@@ -1,14 +1,14 @@
 # Working in this repo
 
-<!-- Fill these in when you start the repo. Delete the comment when done. -->
-
 - **Default branch:** `main`
-- **Issue tracker:** _(e.g. GitHub Issues via `gh`.)_
+- **Issue tracker:** GitHub Issues on `cweber12/wild-coast-kids`, via `gh`.
 - **Ready-for-work label:** `ready-for-agent`
-- **Gate command:** _(the one command that runs everything — see Verification.
-  If it doesn't exist yet, creating it is the first slice of the first task.)_
-- **Toolchain:** _(the exact interpreter/runtime and version, not the system one.)_
-- **Setup:** _(the command(s) that take a fresh clone to a working dev environment.)_
+- **Gate command:** `npm run gate` — see _Verification_.
+- **Toolchain:** Node 22.18.0 with npm 10.9.3. CI pins the same version in
+  `.github/workflows/gate.yml`; if you change one, change both.
+- **Setup:** `npm ci` from a fresh clone. Use `npm ci`, not `npm install`, unless
+  you are deliberately changing a dependency — `ci` installs exactly the
+  lockfile and fails when it has drifted from `package.json`.
 
 **If any of these placeholders are still unfilled when you need them: stop and
 ask.** Do not guess a toolchain, invent a gate command, or fall back to the
