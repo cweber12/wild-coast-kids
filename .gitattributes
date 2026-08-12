@@ -1,0 +1,10 @@
+# Check every text file out with LF, on every platform.
+#
+# Without this, core.autocrlf=true on Windows writes CRLF into the working tree
+# while the index stays LF. Prettier's endOfLine defaults to "lf", so the format
+# gate goes red on a fresh Windows clone and green in CI on Linux - the gate
+# would then depend on who ran it, which is exactly what one gate command
+# exists to prevent.
+#
+# text=auto still leaves binary files (favicon.ico) alone.
+* text=auto eol=lf
