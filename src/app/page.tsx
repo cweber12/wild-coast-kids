@@ -1,4 +1,4 @@
-import { Marquee } from "@/components/Marquee";
+import { HeroViewport } from "@/components/HeroViewport";
 import { Nav } from "@/components/Nav";
 
 export default function Home() {
@@ -6,7 +6,7 @@ export default function Home() {
     <>
       <Nav />
       <main className="flex-1">
-        <Marquee />
+        <HeroViewport />
       </main>
     </>
   );
