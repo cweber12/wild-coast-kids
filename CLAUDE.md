@@ -282,3 +282,22 @@ These are the rules that are specific to this repo and would be wrong elsewhere:
 domain constraints, external system quirks, threading contracts, data formats. -->
 
 _(nothing yet)_
+
+---
+
+## Agent skills
+
+### Issue tracker
+
+Issues are tracked on GitHub Issues for `cweber12/wild-coast-kids`, via the
+`gh` CLI. See `docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+Canonical triage vocabulary, with `ready-for-human` mapped to this repo's
+existing `needs-human` label. See `docs/agents/triage-labels.md`.
+
+### Domain docs
+
+Single-context: one `CONTEXT.md` and `docs/adr/` at the repo root. See
+`docs/agents/domain.md`.
