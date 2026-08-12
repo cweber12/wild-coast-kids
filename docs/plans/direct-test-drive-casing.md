@@ -97,3 +97,15 @@ untested. This commit is the worked example.
 2. `scripts/run-vitest.mjs` + route `test`, `test:watch`, `test:coverage`
    through it + re-baseline the coverage floor (one behavior change; the floor
    move is a consequence of the same commit's new file).
+
+## Addendum, 2026-08-12: the cwd is not the only leak
+
+Implementing slice 2 showed the chdir alone does not fix the failure — the
+12/12 boot deaths reproduced unchanged. The second leak: `require.resolve`
+walks up from the wrapper's **own module URL**, which inherits the launching
+shell's casing, so the vitest bin path — and with it vitest's entire module
+graph — still loaded under `file:///c:/...` while the chdir'd cwd said `C:`.
+The wrapper therefore normalizes both the cwd and the resolved bin path before
+importing. Verified end-to-end after the change: `npm run test` and
+`npm run test:coverage` both pass from a lowercase-drive cwd (12/12 suites, 37
+tests), and both still fail-fast reproduced before it.
