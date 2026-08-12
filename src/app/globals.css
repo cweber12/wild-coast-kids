@@ -61,4 +61,19 @@
   /* Motion */
   --duration-fast: 200ms;
   --duration-normal: 250ms;
+
+  /* Both strips (marquee, gallery) run this animation. 20s is the fallback
+     before StripTrack measures its track and sets the real duration from the
+     shared px/s speed. */
+  --duration-marquee: 20s;
+  --animate-strip: strip-scroll var(--duration-marquee) linear infinite;
+
+  @keyframes strip-scroll {
+    from {
+      transform: translateX(0);
+    }
+    to {
+      transform: translateX(-50%);
+    }
+  }
 }
