@@ -7,6 +7,7 @@ import {
   evaluate,
   formatRows,
   judge,
+  normalizeDriveCasing,
 } from "./gates.mjs";
 
 const gate = (overrides = {}) => ({
@@ -102,6 +103,33 @@ describe("formatRows", () => {
       "  FAIL  typecheck",
       "  SKIP  e2e        (needs a display)",
     ]);
+  });
+});
+
+// Regression tests for issue #4: a lowercase drive letter in the gate
+// runner's cwd made Node load @vitest/runner twice (file:///c:/ and
+// file:///C:/ are different ESM cache keys), so every suite failed at boot.
+describe("normalizeDriveCasing", () => {
+  test("uppercases a lowercase drive letter", () => {
+    expect(normalizeDriveCasing("c:\\Projects\\repo")).toBe(
+      "C:\\Projects\\repo",
+    );
+  });
+
+  test("leaves an already-uppercase drive letter alone", () => {
+    expect(normalizeDriveCasing("C:\\Projects\\repo")).toBe(
+      "C:\\Projects\\repo",
+    );
+  });
+
+  test("touches only the drive letter, not the rest of the path", () => {
+    expect(normalizeDriveCasing("d:\\lower\\MIXED\\path")).toBe(
+      "D:\\lower\\MIXED\\path",
+    );
+  });
+
+  test("leaves a POSIX path alone", () => {
+    expect(normalizeDriveCasing("/home/user/repo")).toBe("/home/user/repo");
   });
 });
 

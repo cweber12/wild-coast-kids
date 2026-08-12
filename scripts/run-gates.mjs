@@ -16,6 +16,7 @@ import {
   SKIPPED,
   evaluate,
   formatRows,
+  normalizeDriveCasing,
 } from "./gates.mjs";
 
 /**
@@ -25,8 +26,13 @@ import {
 function run(command) {
   return new Promise((resolve) => {
     // shell: true so `npm run x` resolves npm.cmd on Windows. The commands come
-    // from the table in this repo, never from user input.
-    const child = spawn(command, { shell: true });
+    // from the table in this repo, never from user input. cwd is normalized
+    // because a lowercase drive letter makes vitest load its runner twice and
+    // fail every suite at boot (issue #4).
+    const child = spawn(command, {
+      shell: true,
+      cwd: normalizeDriveCasing(process.cwd()),
+    });
     let output = "";
 
     child.stdout.on("data", (chunk) => (output += chunk));
