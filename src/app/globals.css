@@ -1,26 +1,92 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
+/* Wild Coast Kids design tokens — coastal pop editorial.
+   Canonical record: .design/wild-coast-kids-landing/DESIGN_TOKENS.css.
+   One fixed, art-directed palette: no dark mode by decision (see
+   docs/plans/wild-coast-kids-landing.md). */
+@theme {
+  /* Palette (template :root, verbatim) */
+  --color-purple: #6b5faa;
+  --color-purple-deep: #5a4f99;
+  --color-ocean: #1a4e8a;
+  --color-pink: #e8a4b8;
+  --color-yellow: #e8ff00;
+  --color-cream: #faf8f5;
+  --color-dark: #1a1a2e;
+  --color-ink: #1a1a00;
+  --color-lavender: #e0d8f0;
+  --color-mist: #f0ebf8;
+  /* Darkened from the template's #7a6e8a: that fails WCAG AA on the mist
+     background (4.06:1); this reads the same and clears 5:1 everywhere. */
+  --color-fog: #6b5f7d;
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
+  /* Typography — one family, weight and italics do the work. Sub-16px
+     label/body sizes are the template's editorial voice, kept on purpose. */
+  --font-sans: var(--font-montserrat), sans-serif;
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+  --text-2xs: 10px;
+  --text-xs: 11px;
+  --text-sm: 12px;
+  --text-base: 13px;
+  --text-stat: 36px;
+  --text-display: clamp(48px, 6vw, 80px);
+  --text-title: clamp(32px, 5vw, 56px);
+  --text-card: clamp(30px, 3vw, 44px);
+  --text-quote: clamp(20px, 2.8vw, 34px);
+
+  --leading-display: 1;
+  --leading-tight: 1.1;
+  --leading-normal: 1.7;
+  --leading-relaxed: 1.8;
+
+  --tracking-wide: 0.05em;
+  --tracking-wider: 0.1em;
+  --tracking-widest: 0.2em;
+
+  /* Layout rhythm */
+  --spacing-gutter: 48px;
+  --spacing-gutter-sm: 24px;
+  --spacing-section: 80px;
+  --spacing-section-sm: 60px;
+  --spacing-nav: 70px;
+
+  /* Radii */
+  --radius-tile: 12px;
+  --radius-thumb: 16px;
+  --radius-box: 20px;
+  --radius-card: 24px;
+  --radius-pill: 99px;
+
+  /* Shadow */
+  --shadow-card: 0 8px 40px rgb(107 95 170 / 0.1);
+
+  /* Motion */
+  --duration-fast: 200ms;
+  --duration-normal: 250ms;
+
+  /* Both strips (marquee, gallery) run this animation. 20s is the fallback
+     before StripTrack measures its track and sets the real duration from the
+     shared px/s speed. */
+  --duration-marquee: 20s;
+  --animate-strip: strip-scroll var(--duration-marquee) linear infinite;
+
+  @keyframes strip-scroll {
+    from {
+      transform: translateX(0);
+    }
+    to {
+      transform: translateX(-50%);
+    }
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+@layer base {
+  /* currentColor keeps the ring visible on every surface: ink on yellow
+     pills, white on the purple hero, dark on cream. */
+  a:focus-visible,
+  button:focus-visible,
+  input:focus-visible {
+    outline: 2px solid currentColor;
+    outline-offset: 2px;
+  }
 }

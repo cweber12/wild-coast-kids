@@ -1,0 +1,118 @@
+/* ==========================================================================
+   Wild Coast Kids — design tokens
+   Philosophy: coastal pop editorial (see DESIGN_BRIEF.md)
+
+   Format: Tailwind v4 `@theme` block. During the build this replaces the
+   scaffold tokens in src/app/globals.css. Tailwind derives utilities from
+   these names (e.g. --color-purple → bg-purple, --radius-card → rounded-card).
+
+   Deviations from the design-tokens skill defaults, all decided in grilling:
+   - No dark mode. One fixed, art-directed palette in every theme; the
+     scaffold's prefers-color-scheme swap is deleted, not extended.
+   - Type sizes below 16px are intentional. The template's editorial voice
+     lives in tiny 800/900-weight uppercase labels; body copy is 13px.
+   ========================================================================== */
+
+@theme {
+  /* ---- Raw palette (template :root, verbatim) --------------------------- */
+  --color-purple: #6b5faa; /* hero, art card, accents */
+  --color-purple-deep: #5a4f99; /* purple hover state */
+  --color-ocean: #1a4e8a; /* co-op card, conditions section */
+  --color-pink: #e8a4b8; /* footer logo only */
+  --color-yellow: #e8ff00; /* marquee, CTAs, stat tiles */
+  --color-cream: #faf8f5; /* page background */
+  --color-dark: #1a1a2e; /* text, footer background */
+  --color-ink: #1a1a00; /* text on yellow surfaces */
+
+  /* ---- Supporting colors (template usage, promoted to tokens) ----------- */
+  --color-lavender: #e0d8f0; /* hairline borders, input borders */
+  --color-mist: #f0ebf8; /* gallery section background */
+  --color-fog: #7a6e8a; /* muted body text on cream */
+
+  /* ---- Typography ------------------------------------------------------- */
+  /* Montserrat via next/font, exposed as a CSS variable in layout.tsx.
+     One family for display and body; weight and italics do the work. */
+  --font-sans: var(--font-montserrat), sans-serif;
+
+  --text-2xs: 10px; /* nav links, tags, labels, aside captions */
+  --text-xs: 11px; /* CTAs, stat labels, prog-time */
+  --text-sm: 12px; /* card descriptions, buttons */
+  --text-base: 13px; /* body copy, marquee text */
+  --text-stat: 36px; /* stat tile numerals */
+
+  /* Fluid display sizes (template clamps, verbatim) */
+  --text-display: clamp(48px, 6vw, 80px); /* hero h1 */
+  --text-title: clamp(32px, 5vw, 56px); /* section h2 */
+  --text-card: clamp(30px, 3vw, 44px); /* program card titles */
+  --text-quote: clamp(20px, 2.8vw, 34px); /* pull quote */
+
+  --leading-display: 1; /* display/hero */
+  --leading-tight: 1.1; /* section headings */
+  --leading-normal: 1.7; /* card/body copy */
+  --leading-relaxed: 1.8; /* hero desc, long body */
+
+  --tracking-wide: 0.05em; /* tags */
+  --tracking-wider: 0.1em; /* nav links, CTAs, labels */
+  --tracking-widest: 0.2em; /* hero tag */
+
+  /* ---- Spacing ---------------------------------------------------------- */
+  /* Tailwind v4 numeric utilities derive from this; template rhythm maps to
+     p-3.5 (14px nav-y), px-8 (32px nav-x), p-6 (24px mobile gutter),
+     px-12 (48px gutter), py-20 (80px section). */
+  --spacing: 4px;
+
+  /* Named layout rhythm, so sections read as intent rather than arithmetic */
+  --spacing-gutter: 48px; /* desktop horizontal gutter */
+  --spacing-gutter-sm: 24px; /* mobile horizontal gutter */
+  --spacing-section: 80px; /* desktop section padding */
+  --spacing-section-sm: 60px; /* mobile section padding */
+  --spacing-nav: 70px; /* fixed nav clearance (hero padding-top) */
+
+  /* ---- Radii ------------------------------------------------------------ */
+  --radius-tile: 12px; /* co-op activity tiles, inputs */
+  --radius-thumb: 16px; /* gallery images, stat tiles */
+  --radius-box: 20px; /* conditions embed box */
+  --radius-card: 24px; /* program cards, form card */
+  --radius-pill: 99px; /* every button */
+
+  /* ---- Shadow ----------------------------------------------------------- */
+  --shadow-card: 0 8px 40px rgb(107 95 170 / 0.1); /* form card lift */
+
+  /* ---- Motion ----------------------------------------------------------- */
+  --duration-fast: 200ms; /* borders, color hovers, card lift */
+  --duration-normal: 250ms; /* image/placeholder scale */
+  --ease-default: cubic-bezier(0.4, 0, 0.2, 1);
+
+  /* The strips: the marquee's 20s half-track loop defines the shared speed.
+     The gallery strip must move at the same px/s, so its duration is
+     computed per its own track width:
+       gallery-duration = 20s × (gallery-track-px / marquee-track-px)
+     measured at runtime (or set from known tile widths). Both animations
+     pause on hover and are disabled under prefers-reduced-motion. */
+  --duration-marquee: 20s;
+
+  /* ---- Breakpoints ------------------------------------------------------ */
+  /* Template collapses everything at one width. Tailwind defaults stay;
+     `md:` (768px) is the working breakpoint for all stacking changes. */
+}
+
+/* --------------------------------------------------------------------------
+   Non-@theme companions (live alongside the block in globals.css)
+   -------------------------------------------------------------------------- */
+
+/* Keyframes for both strips: translate the duplicated track half-way, snap. */
+@keyframes strip-scroll {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+/* Baseline accessibility: strips freeze for reduced-motion users. */
+@media (prefers-reduced-motion: reduce) {
+  .strip-track {
+    animation: none;
+  }
+}
