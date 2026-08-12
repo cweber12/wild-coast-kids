@@ -37,9 +37,14 @@ export function CommunityForm() {
           updates and coastal adventures.
         </p>
       </div>
-      <div className="rounded-card shadow-card bg-white p-9">
+      {/* min-h ≈ the rendered form, so the success swap doesn't collapse the
+          card and yank the page while the user is looking at it. */}
+      <div className="rounded-card shadow-card min-h-140 bg-white p-9">
         {submitted ? (
-          <div role="status" className="px-5 py-10 text-center">
+          <div
+            role="status"
+            className="flex min-h-120 flex-col justify-center px-5 py-10 text-center"
+          >
             <span aria-hidden="true" className="mb-4 block text-[52px]">
               🎉
             </span>
