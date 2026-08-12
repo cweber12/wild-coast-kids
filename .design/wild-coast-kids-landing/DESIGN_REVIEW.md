@@ -5,6 +5,20 @@ Philosophy: Coastal pop editorial
 Date: 2026-08-11
 Reviewed at: branch `wild-coast-kids-landing`, commit `2ce3c63`, Next.js dev server
 
+> **Outcome addendum (2026-08-11, same day):** findings 1–3 fixed on the
+> branch and re-verified against the running app (`verify-*.png`):
+>
+> 1. Nav — fixed in two steps (`2f40bb0`, then `90ad232` after measurement
+>    showed slimming alone still overflowed 55px): below `md` the nav wraps
+>    to two rows, restoring the CTA on phones. Measured zero overflow at
+>    375px and 320px.
+> 2. Hero slot — fixed in `61d6eab`: the placeholder label now shows over
+>    the photo column (`verify-hero-desktop-1280.png`).
+> 3. Success jump — fixed in `6d55c5f`: card height measured identical
+>    before and after submit (560px → 560px, delta 0).
+>
+> Findings 4–6 remain open as could-improves.
+
 ## Screenshots Captured
 
 | Screenshot                                 | Breakpoint         | Description                                 |
