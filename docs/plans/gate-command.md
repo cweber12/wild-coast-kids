@@ -128,4 +128,23 @@ monorepo.
 
 <!-- Dated entries when the plan changes. Never rewrite the above. -->
 
-_(none yet)_
+### 2026-08-11 — a sixth slice, forced by CI
+
+The plan had five slices. CI added a sixth on the first run.
+
+The gate passed locally and failed in CI on `tsc` not finding `LayoutProps`.
+That global is emitted by Next.js into `.next/types`, which `tsconfig.json`
+includes; it existed on this machine only because a build had already run.
+Because the table runs typecheck before build, a fresh clone typechecks against
+generated types that are absent — so the error was invisible to anyone who had
+ever run the app, and visible only to CI and to a new clone.
+
+The fix is `next typegen && tsc --noEmit`, the documented way to emit those
+types without a full build. Reordering the table so build runs first was
+rejected: it would fix the symptom by relying on an ordering constraint that no
+row in the table states, and the next gate added in the wrong position would
+bring the bug back.
+
+Worth recording because it validates the reason CI runs the same command: the
+divergence was not caught by any amount of local running, and could not have
+been.
