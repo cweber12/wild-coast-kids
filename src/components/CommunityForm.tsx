@@ -9,8 +9,9 @@ const INTERESTS = [
   { value: "science", emoji: "🔬", label: "Science" },
 ];
 
+/* 16px on touch widths — iOS zooms into any input below 16px on focus. */
 const INPUT_CLASSES =
-  "rounded-tile w-full border-[1.5px] border-lavender bg-cream px-4 py-[13px] text-base text-dark transition-colors duration-fast outline-none focus:border-purple focus:bg-white";
+  "rounded-tile w-full border-[1.5px] border-lavender bg-cream px-4 py-[13px] text-[16px] text-dark transition-colors duration-fast outline-none focus:border-purple focus:bg-white md:text-base";
 
 /**
  * The interest-list form. Client-side only by decision: submit swaps the
@@ -23,7 +24,7 @@ export function CommunityForm() {
   return (
     <section
       id="community"
-      className="px-gutter-sm py-15 grid items-start gap-10 md:grid-cols-2 md:gap-20 md:px-gutter md:py-20"
+      className="px-gutter-sm py-section-sm grid items-start gap-10 md:grid-cols-2 md:gap-20 md:px-gutter md:py-section"
     >
       <div>
         <h2 className="text-title leading-display mb-4 font-black italic">

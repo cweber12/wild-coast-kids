@@ -16,7 +16,9 @@
   --color-ink: #1a1a00;
   --color-lavender: #e0d8f0;
   --color-mist: #f0ebf8;
-  --color-fog: #7a6e8a;
+  /* Darkened from the template's #7a6e8a: that fails WCAG AA on the mist
+     background (4.06:1); this reads the same and clears 5:1 everywhere. */
+  --color-fog: #6b5f7d;
 
   /* Typography — one family, weight and italics do the work. Sub-16px
      label/body sizes are the template's editorial voice, kept on purpose. */
@@ -75,5 +77,16 @@
     to {
       transform: translateX(-50%);
     }
+  }
+}
+
+@layer base {
+  /* currentColor keeps the ring visible on every surface: ink on yellow
+     pills, white on the purple hero, dark on cream. */
+  a:focus-visible,
+  button:focus-visible,
+  input:focus-visible {
+    outline: 2px solid currentColor;
+    outline-offset: 2px;
   }
 }

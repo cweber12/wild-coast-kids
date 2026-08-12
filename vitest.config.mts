@@ -20,10 +20,10 @@ export default defineConfig({
       // purpose (see docs/adr/0002) and layout.tsx is untested, and both drag
       // these figures down in plain sight rather than quietly.
       thresholds: {
-        statements: 35.84,
-        branches: 66.66,
-        functions: 50,
-        lines: 34.78,
+        statements: 62.76,
+        branches: 72.72,
+        functions: 77.77,
+        lines: 65.88,
       },
     },
   },

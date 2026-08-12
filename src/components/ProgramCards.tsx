@@ -12,7 +12,7 @@ const CARD_BASE =
 
 export function ProgramCards() {
   return (
-    <div className="px-gutter-sm pb-15 md:px-gutter md:pb-20">
+    <div className="px-gutter-sm pb-section-sm md:px-gutter md:pb-section">
       <div className="grid gap-4 md:grid-cols-2">
         <article id="art" className={`${CARD_BASE} bg-purple`}>
           <Placeholder
@@ -38,7 +38,7 @@ export function ProgramCards() {
             <p className="mb-3.5 text-xs font-extrabold tracking-wider text-yellow uppercase">
               In-person · Group & Private · K–8
             </p>
-            <p className="leading-normal mb-4.5 max-w-[340px] text-sm text-white/75">
+            <p className="leading-normal mb-4.5 max-w-[340px] text-sm text-white/90">
               Watercolors, ink, collage, printmaking — inspired by the coast and
               whatever sparks curiosity. Every session is different.
             </p>
@@ -105,7 +105,7 @@ export function ProgramCards() {
                 </li>
               ))}
             </ul>
-            <p className="leading-normal mb-4.5 max-w-[340px] text-sm text-white/75">
+            <p className="leading-normal mb-4.5 max-w-[340px] text-sm text-white/90">
               Exploring San Diego&apos;s wild coast through science, journaling
               and hands-on discovery. Spots limited for fall.
             </p>

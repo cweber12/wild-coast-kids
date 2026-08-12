@@ -13,7 +13,8 @@ export function Hero() {
           make,
           <span className="block text-yellow">wonder.</span>
         </h1>
-        <p className="leading-relaxed mb-9 max-w-80 text-base text-white/70">
+        {/* white/90, up from the template's /70: 4.79:1 vs a failing 3.60:1 */}
+        <p className="leading-relaxed mb-9 max-w-80 text-base text-white/90">
           Art classes and outdoor co-op rooted in the California coast. Charter
           fund eligible.
         </p>

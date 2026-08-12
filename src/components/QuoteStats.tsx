@@ -1,6 +1,6 @@
 export function QuoteStats() {
   return (
-    <section className="border-lavender px-gutter-sm py-15 grid items-center gap-8 border-y-[1.5px] md:grid-cols-2 md:gap-12 md:px-gutter md:py-20">
+    <section className="border-lavender px-gutter-sm py-section-sm grid items-center gap-8 border-y-[1.5px] md:grid-cols-2 md:gap-12 md:px-gutter md:py-section">
       <figure>
         <blockquote className="text-quote leading-[1.25] font-black italic">
           “My daughter now notices every tidepool we walk past.
