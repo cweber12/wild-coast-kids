@@ -1,0 +1,30 @@
+name: gate
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  gate:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          # Pinned to the version the repo is developed against. CI and local
+          # disagreeing about the runtime is the first bug to fix, not to work
+          # around.
+          node-version: "22.18.0"
+          cache: npm
+
+      # ci, not install: it installs exactly the lockfile and fails if
+      # package.json and the lock have drifted apart.
+      - run: npm ci
+
+      # The same command a person runs before committing. CLAUDE.md requires
+      # CI and local to share one definition of green, which means one command
+      # here, never a re-listing of the gates.
+      - run: npm run gate
