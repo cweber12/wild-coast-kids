@@ -62,8 +62,8 @@ the design language.
 
 ## Component Inventory
 
-| Component      | Status | Notes                                                                                   |
-| -------------- | ------ | --------------------------------------------------------------------------------------- |
+| Component      | Status | Notes                                                                                    |
+| -------------- | ------ | ---------------------------------------------------------------------------------------- |
 | Nav            | New    | Fixed top bar: logo placeholder, anchor links, yellow pill CTA                           |
 | HeroViewport   | New    | `min-h-dvh` flex column wrapping Hero + Marquee; marquee sits at the bottom edge         |
 | Hero           | New    | Purple split layout, italic 900 headline, two CTAs, photo placeholder (hidden on mobile) |

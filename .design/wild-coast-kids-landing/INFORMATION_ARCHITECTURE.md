@@ -59,23 +59,23 @@ wordmark banner. Decided in the brief; not deferred.
 
 ## Naming Conventions
 
-| Concept                | Label in UI        | Notes                                       |
-| ---------------------- | ------------------ | ------------------------------------------- |
-| The art program        | Art Classes        | Never "art program" or "lessons"            |
-| The outdoor program    | Tuesday Co-op      | Day is part of the name                     |
-| The signup form        | Community          | Nav label; form heading is "Stay in the loop" |
-| The surf/tide tool     | Conditions         | Singular section, plural word               |
-| Funding note           | Charter eligible   | Exact phrase, used in tags and stats        |
-| Age range              | K–8                | En dash, no spaces                          |
+| Concept             | Label in UI      | Notes                                         |
+| ------------------- | ---------------- | --------------------------------------------- |
+| The art program     | Art Classes      | Never "art program" or "lessons"              |
+| The outdoor program | Tuesday Co-op    | Day is part of the name                       |
+| The signup form     | Community        | Nav label; form heading is "Stay in the loop" |
+| The surf/tide tool  | Conditions       | Singular section, plural word                 |
+| Funding note        | Charter eligible | Exact phrase, used in tags and stats          |
+| Age range           | K–8              | En dash, no spaces                            |
 
 ## Component Reuse Map
 
-| Component     | Used on                                      | Behavior differences                          |
-| ------------- | -------------------------------------------- | --------------------------------------------- |
-| Placeholder   | Nav logo, hero photo, card backgrounds, strip | Label size varies; backgrounds drop the border |
-| Pill button   | Nav CTA, hero CTAs, card CTAs, form submit   | Yellow/ghost/purple variants                  |
-| Looping track | Marquee, GalleryStrip                        | Shared duplicated-track + pause-on-hover mechanic; content and speed derivation differ |
-| Section shell | Gallery, quote, conditions, community        | Shared gutter/padding rhythm, varying backgrounds |
+| Component     | Used on                                       | Behavior differences                                                                   |
+| ------------- | --------------------------------------------- | -------------------------------------------------------------------------------------- |
+| Placeholder   | Nav logo, hero photo, card backgrounds, strip | Label size varies; backgrounds drop the border                                         |
+| Pill button   | Nav CTA, hero CTAs, card CTAs, form submit    | Yellow/ghost/purple variants                                                           |
+| Looping track | Marquee, GalleryStrip                         | Shared duplicated-track + pause-on-hover mechanic; content and speed derivation differ |
+| Section shell | Gallery, quote, conditions, community         | Shared gutter/padding rhythm, varying backgrounds                                      |
 
 ## Content Growth Plan
 
