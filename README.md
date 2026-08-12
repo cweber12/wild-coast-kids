@@ -2,6 +2,22 @@ This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-
 
 ## Getting Started
 
+### Environment variables
+
+The site talks to Supabase and Cloudflare R2 and deploys on Vercel. To set up
+credentials on a fresh clone, run the interactive wizard — it walks you through
+each dashboard, fills `.env.local`, and pushes the values to Vercel:
+
+```bash
+bash scripts/setup-secrets-wizard.sh
+```
+
+The variable names (and which are secret) are documented in
+[`.env.example`](.env.example). Never commit real values; `.env*` is
+gitignored.
+
+### Development server
+
 First, run the development server:
 
 ```bash
