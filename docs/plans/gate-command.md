@@ -53,12 +53,12 @@ destroy the revert/bisect property that one-slice-one-commit exists to create.
 
 Agreed before starting, per CLAUDE.md.
 
-The seam is the split between *deciding* and *spawning*. The gate runner's real
+The seam is the split between _deciding_ and _spawning_. The gate runner's real
 logic is: given a set of results, what is the exit code and what gets printed?
 That is pure and gets unit-tested directly — including the two cases most likely
 to be wrong and least likely to be exercised by accident:
 
-- a gate declared MUST FAIL that *passed* must fail the run;
+- a gate declared MUST FAIL that _passed_ must fail the run;
 - a skipped gate must not count as a pass.
 
 Neither can be tested by running the real gates, because the real gates are all
@@ -115,7 +115,7 @@ monorepo.
 
 - **Playwright and any E2E test.** This is a real, known gap, not an oversight:
   the bundled Next.js 16 docs state that Vitest cannot test `async` Server
-  Components and recommend E2E for them. Today's `page.tsx` is a *synchronous*
+  Components and recommend E2E for them. Today's `page.tsx` is a _synchronous_
   Server Component, so it is testable now. **The first `async` page or layout
   in this repo will be untestable by the gate as designed** — at that point,
   adding Playwright is the next plan, not an afterthought.

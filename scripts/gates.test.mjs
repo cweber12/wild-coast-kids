@@ -9,7 +9,11 @@ import {
   judge,
 } from "./gates.mjs";
 
-const gate = (overrides = {}) => ({ name: "example", command: "true", ...overrides });
+const gate = (overrides = {}) => ({
+  name: "example",
+  command: "true",
+  ...overrides,
+});
 
 describe("judge", () => {
   test("an ordinary gate that passed is ok", () => {

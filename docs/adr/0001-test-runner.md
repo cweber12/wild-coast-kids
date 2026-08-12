@@ -29,7 +29,7 @@ Tests run fast and need no separate transform config, since Vitest handles the
 project's TypeScript and JSX directly.
 
 `async` Server Components cannot be unit-tested. This is inherited from the
-choice of runner *and* would have been inherited from Jest, so it is a property
+choice of runner _and_ would have been inherited from Jest, so it is a property
 of the ecosystem rather than of this decision. It becomes load-bearing the first
 time an `async` page or layout is added: that code will be outside the gate's
 reach, and closing the gap means adding Playwright. This is recorded so the gap

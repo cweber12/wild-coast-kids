@@ -19,6 +19,7 @@
 
 /** @type {Gate[]} */
 export const GATES = [
+  { name: "format", command: "npm run format:check" },
   { name: "lint", command: "npm run lint" },
   { name: "typecheck", command: "npm run typecheck" },
   // Runs with coverage so the floor in vitest.config.mts is enforced here:
