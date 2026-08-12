@@ -29,6 +29,22 @@ export const GATES = [
   { name: "build", command: "npm run build" },
 ];
 
+/**
+ * Uppercase a leading lowercase Windows drive letter, leaving everything else
+ * alone. Node's ESM loader keys its module cache by file URL, so a process
+ * whose cwd starts with `c:\` loads the same file twice under `file:///c:/`
+ * and `file:///C:/` — which makes every vitest suite fail at boot with
+ * "Vitest failed to find the current suite". Some shells and agent harnesses
+ * launch with a lowercase drive; the gate must not care which kind it was
+ * born in. See docs/plans/gate-drive-casing.md.
+ *
+ * @param {string} path
+ * @returns {string}
+ */
+export function normalizeDriveCasing(path) {
+  return path.replace(/^[a-z]:/, (drive) => drive.toUpperCase());
+}
+
 export const PASSED = "passed";
 export const FAILED = "failed";
 export const SKIPPED = "skipped";
