@@ -11,7 +11,7 @@ cleanup task. Components live in `src/components/` (PascalCase), composed by
 
 ## Foundation
 
-- [ ] **Tokens, Montserrat, and the nav bar**: Replace the scaffold tokens in
+- [x] **Tokens, Montserrat, and the nav bar**: Replace the scaffold tokens in
       `globals.css` with the `@theme` block from DESIGN_TOKENS.css (deleting
       the dark-mode swap), swap Geist for Montserrat in `layout.tsx`, and
       build the fixed Nav — Placeholder logo, four anchor links, yellow
@@ -20,7 +20,7 @@ cleanup task. Components live in `src/components/` (PascalCase), composed by
       role+name. _New: `Placeholder`, `Nav`. Modifies: `globals.css`,
       `layout.tsx`, `page.tsx`._
 
-- [ ] **Marquee strip**: The yellow looping text band and, inside it, the
+- [x] **Marquee strip**: The yellow looping text band and, inside it, the
       shared strip mechanic every strip uses — duplicated track
       (`aria-hidden` copy), `strip-scroll` keyframes, pause on hover, frozen
       under `prefers-reduced-motion`. Riskiest mechanic in the build, so it
@@ -29,7 +29,7 @@ cleanup task. Components live in `src/components/` (PascalCase), composed by
 
 ## Core UI
 
-- [ ] **Hero + viewport lock**: Purple split hero (tag, italic-900 headline,
+- [x] **Hero + viewport lock**: Purple split hero (tag, italic-900 headline,
       description, yellow/ghost CTAs, photo Placeholder, corner caption)
       wrapped with the Marquee in a `min-h-dvh` flex column so the marquee
       sits at the bottom edge of the first window on desktop and the block
@@ -37,44 +37,44 @@ cleanup task. Components live in `src/components/` (PascalCase), composed by
       both CTAs reachable by role+name. _New: `Hero`, `HeroViewport`.
       Depends on: Marquee._
 
-- [ ] **Gallery section**: "What kids make here." header plus the film
+- [x] **Gallery section**: "What kids make here." header plus the film
       strip — the nine labeled image Placeholders in a single infinite row
       reusing the strip mechanic, duration derived from track width so it
       moves at the marquee's px/s. Test: section heading reachable; each
       image placeholder present once by `role="img"` name. _New:
       `GallerySection`, `GalleryStrip`. Depends on: Marquee (mechanic)._
 
-- [ ] **Program cards**: The `#art` and `#coop` cards — background
+- [x] **Program cards**: The `#art` and `#coop` cards — background
       Placeholders, numbers, emoji, titles, tags, co-op activities grid,
       pill CTAs (Calendly href is `TODO(verify)`), hover lift. Two columns
       → one ≤768px. Test: both card titles and CTAs reachable; anchor ids
       present. _New: `ProgramCards`._
 
-- [ ] **Quote and stats**: Pull-quote with attribution beside the K–8 and
+- [x] **Quote and stats**: Pull-quote with attribution beside the K–8 and
       Charter stat tiles; stacks ≤768px. Test: quote text and both stat
       labels reachable. _New: `QuoteStats`._
 
-- [ ] **Conditions section**: Ocean-blue `#conditions` split — heading/copy
+- [x] **Conditions section**: Ocean-blue `#conditions` split — heading/copy
       and the dashed "tool coming soon" box reserving the embed slot. Test:
       heading reachable, section id present. _New: `Conditions`._
 
 ## Interactions & States
 
-- [ ] **Community form**: `#community` section with the form card — labeled
+- [x] **Community form**: `#community` section with the form card — labeled
       name/email/ages inputs, interest checkboxes, purple pill submit — and
       the client-side success swap ("You're in!"). Covers: default, invalid
       (required fields), submitted. Test: submit with valid input hides the
       form and shows the success state; labels associated with inputs.
       _New: `CommunityForm` (client component)._
 
-- [ ] **Footer and page metadata**: Dark footer bar (pink wordmark, summary
+- [x] **Footer and page metadata**: Dark footer bar (pink wordmark, summary
       columns, stacked ≤768px) and the real `metadata.description` in
       `layout.tsx`. Test: contentinfo landmark and wordmark reachable.
       _New: `Footer`. Modifies: `layout.tsx`._
 
 ## Responsive & Polish
 
-- [ ] **Accessibility and motion audit**: Visible focus rings on every
+- [x] **Accessibility and motion audit**: Visible focus rings on every
       interactive element, smooth-scroll disabled under reduced motion,
       strip pause behavior verified, contrast spot-check of yellow/ink and
       white-on-purple pairs, placeholder `aria-label`s complete. Test:

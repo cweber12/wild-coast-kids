@@ -71,6 +71,18 @@ checklist. Order: plan commit → tokens/Montserrat/nav → marquee →
 hero+viewport → gallery strip → program cards → quote/stats → conditions →
 community form → footer/metadata → a11y audit.
 
+## Addendum — 2026-08-11 (build)
+
+- **Strip speed mechanism refined.** The plan said the marquee's 20s loop
+  defines the shared speed and the gallery derives from it. Implementation
+  inverted that: both strips ride one `StripTrack` component that measures
+  its own track and derives its duration from a single shared constant
+  (80 px/s), with 20s as the pre-measurement fallback. Same speed by
+  construction, no cross-component measurement.
+- **Contrast lifted above template.** Three template pairs failed WCAG AA;
+  hero/card copy moved to white/90 and the fog text token darkened to
+  `#6b5f7d`. Allowed by the brief's "template opacities or better".
+
 ## Out of scope
 
 Real images and logo, form backend, real booking URL, conditions-tool embed,
