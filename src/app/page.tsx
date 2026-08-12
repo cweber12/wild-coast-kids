@@ -1,3 +1,10 @@
+import { Nav } from "@/components/Nav";
+
 export default function Home() {
-  return <main className="flex flex-1 items-center justify-center" />;
+  return (
+    <>
+      <Nav />
+      <main className="flex-1" />
+    </>
+  );
 }
