@@ -1,3 +1,4 @@
+import { Conditions } from "@/components/Conditions";
 import { GallerySection } from "@/components/GallerySection";
 import { HeroViewport } from "@/components/HeroViewport";
 import { Nav } from "@/components/Nav";
@@ -13,6 +14,7 @@ export default function Home() {
         <GallerySection />
         <ProgramCards />
         <QuoteStats />
+        <Conditions />
       </main>
     </>
   );
