@@ -11,5 +11,20 @@ export default defineConfig({
   test: {
     environment: "jsdom",
     setupFiles: ["./vitest.setup.ts"],
+    coverage: {
+      provider: "v8",
+      include: ["src/**/*.{ts,tsx}", "scripts/**/*.mjs"],
+      // The floor is what the repo actually achieves today, not an aspiration.
+      // Raise it when coverage rises; never lower it to make a commit pass.
+      // Nothing is excluded to flatter the number: run-gates.mjs sits at 0% on
+      // purpose (see docs/adr/0002) and layout.tsx is untested, and both drag
+      // these figures down in plain sight rather than quietly.
+      thresholds: {
+        statements: 35.84,
+        branches: 66.66,
+        functions: 50,
+        lines: 34.78,
+      },
+    },
   },
 });

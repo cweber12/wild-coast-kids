@@ -21,7 +21,10 @@
 export const GATES = [
   { name: "lint", command: "npm run lint" },
   { name: "typecheck", command: "npm run typecheck" },
-  { name: "test", command: "npm test" },
+  // Runs with coverage so the floor in vitest.config.mts is enforced here:
+  // Vitest exits non-zero when a threshold is missed, which is the third way
+  // CLAUDE.md says this command must fail.
+  { name: "test", command: "npm run test:coverage" },
   { name: "build", command: "npm run build" },
 ];
 

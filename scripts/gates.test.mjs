@@ -1,5 +1,13 @@
 import { describe, expect, test } from "vitest";
-import { GATES, PASSED, FAILED, SKIPPED, evaluate, judge } from "./gates.mjs";
+import {
+  GATES,
+  PASSED,
+  FAILED,
+  SKIPPED,
+  evaluate,
+  formatRows,
+  judge,
+} from "./gates.mjs";
 
 const gate = (overrides = {}) => ({ name: "example", command: "true", ...overrides });
 
@@ -73,6 +81,22 @@ describe("evaluate", () => {
     expect(rows.filter((row) => !row.ok).map((row) => row.name)).toEqual([
       "a",
       "b",
+    ]);
+  });
+});
+
+describe("formatRows", () => {
+  test("aligns names and shows the reason a gate was skipped", () => {
+    const { rows } = evaluate([
+      { gate: gate({ name: "lint" }), status: PASSED },
+      { gate: gate({ name: "typecheck" }), status: FAILED },
+      { gate: gate({ name: "e2e", skip: "needs a display" }), status: SKIPPED },
+    ]);
+
+    expect(formatRows(rows).split("\n")).toEqual([
+      "  PASS  lint",
+      "  FAIL  typecheck",
+      "  SKIP  e2e        (needs a display)",
     ]);
   });
 });
