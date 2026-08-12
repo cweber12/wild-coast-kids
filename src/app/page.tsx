@@ -2,6 +2,7 @@ import { GallerySection } from "@/components/GallerySection";
 import { HeroViewport } from "@/components/HeroViewport";
 import { Nav } from "@/components/Nav";
 import { ProgramCards } from "@/components/ProgramCards";
+import { QuoteStats } from "@/components/QuoteStats";
 
 export default function Home() {
   return (
@@ -11,6 +12,7 @@ export default function Home() {
         <HeroViewport />
         <GallerySection />
         <ProgramCards />
+        <QuoteStats />
       </main>
     </>
   );
