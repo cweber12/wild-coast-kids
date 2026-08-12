@@ -1,5 +1,6 @@
 import { CommunityForm } from "@/components/CommunityForm";
 import { Conditions } from "@/components/Conditions";
+import { Footer } from "@/components/Footer";
 import { GallerySection } from "@/components/GallerySection";
 import { HeroViewport } from "@/components/HeroViewport";
 import { Nav } from "@/components/Nav";
@@ -18,6 +19,7 @@ export default function Home() {
         <Conditions />
         <CommunityForm />
       </main>
+      <Footer />
     </>
   );
 }

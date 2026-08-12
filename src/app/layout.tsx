@@ -13,7 +13,8 @@ const montserrat = Montserrat({
 
 export const metadata: Metadata = {
   title: "Wild Coast Kids",
-  description: "",
+  description:
+    "Art classes and a Tuesday outdoor co-op for K–8 kids, rooted in the San Diego coast. Charter fund eligible.",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
