@@ -9,7 +9,13 @@ credentials on a fresh clone, run the interactive wizard — it walks you throug
 each dashboard, fills `.env.local`, and pushes the values to Vercel:
 
 ```bash
+# from Git Bash (or any POSIX shell)
 bash scripts/setup-secrets-wizard.sh
+```
+
+```powershell
+# from PowerShell — plain `bash` resolves to the WSL relay, so call Git Bash directly
+& "C:\Program Files\Git\bin\bash.exe" scripts/setup-secrets-wizard.sh
 ```
 
 The variable names (and which are secret) are documented in
