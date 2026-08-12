@@ -1,14 +1,14 @@
 # Working in this repo
 
-<!-- Fill these in when you start the repo. Delete the comment when done. -->
-
 - **Default branch:** `main`
-- **Issue tracker:** _(e.g. GitHub Issues via `gh`.)_
+- **Issue tracker:** GitHub Issues on `cweber12/wild-coast-kids`, via `gh`.
 - **Ready-for-work label:** `ready-for-agent`
-- **Gate command:** _(the one command that runs everything — see Verification.
-  If it doesn't exist yet, creating it is the first slice of the first task.)_
-- **Toolchain:** _(the exact interpreter/runtime and version, not the system one.)_
-- **Setup:** _(the command(s) that take a fresh clone to a working dev environment.)_
+- **Gate command:** `npm run gate` — see _Verification_.
+- **Toolchain:** Node 22.18.0 with npm 10.9.3. CI pins the same version in
+  `.github/workflows/gate.yml`; if you change one, change both.
+- **Setup:** `npm ci` from a fresh clone. Use `npm ci`, not `npm install`, unless
+  you are deliberately changing a dependency — `ci` installs exactly the
+  lockfile and fails when it has drifted from `package.json`.
 
 **If any of these placeholders are still unfilled when you need them: stop and
 ask.** Do not guess a toolchain, invent a gate command, or fall back to the
@@ -27,7 +27,7 @@ Say back what you think is being asked, in your own words, including anything
 ambiguous and how you intend to read it. If two readings would lead to
 materially different work, ask — don't pick one silently.
 
-Also say what you think is *out* of scope. Most misunderstandings are about
+Also say what you think is _out_ of scope. Most misunderstandings are about
 scope, not intent.
 
 ### 2. Produce a plan in logical slices
@@ -63,8 +63,8 @@ The conversation that produced the plan is not durable. Write the plan to
 exists only in a transcript gets rebuilt slightly differently every time
 someone returns to it.
 
-The write-up states the problem and the solution *from the user's point of
-view*, the implementation decisions, the **test seams**, and what is out of
+The write-up states the problem and the solution _from the user's point of
+view_, the implementation decisions, the **test seams**, and what is out of
 scope. Say what was considered and rejected, and why — the rejected options are
 most of what makes the accepted one defensible, and they are the first thing
 someone re-litigates otherwise.
@@ -87,7 +87,7 @@ Publish one issue per slice, in dependency order, so each can name a real
 blocker. Each issue links to the plan file. Mark each as autonomous if it can
 be implemented and merged without a human, or needs-human if it requires a
 decision or a look at the artifact. Prefer autonomous. A slice whose whole
-purpose is that something reads correctly *to a person* needs a human, because
+purpose is that something reads correctly _to a person_ needs a human, because
 no gate can assert it.
 
 Issues close normally when their PR merges — the plan file, not the issue, is
@@ -110,7 +110,7 @@ commit directly to it.
 - Do not start an issue whose blocker has not merged. The blocker's code is the
   ground the slices stand on, and rebasing half-finished work onto a moved
   blocker is how a verified slice quietly stops being verified.
-- If `main` moves while your branch is open: rebase onto it *before* opening
+- If `main` moves while your branch is open: rebase onto it _before_ opening
   the PR and re-run the gates. After the PR is open, never rewrite pushed
   history — if `main` moves again, merge it in or ask.
 - Never force-push to the default branch or to any branch with an open PR.
@@ -128,11 +128,11 @@ slice can be reverted or bisected on its own.
 
 Before committing a slice:
 
-- run the gate command and read its output — see *Verification*,
+- run the gate command and read its output — see _Verification_,
 - run `git status` and `git diff --staged`: the tree contains only that slice's
   changes, and nothing generated, no secrets, no debug residue,
 - write the message: imperative subject line ≤ 72 characters saying what
-  changed; body saying *why* — the constraint or bug that made this the right
+  changed; body saying _why_ — the constraint or bug that made this the right
   change, not a restatement of the diff.
 
 Then move to the next slice. Do not batch commits.
