@@ -23,6 +23,16 @@ test("both hero CTAs link to their program anchors", () => {
   ).toBe("#coop");
 });
 
+test("the hero photo slot shows its label while it is a placeholder", () => {
+  render(<HeroViewport />);
+
+  // Without the visible label the slot is invisible over the purple and the
+  // poster's right half reads as empty (design review, finding 2).
+  expect(
+    screen.getByText("Hero photo of kids exploring the coast"),
+  ).toBeDefined();
+});
+
 test("the marquee rides inside the viewport block", () => {
   render(<HeroViewport />);
 

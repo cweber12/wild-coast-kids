@@ -34,10 +34,14 @@ export function Hero() {
         </div>
       </div>
       <div className="relative col-start-2 row-start-1 hidden md:block">
+        {/* showLabel: without it this slot is invisible over the purple and
+            the poster's right half reads as empty (design review, finding 2). */}
         <Placeholder
           background
+          showLabel
           label="Hero photo of kids exploring the coast"
-          className="absolute inset-0"
+          className="absolute inset-0 bg-white/5"
+          labelClassName="text-white/40"
         />
         {/* Blends the photo edge into the purple text column, as in the
             template's hero-photo::after gradient. */}

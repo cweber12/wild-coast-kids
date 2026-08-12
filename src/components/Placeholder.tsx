@@ -1,8 +1,10 @@
 type PlaceholderProps = {
   /** Describes the future image; doubles as the accessible name. */
   label: string;
-  /** Background fills drop the dashed frame and the visible label. */
+  /** Background fills drop the dashed frame and, by default, the label. */
   background?: boolean;
+  /** Overrides the label's visibility (defaults to hidden on backgrounds). */
+  showLabel?: boolean;
   className?: string;
   labelClassName?: string;
 };
@@ -15,6 +17,7 @@ type PlaceholderProps = {
 export function Placeholder({
   label,
   background = false,
+  showLabel = !background,
   className = "",
   labelClassName = "",
 }: PlaceholderProps) {
@@ -26,7 +29,7 @@ export function Placeholder({
         background ? "" : "border-[1.5px] border-dashed border-purple/38"
       } ${className}`}
     >
-      {!background && (
+      {showLabel && (
         <span
           aria-hidden="true"
           className={`flex size-full min-h-12 items-center justify-center p-3 text-center text-2xs font-extrabold tracking-[0.08em] uppercase text-dark/50 ${labelClassName}`}
