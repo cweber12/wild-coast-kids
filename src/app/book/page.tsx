@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import Link from "next/link";
+import { PillLink } from "@/components/PillLink";
 import { ReservedSlot } from "@/components/ReservedSlot";
 
 export const metadata: Metadata = {
@@ -23,12 +23,11 @@ export default function Book() {
           something wild. Online booking is on its way; until it lands, the
           interest list is the fastest way to grab a spot.
         </p>
-        <Link
-          href="/#community"
-          className="rounded-pill mb-12 inline-block bg-purple px-7 py-[13px] text-sm font-black text-white transition-colors duration-fast hover:bg-purple-deep"
-        >
-          Join the interest list →
-        </Link>
+        <div className="mb-12">
+          <PillLink href="/#community" tone="purple">
+            Join the interest list →
+          </PillLink>
+        </div>
         <ReservedSlot
           emoji="🗓️"
           headline="Online booking coming soon."

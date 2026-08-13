@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { PillLink } from "./PillLink";
 import { ReservedSlot } from "./ReservedSlot";
 
 export function Conditions() {
@@ -19,12 +19,9 @@ export function Conditions() {
           Real-time surf, tide, wind and visibility for San Diego&apos;s coast —
           built by a local, for families planning tidepool visits and hikes.
         </p>
-        <Link
-          href="/conditions"
-          className="rounded-pill inline-block border-2 border-white/50 px-[24px] py-[10px] text-sm font-bold text-white"
-        >
+        <PillLink href="/conditions" tone="outline-light">
           Learn more →
-        </Link>
+        </PillLink>
       </div>
       <ReservedSlot
         emoji="🌊"

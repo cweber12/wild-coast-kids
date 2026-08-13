@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { PillLink } from "./PillLink";
 import { Placeholder } from "./Placeholder";
 
 const COOP_ACTIVITIES = [
@@ -55,18 +55,12 @@ export function ProgramCards() {
               </span>
             </div>
             <div className="flex flex-wrap gap-3">
-              <Link
-                href="/book"
-                className="rounded-pill bg-yellow px-[26px] py-3 text-sm font-black text-ink"
-              >
+              <PillLink href="/book" tone="yellow">
                 Book a class →
-              </Link>
-              <Link
-                href="/art"
-                className="rounded-pill border-2 border-white/50 px-[24px] py-[10px] text-sm font-bold text-white"
-              >
+              </PillLink>
+              <PillLink href="/art" tone="outline-light">
                 Learn more →
-              </Link>
+              </PillLink>
             </div>
           </div>
         </article>
@@ -115,18 +109,12 @@ export function ProgramCards() {
               and hands-on discovery. Spots limited for fall.
             </p>
             <div className="flex flex-wrap gap-3">
-              <a
-                href="#community"
-                className="rounded-pill bg-yellow px-[26px] py-3 text-sm font-black text-ink"
-              >
+              <PillLink href="#community" tone="yellow">
                 Join the interest list →
-              </a>
-              <Link
-                href="/coop"
-                className="rounded-pill border-2 border-white/50 px-[24px] py-[10px] text-sm font-bold text-white"
-              >
+              </PillLink>
+              <PillLink href="/coop" tone="outline-light">
                 Learn more →
-              </Link>
+              </PillLink>
             </div>
           </div>
         </article>

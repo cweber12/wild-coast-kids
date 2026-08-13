@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import Link from "next/link";
+import { PillLink } from "@/components/PillLink";
 import { Placeholder } from "@/components/Placeholder";
 import { ReservedSlot } from "@/components/ReservedSlot";
 
@@ -24,12 +24,11 @@ export default function Coop() {
           journaling and hands-on science. Spots are limited for fall, and full
           co-op details are on their way.
         </p>
-        <Link
-          href="/#community"
-          className="rounded-pill mb-12 inline-block bg-ocean px-7 py-[13px] text-sm font-black text-white transition-colors duration-fast"
-        >
-          Join the interest list →
-        </Link>
+        <div className="mb-12">
+          <PillLink href="/#community" tone="ocean">
+            Join the interest list →
+          </PillLink>
+        </div>
         {/* Reserved slots for the content pass: the weekly rhythm and photos
             from past adventures. */}
         <div className="grid gap-4 md:grid-cols-2">
