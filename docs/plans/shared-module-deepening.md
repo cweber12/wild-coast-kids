@@ -151,6 +151,24 @@ poster's height and a few pixels of extra gap above an anchor target, and
 neither is visible; clipped navigation is. The trade is recorded in
 ADR-0003.
 
+## Addendum — 2026-08-13 (PR B build)
+
+- **Slice 5 covered one more CTA than planned.** The plan scoped it to the
+  form's submit control, but the co-op card said "Join interest list"
+  without the article. `CONTEXT.md` says every CTA that joins the interest
+  list reads "Join the interest list", so both moved together — the point
+  of the slice is that the glossary becomes true of the code.
+- **`CommunityForm` became `InterestListTeaser`.** Both halves of the name
+  come from the glossary.
+- **`PillLink` unifies geometry as well as tone**, which the plan implied
+  but did not say. Eleven call sites carried five paddings; they converge
+  on the one the hero and the page CTAs already used, so the most common
+  pill is unchanged and the rest move two or three pixels. Solid and
+  outline now differ by exactly the border width so their outer boxes line
+  up — already true on the program cards, not in the hero.
+- **The coverage floor rises** to what the repo now achieves, per the rule
+  in the threshold comment.
+
 ## Out of scope
 
 Real copy, images and logo; the booking provider and its embed; the
