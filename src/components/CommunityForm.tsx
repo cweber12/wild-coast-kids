@@ -1,26 +1,15 @@
-"use client";
-
-import { useState } from "react";
-
-const INTERESTS = [
-  { value: "art", emoji: "🎨", label: "Art Classes" },
-  { value: "tidepools", emoji: "🌊", label: "Tidepools" },
-  { value: "hikes", emoji: "🌿", label: "Hikes" },
-  { value: "science", emoji: "🔬", label: "Science" },
-];
-
-/* 16px on touch widths — iOS zooms into any input below 16px on focus. */
-const INPUT_CLASSES =
-  "rounded-tile w-full border-[1.5px] border-lavender bg-cream px-4 py-[13px] text-[16px] text-dark transition-colors duration-fast outline-none focus:border-purple focus:bg-white md:text-base";
+import Link from "next/link";
+import { InterestListForm } from "./InterestListForm";
 
 /**
- * The interest-list form. Client-side only by decision: submit swaps the
- * form for the success state and no data leaves the page — wiring a real
- * destination (email/sheet/service) is a future slice.
+ * The landing page's interest-list teaser: the pitch, a link on to the fuller
+ * /community page, and the form itself alongside.
+ *
+ * The teaser and the form are separate modules because /community renders the
+ * form without this teaser. Rendering the whole section there put the "Meet
+ * the community" link on the page it points at.
  */
 export function CommunityForm() {
-  const [submitted, setSubmitted] = useState(false);
-
   return (
     <section
       id="community"
@@ -32,114 +21,18 @@ export function CommunityForm() {
           <br />
           the <span className="text-purple">loop.</span>
         </h2>
-        <p className="leading-relaxed text-base text-fog">
+        <p className="leading-relaxed mb-6 text-base text-fog">
           Drop your info and we&apos;ll reach out with new classes, co-op
           updates and coastal adventures.
         </p>
+        <Link
+          href="/community"
+          className="rounded-pill inline-block border-2 border-lavender px-[24px] py-[10px] text-sm font-bold text-dark"
+        >
+          Meet the community →
+        </Link>
       </div>
-      {/* min-h ≈ the rendered form, so the success swap doesn't collapse the
-          card and yank the page while the user is looking at it. */}
-      <div className="rounded-card shadow-card min-h-140 bg-white p-9">
-        {submitted ? (
-          <div
-            role="status"
-            className="flex min-h-120 flex-col justify-center px-5 py-10 text-center"
-          >
-            <span aria-hidden="true" className="mb-4 block text-[52px]">
-              🎉
-            </span>
-            <h3 className="mb-2 text-[22px] font-black italic">
-              You&apos;re in!
-            </h3>
-            <p className="leading-normal text-base text-fog">
-              We&apos;ll be in touch soon with updates, new classes and coastal
-              adventures.
-            </p>
-          </div>
-        ) : (
-          <form
-            onSubmit={(event) => {
-              event.preventDefault();
-              setSubmitted(true);
-            }}
-          >
-            <div className="mb-4.5">
-              <label
-                htmlFor="community-name"
-                className="mb-2 block text-2xs font-extrabold tracking-wider uppercase"
-              >
-                Your name
-              </label>
-              <input
-                id="community-name"
-                name="name"
-                type="text"
-                required
-                placeholder="First and last name"
-                className={INPUT_CLASSES}
-              />
-            </div>
-            <div className="mb-4.5">
-              <label
-                htmlFor="community-email"
-                className="mb-2 block text-2xs font-extrabold tracking-wider uppercase"
-              >
-                Email
-              </label>
-              <input
-                id="community-email"
-                name="email"
-                type="email"
-                required
-                placeholder="you@email.com"
-                className={INPUT_CLASSES}
-              />
-            </div>
-            <div className="mb-4.5">
-              <label
-                htmlFor="community-ages"
-                className="mb-2 block text-2xs font-extrabold tracking-wider uppercase"
-              >
-                Kids&apos; ages
-              </label>
-              <input
-                id="community-ages"
-                name="ages"
-                type="text"
-                placeholder="e.g. 6, 9, 12"
-                className={INPUT_CLASSES}
-              />
-            </div>
-            <fieldset className="mb-4.5">
-              <legend className="mb-2 block text-2xs font-extrabold tracking-wider uppercase">
-                Interested in
-              </legend>
-              <div className="mt-2 grid grid-cols-2 gap-2.5">
-                {INTERESTS.map(({ value, emoji, label }) => (
-                  <label
-                    key={value}
-                    className="flex cursor-pointer items-center gap-2 text-sm font-bold"
-                  >
-                    <input
-                      type="checkbox"
-                      name="interest"
-                      value={value}
-                      className="size-4 accent-purple"
-                    />
-                    <span aria-hidden="true">{emoji}</span> {label}
-                  </label>
-                ))}
-              </div>
-            </fieldset>
-            <button
-              type="submit"
-              className="rounded-pill mt-6 w-full cursor-pointer bg-purple p-[15px] text-base font-black tracking-[0.06em] text-white transition-colors duration-fast hover:bg-purple-deep"
-            >
-              Join the community →
-            </button>
-          </form>
-        )}
-      </div>
+      <InterestListForm />
     </section>
   );
 }

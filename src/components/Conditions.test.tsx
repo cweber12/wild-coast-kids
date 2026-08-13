@@ -9,6 +9,14 @@ test("the conditions heading and embed slot are reachable at #conditions", () =>
   expect(heading.textContent).toContain("conditions");
   expect(screen.getByText(/conditions tool coming soon/i)).toBeDefined();
 
-  // The nav deep-links here; the id is stable API.
+  // Teasers deep-link here; the id is stable API.
   expect(container.querySelector("section#conditions")).not.toBeNull();
+});
+
+test("the section teases the full conditions page", () => {
+  render(<Conditions />);
+
+  expect(
+    screen.getByRole("link", { name: /learn more/i }).getAttribute("href"),
+  ).toBe("/conditions");
 });

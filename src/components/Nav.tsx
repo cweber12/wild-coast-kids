@@ -1,10 +1,11 @@
+import { NavLink } from "./NavLink";
 import { Placeholder } from "./Placeholder";
 
 const SECTION_LINKS = [
-  { href: "#art", label: "Art Classes" },
-  { href: "#coop", label: "Tuesday Co-op" },
-  { href: "#conditions", label: "Conditions" },
-  { href: "#community", label: "Community" },
+  { href: "/art", label: "Art Classes" },
+  { href: "/coop", label: "Tuesday Co-op" },
+  { href: "/conditions", label: "Conditions" },
+  { href: "/community", label: "Community" },
 ];
 
 export function Nav() {
@@ -22,21 +23,21 @@ export function Nav() {
       </div>
       <div className="order-last flex w-full flex-wrap justify-between gap-x-2 md:order-0 md:w-auto md:flex-nowrap md:justify-start md:gap-7">
         {SECTION_LINKS.map(({ href, label }) => (
-          <a
+          <NavLink
             key={href}
             href={href}
-            className="border-b-2 border-transparent pb-0.5 text-[9px] font-extrabold tracking-wider whitespace-nowrap text-dark uppercase transition-colors duration-fast hover:border-yellow md:text-2xs"
+            className="border-b-2 border-transparent pb-0.5 text-[9px] font-extrabold tracking-wider whitespace-nowrap text-dark uppercase transition-colors duration-fast hover:border-yellow aria-[current=page]:border-yellow md:text-2xs"
           >
             {label}
-          </a>
+          </NavLink>
         ))}
       </div>
-      <a
-        href="#art"
+      <NavLink
+        href="/book"
         className="rounded-pill shrink-0 bg-yellow px-3.5 py-2 text-2xs font-black tracking-[0.06em] whitespace-nowrap text-ink md:px-5.5 md:py-2.25 md:text-xs"
       >
         Book Now →
-      </a>
+      </NavLink>
     </nav>
   );
 }

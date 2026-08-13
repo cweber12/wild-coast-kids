@@ -89,6 +89,43 @@ each slice = route + shell + metadata + its nav flip + teaser link):
 Per-slice issues are skipped deliberately: one person works these in
 sequence from this file, and splitting would buy nothing (CLAUDE.md §5).
 
+## Addendum — 2026-08-12 (build)
+
+- **The /book slice flipped one more CTA than planned.** The art card's
+  "Book a class" link carried the template's placeholder calendly.com
+  behind a TODO(verify); pointing it at `/book` retires that TODO and
+  moves the provider decision behind the booking page. The hero CTAs
+  stay on their program anchors — their flow targets the cards, not
+  booking directly.
+- **The active-state assertion landed one slice early.** NavLink and its
+  aria-current tests shipped with `/book` (the component's own slice)
+  rather than waiting for `/art`; the `/art` slice then only moved the
+  nav's link row onto the existing machinery.
+
+## Addendum — 2026-08-12 (review)
+
+- **`/community` linked to itself.** The `/community` slice reused the
+  landing section wholesale, so the teaser's "Meet the community" CTA
+  rendered on the page it points at. Fixed by splitting `InterestListForm`
+  out of `CommunityForm`: the landing page composes teaser + form, and
+  `/community` renders the form alone under its own heading. A MUST FAIL
+  regression test went in first, as `test.fails` — the gate table's
+  `mustFail` flag judges a whole gate, and the test gate runs the whole
+  suite, so it cannot express one failing test inside a passing suite.
+- **`CONTEXT.md` landed here**, though this plan put it out of scope. The
+  split needed a name for the thing the form collects, and the repo had
+  four in use: "interest list" (program card, `/book`, `/coop`), "join the
+  community" (the form's own button), "stay in the loop" (its heading) and
+  "email list" (in conversation). The glossary picks **interest list**.
+- **Two inconsistencies are knowingly left open**, both deliberately out of
+  this PR's scope: the form's submit button still reads "Join the
+  community", and `CommunityForm` no longer contains a form. Both are
+  rename/copy slices, which this repo keeps separate from bugfixes.
+- **The "no content layer" rejection above is worth reopening**, but not
+  here. It was decided when exactly one paragraph was shared; the reserved
+  slot is now duplicated at six call sites. That is a structural
+  duplication rather than a copy one, and it gets its own plan.
+
 ## Out of scope
 
 Real copy, images and logo, booking provider choice and its embed, the
