@@ -9,7 +9,7 @@ test("the teaser carries the interest-list form alongside it", () => {
   // behavior is asserted in InterestListForm.test.tsx.
   expect(screen.getByRole("textbox", { name: /your name/i })).toBeDefined();
   expect(
-    screen.getByRole("button", { name: /join the community/i }),
+    screen.getByRole("button", { name: /join the interest list/i }),
   ).toBeDefined();
 });
 

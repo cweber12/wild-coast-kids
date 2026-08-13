@@ -22,7 +22,7 @@ test("each card's CTA points where its flow goes", () => {
   const book = screen.getByRole("link", { name: /book a class/i });
   expect(book.getAttribute("href")).toBe("/book");
 
-  const join = screen.getByRole("link", { name: /join interest list/i });
+  const join = screen.getByRole("link", { name: /join the interest list/i });
   expect(join.getAttribute("href")).toBe("#community");
 
   const learnMore = screen

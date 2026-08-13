@@ -119,7 +119,7 @@ export function ProgramCards() {
                 href="#community"
                 className="rounded-pill bg-yellow px-[26px] py-3 text-sm font-black text-ink"
               >
-                Join interest list →
+                Join the interest list →
               </a>
               <Link
                 href="/coop"
