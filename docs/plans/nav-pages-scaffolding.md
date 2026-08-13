@@ -89,6 +89,19 @@ each slice = route + shell + metadata + its nav flip + teaser link):
 Per-slice issues are skipped deliberately: one person works these in
 sequence from this file, and splitting would buy nothing (CLAUDE.md §5).
 
+## Addendum — 2026-08-12 (build)
+
+- **The /book slice flipped one more CTA than planned.** The art card's
+  "Book a class" link carried the template's placeholder calendly.com
+  behind a TODO(verify); pointing it at `/book` retires that TODO and
+  moves the provider decision behind the booking page. The hero CTAs
+  stay on their program anchors — their flow targets the cards, not
+  booking directly.
+- **The active-state assertion landed one slice early.** NavLink and its
+  aria-current tests shipped with `/book` (the component's own slice)
+  rather than waiting for `/art`; the `/art` slice then only moved the
+  nav's link row onto the existing machinery.
+
 ## Out of scope
 
 Real copy, images and logo, booking provider choice and its embed, the
