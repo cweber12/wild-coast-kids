@@ -20,7 +20,7 @@ test("each card's CTA points where its flow goes", () => {
   render(<ProgramCards />);
 
   const book = screen.getByRole("link", { name: /book a class/i });
-  expect(book.getAttribute("target")).toBe("_blank");
+  expect(book.getAttribute("href")).toBe("/book");
 
   const join = screen.getByRole("link", { name: /join interest list/i });
   expect(join.getAttribute("href")).toBe("#community");

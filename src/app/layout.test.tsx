@@ -8,6 +8,12 @@ vi.mock("next/font/google", () => ({
   Montserrat: () => ({ variable: "--font-montserrat" }),
 }));
 
+// The nav's routed links read the current pathname from the app router,
+// which vitest does not mount.
+vi.mock("next/navigation", () => ({
+  usePathname: () => "/",
+}));
+
 test("the layout wraps every page in the shared nav and footer", () => {
   render(
     <RootLayout params={Promise.resolve({})}>

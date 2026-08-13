@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { Placeholder } from "./Placeholder";
 
 const COOP_ACTIVITIES = [
@@ -53,16 +54,12 @@ export function ProgramCards() {
                 Outdoors
               </span>
             </div>
-            {/* TODO(verify): the template ships a bare calendly.com — swap in
-                the real booking URL when it exists. */}
-            <a
-              href="https://calendly.com"
-              target="_blank"
-              rel="noopener noreferrer"
+            <Link
+              href="/book"
               className="rounded-pill self-start bg-yellow px-[26px] py-3 text-sm font-black text-ink"
             >
               Book a class →
-            </a>
+            </Link>
           </div>
         </article>
 

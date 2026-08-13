@@ -14,7 +14,11 @@ const montserrat = Montserrat({
 });
 
 export const metadata: Metadata = {
-  title: "Wild Coast Kids",
+  // Pages set their own titles; the template keeps the brand on every tab.
+  title: {
+    default: "Wild Coast Kids",
+    template: "%s — Wild Coast Kids",
+  },
   description:
     "Art classes and a Tuesday outdoor co-op for K–8 kids, rooted in the San Diego coast. Charter fund eligible.",
 };

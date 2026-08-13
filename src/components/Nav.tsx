@@ -1,3 +1,4 @@
+import { NavLink } from "./NavLink";
 import { Placeholder } from "./Placeholder";
 
 const SECTION_LINKS = [
@@ -31,12 +32,12 @@ export function Nav() {
           </a>
         ))}
       </div>
-      <a
-        href="#art"
+      <NavLink
+        href="/book"
         className="rounded-pill shrink-0 bg-yellow px-3.5 py-2 text-2xs font-black tracking-[0.06em] whitespace-nowrap text-ink md:px-5.5 md:py-2.25 md:text-xs"
       >
         Book Now →
-      </a>
+      </NavLink>
     </nav>
   );
 }
