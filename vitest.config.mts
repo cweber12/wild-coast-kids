@@ -20,14 +20,13 @@ export default defineConfig({
       // denominator grew with deliberately-untested entry plumbing (see
       // docs/adr/0002), and the commit doing so must name the statements and
       // why they stay untested. Nothing is excluded to flatter the number:
-      // run-gates.mjs and run-vitest.mjs sit at 0% on purpose and layout.tsx
-      // is untested, and all three drag these figures down in plain sight
-      // rather than quietly.
+      // run-gates.mjs and run-vitest.mjs sit at 0% on purpose, and both drag
+      // these figures down in plain sight rather than quietly.
       thresholds: {
-        statements: 60.39,
+        statements: 63.36,
         branches: 73.52,
-        functions: 78.94,
-        lines: 62.63,
+        functions: 81.57,
+        lines: 65.93,
       },
     },
   },
