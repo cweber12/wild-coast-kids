@@ -38,3 +38,18 @@ test("the marquee rides inside the viewport block", () => {
 
   expect(screen.getAllByText("Art Classes").length).toBeGreaterThan(0);
 });
+
+test("the poster is the window less the nav, at both widths", () => {
+  const { container } = render(<HeroViewport />);
+
+  // The marquee sits at the poster's bottom edge, so if this block were a
+  // full 100dvh the nav above it would push the marquee off screen. Both
+  // breakpoints subtract, because the nav is taller on the two-row layout.
+  const poster = container.firstElementChild;
+  expect(poster?.className).toContain(
+    "min-h-[calc(100dvh-var(--spacing-nav-sm))]",
+  );
+  expect(poster?.className).toContain(
+    "md:min-h-[calc(100dvh-var(--spacing-nav))]",
+  );
+});

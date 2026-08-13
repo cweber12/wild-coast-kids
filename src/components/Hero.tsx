@@ -2,7 +2,7 @@ import { Placeholder } from "./Placeholder";
 
 export function Hero() {
   return (
-    <section className="relative grid flex-1 overflow-hidden bg-purple pt-[90px] pb-15 md:grid-cols-2 md:pt-nav md:pb-0">
+    <section className="relative grid flex-1 overflow-hidden bg-purple pb-15 md:grid-cols-2 md:pb-0">
       <div className="relative z-10 col-start-1 row-start-1 flex flex-col justify-center px-6 pt-5 md:px-12 md:py-15">
         <p className="mb-7 text-2xs font-extrabold tracking-widest text-yellow uppercase">
           📍 San Diego · K–8 · Outdoors

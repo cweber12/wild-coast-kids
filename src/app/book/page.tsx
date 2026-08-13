@@ -9,7 +9,7 @@ export const metadata: Metadata = {
 
 export default function Book() {
   return (
-    <main className="flex-1 pt-[90px] md:pt-nav">
+    <main className="flex-1">
       <section className="px-gutter-sm py-section-sm md:px-gutter md:py-section">
         <p className="mb-7 text-2xs font-extrabold tracking-widest text-purple uppercase">
           In-person · Group & Private · K–8

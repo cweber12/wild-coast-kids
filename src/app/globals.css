@@ -48,7 +48,14 @@
   --spacing-gutter-sm: 24px;
   --spacing-section: 80px;
   --spacing-section-sm: 60px;
-  --spacing-nav: 70px;
+  /* The nav takes its height *from* these, rather than these describing the
+     height it happens to render at. That direction is the point: the old
+     70px described a nav that measured about 82px, and nothing could notice.
+     The nav sets min-h from them, so text scaling can still grow it; the two
+     consumers (the hero poster's height, scroll-padding-top) tolerate being
+     a few pixels under far better than the nav tolerates clipping. */
+  --spacing-nav: 84px;
+  --spacing-nav-sm: 90px;
 
   /* Radii */
   --radius-tile: 12px;
