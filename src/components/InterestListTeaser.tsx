@@ -9,7 +9,7 @@ import { InterestListForm } from "./InterestListForm";
  * form without this teaser. Rendering the whole section there put the "Meet
  * the community" link on the page it points at.
  */
-export function CommunityForm() {
+export function InterestListTeaser() {
   return (
     <section
       id="community"
