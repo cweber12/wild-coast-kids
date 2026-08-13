@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { CommunityForm } from "@/components/CommunityForm";
+import { InterestListForm } from "@/components/InterestListForm";
 import { Placeholder } from "@/components/Placeholder";
 
 export const metadata: Metadata = {
@@ -42,7 +42,20 @@ export default function Community() {
           />
         </div>
       </section>
-      <CommunityForm />
+      {/* The form alone, not the landing teaser: this is the page that
+          teaser points at. */}
+      <section className="px-gutter-sm pb-section-sm md:px-gutter md:pb-section">
+        <h2 className="text-title leading-display mb-4 font-black italic">
+          Join the <span className="text-purple">interest list.</span>
+        </h2>
+        <p className="leading-relaxed mb-6 max-w-130 text-base text-fog">
+          Drop your info and we&apos;ll reach out with new classes, co-op
+          updates and coastal adventures.
+        </p>
+        <div className="max-w-130">
+          <InterestListForm />
+        </div>
+      </section>
     </main>
   );
 }
