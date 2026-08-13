@@ -29,14 +29,7 @@ test("the layout wraps every page in the shared nav and footer", () => {
   expect(screen.getByRole("main")).toBeDefined();
 });
 
-// MUST FAIL: the bug this asserts against is live. See the note in
-// src/app/community/page.test.tsx for why test.fails stands in for the gate
-// table's mustFail flag. The fix commit turns this into a plain test().
-//
-// The h-full assertion above the scroll-pt ones is deliberate: it proves the
-// className was read from somewhere real, so this cannot pass by throwing on
-// an undefined it never found.
-test.fails("anchor targets come to rest below the nav, not under it", () => {
+test("anchor targets come to rest below the nav, not under it", () => {
   render(
     <RootLayout params={Promise.resolve({})}>
       <main>page content</main>
