@@ -25,8 +25,10 @@ test("each card's CTA points where its flow goes", () => {
   const join = screen.getByRole("link", { name: /join interest list/i });
   expect(join.getAttribute("href")).toBe("#community");
 
-  const learnMore = screen.getByRole("link", { name: /learn more/i });
-  expect(learnMore.getAttribute("href")).toBe("/art");
+  const learnMore = screen
+    .getAllByRole("link", { name: /learn more/i })
+    .map((link) => link.getAttribute("href"));
+  expect(learnMore).toEqual(["/art", "/coop"]);
 });
 
 test("the co-op card lists all four activities", () => {

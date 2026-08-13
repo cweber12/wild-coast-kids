@@ -114,12 +114,20 @@ export function ProgramCards() {
               Exploring San Diego&apos;s wild coast through science, journaling
               and hands-on discovery. Spots limited for fall.
             </p>
-            <a
-              href="#community"
-              className="rounded-pill self-start bg-yellow px-[26px] py-3 text-sm font-black text-ink"
-            >
-              Join interest list →
-            </a>
+            <div className="flex flex-wrap gap-3">
+              <a
+                href="#community"
+                className="rounded-pill bg-yellow px-[26px] py-3 text-sm font-black text-ink"
+              >
+                Join interest list →
+              </a>
+              <Link
+                href="/coop"
+                className="rounded-pill border-2 border-white/50 px-[24px] py-[10px] text-sm font-bold text-white"
+              >
+                Learn more →
+              </Link>
+            </div>
           </div>
         </article>
       </div>

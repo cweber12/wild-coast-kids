@@ -27,7 +27,7 @@ test("each section link points at its current destination", () => {
 
   for (const [name, href] of [
     ["Art Classes", "/art"],
-    ["Tuesday Co-op", "#coop"],
+    ["Tuesday Co-op", "/coop"],
     ["Conditions", "#conditions"],
     ["Community", "#community"],
   ]) {

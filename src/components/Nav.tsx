@@ -5,7 +5,7 @@ import { Placeholder } from "./Placeholder";
 // (docs/plans/nav-pages-scaffolding.md).
 const SECTION_LINKS = [
   { href: "/art", label: "Art Classes" },
-  { href: "#coop", label: "Tuesday Co-op" },
+  { href: "/coop", label: "Tuesday Co-op" },
   { href: "#conditions", label: "Conditions" },
   { href: "#community", label: "Community" },
 ];
