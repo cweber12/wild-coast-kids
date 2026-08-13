@@ -116,6 +116,41 @@ Per-slice issues are skipped, per CLAUDE.md §5: these are sequential, they
 touch the same files, and two people could not pick up two of them without
 colliding.
 
+## Addendum — 2026-08-12 (correction, before slice 2)
+
+**Slice 2 is dropped, and the constraint that justified it was wrong.**
+
+The plan above claims `overflow-x: hidden` on `body` makes `body` a scroll
+container and breaks `position: sticky`. That is the wrong reading of the
+spec for this configuration. Overflow propagates: when the root element's
+overflow is `visible` — nothing sets it on `html` here — the **body's**
+overflow value is applied to the viewport instead, and `body` itself is
+then treated as `overflow: visible`. So `body` is not a scroll container,
+and sticky descendants behave normally. The gotcha is real when overflow
+sits on `html` or on an intermediate ancestor, neither of which applies.
+
+So `overflow-x-hidden` stays where it is. Removing it would have risked
+reintroducing the horizontal scroll it was presumably added to suppress,
+to fix a problem that was not there.
+
+**Slice 3 changes shape as a result.** The plan said to measure the nav's
+height and write it into the token. That keeps the token _describing_ an
+emergent value, which is the same drift that produced the 70px/82px
+mismatch in the first place — it would just be correct for a while longer.
+
+Instead the dependency inverts: the nav takes its height **from** the
+token (`min-h-nav-sm md:min-h-nav`), so the token is the source of truth
+rather than a description of one. Nothing needs measuring, and the two
+remaining consumers — the hero poster's height and `scroll-padding-top` —
+are correct by construction rather than by vigilance.
+
+`min-h-*` rather than a fixed `h-*`: pinning the height exactly would
+guarantee the calc is exact to the pixel, but it clips the nav if a reader
+scales text up. The inexactness this concedes is a few pixels on the
+poster's height and a few pixels of extra gap above an anchor target, and
+neither is visible; clipped navigation is. The trade is recorded in
+ADR-0003.
+
 ## Out of scope
 
 Real copy, images and logo; the booking provider and its embed; the
