@@ -1,0 +1,56 @@
+# Wild Coast Kids
+
+The site for an art-class and outdoor-co-op program for K–8 kids in San Diego.
+This file is the project's domain glossary: the words the code, the copy, the
+issues and the plans all use for the same things. When two words are in play
+for one concept, this file picks one and lists the rest under _Avoid_.
+
+## Language
+
+**Program**:
+One of the two things the site offers — art classes, and the Tuesday co-op.
+Each has a card on the landing page and a page of its own.
+_Avoid_: offering, service, class (a class is one session of the art program)
+
+**Teaser**:
+A landing-page section that summarises a topic and links to its full page. The
+teaser stays on `/` once the page exists; it is not a copy of the page.
+_Avoid_: preview, blurb, summary, excerpt
+
+**Interest list**:
+The list a parent joins to hear about new classes and co-op spots. Collected by
+the interest-list form, which appears on the landing page and on `/community`.
+Every CTA that points at it reads "Join the interest list".
+_Avoid_: email list, mailing list, the community, the loop
+
+**Reserved slot**:
+A labeled stand-in for content that has been decided on but not yet written or
+built — a schedule, a booking scheduler, the conditions tool. Renders as a
+dashed frame with an emoji and a "coming soon" line naming what lands there.
+_Avoid_: coming-soon box, empty state, placeholder (that word is taken, below)
+
+**Placeholder**:
+A labeled stand-in for a future _image_ — logo, hero photo, card background,
+gallery frame. Carries the accessible name the real image will inherit, so
+swapping in the photograph changes nothing for assistive tech.
+_Avoid_: stub, dummy image, reserved slot (that is for content, not images)
+
+**Strip**:
+A band of content that loops horizontally — the yellow marquee and the gallery
+film strip. Every strip moves at one shared pixels-per-second speed, whatever
+its width.
+_Avoid_: carousel, ticker, marquee (the marquee is one strip, not the concept)
+
+**Pill**:
+The site's call-to-action shape: a fully-rounded link. Five tones, and the list
+is closed — `yellow`, `purple`, `ocean`, `outline-light`, `outline-dark`. A
+pill is a link; the interest-list form's submit control is the site's only
+true button.
+_Avoid_: button, chip, badge (a badge is the smaller non-interactive pill on a
+program card)
+
+**Conditions**:
+The real-time surf, tide, wind and visibility tool for San Diego's coast, built
+separately and embedded here. Has a teaser on the landing page and a page of
+its own; both currently carry a reserved slot for it.
+_Avoid_: weather, forecast, surf report
