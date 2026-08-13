@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Placeholder } from "@/components/Placeholder";
+import { ReservedSlot } from "@/components/ReservedSlot";
 
 export const metadata: Metadata = {
   title: "Art Classes",
@@ -32,18 +33,11 @@ export default function Art() {
         {/* Reserved slots for the content pass: real schedule, pricing and
             student photos. */}
         <div className="grid gap-4 md:grid-cols-2">
-          <div className="rounded-box border-2 border-dashed border-lavender bg-white/60 px-8 py-12 text-center">
-            <span aria-hidden="true" className="mb-3.5 block text-5xl">
-              🎨
-            </span>
-            <p className="leading-normal text-sm text-fog">
-              Schedule & pricing coming soon.
-              <br />
-              <br />
-              Session times, group and private options, and charter-fund details
-              land here.
-            </p>
-          </div>
+          <ReservedSlot
+            emoji="🎨"
+            headline="Schedule & pricing coming soon."
+            detail="Session times, group and private options, and charter-fund details land here."
+          />
           <Placeholder
             label="Student artwork gallery"
             className="rounded-box min-h-60"

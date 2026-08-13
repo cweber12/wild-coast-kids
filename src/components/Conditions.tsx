@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { ReservedSlot } from "./ReservedSlot";
 
 export function Conditions() {
   return (
@@ -25,18 +26,12 @@ export function Conditions() {
           Learn more →
         </Link>
       </div>
-      {/* The reserved slot for the future conditions-tool embed. */}
-      <div className="rounded-box border-2 border-dashed border-white/20 bg-white/7 px-8 py-12 text-center">
-        <span aria-hidden="true" className="mb-3.5 block text-5xl">
-          🌊
-        </span>
-        <p className="leading-normal text-sm text-white/45">
-          Conditions tool coming soon.
-          <br />
-          <br />
-          Drop the URL and it embeds here automatically.
-        </p>
-      </div>
+      <ReservedSlot
+        emoji="🌊"
+        headline="Conditions tool coming soon."
+        detail="Drop the URL and it embeds here automatically."
+        tone="ocean"
+      />
     </section>
   );
 }

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { InterestListForm } from "@/components/InterestListForm";
 import { Placeholder } from "@/components/Placeholder";
+import { ReservedSlot } from "@/components/ReservedSlot";
 
 export const metadata: Metadata = {
   title: "Community",
@@ -25,17 +26,11 @@ export default function Community() {
         </p>
         {/* Reserved slots for the content pass: stories, meetups and photos. */}
         <div className="grid gap-4 md:grid-cols-2">
-          <div className="rounded-box border-2 border-dashed border-lavender bg-white/60 px-8 py-12 text-center">
-            <span aria-hidden="true" className="mb-3.5 block text-5xl">
-              🏄
-            </span>
-            <p className="leading-normal text-sm text-fog">
-              Community stories coming soon.
-              <br />
-              <br />
-              Photos, testimonials and upcoming meetups land here.
-            </p>
-          </div>
+          <ReservedSlot
+            emoji="🏄"
+            headline="Community stories coming soon."
+            detail="Photos, testimonials and upcoming meetups land here."
+          />
           <Placeholder
             label="Community photo gallery"
             className="rounded-box min-h-60"

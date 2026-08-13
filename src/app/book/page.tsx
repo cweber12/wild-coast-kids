@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { ReservedSlot } from "@/components/ReservedSlot";
 
 export const metadata: Metadata = {
   title: "Book Now",
@@ -28,18 +29,11 @@ export default function Book() {
         >
           Join the interest list →
         </Link>
-        {/* The reserved slot for the scheduler, once a provider is chosen. */}
-        <div className="rounded-box border-2 border-dashed border-lavender bg-white/60 px-8 py-12 text-center">
-          <span aria-hidden="true" className="mb-3.5 block text-5xl">
-            🗓️
-          </span>
-          <p className="leading-normal text-sm text-fog">
-            Online booking coming soon.
-            <br />
-            <br />
-            The scheduler embeds here once a booking provider is chosen.
-          </p>
-        </div>
+        <ReservedSlot
+          emoji="🗓️"
+          headline="Online booking coming soon."
+          detail="The scheduler embeds here once a booking provider is chosen."
+        />
       </section>
     </main>
   );

@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { ReservedSlot } from "@/components/ReservedSlot";
 
 export const metadata: Metadata = {
   title: "Conditions",
@@ -21,19 +22,12 @@ export default function Conditions() {
           built by a local, for families planning tidepool visits and hikes.
           Know before you go.
         </p>
-        {/* The reserved slot for the conditions tool, same contract as the
-            landing section's: drop the URL and it embeds here. */}
-        <div className="rounded-box border-2 border-dashed border-lavender bg-white/60 px-8 py-12 text-center">
-          <span aria-hidden="true" className="mb-3.5 block text-5xl">
-            🌊
-          </span>
-          <p className="leading-normal text-sm text-fog">
-            Conditions tool coming soon.
-            <br />
-            <br />
-            Drop the URL and it embeds here automatically.
-          </p>
-        </div>
+        {/* Same slot the landing section carries, on this page's surface. */}
+        <ReservedSlot
+          emoji="🌊"
+          headline="Conditions tool coming soon."
+          detail="Drop the URL and it embeds here automatically."
+        />
       </section>
     </main>
   );

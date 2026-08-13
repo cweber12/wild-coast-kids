@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Placeholder } from "@/components/Placeholder";
+import { ReservedSlot } from "@/components/ReservedSlot";
 
 export const metadata: Metadata = {
   title: "Tuesday Co-op",
@@ -32,18 +33,11 @@ export default function Coop() {
         {/* Reserved slots for the content pass: the weekly rhythm and photos
             from past adventures. */}
         <div className="grid gap-4 md:grid-cols-2">
-          <div className="rounded-box border-2 border-dashed border-lavender bg-white/60 px-8 py-12 text-center">
-            <span aria-hidden="true" className="mb-3.5 block text-5xl">
-              🌿
-            </span>
-            <p className="leading-normal text-sm text-fog">
-              Full co-op details coming soon.
-              <br />
-              <br />
-              The weekly rhythm, meeting spots, and fall sign-up details land
-              here.
-            </p>
-          </div>
+          <ReservedSlot
+            emoji="🌿"
+            headline="Full co-op details coming soon."
+            detail="The weekly rhythm, meeting spots, and fall sign-up details land here."
+          />
           <Placeholder
             label="Co-op adventures photo gallery"
             className="rounded-box min-h-60"
