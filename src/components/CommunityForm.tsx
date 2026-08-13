@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useState } from "react";
 
 const INTERESTS = [
@@ -32,10 +33,16 @@ export function CommunityForm() {
           <br />
           the <span className="text-purple">loop.</span>
         </h2>
-        <p className="leading-relaxed text-base text-fog">
+        <p className="leading-relaxed mb-6 text-base text-fog">
           Drop your info and we&apos;ll reach out with new classes, co-op
           updates and coastal adventures.
         </p>
+        <Link
+          href="/community"
+          className="rounded-pill inline-block border-2 border-lavender px-[24px] py-[10px] text-sm font-bold text-dark"
+        >
+          Meet the community →
+        </Link>
       </div>
       {/* min-h ≈ the rendered form, so the success swap doesn't collapse the
           card and yank the page while the user is looking at it. */}

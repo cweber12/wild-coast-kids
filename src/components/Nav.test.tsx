@@ -21,15 +21,14 @@ test("the nav exposes all four section links by name", () => {
   }
 });
 
-// Anchors flip to routes as each page lands; this table is the flip's record.
-test("each section link points at its current destination", () => {
+test("each section link points at its page", () => {
   render(<Nav />);
 
   for (const [name, href] of [
     ["Art Classes", "/art"],
     ["Tuesday Co-op", "/coop"],
     ["Conditions", "/conditions"],
-    ["Community", "#community"],
+    ["Community", "/community"],
   ]) {
     expect(screen.getByRole("link", { name }).getAttribute("href")).toBe(href);
   }

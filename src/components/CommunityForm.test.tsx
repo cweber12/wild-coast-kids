@@ -34,3 +34,13 @@ test("submitting swaps the form for the success state", () => {
     null,
   );
 });
+
+test("the section teases the full community page", () => {
+  render(<CommunityForm />);
+
+  expect(
+    screen
+      .getByRole("link", { name: /meet the community/i })
+      .getAttribute("href"),
+  ).toBe("/community");
+});

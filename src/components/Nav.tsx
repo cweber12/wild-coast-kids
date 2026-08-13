@@ -1,13 +1,11 @@
 import { NavLink } from "./NavLink";
 import { Placeholder } from "./Placeholder";
 
-// Entries flip from landing-section anchors to routes as each page lands
-// (docs/plans/nav-pages-scaffolding.md).
 const SECTION_LINKS = [
   { href: "/art", label: "Art Classes" },
   { href: "/coop", label: "Tuesday Co-op" },
   { href: "/conditions", label: "Conditions" },
-  { href: "#community", label: "Community" },
+  { href: "/community", label: "Community" },
 ];
 
 export function Nav() {
