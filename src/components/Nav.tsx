@@ -1,8 +1,10 @@
 import { NavLink } from "./NavLink";
 import { Placeholder } from "./Placeholder";
 
+// Entries flip from landing-section anchors to routes as each page lands
+// (docs/plans/nav-pages-scaffolding.md).
 const SECTION_LINKS = [
-  { href: "#art", label: "Art Classes" },
+  { href: "/art", label: "Art Classes" },
   { href: "#coop", label: "Tuesday Co-op" },
   { href: "#conditions", label: "Conditions" },
   { href: "#community", label: "Community" },
@@ -23,13 +25,13 @@ export function Nav() {
       </div>
       <div className="order-last flex w-full flex-wrap justify-between gap-x-2 md:order-0 md:w-auto md:flex-nowrap md:justify-start md:gap-7">
         {SECTION_LINKS.map(({ href, label }) => (
-          <a
+          <NavLink
             key={href}
             href={href}
-            className="border-b-2 border-transparent pb-0.5 text-[9px] font-extrabold tracking-wider whitespace-nowrap text-dark uppercase transition-colors duration-fast hover:border-yellow md:text-2xs"
+            className="border-b-2 border-transparent pb-0.5 text-[9px] font-extrabold tracking-wider whitespace-nowrap text-dark uppercase transition-colors duration-fast hover:border-yellow aria-[current=page]:border-yellow md:text-2xs"
           >
             {label}
-          </a>
+          </NavLink>
         ))}
       </div>
       <NavLink

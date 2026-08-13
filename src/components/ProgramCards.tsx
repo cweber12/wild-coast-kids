@@ -54,12 +54,20 @@ export function ProgramCards() {
                 Outdoors
               </span>
             </div>
-            <Link
-              href="/book"
-              className="rounded-pill self-start bg-yellow px-[26px] py-3 text-sm font-black text-ink"
-            >
-              Book a class →
-            </Link>
+            <div className="flex flex-wrap gap-3">
+              <Link
+                href="/book"
+                className="rounded-pill bg-yellow px-[26px] py-3 text-sm font-black text-ink"
+              >
+                Book a class →
+              </Link>
+              <Link
+                href="/art"
+                className="rounded-pill border-2 border-white/50 px-[24px] py-[10px] text-sm font-bold text-white"
+              >
+                Learn more →
+              </Link>
+            </div>
           </div>
         </article>
 
