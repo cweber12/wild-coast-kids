@@ -41,6 +41,28 @@ test("the booking CTA routes to the booking page", () => {
   expect(cta.getAttribute("href")).toBe("/book");
 });
 
+test("the nav occupies its own space instead of floating over the page", () => {
+  render(<Nav />);
+
+  // jsdom applies no stylesheets, so the class contract is the seam (as in
+  // StripTrack.test.tsx). This one is load-bearing: while the nav was fixed,
+  // five pages and Hero each carried their own copy of its height to leave
+  // room for it. Sticky means nothing has to know.
+  const nav = screen.getByRole("navigation");
+  expect(nav.className).toContain("sticky");
+  expect(nav.className).not.toContain("fixed");
+});
+
+test("the nav takes its height from the nav tokens", () => {
+  render(<Nav />);
+
+  // The token is the source of the height, not a description of it. The
+  // hero's poster and scroll-padding-top both subtract these same tokens.
+  const nav = screen.getByRole("navigation");
+  expect(nav.className).toContain("min-h-nav-sm");
+  expect(nav.className).toContain("md:min-h-nav");
+});
+
 test("the logo slot is a labeled image placeholder", () => {
   render(<Nav />);
 

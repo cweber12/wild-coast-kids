@@ -13,7 +13,10 @@ export function Nav() {
     // Two rows below md — logo and CTA above, links spread beneath — because
     // the four links plus the pill cannot share one 375px row (design
     // review, must-fix). md: restores the template's single row.
-    <nav className="fixed inset-x-0 top-0 z-50 flex flex-wrap items-center justify-between gap-y-2 border-b-2 border-purple bg-cream px-3 py-2.5 md:flex-nowrap md:px-8 md:py-3.5">
+    // sticky, not fixed: the nav occupies its own space, so no page has to
+    // reserve any for it. min-h comes from the nav tokens, which is what
+    // makes the hero's height and scroll-padding-top right by construction.
+    <nav className="min-h-nav-sm md:min-h-nav sticky top-0 z-50 flex flex-wrap items-center justify-between gap-y-2 border-b-2 border-purple bg-cream px-3 py-2.5 md:flex-nowrap md:px-8 md:py-3.5">
       <div className="size-10 shrink-0 overflow-hidden rounded-full md:size-13">
         <Placeholder
           label="Wild Coast Kids logo"

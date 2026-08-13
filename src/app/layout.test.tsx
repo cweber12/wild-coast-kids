@@ -28,3 +28,23 @@ test("the layout wraps every page in the shared nav and footer", () => {
   expect(screen.getByRole("contentinfo")).toBeDefined();
   expect(screen.getByRole("main")).toBeDefined();
 });
+
+test("anchor targets come to rest below the nav, not under it", () => {
+  render(
+    <RootLayout params={Promise.resolve({})}>
+      <main>page content</main>
+    </RootLayout>,
+  );
+
+  // React hoists <html> and <body> onto the real document rather than into
+  // the render container, so the layout's root classes are read from
+  // documentElement — querySelect("html") on the container finds nothing.
+  const html = document.documentElement.className;
+  expect(html).toContain("h-full");
+
+  // html carries motion-safe:scroll-smooth and the hero's CTAs target #art
+  // and #coop, so without scroll-padding the browser scrolls those sections
+  // flush to the top of the viewport — behind the nav.
+  expect(html).toContain("scroll-pt-nav-sm");
+  expect(html).toContain("md:scroll-pt-nav");
+});
