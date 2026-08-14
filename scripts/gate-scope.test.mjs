@@ -25,6 +25,7 @@ import {
   writeFileSync,
 } from "node:fs";
 import { join } from "node:path";
+import { ESLint } from "eslint";
 import { afterEach, describe, expect, it } from "vitest";
 
 /**
@@ -154,4 +155,17 @@ describe("vitest", () => {
       expect(collected).toContain(COLLECTED_HERE);
     },
   );
+});
+
+describe("eslint", () => {
+  // Asked of eslint's own resolver rather than by running it: `npm run lint`
+  // over a clean worktree reports nothing either way, so a green run would say
+  // only that the other branch happens to lint.
+  it("ignores agent worktrees", async () => {
+    expect(await new ESLint().isPathIgnored(IN_AGENT_WORKTREE)).toBe(true);
+  });
+
+  it("does not ignore this checkout's own source", async () => {
+    expect(await new ESLint().isPathIgnored(IN_THIS_CHECKOUT)).toBe(false);
+  });
 });
