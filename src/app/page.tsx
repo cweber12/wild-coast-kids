@@ -23,7 +23,7 @@ export default function Home() {
       <SnapSection>
         <Conditions />
       </SnapSection>
-      <SnapSection>
+      <SnapSection id="community">
         <InterestListTeaser />
       </SnapSection>
       {/* natural: the footer sits below this one, and the two share a screen. */}

@@ -18,6 +18,18 @@ test("the landing page is six sections", () => {
   expect(screen.getByRole("main").children).toHaveLength(6);
 });
 
+test("#community lands on a snap stop, not mid-section", () => {
+  const { container } = render(<Home />);
+
+  // The co-op card links to #community, and /book and /coop to /#community.
+  // The id has to sit on the section wrapper: on an element inside one, the
+  // browser parks at a non-snap position and then snaps somewhere else.
+  const target = container.querySelector("#community");
+
+  expect(target?.tagName).toBe("SECTION");
+  expect(target?.className).toContain("md:snap-start");
+});
+
 test("the parent quotes close the page, below the interest list", () => {
   render(<Home />);
 
