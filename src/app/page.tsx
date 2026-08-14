@@ -11,9 +11,9 @@ export default function Home() {
       <HeroViewport />
       <GallerySection />
       <ProgramCards />
-      <QuoteStats />
       <Conditions />
       <InterestListTeaser />
+      <QuoteStats />
     </main>
   );
 }

@@ -1,17 +1,38 @@
+/* The second quote is invented copy, not a real testimonial — placeholder
+   for a parent's own words. Replace before launch. Every other unfinished
+   thing on this site announces itself (see ReservedSlot, Placeholder); this
+   one deliberately does not, so it needs this comment instead. */
+const QUOTES = [
+  {
+    lead: "“My daughter now notices every tidepool we walk past.",
+    tail: "She sketches everything.”",
+  },
+  {
+    lead: "“He used to ask how long until we go home.",
+    tail: "Now he asks when we can go back.”",
+  },
+];
+
 export function QuoteStats() {
   return (
-    <section className="border-lavender px-gutter-sm py-section-sm grid items-center gap-8 border-y-[1.5px] md:grid-cols-2 md:gap-12 md:px-gutter md:py-section">
-      <figure>
-        <blockquote className="text-quote leading-[1.25] font-black italic">
-          “My daughter now notices every tidepool we walk past.
-          <br />
-          <span className="text-purple">She sketches everything.”</span>
-        </blockquote>
-        <figcaption className="mt-5 text-xs font-bold tracking-wider text-purple uppercase">
-          — Parent, Wild Coast Kids
-        </figcaption>
-      </figure>
-      <div className="flex flex-col gap-3">
+    // border-t only: this section closes the page, so its bottom edge meets
+    // the footer rather than another section.
+    <section className="border-lavender px-gutter-sm py-section-sm border-t-[1.5px] md:px-gutter md:py-section">
+      <div className="grid gap-8 md:grid-cols-2 md:gap-12">
+        {QUOTES.map(({ lead, tail }) => (
+          <figure key={lead}>
+            <blockquote className="text-quote leading-[1.25] font-black italic">
+              {lead}
+              <br />
+              <span className="text-purple">{tail}</span>
+            </blockquote>
+            <figcaption className="mt-5 text-xs font-bold tracking-wider text-purple uppercase">
+              — Parent, Wild Coast Kids
+            </figcaption>
+          </figure>
+        ))}
+      </div>
+      <div className="mt-10 grid gap-3 md:grid-cols-2 md:gap-4">
         <div className="rounded-thumb bg-yellow px-6 py-5">
           <p className="text-stat leading-none mb-1 font-black text-ink italic">
             K–8
