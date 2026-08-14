@@ -26,10 +26,10 @@ export default defineConfig({
       // run-vitest.mjs and check-built-css.mjs sit at 0% on purpose, and all
       // three drag these figures down in plain sight rather than quietly.
       thresholds: {
-        statements: 78.83,
+        statements: 78.94,
         branches: 81.81,
         functions: 89.06,
-        lines: 79.76,
+        lines: 79.88,
       },
     },
   },

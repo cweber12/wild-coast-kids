@@ -64,7 +64,12 @@
      consumers (the hero poster's height, scroll-padding-top) tolerate being
      a few pixels under far better than the nav tolerates clipping. */
   --spacing-nav: 84px;
-  --spacing-nav-sm: 90px;
+  /* 8 + 44 + 12 + 44 + 8: py-2, the logo/pill row now set by the 44px pill,
+     gap-y-3, the link row, py-2. Both rows carry 44px touch targets below md
+     (ADR-0004), which is what took this from 90px. Below ~340px the links
+     wrap to a third row and the bar exceeds this; min-h means it grows
+     rather than clips, and the poster is min-h too, so it absorbs it. */
+  --spacing-nav-sm: 116px;
   /* Same inversion as the nav tokens: the footer takes its height from this
      rather than this describing whatever the footer happens to render at.
      The closing snap stop subtracts both, so quotes and footer share exactly

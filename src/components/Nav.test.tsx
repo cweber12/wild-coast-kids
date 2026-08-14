@@ -63,6 +63,49 @@ test("the nav takes its height from the nav tokens", () => {
   expect(nav.className).toContain("md:min-h-nav");
 });
 
+test("every target in the nav carries the 44px touch target", () => {
+  render(<Nav />);
+
+  // Iterating every link rather than asserting a literal per element is the
+  // point: this fails when a fifth link is added or the pill is restyled
+  // without composing TOUCH_TARGET, which is the drift that actually happens.
+  // It cannot prove the rendered box is 44px -- jsdom applies no stylesheets
+  // (ADR-0001) -- so that stays a human check at 375px.
+  const links = screen.getAllByRole("link");
+  expect(links).toHaveLength(5);
+
+  for (const link of links) {
+    expect(link.className).toContain("min-h-11");
+  }
+});
+
+test("the current-page underline sits on the label, not on the link box", () => {
+  render(<Nav />);
+
+  // A bottom border is drawn at its own element's box edge, so an indicator
+  // on the anchor would move with the touch target. Keeping it on an inner
+  // span is what lets the anchor grow to 44px without the yellow rule
+  // drifting below the text. group-* wiring is part of the contract: without
+  // it the enlarged target would respond only over the glyphs.
+  for (const name of [
+    "Art Classes",
+    "Tuesday Co-op",
+    "Conditions",
+    "Community",
+  ]) {
+    const link = screen.getByRole("link", { name });
+    const label = link.firstElementChild;
+
+    expect(link.className).not.toContain("border-b");
+    expect(link.classList.contains("group")).toBe(true);
+    expect(label?.className).toContain("border-b-2");
+    expect(label?.className).toContain("group-hover:border-yellow");
+    expect(label?.className).toContain(
+      "group-aria-[current=page]:border-yellow",
+    );
+  }
+});
+
 test("the logo slot is a labeled image placeholder", () => {
   render(<Nav />);
 
