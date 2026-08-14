@@ -184,3 +184,27 @@ one was locked and in use. The harness's placement is not this repo's to change.
 ## Addenda
 
 <!-- Dated entries when the plan changes. Never rewrite the above. -->
+
+### 2026-08-14 — slice 5 did not fire, and the whole thing was run end to end
+
+**The coverage floor did not move.** Slice 5 was conditional and the condition
+never arose: coverage after all three scopings is 78.94 / 81.81 / 89.06 / 79.88,
+identical to before. `coverage.include` covers `scripts/**/*.mjs`, so a new file
+there looked like it would shift the ratio, but vitest excludes test files from
+instrumentation by default and this change adds no source. No slice, no commit.
+
+**The three tests pass individually against a synthetic probe; the gate was
+also run against the real thing.** A worktree was created at
+`.claude/worktrees/verify-31` on `issue-25-ia-routed-structure` — the same
+condition #31 and #29 were filed under — and given a badly formatted file, a
+file with a lint error, and a component using `rotate-45`, a utility no file in
+this checkout mentions. With `.next/` removed first, so the build cache could
+not hide the Tailwind half:
+
+- all six gate rows PASS;
+- the built stylesheet contains no `.rotate-45` rule;
+- vitest collects 27 files, every one of them under `src/` or `scripts/`.
+
+The 27 is worth writing down because it contradicts the issues' arithmetic:
+they say the repo has 25 test files. It had 26 by the time this branch was cut
+(#32 and #33 merged in between), and this branch adds `gate-scope.test.mjs`.
