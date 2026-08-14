@@ -1,5 +1,14 @@
 @import "tailwindcss";
 
+/* Tailwind's automatic source detection scans every non-gitignored file in the
+   project, so a class name written in prose compiles into the shipped
+   stylesheet. That makes "the class is in the built CSS" stop proving a
+   component uses it — the check several PRs rely on to confirm a utility emits
+   real CSS rather than silently resolving to nothing. Paths are relative to
+   this file, so ../../ is the repo root. */
+@source not "../../docs";
+@source not "../../.design";
+
 /* Wild Coast Kids design tokens — coastal pop editorial.
    Canonical record: .design/wild-coast-kids-landing/DESIGN_TOKENS.css.
    One fixed, art-directed palette: no dark mode by decision (see
