@@ -63,6 +63,33 @@ test("the nav takes its height from the nav tokens", () => {
   expect(nav.className).toContain("md:min-h-nav");
 });
 
+test("the current-page underline sits on the label, not on the link box", () => {
+  render(<Nav />);
+
+  // A bottom border is drawn at its own element's box edge, so an indicator
+  // on the anchor would move with the touch target. Keeping it on an inner
+  // span is what lets the anchor grow to 44px without the yellow rule
+  // drifting below the text. group-* wiring is part of the contract: without
+  // it the enlarged target would respond only over the glyphs.
+  for (const name of [
+    "Art Classes",
+    "Tuesday Co-op",
+    "Conditions",
+    "Community",
+  ]) {
+    const link = screen.getByRole("link", { name });
+    const label = link.firstElementChild;
+
+    expect(link.className).not.toContain("border-b");
+    expect(link.classList.contains("group")).toBe(true);
+    expect(label?.className).toContain("border-b-2");
+    expect(label?.className).toContain("group-hover:border-yellow");
+    expect(label?.className).toContain(
+      "group-aria-[current=page]:border-yellow",
+    );
+  }
+});
+
 test("the logo slot is a labeled image placeholder", () => {
   render(<Nav />);
 

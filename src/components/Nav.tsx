@@ -26,12 +26,19 @@ export function Nav() {
       </div>
       <div className="order-last flex w-full flex-wrap justify-between gap-x-2 md:order-0 md:w-auto md:flex-nowrap md:justify-start md:gap-7">
         {SECTION_LINKS.map(({ href, label }) => (
+          // The indicator is a bottom border, and a border is drawn at its
+          // own element's box edge. On the anchor it would track the touch
+          // target rather than the label; on an inner span it keeps hugging
+          // the text however large the target grows. group-* so the whole
+          // target lights the underline, not just the glyphs.
           <NavLink
             key={href}
             href={href}
-            className="border-b-2 border-transparent pb-0.5 text-[9px] font-extrabold tracking-wider whitespace-nowrap text-dark uppercase transition-colors duration-fast hover:border-yellow aria-[current=page]:border-yellow md:text-2xs"
+            className="group text-[9px] font-extrabold tracking-wider whitespace-nowrap text-dark uppercase md:text-2xs"
           >
-            {label}
+            <span className="border-b-2 border-transparent pb-0.5 transition-colors duration-fast group-hover:border-yellow group-aria-[current=page]:border-yellow">
+              {label}
+            </span>
           </NavLink>
         ))}
       </div>
