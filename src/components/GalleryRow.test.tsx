@@ -74,3 +74,13 @@ test("the row snaps horizontally without moving on its own", () => {
   expect(row.className).toContain("snap-x");
   expect(row.className).not.toContain("animate-strip");
 });
+
+test("the controls do not animate for a reader who asked for less motion", () => {
+  const { row } = renderRow();
+
+  // Every other piece of motion here is gated — motion-safe:scroll-smooth on
+  // html, motion-reduce:animate-none on the marquee, motion-safe on snapping
+  // itself. A bare scroll-smooth would animate every press regardless.
+  expect(row.className).toContain("motion-safe:scroll-smooth");
+  expect(row.className).not.toMatch(/(^|\s)scroll-smooth/);
+});

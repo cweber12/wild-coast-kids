@@ -94,10 +94,14 @@
 
 @layer base {
   /* currentColor keeps the ring visible on every surface: ink on yellow
-     pills, white on the purple hero, dark on cream. */
+     pills, white on the purple hero, dark on cream.
+     [tabindex] covers the scrollable gallery row, which is a focus stop
+     without being a link, button or input — without it that row falls back
+     to the browser's own ring and reads as foreign on the page. */
   a:focus-visible,
   button:focus-visible,
-  input:focus-visible {
+  input:focus-visible,
+  [tabindex]:focus-visible {
     outline: 2px solid currentColor;
     outline-offset: 2px;
   }

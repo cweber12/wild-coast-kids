@@ -43,7 +43,7 @@ export function GalleryRow({ label, children }: GalleryRowProps) {
         tabIndex={0}
         role="group"
         aria-label={label}
-        className="flex snap-x snap-mandatory gap-3 overflow-x-auto scroll-smooth px-gutter-sm md:px-gutter"
+        className="flex snap-x snap-mandatory gap-3 overflow-x-auto px-gutter-sm motion-safe:scroll-smooth md:px-gutter"
       >
         {children}
       </div>
