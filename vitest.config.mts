@@ -1,4 +1,4 @@
-import { defineConfig } from "vitest/config";
+import { configDefaults, defineConfig } from "vitest/config";
 import react from "@vitejs/plugin-react";
 
 export default defineConfig({
@@ -11,6 +11,14 @@ export default defineConfig({
   test: {
     environment: "jsdom",
     setupFiles: ["./vitest.setup.ts"],
+    // Agent sessions put git worktrees at `.claude/worktrees/<id>/` — full
+    // copies of the repo on other branches — so the default glob collects a
+    // second and third suite and runs them against this branch's config.
+    // Vitest reads no .gitignore, so ignoring the directory in git does not
+    // reach here. Spread rather than replace: setting `exclude` overrides
+    // vitest's defaults wholesale, and dropping node_modules while fixing this
+    // would trade one kind of foreign test file for another.
+    exclude: [...configDefaults.exclude, "**/.claude/**"],
     coverage: {
       provider: "v8",
       include: ["src/**/*.{ts,tsx}", "scripts/**/*.mjs"],
