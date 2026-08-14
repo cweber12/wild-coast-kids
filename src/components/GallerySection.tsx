@@ -38,7 +38,11 @@ export function GallerySection() {
           <Placeholder
             key={label}
             label={label}
-            className="rounded-thumb h-52 w-72 shrink-0 snap-start overflow-hidden md:h-56 md:w-80"
+            /* Tiles are a fraction of the row rather than a fixed size, so a
+               whole number of them is visible at every width and they grow
+               to fill the stop: two from md, three from lg, four from xl.
+               The subtraction in each calc is the gap-4 between them. */
+            className="rounded-thumb aspect-4/3 w-[85%] shrink-0 snap-start overflow-hidden md:w-[calc((100%-1rem)/2)] lg:w-[calc((100%-2rem)/3)] xl:w-[calc((100%-3rem)/4)]"
             labelClassName="whitespace-normal"
           />
         ))}

@@ -12,13 +12,12 @@ function renderRow() {
 
   const row = screen.getByRole("group", { name: "Artwork" });
 
-  // jsdom has no layout, so the row cannot really scroll and every element
-  // measures zero. Stubbing both is what lets the assertion be about the
-  // distance asked for rather than about jsdom.
+  // jsdom has no layout, so the row cannot really scroll and measures zero.
+  // Stubbing both is what lets the assertion be about the distance asked for
+  // rather than about jsdom.
   const scrollBy = vi.fn();
   row.scrollBy = scrollBy;
-  screen.getByText("first").getBoundingClientRect = () =>
-    ({ width: 320 }) as unknown as DOMRect;
+  Object.defineProperty(row, "clientWidth", { value: 900, configurable: true });
 
   return { row, scrollBy };
 }
@@ -32,37 +31,23 @@ test("the row is reachable and named for a keyboard or screen reader", () => {
   expect(row.getAttribute("aria-label")).toBe("Artwork");
 });
 
-test("next scrolls forward by exactly one item", () => {
+test("next pages forward by a screenful", () => {
   const { scrollBy } = renderRow();
 
   fireEvent.click(screen.getByRole("button", { name: /next artwork/i }));
 
-  // Measured from the item, not assumed: the placeholders are one width
-  // below md and another above it.
-  expect(scrollBy).toHaveBeenCalledWith({ left: 320 });
+  // A screenful, not one item: how many items that is changes with the
+  // width, and snap-mandatory pulls the result back onto an item edge, so
+  // the control never has to know the count.
+  expect(scrollBy).toHaveBeenCalledWith({ left: 900 });
 });
 
-test("previous scrolls back by exactly one item", () => {
+test("previous pages back by a screenful", () => {
   const { scrollBy } = renderRow();
 
   fireEvent.click(screen.getByRole("button", { name: /previous artwork/i }));
 
-  expect(scrollBy).toHaveBeenCalledWith({ left: -320 });
-});
-
-test("a row with no items falls back to its own width", () => {
-  render(<GalleryRow label="Empty">{null}</GalleryRow>);
-
-  const row = screen.getByRole("group", { name: "Empty" });
-  const scrollBy = vi.fn();
-  row.scrollBy = scrollBy;
-  Object.defineProperty(row, "clientWidth", { value: 500 });
-
-  fireEvent.click(screen.getByRole("button", { name: /next artwork/i }));
-
-  // There is no first item to measure, so the step comes from the row. The
-  // controls do something harmless rather than dividing by an absent child.
-  expect(scrollBy).toHaveBeenCalledWith({ left: 500 });
+  expect(scrollBy).toHaveBeenCalledWith({ left: -900 });
 });
 
 test("the row snaps horizontally without moving on its own", () => {
@@ -75,6 +60,12 @@ test("the row snaps horizontally without moving on its own", () => {
   expect(row.className).not.toContain("animate-strip");
 });
 
+test("the scrollbar is hidden, because the controls are the affordance", () => {
+  const { row } = renderRow();
+
+  expect(row.className).toContain("no-scrollbar");
+});
+
 test("the controls do not animate for a reader who asked for less motion", () => {
   const { row } = renderRow();
 
@@ -83,4 +74,18 @@ test("the controls do not animate for a reader who asked for less motion", () =>
   // itself. A bare scroll-smooth would animate every press regardless.
   expect(row.className).toContain("motion-safe:scroll-smooth");
   expect(row.className).not.toMatch(/(^|\s)scroll-smooth/);
+});
+
+test("the controls sit on the row's edges", () => {
+  renderRow();
+
+  // Overlaid left and right rather than stacked beneath, so the row reads as
+  // one paged surface instead of a scroller with buttons parked under it.
+  const previous = screen.getByRole("button", { name: /previous artwork/i });
+  const next = screen.getByRole("button", { name: /next artwork/i });
+
+  expect(previous.className).toContain("absolute");
+  expect(previous.className).toContain("left-3");
+  expect(next.className).toContain("absolute");
+  expect(next.className).toContain("right-3");
 });

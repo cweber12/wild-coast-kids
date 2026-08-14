@@ -92,6 +92,16 @@
   }
 }
 
+/* A scroll container the reader drives with controls rather than the bar.
+   Firefox takes scrollbar-width; WebKit needs the pseudo-element. */
+@utility no-scrollbar {
+  scrollbar-width: none;
+
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
+
 @layer base {
   /* currentColor keeps the ring visible on every surface: ink on yellow
      pills, white on the purple hero, dark on cream.
