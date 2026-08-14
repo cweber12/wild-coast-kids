@@ -1,5 +1,5 @@
+import { GalleryRow } from "./GalleryRow";
 import { Placeholder } from "./Placeholder";
-import { StripTrack } from "./StripTrack";
 
 const GALLERY_IMAGES = [
   "Art class at the park",
@@ -28,20 +28,19 @@ export function GallerySection() {
           Every kid surprises us.
         </p>
       </div>
-      {/* Full-bleed film strip: single row, moving at the marquee's px/s via
-          the shared StripTrack speed. */}
-      <div className="group overflow-hidden">
-        <StripTrack>
-          {GALLERY_IMAGES.map((label) => (
-            <Placeholder
-              key={label}
-              label={label}
-              className="rounded-thumb mx-1.5 h-52 w-72 shrink-0 overflow-hidden md:h-56 md:w-80"
-              labelClassName="whitespace-normal"
-            />
-          ))}
-        </StripTrack>
-      </div>
+      {/* The row is driven by the reader, not by a clock: a piece of artwork
+          you want to look at should not slide away, and one you missed
+          should be one press back. */}
+      <GalleryRow label="Artwork from Wild Coast Kids classes">
+        {GALLERY_IMAGES.map((label) => (
+          <Placeholder
+            key={label}
+            label={label}
+            className="rounded-thumb h-52 w-72 shrink-0 snap-start overflow-hidden md:h-56 md:w-80"
+            labelClassName="whitespace-normal"
+          />
+        ))}
+      </GalleryRow>
     </section>
   );
 }
