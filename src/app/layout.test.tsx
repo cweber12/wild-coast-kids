@@ -48,3 +48,21 @@ test("anchor targets come to rest below the nav, not under it", () => {
   expect(html).toContain("scroll-pt-nav-sm");
   expect(html).toContain("md:scroll-pt-nav");
 });
+
+test("snapping is enabled only from md up, and only when motion is safe", () => {
+  render(
+    <RootLayout params={Promise.resolve({})}>
+      <main>page content</main>
+    </RootLayout>,
+  );
+
+  const html = document.documentElement.className;
+
+  // motion-safe on the enabling classes rather than motion-reduce on a
+  // disabling one: that way snapping is never switched on for a reader who
+  // asked for reduced motion, with no dependence on which utility the
+  // stylesheet happens to emit last.
+  expect(html).toContain("motion-safe:md:snap-y");
+  expect(html).toContain("motion-safe:md:snap-mandatory");
+  expect(html).not.toContain("motion-reduce:");
+});

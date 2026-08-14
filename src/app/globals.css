@@ -56,6 +56,11 @@
      a few pixels under far better than the nav tolerates clipping. */
   --spacing-nav: 84px;
   --spacing-nav-sm: 90px;
+  /* Same inversion as the nav tokens: the footer takes its height from this
+     rather than this describing whatever the footer happens to render at.
+     The closing snap stop subtracts both, so quotes and footer share exactly
+     one screen without either measuring the other. */
+  --spacing-footer: 152px;
 
   /* Radii */
   --radius-tile: 12px;
@@ -87,12 +92,26 @@
   }
 }
 
+/* A scroll container the reader drives with controls rather than the bar.
+   Firefox takes scrollbar-width; WebKit needs the pseudo-element. */
+@utility no-scrollbar {
+  scrollbar-width: none;
+
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
+
 @layer base {
   /* currentColor keeps the ring visible on every surface: ink on yellow
-     pills, white on the purple hero, dark on cream. */
+     pills, white on the purple hero, dark on cream.
+     [tabindex] covers the scrollable gallery row, which is a focus stop
+     without being a link, button or input — without it that row falls back
+     to the browser's own ring and reads as foreign on the page. */
   a:focus-visible,
   button:focus-visible,
-  input:focus-visible {
+  input:focus-visible,
+  [tabindex]:focus-visible {
     outline: 2px solid currentColor;
     outline-offset: 2px;
   }

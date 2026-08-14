@@ -20,10 +20,14 @@ export function Hero() {
           fund eligible.
         </p>
         <div className="flex flex-wrap gap-3">
-          <PillLink href="#art" tone="yellow">
+          {/* Routes, not anchors: both program cards now share one snap
+              stop, so #art and #coop would have been the same screen — and
+              an anchor onto an element inside a section lands the viewport
+              at a non-snap position. */}
+          <PillLink href="/book" tone="yellow">
             🎨 Book Art Class
           </PillLink>
-          <PillLink href="#coop" tone="outline-light">
+          <PillLink href="/coop" tone="outline-light">
             Tuesday Co-op →
           </PillLink>
         </div>

@@ -116,6 +116,40 @@ the design language.
 - Contrast: yellow `#E8FF00` surfaces use near-black `#1A1A00` text; body text
   on purple/ocean stays at the template's tested opacities or better.
 
+## Addendum — 2026-08-13 (what has changed since)
+
+This brief describes the single-page build of 2026-08-11. Four PRs have
+since changed things it still states as current. Recorded here rather than
+rewritten, so the original intent stays readable.
+
+- **The landing page snaps.** From `md` up it is six stops, one screen each:
+  hero, gallery, program cards, conditions, interest list, quotes + footer.
+  Below `md`, and under `prefers-reduced-motion`, it is an ordinary
+  scrolling page — two sections are taller than a phone viewport, so
+  snapping them would mean fighting the snap to read them.
+  "Poster first, page second" now applies to every stop, not only the first.
+- **The gallery no longer moves on its own.** Experience principle 2 and
+  Key Interactions describe two synced strips as the page's pulse; the
+  gallery is now a paged row the reader drives, with controls at its edges.
+  The marquee still carries the motion. `StripTrack` therefore has one
+  caller rather than two.
+- **The site is no longer one page.** `/art`, `/coop`, `/conditions`,
+  `/community` and `/book` exist; the nav is routed links, not anchors, and
+  `#art` and `#coop` are gone. The hero's two CTAs point at `/book` and
+  `/coop`. Only `#community` survives as an anchor.
+- **The nav sits in the document flow**, sticky rather than fixed, and takes
+  its height from a token (ADR-0003). The footer now does the same, so the
+  closing stop can size itself as the window less both.
+- **Component names have moved on:** `GalleryStrip` → `GalleryRow`,
+  `CommunityForm` → `InterestListTeaser` plus `InterestListForm`. `Nav`,
+  `Footer`, `SnapSection`, `PillLink` and `ReservedSlot` are shared;
+  `CONTEXT.md` at the repo root is now the glossary for the domain words.
+- **The quote section closes the page** and carries two quotes above the
+  stat tiles. The second quote is invented copy, not a real testimonial,
+  and is marked as placeholder in the source.
+- **The Calendly `TODO(verify)` is retired** — booking CTAs point at
+  `/book`, and the provider decision sits behind that page.
+
 ## Out of Scope
 
 - Real photography or a logo — labeled placeholders ship; swapping in real

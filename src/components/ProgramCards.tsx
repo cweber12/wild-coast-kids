@@ -13,9 +13,9 @@ const CARD_BASE =
 
 export function ProgramCards() {
   return (
-    <div className="px-gutter-sm pb-section-sm md:px-gutter md:pb-section">
+    <div className="px-gutter-sm pb-section-sm md:px-gutter md:pb-0">
       <div className="grid gap-4 md:grid-cols-2">
-        <article id="art" className={`${CARD_BASE} bg-purple`}>
+        <article className={`${CARD_BASE} bg-purple`}>
           <Placeholder
             background
             label="Art classes background"
@@ -65,7 +65,7 @@ export function ProgramCards() {
           </div>
         </article>
 
-        <article id="coop" className={`${CARD_BASE} bg-ocean`}>
+        <article className={`${CARD_BASE} bg-ocean`}>
           <Placeholder
             background
             label="Tuesday co-op background"

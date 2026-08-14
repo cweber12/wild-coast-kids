@@ -2,11 +2,15 @@ import { expect, test } from "vitest";
 import { render, screen } from "@testing-library/react";
 import { QuoteStats } from "./QuoteStats";
 
-test("the parent quote and its attribution are reachable", () => {
+test("both parent quotes are reachable, each with its attribution", () => {
   render(<QuoteStats />);
 
   expect(screen.getByText(/notices every tidepool/i)).toBeDefined();
-  expect(screen.getByText(/— Parent, Wild Coast Kids/i)).toBeDefined();
+  expect(screen.getByText(/when we can go back/i)).toBeDefined();
+
+  // Two quotes, so two attributions — the section closes the page on parent
+  // voices rather than on one voice beside a pair of facts.
+  expect(screen.getAllByText(/— Parent, Wild Coast Kids/i)).toHaveLength(2);
 });
 
 test("both stat tiles state the facts parents filter on", () => {
@@ -16,4 +20,13 @@ test("both stat tiles state the facts parents filter on", () => {
   expect(screen.getByText("All ages welcome")).toBeDefined();
   expect(screen.getByText("Charter ✓")).toBeDefined();
   expect(screen.getByText("Fund eligible programs")).toBeDefined();
+});
+
+test("the closing section carries no divider at all", () => {
+  const { container } = render(<QuoteStats />);
+
+  // jsdom applies no stylesheets, so the class contract is the seam. A top
+  // border here draws hard against the nav once the stop fills its screen,
+  // and it separates nothing: the section above is never on screen with it.
+  expect(container.firstElementChild?.className).not.toContain("border-");
 });

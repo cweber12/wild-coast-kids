@@ -13,8 +13,9 @@ test("the gallery heading is reachable", () => {
 test("every image slot is exposed to assistive tech exactly once", () => {
   render(<GallerySection />);
 
-  // The strip renders each placeholder twice for the seamless loop, but the
-  // duplicate track is aria-hidden, so by role each image appears once.
+  // Each placeholder is now rendered once, full stop — the looping strip
+  // rendered every one twice and relied on aria-hidden to keep the copy
+  // quiet. One of them is simply a stronger guarantee than the other.
   for (const name of [
     "Art class at the park",
     "Watercolor houses",
@@ -22,4 +23,13 @@ test("every image slot is exposed to assistive tech exactly once", () => {
   ]) {
     expect(screen.getAllByRole("img", { name })).toHaveLength(1);
   }
+});
+
+test("the reader drives the row", () => {
+  render(<GallerySection />);
+
+  expect(
+    screen.getByRole("button", { name: /previous artwork/i }),
+  ).toBeDefined();
+  expect(screen.getByRole("button", { name: /next artwork/i })).toBeDefined();
 });

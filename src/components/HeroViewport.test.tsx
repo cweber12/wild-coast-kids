@@ -12,15 +12,18 @@ test("the hero headline is the page's h1", () => {
   expect(headline.textContent).toContain("wonder.");
 });
 
-test("both hero CTAs link to their program anchors", () => {
+test("both hero CTAs go to a page, not down the page", () => {
   render(<HeroViewport />);
 
+  // Under snapping, scrolling one screen is what the scroll gesture already
+  // does; both program cards share a stop, so anchors would have sent these
+  // two buttons to one identical place.
   expect(
     screen.getByRole("link", { name: /book art class/i }).getAttribute("href"),
-  ).toBe("#art");
+  ).toBe("/book");
   expect(
     screen.getByRole("link", { name: /tuesday co-op/i }).getAttribute("href"),
-  ).toBe("#coop");
+  ).toBe("/coop");
 });
 
 test("the hero photo slot shows its label while it is a placeholder", () => {

@@ -2,9 +2,10 @@
 
 import { useEffect, useRef, useState, type ReactNode } from "react";
 
-/* One shared speed keeps the marquee and the gallery strip visually in sync:
-   each track computes its own duration from its own width, so both move at
-   the same pixels-per-second no matter how wide their content is. */
+/* The track computes its duration from its own width, so the speed stays the
+   same pixels-per-second however wide the content gets. This used to keep two
+   strips in sync; the gallery now moves only when the reader moves it, so the
+   marquee is the only caller left. */
 const SPEED_PX_PER_SECOND = 80;
 
 type StripTrackProps = {
@@ -17,6 +18,12 @@ type StripTrackProps = {
  * aria-hidden — assistive tech hears the content once. The parent supplies
  * `group` and `overflow-hidden`; hovering the parent pauses the animation,
  * and prefers-reduced-motion stops it entirely.
+ *
+ * One caller, `Marquee`. This module was justified by having two, so the
+ * seam it sits at is now hypothetical rather than real — kept because the
+ * mechanic is genuinely intricate, not because anything varies across it.
+ * If the marquee ever goes, this goes with it rather than waiting for a
+ * second caller that is not coming.
  */
 export function StripTrack({ children }: StripTrackProps) {
   const trackRef = useRef<HTMLDivElement>(null);

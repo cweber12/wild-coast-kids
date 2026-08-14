@@ -1,6 +1,8 @@
 export function Footer() {
   return (
-    <footer className="flex flex-col items-center gap-4 bg-dark p-9 text-center md:flex-row md:justify-between md:p-12 md:text-left">
+    // min-h from the footer token: the closing snap stop sizes itself as the
+    // window less the nav less this, so the two share one screen exactly.
+    <footer className="flex flex-col items-center gap-4 bg-dark p-9 text-center md:min-h-footer md:flex-row md:justify-between md:p-12 md:text-left">
       <div>
         <p className="text-xl font-black text-pink italic">Wild Coast Kids</p>
         <p className="mt-1 text-xs font-semibold text-white/30">

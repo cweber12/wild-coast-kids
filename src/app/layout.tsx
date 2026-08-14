@@ -30,7 +30,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     // gap and the bar cannot drift apart.
     <html
       lang="en"
-      className={`${montserrat.variable} scroll-pt-nav-sm md:scroll-pt-nav h-full antialiased motion-safe:scroll-smooth`}
+      className={`${montserrat.variable} scroll-pt-nav-sm md:scroll-pt-nav h-full antialiased motion-safe:scroll-smooth motion-safe:md:snap-y motion-safe:md:snap-mandatory`}
     >
       <body className="flex min-h-full flex-col overflow-x-hidden bg-cream font-sans text-dark">
         <Nav />
