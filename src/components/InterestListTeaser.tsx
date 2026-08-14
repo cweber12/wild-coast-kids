@@ -1,5 +1,5 @@
-import Link from "next/link";
 import { InterestListForm } from "./InterestListForm";
+import { PillLink } from "./PillLink";
 
 /**
  * The landing page's interest-list teaser: the pitch, a link on to the fuller
@@ -9,7 +9,7 @@ import { InterestListForm } from "./InterestListForm";
  * form without this teaser. Rendering the whole section there put the "Meet
  * the community" link on the page it points at.
  */
-export function CommunityForm() {
+export function InterestListTeaser() {
   return (
     <section
       id="community"
@@ -25,12 +25,9 @@ export function CommunityForm() {
           Drop your info and we&apos;ll reach out with new classes, co-op
           updates and coastal adventures.
         </p>
-        <Link
-          href="/community"
-          className="rounded-pill inline-block border-2 border-lavender px-[24px] py-[10px] text-sm font-bold text-dark"
-        >
+        <PillLink href="/community" tone="outline-dark">
           Meet the community →
-        </Link>
+        </PillLink>
       </div>
       <InterestListForm />
     </section>

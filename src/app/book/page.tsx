@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
-import Link from "next/link";
+import { PillLink } from "@/components/PillLink";
+import { ReservedSlot } from "@/components/ReservedSlot";
 
 export const metadata: Metadata = {
   title: "Book Now",
@@ -22,24 +23,16 @@ export default function Book() {
           something wild. Online booking is on its way; until it lands, the
           interest list is the fastest way to grab a spot.
         </p>
-        <Link
-          href="/#community"
-          className="rounded-pill mb-12 inline-block bg-purple px-7 py-[13px] text-sm font-black text-white transition-colors duration-fast hover:bg-purple-deep"
-        >
-          Join the interest list →
-        </Link>
-        {/* The reserved slot for the scheduler, once a provider is chosen. */}
-        <div className="rounded-box border-2 border-dashed border-lavender bg-white/60 px-8 py-12 text-center">
-          <span aria-hidden="true" className="mb-3.5 block text-5xl">
-            🗓️
-          </span>
-          <p className="leading-normal text-sm text-fog">
-            Online booking coming soon.
-            <br />
-            <br />
-            The scheduler embeds here once a booking provider is chosen.
-          </p>
+        <div className="mb-12">
+          <PillLink href="/#community" tone="purple">
+            Join the interest list →
+          </PillLink>
         </div>
+        <ReservedSlot
+          emoji="🗓️"
+          headline="Online booking coming soon."
+          detail="The scheduler embeds here once a booking provider is chosen."
+        />
       </section>
     </main>
   );

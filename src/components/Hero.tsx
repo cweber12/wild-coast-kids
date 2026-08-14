@@ -1,3 +1,4 @@
+import { PillLink } from "./PillLink";
 import { Placeholder } from "./Placeholder";
 
 export function Hero() {
@@ -19,18 +20,12 @@ export function Hero() {
           fund eligible.
         </p>
         <div className="flex flex-wrap gap-3">
-          <a
-            href="#art"
-            className="rounded-pill bg-yellow px-7 py-[13px] text-sm font-black text-ink"
-          >
+          <PillLink href="#art" tone="yellow">
             🎨 Book Art Class
-          </a>
-          <a
-            href="#coop"
-            className="rounded-pill border-2 border-white/50 px-[26px] py-[13px] text-sm font-bold text-white"
-          >
+          </PillLink>
+          <PillLink href="#coop" tone="outline-light">
             Tuesday Co-op →
-          </a>
+          </PillLink>
         </div>
       </div>
       <div className="relative col-start-2 row-start-1 hidden md:block">

@@ -1,20 +1,20 @@
 import { expect, test } from "vitest";
 import { render, screen } from "@testing-library/react";
-import { CommunityForm } from "./CommunityForm";
+import { InterestListTeaser } from "./InterestListTeaser";
 
 test("the teaser carries the interest-list form alongside it", () => {
-  render(<CommunityForm />);
+  render(<InterestListTeaser />);
 
   // The landing section is the teaser and the form together; the form's own
   // behavior is asserted in InterestListForm.test.tsx.
   expect(screen.getByRole("textbox", { name: /your name/i })).toBeDefined();
   expect(
-    screen.getByRole("button", { name: /join the community/i }),
+    screen.getByRole("button", { name: /join the interest list/i }),
   ).toBeDefined();
 });
 
 test("the section teases the full community page", () => {
-  render(<CommunityForm />);
+  render(<InterestListTeaser />);
 
   expect(
     screen

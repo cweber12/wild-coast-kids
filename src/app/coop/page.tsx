@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
-import Link from "next/link";
+import { PillLink } from "@/components/PillLink";
 import { Placeholder } from "@/components/Placeholder";
+import { ReservedSlot } from "@/components/ReservedSlot";
 
 export const metadata: Metadata = {
   title: "Tuesday Co-op",
@@ -23,27 +24,19 @@ export default function Coop() {
           journaling and hands-on science. Spots are limited for fall, and full
           co-op details are on their way.
         </p>
-        <Link
-          href="/#community"
-          className="rounded-pill mb-12 inline-block bg-ocean px-7 py-[13px] text-sm font-black text-white transition-colors duration-fast"
-        >
-          Join the interest list →
-        </Link>
+        <div className="mb-12">
+          <PillLink href="/#community" tone="ocean">
+            Join the interest list →
+          </PillLink>
+        </div>
         {/* Reserved slots for the content pass: the weekly rhythm and photos
             from past adventures. */}
         <div className="grid gap-4 md:grid-cols-2">
-          <div className="rounded-box border-2 border-dashed border-lavender bg-white/60 px-8 py-12 text-center">
-            <span aria-hidden="true" className="mb-3.5 block text-5xl">
-              🌿
-            </span>
-            <p className="leading-normal text-sm text-fog">
-              Full co-op details coming soon.
-              <br />
-              <br />
-              The weekly rhythm, meeting spots, and fall sign-up details land
-              here.
-            </p>
-          </div>
+          <ReservedSlot
+            emoji="🌿"
+            headline="Full co-op details coming soon."
+            detail="The weekly rhythm, meeting spots, and fall sign-up details land here."
+          />
           <Placeholder
             label="Co-op adventures photo gallery"
             className="rounded-box min-h-60"

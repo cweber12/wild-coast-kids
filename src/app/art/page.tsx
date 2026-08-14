@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
-import Link from "next/link";
+import { PillLink } from "@/components/PillLink";
 import { Placeholder } from "@/components/Placeholder";
+import { ReservedSlot } from "@/components/ReservedSlot";
 
 export const metadata: Metadata = {
   title: "Art Classes",
@@ -23,27 +24,19 @@ export default function Art() {
           whatever sparks curiosity. Every session is different, and full class
           details are on their way.
         </p>
-        <Link
-          href="/book"
-          className="rounded-pill mb-12 inline-block bg-purple px-7 py-[13px] text-sm font-black text-white transition-colors duration-fast hover:bg-purple-deep"
-        >
-          Book a class →
-        </Link>
+        <div className="mb-12">
+          <PillLink href="/book" tone="purple">
+            Book a class →
+          </PillLink>
+        </div>
         {/* Reserved slots for the content pass: real schedule, pricing and
             student photos. */}
         <div className="grid gap-4 md:grid-cols-2">
-          <div className="rounded-box border-2 border-dashed border-lavender bg-white/60 px-8 py-12 text-center">
-            <span aria-hidden="true" className="mb-3.5 block text-5xl">
-              🎨
-            </span>
-            <p className="leading-normal text-sm text-fog">
-              Schedule & pricing coming soon.
-              <br />
-              <br />
-              Session times, group and private options, and charter-fund details
-              land here.
-            </p>
-          </div>
+          <ReservedSlot
+            emoji="🎨"
+            headline="Schedule & pricing coming soon."
+            detail="Session times, group and private options, and charter-fund details land here."
+          />
           <Placeholder
             label="Student artwork gallery"
             className="rounded-box min-h-60"

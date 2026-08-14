@@ -124,7 +124,7 @@ export function InterestListForm() {
             type="submit"
             className="rounded-pill mt-6 w-full cursor-pointer bg-purple p-[15px] text-base font-black tracking-[0.06em] text-white transition-colors duration-fast hover:bg-purple-deep"
           >
-            Join the community →
+            Join the interest list →
           </button>
         </form>
       )}

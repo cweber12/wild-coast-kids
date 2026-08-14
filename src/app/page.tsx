@@ -1,7 +1,7 @@
-import { CommunityForm } from "@/components/CommunityForm";
 import { Conditions } from "@/components/Conditions";
 import { GallerySection } from "@/components/GallerySection";
 import { HeroViewport } from "@/components/HeroViewport";
+import { InterestListTeaser } from "@/components/InterestListTeaser";
 import { ProgramCards } from "@/components/ProgramCards";
 import { QuoteStats } from "@/components/QuoteStats";
 
@@ -13,7 +13,7 @@ export default function Home() {
       <ProgramCards />
       <QuoteStats />
       <Conditions />
-      <CommunityForm />
+      <InterestListTeaser />
     </main>
   );
 }

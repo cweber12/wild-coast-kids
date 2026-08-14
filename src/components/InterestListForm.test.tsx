@@ -25,14 +25,16 @@ test("submitting swaps the form for the success state", () => {
     target: { value: "robin@example.com" },
   });
   fireEvent.click(screen.getByRole("checkbox", { name: /tidepools/i }));
-  fireEvent.click(screen.getByRole("button", { name: /join the community/i }));
+  fireEvent.click(
+    screen.getByRole("button", { name: /join the interest list/i }),
+  );
 
   // The success state must actually replace the form, not merely render:
   // the status is announced and the submit button is gone.
   expect(screen.getByRole("status").textContent).toContain("You're in!");
-  expect(screen.queryByRole("button", { name: /join the community/i })).toBe(
-    null,
-  );
+  expect(
+    screen.queryByRole("button", { name: /join the interest list/i }),
+  ).toBe(null);
 });
 
 test("the form carries no link to the community page", () => {

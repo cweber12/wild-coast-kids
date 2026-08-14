@@ -23,10 +23,10 @@ export default defineConfig({
       // run-gates.mjs and run-vitest.mjs sit at 0% on purpose, and both drag
       // these figures down in plain sight rather than quietly.
       thresholds: {
-        statements: 67.54,
-        branches: 75,
-        functions: 84.09,
-        lines: 70.19,
+        statements: 69.16,
+        branches: 75.67,
+        functions: 85.1,
+        lines: 71.81,
       },
     },
   },

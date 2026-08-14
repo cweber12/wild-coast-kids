@@ -23,7 +23,7 @@ test("the interest-list form rides on the page, not just the landing", () => {
   // of the landing teaser.
   expect(screen.getByRole("textbox", { name: /your name/i })).toBeDefined();
   expect(
-    screen.getByRole("button", { name: /join the community/i }),
+    screen.getByRole("button", { name: /join the interest list/i }),
   ).toBeDefined();
 });
 
