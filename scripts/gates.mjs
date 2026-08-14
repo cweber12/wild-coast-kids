@@ -27,6 +27,10 @@ export const GATES = [
   // CLAUDE.md says this command must fail.
   { name: "test", command: "npm run test:coverage" },
   { name: "build", command: "npm run build" },
+  // Reads what the build just emitted, so it has to follow it. Not a skip when
+  // the stylesheet is missing: the state it needs is produced by the row above,
+  // so absence is a failure. See docs/plans/assert-built-stylesheet.md.
+  { name: "stylesheet", command: "node scripts/check-built-css.mjs" },
 ];
 
 /**

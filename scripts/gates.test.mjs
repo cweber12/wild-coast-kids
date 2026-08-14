@@ -138,4 +138,14 @@ describe("the gate table", () => {
     const names = GATES.map((entry) => entry.name);
     expect(new Set(names).size).toBe(names.length);
   });
+
+  // The stylesheet row reads what the build emitted, and nothing else in the
+  // table states that dependency. Ahead of build it would read a stale
+  // stylesheet, or none — see the 2026-08-11 addendum in
+  // docs/plans/gate-command.md for the last time an ordering assumption that
+  // no row stated cost a CI run.
+  test("the stylesheet row runs after the build that produces its input", () => {
+    const order = GATES.map((entry) => entry.name);
+    expect(order.indexOf("stylesheet")).toBeGreaterThan(order.indexOf("build"));
+  });
 });
