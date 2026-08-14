@@ -17,6 +17,12 @@ const eslintConfig = defineConfig([
     // and reads no .gitignore, so nothing else keeps this run inside the
     // branch it is meant to be judging.
     ".claude/**",
+    // Vendored istanbul output, written by the `test` row that runs one line
+    // above `lint` in the gate table. Gitignored and in .prettierignore, but
+    // eslint reads neither, so this is the only place it is excluded — and
+    // without it the row's verdict turns on whether coverage has been
+    // generated, which is a local/CI disagreement waiting to happen.
+    "coverage/**",
   ]),
 ]);
 
