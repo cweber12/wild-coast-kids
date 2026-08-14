@@ -12,6 +12,11 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Agent sessions put git worktrees at `.claude/worktrees/<id>/` — full
+    // copies of the repo on other branches. Flat config walks dot-directories
+    // and reads no .gitignore, so nothing else keeps this run inside the
+    // branch it is meant to be judging.
+    ".claude/**",
   ]),
 ]);
 

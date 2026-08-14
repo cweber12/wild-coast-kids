@@ -40,3 +40,10 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# agent sessions: git worktrees at .claude/worktrees/<id>/ are full copies of
+# the repo on other branches, and the harness keeps local session state here
+# too. Prettier and Tailwind's source detection both read this file, so leaving
+# it out means formatting another branch's code and compiling its class names
+# into this branch's stylesheet.
+/.claude/
