@@ -22,6 +22,7 @@ import {
   mkdirSync,
   mkdtempSync,
   rmSync,
+  rmdirSync,
   writeFileSync,
 } from "node:fs";
 import { join } from "node:path";
@@ -96,6 +97,10 @@ afterEach(() => {
  * itself is removed again only if this test created it; a session's own
  * directory is left alone.
  *
+ * That branch only runs where `.claude/` does not already exist, which is CI
+ * and never a machine with a session open — so it went out red once. Removing
+ * `.claude/` locally is how to exercise it here.
+ *
  * @returns {string} The planted file's path, slash-separated like vitest's own
  *   output.
  */
@@ -106,7 +111,17 @@ function plantForeignTestFile() {
   const directory = mkdtempSync(join(AGENT_DIRECTORY, "gate-scope-probe-"));
   cleanups.push(() => {
     rmSync(directory, { recursive: true, force: true });
-    if (!agentDirectoryExisted) rmSync(AGENT_DIRECTORY, { force: true });
+    if (agentDirectoryExisted) return;
+
+    // Only while it is still empty, and `rmdirSync` refusing a non-empty
+    // directory is exactly that check. A session that started mid-run owns
+    // whatever else is in there, so leaving it is the right outcome, not a
+    // swallowed failure — anything other than ENOTEMPTY still propagates.
+    try {
+      rmdirSync(AGENT_DIRECTORY);
+    } catch (error) {
+      if (error.code !== "ENOTEMPTY") throw error;
+    }
   });
 
   const file = join(directory, "probe.test.ts");
