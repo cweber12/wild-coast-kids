@@ -115,7 +115,11 @@ lands on `/art` first; that page's CTA is "Book a class →" → `/book`.
   whatever list it is given; adding photos is a data change, not a layout one.
 - **Programs**: the grid accepts a third card if an offering is added.
 - **Conditions**: the dashed box is the reserved slot for the future embed.
-- Anything beyond that (blog, schedules, multiple pages) is a new IA exercise.
+- **A new program area** is a route beside the existing five, plus a teaser
+  section on `/` that links to it. That path is established; adding one
+  decides nothing new.
+- Anything beyond that (a blog, real schedules, nested or dynamic routes) is a
+  new IA exercise.
 
 ## URL Strategy
 
