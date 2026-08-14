@@ -63,6 +63,22 @@ test("the nav takes its height from the nav tokens", () => {
   expect(nav.className).toContain("md:min-h-nav");
 });
 
+test("every target in the nav carries the 44px touch target", () => {
+  render(<Nav />);
+
+  // Iterating every link rather than asserting a literal per element is the
+  // point: this fails when a fifth link is added or the pill is restyled
+  // without composing TOUCH_TARGET, which is the drift that actually happens.
+  // It cannot prove the rendered box is 44px -- jsdom applies no stylesheets
+  // (ADR-0001) -- so that stays a human check at 375px.
+  const links = screen.getAllByRole("link");
+  expect(links).toHaveLength(5);
+
+  for (const link of links) {
+    expect(link.className).toContain("min-h-11");
+  }
+});
+
 test("the current-page underline sits on the label, not on the link box", () => {
   render(<Nav />);
 
