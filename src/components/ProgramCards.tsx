@@ -13,7 +13,7 @@ const CARD_BASE =
 
 export function ProgramCards() {
   return (
-    <div className="px-gutter-sm pb-section-sm md:px-gutter md:pb-section">
+    <div className="px-gutter-sm pb-section-sm md:px-gutter md:pb-0">
       <div className="grid gap-4 md:grid-cols-2">
         <article className={`${CARD_BASE} bg-purple`}>
           <Placeholder

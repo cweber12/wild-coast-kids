@@ -19,6 +19,21 @@ test("a section is a snap stop a screen tall, from md up", () => {
   );
 });
 
+test("centring never pushes content off the top of the stop", () => {
+  const { container } = render(
+    <SnapSection>
+      <p>content</p>
+    </SnapSection>,
+  );
+
+  // Plain justify-center splits overflow across both ends, and the top end
+  // of a snap stop cannot be scrolled to — content taller than the box
+  // becomes unreachable. The safe variant falls back to start-alignment.
+  const section = container.firstElementChild;
+  expect(section?.className).toContain("md:justify-center-safe");
+  expect(section?.className).not.toMatch(/md:justify-center(?!-safe)/);
+});
+
 test("nothing is forced below md", () => {
   const { container } = render(
     <SnapSection>

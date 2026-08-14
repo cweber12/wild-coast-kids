@@ -25,6 +25,16 @@ type SnapSectionProps = {
  * height — a phone gets an ordinary scrolling page. `HeroViewport` keeps its
  * own height because the poster fills the screen at every width, which is a
  * different rule from this one rather than a copy of it.
+ *
+ * `justify-center-safe`, not `justify-center`: plain centring pushes an
+ * over-tall child out of *both* ends of the box, and the top end of a snap
+ * stop cannot be scrolled to. Safe centring falls back to start-alignment
+ * the moment the content stops fitting, so the top of a section is always
+ * reachable.
+ *
+ * Children do not add their own vertical padding at `md` — this box supplies
+ * the space. Padding on both would be counted twice, which is what pushed
+ * sections past the height they had to fit in.
  */
 export function SnapSection({
   children,
@@ -37,7 +47,7 @@ export function SnapSection({
       className={`md:snap-start ${
         natural
           ? ""
-          : "md:flex md:min-h-[calc(100dvh-var(--spacing-nav))] md:flex-col md:justify-center"
+          : "md:flex md:min-h-[calc(100dvh-var(--spacing-nav))] md:flex-col md:justify-center-safe"
       }`}
     >
       {children}

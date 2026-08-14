@@ -5,7 +5,7 @@ export function Conditions() {
   return (
     <section
       id="conditions"
-      className="px-gutter-sm py-section-sm grid items-center gap-8 bg-ocean md:grid-cols-2 md:gap-12 md:px-gutter md:py-section"
+      className="px-gutter-sm py-section-sm grid items-center gap-8 bg-ocean md:grid-cols-2 md:gap-12 md:px-gutter md:py-0"
     >
       <div>
         <h2 className="text-title leading-tight mb-3.5 font-black text-white italic">
