@@ -63,6 +63,25 @@ test("a natural section keeps its own height but stays a stop", () => {
   expect(section?.className).not.toContain("md:min-h-");
 });
 
+test("the stop carries its own surface", () => {
+  const { container: cream } = render(
+    <SnapSection>
+      <p>content</p>
+    </SnapSection>,
+  );
+  const { container: ocean } = render(
+    <SnapSection tone="ocean">
+      <p>content</p>
+    </SnapSection>,
+  );
+
+  // Painting the child instead leaves the colour the height of the content
+  // while the stop stays a screen tall — which is how the ocean band ended
+  // up with a cream stripe above it.
+  expect(cream.firstElementChild?.className).not.toContain("bg-");
+  expect(ocean.firstElementChild?.className).toContain("bg-ocean");
+});
+
 test("a section can carry an anchor target", () => {
   const { container } = render(
     <SnapSection id="community">

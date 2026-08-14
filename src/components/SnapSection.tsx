@@ -9,6 +9,17 @@ type SnapSectionProps = {
    * closing section uses this so the footer below it shares the same screen.
    */
   natural?: boolean;
+  /** The surface this stop is painted on. */
+  tone?: "cream" | "mist" | "ocean";
+};
+
+/* The stop owns its surface. Painting the child instead leaves the colour
+   the height of the content while the stop stays a screen tall, which is
+   how the ocean band ended up with a cream stripe above it. */
+const TONES = {
+  cream: "",
+  mist: "bg-mist",
+  ocean: "bg-ocean",
 };
 
 /**
@@ -40,11 +51,12 @@ export function SnapSection({
   children,
   id,
   natural = false,
+  tone = "cream",
 }: SnapSectionProps) {
   return (
     <section
       id={id}
-      className={`md:snap-start ${
+      className={`md:snap-start ${TONES[tone]} ${
         natural
           ? ""
           : "md:flex md:min-h-[calc(100dvh-var(--spacing-nav))] md:flex-col md:justify-center-safe"

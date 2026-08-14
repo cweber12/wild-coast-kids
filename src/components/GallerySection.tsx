@@ -15,7 +15,9 @@ const GALLERY_IMAGES = [
 
 export function GallerySection() {
   return (
-    <section className="bg-mist py-section-sm md:py-0">
+    // Surface lives on the SnapSection wrapping this, so it fills the stop
+    // rather than only the height of the content.
+    <section className="py-section-sm md:py-0">
       <div className="mb-10 flex flex-col items-start gap-3 px-gutter-sm md:flex-row md:items-end md:justify-between md:px-gutter">
         <h2 className="text-title leading-tight font-black italic">
           What kids

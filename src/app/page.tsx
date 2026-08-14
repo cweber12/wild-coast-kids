@@ -14,13 +14,13 @@ export default function Home() {
       <SnapSection natural>
         <HeroViewport />
       </SnapSection>
-      <SnapSection>
+      <SnapSection tone="mist">
         <GallerySection />
       </SnapSection>
       <SnapSection>
         <ProgramCards />
       </SnapSection>
-      <SnapSection>
+      <SnapSection tone="ocean">
         <Conditions />
       </SnapSection>
       <SnapSection id="community">
