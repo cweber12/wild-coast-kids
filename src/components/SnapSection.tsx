@@ -4,13 +4,23 @@ type SnapSectionProps = {
   children: ReactNode;
   /** Anchor target, when something links to this section. */
   id?: string;
-  /**
-   * Keeps the section's own height instead of filling the screen. The
-   * closing section uses this so the footer below it shares the same screen.
-   */
-  natural?: boolean;
+  /** How tall the stop is. */
+  height?: "screen" | "screen-less-footer" | "content";
   /** The surface this stop is painted on. */
   tone?: "cream" | "mist" | "ocean";
+};
+
+const CENTRED = "md:flex md:flex-col md:justify-center-safe";
+
+const HEIGHTS = {
+  screen: `md:min-h-[calc(100dvh-var(--spacing-nav))] ${CENTRED}`,
+  /* The footer sits below this stop and shares its screen, so the stop is
+     the window less the nav less the footer. Both come from tokens the nav
+     and footer set their own heights from, so nothing measures anything. */
+  "screen-less-footer": `md:min-h-[calc(100dvh-var(--spacing-nav)-var(--spacing-footer))] ${CENTRED}`,
+  /* The hero brings its own height, and fills the screen at every width
+     rather than only from md up. */
+  content: "",
 };
 
 /* The stop owns its surface. Painting the child instead leaves the colour
@@ -33,9 +43,7 @@ const TONES = {
  *
  * Everything is `md` and up. Two of the landing page's sections are taller
  * than a phone viewport, so below `md` there is no snapping and no forced
- * height — a phone gets an ordinary scrolling page. `HeroViewport` keeps its
- * own height because the poster fills the screen at every width, which is a
- * different rule from this one rather than a copy of it.
+ * height — a phone gets an ordinary scrolling page.
  *
  * `justify-center-safe`, not `justify-center`: plain centring pushes an
  * over-tall child out of *both* ends of the box, and the top end of a snap
@@ -50,17 +58,13 @@ const TONES = {
 export function SnapSection({
   children,
   id,
-  natural = false,
+  height = "screen",
   tone = "cream",
 }: SnapSectionProps) {
   return (
     <section
       id={id}
-      className={`md:snap-start ${TONES[tone]} ${
-        natural
-          ? ""
-          : "md:flex md:min-h-[calc(100dvh-var(--spacing-nav))] md:flex-col md:justify-center-safe"
-      }`}
+      className={`md:snap-start ${TONES[tone]} ${HEIGHTS[height]}`}
     >
       {children}
     </section>

@@ -15,9 +15,10 @@ const QUOTES = [
 
 export function QuoteStats() {
   return (
-    // border-t only: this section closes the page, so its bottom edge meets
-    // the footer rather than another section.
-    <section className="border-lavender px-gutter-sm py-section-sm border-t-[1.5px] md:px-gutter md:py-section">
+    // No divider: this stop and the one above it are never on screen at the
+    // same time, and once the stop fills its screen a top border draws hard
+    // against the nav rather than separating anything.
+    <section className="px-gutter-sm py-section-sm md:px-gutter md:py-0">
       <div className="grid gap-8 md:grid-cols-2 md:gap-12">
         {QUOTES.map(({ lead, tail }) => (
           <figure key={lead}>

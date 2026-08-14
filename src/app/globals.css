@@ -56,6 +56,11 @@
      a few pixels under far better than the nav tolerates clipping. */
   --spacing-nav: 84px;
   --spacing-nav-sm: 90px;
+  /* Same inversion as the nav tokens: the footer takes its height from this
+     rather than this describing whatever the footer happens to render at.
+     The closing snap stop subtracts both, so quotes and footer share exactly
+     one screen without either measuring the other. */
+  --spacing-footer: 152px;
 
   /* Radii */
   --radius-tile: 12px;

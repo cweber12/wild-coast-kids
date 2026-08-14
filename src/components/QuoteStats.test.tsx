@@ -22,12 +22,11 @@ test("both stat tiles state the facts parents filter on", () => {
   expect(screen.getByText("Fund eligible programs")).toBeDefined();
 });
 
-test("the closing section has no bottom border", () => {
+test("the closing section carries no divider at all", () => {
   const { container } = render(<QuoteStats />);
 
-  // jsdom applies no stylesheets, so the class contract is the seam. The
-  // bottom edge now meets the footer, not another section.
-  const section = container.firstElementChild;
-  expect(section?.className).toContain("border-t-[1.5px]");
-  expect(section?.className).not.toContain("border-y-[1.5px]");
+  // jsdom applies no stylesheets, so the class contract is the seam. A top
+  // border here draws hard against the nav once the stop fills its screen,
+  // and it separates nothing: the section above is never on screen with it.
+  expect(container.firstElementChild?.className).not.toContain("border-");
 });

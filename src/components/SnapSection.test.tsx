@@ -50,17 +50,32 @@ test("nothing is forced below md", () => {
   }
 });
 
-test("a natural section keeps its own height but stays a stop", () => {
+test("a content-height section keeps its own height but stays a stop", () => {
   const { container } = render(
-    <SnapSection natural>
+    <SnapSection height="content">
       <p>content</p>
     </SnapSection>,
   );
 
-  // The closing section, so the footer below it shares the screen.
+  // The hero, which brings its own height and fills the screen at every
+  // width rather than only from md up.
   const section = container.firstElementChild;
   expect(section?.className).toContain("md:snap-start");
   expect(section?.className).not.toContain("md:min-h-");
+});
+
+test("the closing stop leaves room for the footer", () => {
+  const { container } = render(
+    <SnapSection height="screen-less-footer">
+      <p>content</p>
+    </SnapSection>,
+  );
+
+  // Both tokens are the ones the nav and footer set their own heights from,
+  // so the three agree by construction and nothing measures anything.
+  expect(container.firstElementChild?.className).toContain(
+    "md:min-h-[calc(100dvh-var(--spacing-nav)-var(--spacing-footer))]",
+  );
 });
 
 test("the stop carries its own surface", () => {
