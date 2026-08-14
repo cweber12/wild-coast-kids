@@ -156,3 +156,55 @@ the same regression from the other side.
 ## Addenda
 
 <!-- Dated entries when the plan changes. Never rewrite the above. -->
+
+### 2026-08-14 — the checker fed itself into the stylesheet it checks
+
+The first run of the finished row failed, and it was right to. `scripts/` is
+scanned by Tailwind's automatic source detection exactly like `docs/` and
+`.design/` were before PR #22, so writing the utility names into
+`scripts/built-css.mjs` compiled them into the build the row then read:
+
+```
+FAIL  snap-none is in the built CSS — …
+ok    .min-h-footer{min-height:var(--spacing-footer)}
+ok    .md\:min-h-footer{min-height:var(--spacing-footer)}
+```
+
+`.snap-none{scroll-snap-type:none}` was in the output for the first time, and
+the bare `.min-h-footer` rule beside the `md:` one had not been there an hour
+earlier. Both came from the new expectation table.
+
+This is worse than a failing row: it makes the row assert nothing. The
+forbidden name is present because the checker names it, and the required
+utilities emit because the checker names them — so the check would stay green
+after the app stopped using any of them. A gate that cannot fail is the thing
+this issue was filed about, one level up.
+
+**The fix, and why not the obvious one.** The obvious fix is a third
+`@source not` line for `scripts/` in `src/app/globals.css`. That file is out of
+scope here by decision — the exclusions belong to issue #24, which proposes
+replacing them with a positive `@source "../../src"`, inverting detection from
+opt-out to opt-in and covering `scripts/` along with the root Markdown it was
+filed about.
+
+So the table spells each utility in segments — `["snap", "none"]` — joined at
+runtime, and no file under `scripts/` contains a whole utility name, comments
+included. No segment is itself a Tailwind utility, so nothing compiles from
+them. A test walks `scripts/*.mjs` and fails if any file spells one of the
+names, so the constraint is enforced rather than remembered.
+
+The indirection is a workaround for a scanner, and it says so in the file.
+**When #24 lands, delete that test and make the segments plain strings** — the
+positive `@source` removes the reason for both.
+
+**What this adds to #24.** #24 records the hazard as latent, on the grounds
+that no prose-only class survived the audit of PR #22. It is live now, and
+`scripts/` is a directory that issue does not mention.
+
+### 2026-08-14 — a third slice: the coverage floor
+
+The new module is well covered and the new entry point is not, and the net is
+upward on all four measures. `vitest.config.mts` says the floor is what the
+repo achieves today and is raised when coverage rises, so leaving it where it
+was would let this change quietly buy slack the next one could spend. Raising
+it is its own commit, because it is its own change.
