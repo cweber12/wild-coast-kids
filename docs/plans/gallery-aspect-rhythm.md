@@ -191,6 +191,58 @@ composition that depends on it. One branch and one PR: well inside the
 reviewable guide, and no two people could take these slices without colliding,
 so splitting them into issues would buy nothing.
 
+## Addendum — 2026-08-14: slice 3 is descoped, and why
+
+Slice 2 shipped. Before building slice 3, the owner reported the landing page
+snapping badly, and measurement in a browser at their own window moved the
+decision.
+
+Their viewport is 1536×639 CSS pixels: a 1920×1080 display at 125% Windows
+scaling gives 1536×864, and Chrome's own furniture takes 177px more. That
+leaves **555px** for a stop, against the ~782px this repo's snapping was built
+and reviewed at (`DESIGN_REVIEW.md` records 1900×866).
+
+Measured on plain `main` and on this branch at that window, content height per
+stop against the 555px available:
+
+| stop          | main | this branch | overflows by |
+| ------------- | ---- | ----------- | ------------ |
+| hero          | 612  | 612         | 57           |
+| gallery       | 421  | 473         | —            |
+| cards         | 577  | 577         | 22           |
+| conditions    | 312  | 312         | —            |
+| interest list | 560  | 560         | 5            |
+| quotes        | 297  | 297         | —            |
+
+Identical but for the gallery, which grew and still fits. So the reported
+breakage is a property of the page at short viewports, not of this work: three
+sections are taller than their stop, `justify-center-safe` therefore
+start-aligns them rather than centring, and mandatory snapping over an
+over-tall section is what makes the page feel like it will not settle.
+
+That reaches this plan through the numbers. A 4:3 tile at 1536px wide:
+
+| layout                              | tile width |
+| ----------------------------------- | ---------- |
+| `main` before this branch, 4 across | 348        |
+| slice 2, three across with rhythm   | **417**    |
+| slice 3's grid, capped at 555px     | **322**    |
+
+Slice 2 already makes the artwork larger on that screen. Slice 3 would make it
+smaller than it was before this issue started — the failure this plan predicted
+for tablets, which turns out to apply to the owner's own laptop. The two-stop
+grid only pays for itself above roughly 800px of usable height, which is a
+premise the page does not currently meet.
+
+**Decision:** this issue ends after slice 2 and the documentation slice. The
+height problem is filed as its own issue, since it affects the hero, the
+program cards and the interest list on `main` and has nothing to do with the
+gallery. The two-stop grid is filed separately and blocked on it.
+
+Slices 3 and 4 above are therefore superseded: 3 is not built, and 4 becomes
+slice 3 of this branch. The rest of this file records what was decided for the
+grid, and stands as the design for the issue that will build it.
+
 ## Out of scope
 
 Real photography, and the final decision about which images are wide. Renaming

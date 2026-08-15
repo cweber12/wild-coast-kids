@@ -135,6 +135,22 @@ is a separate, straightforwardly unfinished piece of interaction design.
 10. **Uniform tiles.** Finding 4 of the previous review stands: the template
     mixed aspect ratios and the row flattens them. Worth revisiting once the
     tiles are larger, since the rhythm will read more strongly.
+    _Fixed, issue #19 (2026-08-14)._ A row is now two 4:3 tiles and one 16:9
+    at one height, the wide slot alternating right, left, right. Three fill a
+    screenful from `lg`, which also made the 4:3 tiles larger — 417px against
+    348px at a 1536px window — so the rhythm has the size to read.
+
+11. **The stops do not fit a 555px viewport.** Found while verifying finding
+    10 at the owner's own window, 1536×639 (a 1080p display at 125% Windows
+    scaling, less Chrome's furniture). Against the 555px a stop then has, the
+    hero needs 612, the program cards 577 and the interest list 560. All three
+    therefore start-align instead of centring — `justify-center-safe` doing
+    exactly what finding 1 asked it to — and mandatory snapping over an
+    over-tall section reads as the page refusing to settle.
+    This review was conducted at 1900×866, where 782px is available and all
+    three fit, which is why it went unseen. Present on `main` and unrelated to
+    the gallery. _Filed as its own issue; it is a page-level constraint, not a
+    section's bug._
 
 ## What Works Well
 

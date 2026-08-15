@@ -150,6 +150,25 @@ rewritten, so the original intent stays readable.
 - **The Calendly `TODO(verify)` is retired** — booking CTAs point at
   `/book`, and the provider decision sits behind that page.
 
+## Addendum — 2026-08-14 (gallery tiles)
+
+- **Gallery tiles are no longer one shape.** "Gallery strip: same single-row
+  strip at all widths; image tiles shrink" now reads: a row is two 4:3 tiles
+  and one 16:9 at one height, so the wide tile is wider rather than shorter,
+  and the wide slot alternates right, left, right down the rows. The shares
+  are the ratios normalised — 0.3 : 0.3 : 0.4 — so every row totals the same
+  width whatever the order. From `lg` three tiles fill a screenful; below it
+  the reader swipes one at a time. See `docs/plans/gallery-aspect-rhythm.md`.
+- **Which images are wide is not a content decision yet.** The nine labels are
+  example content from the reference template; the aspect tagging is marked
+  provisional in `galleryImages.ts` and belongs to the real photography pass.
+- **The stops do not fit every window.** Measured at 1536×639 — a 1080p
+  display at 125% scaling — the hero, the program cards and the interest list
+  are taller than the 555px a stop has, so they start-align instead of
+  centring. The snapping was designed against ~782px. Filed as its own issue;
+  recorded here because "one screen per section" is a brief-level claim, and
+  it is currently false below roughly 780px of usable height.
+
 ## Out of Scope
 
 - Real photography or a logo — labeled placeholders ship; swapping in real
