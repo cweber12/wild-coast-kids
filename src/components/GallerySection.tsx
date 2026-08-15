@@ -1,17 +1,21 @@
 import { GalleryRow } from "./GalleryRow";
 import { Placeholder } from "./Placeholder";
+import { GALLERY_IMAGES, type GalleryAspect } from "./galleryImages";
 
-const GALLERY_IMAGES = [
-  "Art class at the park",
-  "Mixed media art",
-  "Neon chalk art",
-  "Sunset painting",
-  "Watercolor houses",
-  "Cactus collage",
-  "Pixel art",
-  "Kids with artwork",
-  "Dinosaur watercolor",
-];
+/* What a tile's aspect costs it in width. Two 4:3 tiles and one 16:9 share a
+   row at one height, and 4/3 : 4/3 : 16/9 normalises to exactly 0.3 : 0.3 :
+   0.4 — so the shares are the ratios, and the three tiles come out the same
+   height without a second rule saying so. The subtraction is the two gap-6
+   gaps between them, so a row of three fills the container exactly — Tailwind
+   emits these as `width: calc(30% - .9rem)` and `calc(40% - 1.2rem)`.
+
+   The shares only apply from lg, where three tiles share a screenful. Below
+   that the row shows one tile at a time at 85% with the next peeking, and the
+   wide ones are simply shorter. */
+const TILE_ASPECT_CLASSES: Record<GalleryAspect, string> = {
+  tall: "aspect-4/3 lg:w-[calc((100%-3rem)*0.3)]",
+  wide: "aspect-video lg:w-[calc((100%-3rem)*0.4)]",
+};
 
 export function GallerySection() {
   return (
@@ -34,15 +38,18 @@ export function GallerySection() {
           you want to look at should not slide away, and one you missed
           should be one press back. */}
       <GalleryRow label="Artwork from Wild Coast Kids classes">
-        {GALLERY_IMAGES.map((label) => (
+        {GALLERY_IMAGES.map(({ label, aspect }) => (
           <Placeholder
             key={label}
             label={label}
-            /* Tiles are a fraction of the row rather than a fixed size, so a
-               whole number of them is visible at every width and they grow
-               to fill the stop: two from md, three from lg, four from xl.
-               The subtraction in each calc is the gap-4 between them. */
-            className="rounded-thumb aspect-4/3 w-[85%] shrink-0 snap-start overflow-hidden md:w-[calc((100%-1rem)/2)] lg:w-[calc((100%-2rem)/3)] xl:w-[calc((100%-3rem)/4)]"
+            /* self-center rather than the flex default: stretch forces a
+               height, which makes aspect-ratio yield nothing and pulls the
+               16:9 tiles up to the height of the 4:3 ones. Centred, the row
+               takes its height from its tallest tile and a swipe past a wide
+               one does not make the page jump. It sits here rather than as
+               items-center on the row because GalleryRow owns no tile
+               geometry. */
+            className={`rounded-thumb w-[85%] shrink-0 snap-start self-center overflow-hidden ${TILE_ASPECT_CLASSES[aspect]}`}
             labelClassName="whitespace-normal"
           />
         ))}
