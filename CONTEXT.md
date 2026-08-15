@@ -36,10 +36,24 @@ swapping in the photograph changes nothing for assistive tech.
 _Avoid_: stub, dummy image, reserved slot (that is for content, not images)
 
 **Strip**:
-A band of content that loops horizontally — the yellow marquee and the gallery
-film strip. Every strip moves at one shared pixels-per-second speed, whatever
-its width.
+A band of content that loops horizontally. The yellow marquee is the only one
+left: the gallery was a strip until PR #14 gave it controls and stopped it
+moving, and a row the reader drives is not a strip.
 _Avoid_: carousel, ticker, marquee (the marquee is one strip, not the concept)
+
+**Stop**:
+One screen of the landing page, which the viewport comes to rest on from `md`
+up. The page is six of them. A stop owns its height and its surface, and the
+content inside it adds no vertical padding of its own — the stop is already
+supplying that space, and padding on both is counted twice.
+_Avoid_: slide, panel, screen (a section is the content; the stop is the screen
+it fills)
+
+**Tall / wide**:
+The two shapes a gallery tile comes in — 4:3 and 16:9. A row of the gallery is
+two tall and one wide at a single height, so the wide tile is the wider one
+rather than the shorter one, and the wide slot alternates side down the rows.
+_Avoid_: portrait (a tall tile is landscape too, just less so), thumbnail
 
 **Pill**:
 The site's call-to-action shape: a fully-rounded link. Five tones, and the list

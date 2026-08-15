@@ -25,6 +25,32 @@ test("every image slot is exposed to assistive tech exactly once", () => {
   }
 });
 
+test("a wide tile takes the wider share of the row", () => {
+  render(<GallerySection />);
+
+  // jsdom applies no stylesheets, so the class contract is the seam. What it
+  // guards is the arithmetic: the shares are the aspect ratios normalised, so
+  // 0.4 against 0.3 is what makes three tiles one height and a full row.
+  const wide = screen.getByRole("img", { name: "Neon chalk art" });
+  const tall = screen.getByRole("img", { name: "Mixed media art" });
+
+  expect(wide.className).toContain("aspect-video");
+  expect(wide.className).toContain("lg:w-[calc((100%-3rem)*0.4)]");
+  expect(tall.className).toContain("aspect-4/3");
+  expect(tall.className).toContain("lg:w-[calc((100%-3rem)*0.3)]");
+});
+
+test("tiles are centred rather than stretched", () => {
+  render(<GallerySection />);
+
+  // A flex child defaults to stretch, which forces a height and leaves
+  // aspect-ratio with nothing to decide — every 16:9 tile would be pulled up
+  // to a 4:3 tile's height and the variation would vanish silently.
+  expect(
+    screen.getByRole("img", { name: "Neon chalk art" }).className,
+  ).toContain("self-center");
+});
+
 test("the reader drives the row", () => {
   render(<GallerySection />);
 
