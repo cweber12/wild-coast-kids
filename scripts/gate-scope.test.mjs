@@ -41,6 +41,13 @@ const IN_AGENT_WORKTREE =
 const IN_THIS_CHECKOUT = "src/app/page.tsx";
 
 /**
+ * Vendored istanbul output, written by the `test` row of the gate that runs
+ * immediately before `lint`. Rule-based like the above, so this holds on a
+ * fresh clone where no coverage report has been produced yet.
+ */
+const IN_GENERATED_OUTPUT = "coverage/block-navigation.js";
+
+/**
  * Whether git ignores `path`. This is the mechanism prettier and Tailwind's
  * source detection both consult, so it is what settles the `format` and `build`
  * rows.
@@ -178,6 +185,13 @@ describe("eslint", () => {
   // only that the other branch happens to lint.
   it("ignores agent worktrees", async () => {
     expect(await new ESLint().isPathIgnored(IN_AGENT_WORKTREE)).toBe(true);
+  });
+
+  // The `test` row writes coverage/ and `lint` runs next, so without this the
+  // linter reads the output of the gate row before it — and its verdict on a
+  // bare `npm run lint` depends on whether that row has ever run.
+  it("ignores the coverage report the gate produces", async () => {
+    expect(await new ESLint().isPathIgnored(IN_GENERATED_OUTPUT)).toBe(true);
   });
 
   it("does not ignore this checkout's own source", async () => {
