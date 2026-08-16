@@ -1,13 +1,20 @@
-@import "tailwindcss";
+/* `source(none)` switches off Tailwind's automatic detection, which would
+   otherwise scan every non-gitignored file in the project and compile any
+   utility it found in prose. That would make "the class is in the built CSS"
+   stop proving a component uses it — the reading the `stylesheet` gate row and
+   several PRs before it depend on to confirm a utility emits real CSS rather
+   than silently resolving to nothing.
 
-/* Tailwind's automatic source detection scans every non-gitignored file in the
-   project, so a class name written in prose compiles into the shipped
-   stylesheet. That makes "the class is in the built CSS" stop proving a
-   component uses it — the check several PRs rely on to confirm a utility emits
-   real CSS rather than silently resolving to nothing. Paths are relative to
-   this file, so ../../ is the repo root. */
-@source not "../../docs";
-@source not "../../.design";
+   So the app names its own sources instead. Detection is opt-in: a directory
+   outside src/ compiles nothing until it is declared here. The list this
+   replaces was the opposite shape, naming docs/ and .design/ as exclusions,
+   and it could only ever name the places prose had already reached — the root
+   Markdown files were outside it. See
+   docs/adr/0006-opt-in-tailwind-source-detection.md.
+
+   Paths are relative to this file, so ../../ is the repo root. */
+@import "tailwindcss" source(none);
+@source "../../src";
 
 /* "This window can hold a stop." The landing page's one-screen layout — the
    snap type, the stops' forced heights and centring, and the sections dropping
