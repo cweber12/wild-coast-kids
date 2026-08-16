@@ -154,3 +154,94 @@ Beyond the class names:
   the hero's display type or its padding — the one composition every review so
   far has said is right.
 - The reduced-motion asymmetry described above.
+
+## Addendum — 2026-08-15: the threshold was answering the wrong question
+
+The 45rem threshold above is wrong, and the reason is a number nobody measured
+before choosing it.
+
+```
+screen.height       864   1920x1080 at 125% scaling
+screen.availHeight  816   less the Windows taskbar
+Chrome's furniture  177   tab strip, address bar
+max viewport        639   <- maximised, on this display, full stop
+```
+
+**The owner's display cannot produce a 720px viewport in a normal window.** Not
+by resizing: 639 is the ceiling a maximised Chrome gets, and only F11 fullscreen
+clears it. So a 45rem threshold does not merely switch the stops off "on short
+windows" — it switches them off permanently on the only machine the site is
+reviewed from, and leaves issue #38, the two-stop gallery grid, permanently
+unbuildable there, since its own plan needs a stop taller than this one has.
+
+The body of this plan reasoned carefully about which windows should keep the
+stops and never asked whether the reviewer's window could be one of them. That
+is the same failure as the original bug — designing against an assumed viewport
+— committed one level up.
+
+**Decision reversed.** The stops are made to fit 555px rather than switched off
+above it. The threshold survives, at a number that admits the machine it was
+written for.
+
+### The new arithmetic
+
+| quantity              | value                                |
+| --------------------- | ------------------------------------ |
+| reviewer's viewport   | 639                                  |
+| less the nav          | 555 available                        |
+| target for every stop | **540** (15px of headroom)           |
+| threshold             | **39rem = 624** (540 + the 84px nav) |
+
+39rem, not 40. 40rem is 640px — one pixel above the ceiling above, which would
+have reproduced the whole problem in a plan written to fix it.
+
+### The trims, measured at 1536 before and after
+
+| stop          | was | where the height was                                | change                                                    | now |
+| ------------- | --- | --------------------------------------------------- | --------------------------------------------------------- | --- |
+| hero          | 612 | 120px of `md:py-15`, 441px of content               | `md:py-5`                                                 | 532 |
+| program cards | 577 | `p-9`; the emoji renders 66px tall at `text-[44px]` | `p-7`, `leading-none` on the emoji, two margins tightened | 531 |
+| interest list | 560 | `min-h-140` on the form card                        | card `min-h-126`, success `min-h-108`                     | 504 |
+| gallery       | 473 | —                                                   | —                                                         | 473 |
+| conditions    | 312 | —                                                   | —                                                         | 312 |
+| quotes        | 297 | —                                                   | —                                                         | 297 |
+
+Two of the three cost almost nothing, which is why this was the wrong trade to
+refuse:
+
+- **The hero's padding is not binding on a tall window.** The text column is
+  `justify-center` inside a box already `100dvh - nav` tall, so above the
+  threshold the content is centred in the same space whatever the padding is.
+  Cutting it changes the poster only on the windows that need it cut.
+- **The interest list's `min-h` contradicted its own comment.** The comment says
+  it is sized so the success swap does not collapse the card, "≈ the rendered
+  form" — but the form is 431px of content in a 72px-padded card, 503 tall,
+  while the success state's own `min-h-120` makes it 552. The card was sized to
+  the success state and the form paid 57px for it. Both are now derived from the
+  form's measured content, which is what the comment always claimed.
+
+### The width half moves to `lg`
+
+`(min-width: 64rem) and (min-height: 39rem)`.
+
+Between 768 and 1023 the cards are 623 and the trim only reaches 585. The extra
+is not padding: the two CTA pills wrap to a second line there (97px against 43)
+and the co-op paragraph runs 61 against 41, because the two columns are ~360px
+wide. Closing that needs shorter pill labels or stacked CTAs and shorter copy —
+composition changes that would show at every width to fix one band.
+
+`lg` instead makes that band an ordinary scrolling page. This is the rule
+`gallery-aspect-rhythm.md` already chose for the gallery — "small screens
+swipe, large screens grid" — now applied to the page rather than to one section,
+and it dissolves the `md`–`lg` half of issue #40: there is no stop in that band
+to overflow. _Rejected: keeping `md`._ It buys snapping on tablets at the cost
+of copy changes on desktops, and leaves an over-tall gallery stop behind anyway.
+
+### What is still not fixed
+
+Issue #40 survives above `lg`, in the other direction: the gallery's tiles are a
+percentage of the row with a fixed aspect, so its stop grows with width without
+limit — 473 at 1536, 559 at 1920, 703 at 2560. It clears the 540 budget to about
+1750px wide and exceeds it beyond that. The fix is the `gallery-fit` cap already
+designed in `gallery-aspect-rhythm.md`, which derives the grid's max width from
+the stop's height; it belongs to #38 and #40, not here.
