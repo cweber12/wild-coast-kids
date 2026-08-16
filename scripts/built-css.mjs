@@ -55,7 +55,7 @@ export function utilityName({ segments }) {
 export const FORBIDDEN = [
   {
     segments: ["snap", "none"],
-    why: "in no file under src/; only prose in docs/plans/section-snapping.md, so its return means a directory outside the app is feeding Tailwind's scanner",
+    why: "in no file under src/. CLAUDE.md's Project invariants names it while stating that prose never reaches the stylesheet, and that sentence is this row's canary: a root Markdown file is exactly what the opt-out arrangement could not exclude, so its return means detection has stopped being opt-in",
   },
 ];
 

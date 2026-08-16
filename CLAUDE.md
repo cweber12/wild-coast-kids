@@ -281,7 +281,15 @@ learn, and say what it cost — the reason is what stops it being re-litigated.
 These are the rules that are specific to this repo and would be wrong elsewhere:
 domain constraints, external system quirks, threading contracts, data formats. -->
 
-_(nothing yet)_
+**Prose never reaches the stylesheet.** Tailwind's source detection is opt-in
+here: `src/app/globals.css` imports it with `source(none)` and names `src/` as
+the only scanned directory. That is what makes "the class is in the built CSS"
+evidence that a component uses it — the reading the `stylesheet` gate row and
+several PRs before it depend on. It also means this file, `CONTEXT.md` and
+`README.md` may name a utility while explaining a convention — `snap-none`,
+say — without compiling it into the shipped stylesheet. The gate asserts that
+exact name stays absent, so this sentence is the check's canary as well as its
+documentation. See `docs/adr/0006-opt-in-tailwind-source-detection.md`.
 
 ---
 
