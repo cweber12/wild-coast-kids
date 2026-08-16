@@ -8,8 +8,16 @@ const COOP_ACTIVITIES = [
   { emoji: "🔬", name: "Science" },
 ];
 
+/* p-7, not the p-9 this started at: a card has to come in under the 540px a
+   stop budgets (issue #37), and 16px of padding is the cheapest of the three
+   places that height was hiding. */
 const CARD_BASE =
-  "rounded-card relative flex min-h-[520px] flex-col justify-between overflow-hidden p-9 transition-transform duration-fast hover:-translate-y-1";
+  "rounded-card relative flex min-h-[520px] flex-col justify-between overflow-hidden p-7 transition-transform duration-fast hover:-translate-y-1";
+
+/* leading-none on a decorative glyph: at text-[44px] the default line box
+   renders 66px tall, so 22px of the card's height was line-height around an
+   emoji. Nothing moves visually. */
+const CARD_EMOJI = "mb-4 block text-[44px] leading-none";
 
 export function ProgramCards() {
   return (
@@ -28,7 +36,7 @@ export function ProgramCards() {
             [ 01 ]
           </p>
           <div className="relative z-10 flex flex-col">
-            <span aria-hidden="true" className="mb-4 block text-[44px]">
+            <span aria-hidden="true" className={CARD_EMOJI}>
               🎨
             </span>
             <h2 className="text-card leading-display mb-2 font-black text-white italic">
@@ -78,7 +86,7 @@ export function ProgramCards() {
             [ 02 ]
           </p>
           <div className="relative z-10 flex flex-col">
-            <span aria-hidden="true" className="mb-4 block text-[44px]">
+            <span aria-hidden="true" className={CARD_EMOJI}>
               🌿
             </span>
             <h2 className="text-card leading-display mb-2 font-black text-white italic">
@@ -93,7 +101,7 @@ export function ProgramCards() {
               {COOP_ACTIVITIES.map(({ emoji, name }) => (
                 <li
                   key={name}
-                  className="rounded-tile bg-white/12 p-3 text-center"
+                  className="rounded-tile bg-white/12 p-2.5 text-center"
                 >
                   <span aria-hidden="true" className="mb-1 block text-[22px]">
                     {emoji}

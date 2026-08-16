@@ -4,7 +4,12 @@ import { Placeholder } from "./Placeholder";
 export function Hero() {
   return (
     <section className="relative grid flex-1 overflow-hidden bg-purple pb-15 md:grid-cols-2 md:pb-0">
-      <div className="relative z-10 col-start-1 row-start-1 flex flex-col justify-center px-6 pt-5 md:px-12 md:py-15">
+      {/* md:py-5, not the py-15 this started at. The column is justify-center
+          inside a cell already `100dvh - nav` tall, so on a tall window the
+          padding is not binding — the content is centred in the same space
+          either way — and on a 555px stop those 80px were most of what made
+          the poster overflow it (issue #37). */}
+      <div className="relative z-10 col-start-1 row-start-1 flex flex-col justify-center px-6 pt-5 md:px-12 md:py-5">
         <p className="mb-7 text-2xs font-extrabold tracking-widest text-yellow uppercase">
           📍 San Diego · K–8 · Outdoors
         </p>

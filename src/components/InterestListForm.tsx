@@ -28,11 +28,18 @@ export function InterestListForm() {
   return (
     // min-h ≈ the rendered form, so the success swap doesn't collapse the
     // card and yank the page while the user is looking at it.
-    <div className="rounded-card shadow-card min-h-140 bg-white p-9">
+    //
+    // Both numbers are derived from that form: it measures 431px of content
+    // inside 36px of padding, so the card is 126 (504px) and the success state
+    // 108 (432px), and the swap is exactly height-neutral. They used to be 140
+    // and 120, which sized the card to the *success* state — 552px against the
+    // form's 503 — and cost the interest-list stop 57px it did not have to
+    // spend. `InterestListForm.test.tsx` now asserts the two agree.
+    <div className="rounded-card shadow-card min-h-126 bg-white p-9">
       {submitted ? (
         <div
           role="status"
-          className="flex min-h-120 flex-col justify-center px-5 py-10 text-center"
+          className="flex min-h-108 flex-col justify-center px-5 py-10 text-center"
         >
           <span aria-hidden="true" className="mb-4 block text-[52px]">
             🎉
