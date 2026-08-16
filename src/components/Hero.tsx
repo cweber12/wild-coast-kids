@@ -4,23 +4,29 @@ import { Placeholder } from "./Placeholder";
 export function Hero() {
   return (
     <section className="relative grid flex-1 overflow-hidden bg-purple pb-15 md:grid-cols-2 md:pb-0">
-      {/* md:py-5, not the py-15 this started at. The column is justify-center
-          inside a cell already `100dvh - nav` tall, so on a tall window the
-          padding is not binding — the content is centred in the same space
-          either way — and on a 555px stop those 80px were most of what made
-          the poster overflow it (issue #37). */}
-      <div className="relative z-10 col-start-1 row-start-1 flex flex-col justify-center px-6 pt-5 md:px-12 md:py-5">
-        <p className="mb-7 text-2xs font-extrabold tracking-widest text-yellow uppercase">
+      {/* md:pt-5 md:pb-14, not the symmetric py-15 this started at. Padding on
+          this column is not binding on a tall window — it is justify-center
+          inside a cell already `100dvh - nav` tall, so the content is centred
+          in the same space whatever the padding — which is why trimming it is
+          what let the poster into a 555px stop (issue #37).
+
+          The bottom half is asymmetric on purpose. The "San Diego, CA · K–8"
+          line below is absolutely positioned to the section's bottom edge, and
+          when the section shrinks to the stop the centred content catches up
+          with it and prints straight through the CTA pills. pb-14 reserves the
+          51px that line occupies, so the two cannot meet at any window height. */}
+      <div className="relative z-10 col-start-1 row-start-1 flex flex-col justify-center px-6 pt-5 md:px-12 md:pt-5 md:pb-14">
+        <p className="mb-5 text-2xs font-extrabold tracking-widest text-yellow uppercase">
           📍 San Diego · K–8 · Outdoors
         </p>
-        <h1 className="text-display leading-display mb-8 font-black text-cream italic">
+        <h1 className="text-display leading-display mb-6 font-black text-cream italic">
           Kids who
           <br />
           make,
           <span className="block text-yellow">wonder.</span>
         </h1>
         {/* white/90, up from the template's /70: 4.79:1 vs a failing 3.60:1 */}
-        <p className="leading-relaxed mb-9 max-w-80 text-base text-white/90">
+        <p className="leading-relaxed mb-6 max-w-80 text-base text-white/90">
           Art classes and outdoor co-op rooted in the California coast. Charter
           fund eligible.
         </p>
