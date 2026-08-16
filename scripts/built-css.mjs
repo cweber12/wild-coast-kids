@@ -59,6 +59,35 @@ export const FORBIDDEN = [
   },
 ];
 
+/**
+ * At-rules that must appear *and* wrap at least one rule that declares
+ * something.
+ *
+ * A `REQUIRED` row cannot do this job. An unregistered `@custom-variant` makes
+ * every class using it compile to nothing at all, silently, while the class
+ * name stays in the markup where jsdom still finds it — so the class contract
+ * in the component tests cannot see the failure either. The obvious utility to
+ * require instead, `snap-start`, is also written bare on the gallery tiles, so
+ * a rule for it exists either way: a false pass. Only the at-rule proves both
+ * that Tailwind registered the variant and that it registered *these*
+ * conditions.
+ *
+ * A prelude holds no class name, so unlike the tables above these are plain
+ * strings — there is nothing here for Tailwind's scanner to compile.
+ *
+ * @typedef {object} AtRuleExpectation
+ * @property {string} prelude  Verbatim, as the minified build emits it.
+ * @property {string} why      Printed with the row, so a failure explains itself.
+ */
+
+/** @type {AtRuleExpectation[]} */
+export const AT_RULES = [
+  {
+    prelude: "@media (min-width:64rem) and (min-height:39rem)",
+    why: "the `stops` variant gates the landing page's one-screen layout on it; 39rem is the trimmed height a stop needs plus the nav, and it has to stay under the 640px ceiling a 125%-scaled 1080p display imposes — see docs/plans/stop-height-threshold.md",
+  },
+];
+
 /** Utilities that must appear *and* emit at least one declaration. */
 /** @type {Expectation[]} */
 export const REQUIRED = [
@@ -92,11 +121,12 @@ function escapeForRegExp(text) {
  * whose body holds at least one declaration.
  *
  * The token may be variant-prefixed: two of the required utilities are used in
- * src/ only under `md:`, so the built selector escapes the variant into the
- * class name and a matcher anchored on a leading dot would report a working
- * utility as missing. Matching a bare substring instead would count a mention
- * in a comment as a pass, which is the failure this whole check exists to
- * remove.
+ * src/ only under a variant — one under `md:`, one under `stops:` — so the
+ * built selector escapes the variant into the class name and a matcher
+ * anchored on a leading dot would report a working utility as missing. Naming
+ * which two is exactly what the guard test at the foot of the test file
+ * forbids. Matching a bare substring instead would count a mention in a
+ * comment as a pass, which is the failure this whole check exists to remove.
  *
  * @param {string} css
  * @param {string} utility
@@ -111,6 +141,52 @@ export function rulesFor(css, utility) {
   return [...css.matchAll(rule)]
     .filter((match) => DECLARATION.test(match[1]))
     .map((match) => match[0]);
+}
+
+/**
+ * Every rule inside `css` that has a selector and declares something, as
+ * `selector{body}` pairs. Used to read an at-rule's contents as evidence.
+ *
+ * @param {string} css
+ * @returns {string[]} The selectors, in source order.
+ */
+function selectorsIn(css) {
+  return [...css.matchAll(/([^{}]+)\{([^{}]*)\}/g)]
+    .filter((match) => DECLARATION.test(match[2]))
+    .map((match) => match[1].trim())
+    .filter((selector) => !selector.startsWith("@"));
+}
+
+/**
+ * The body of every at-rule in `css` with this prelude.
+ *
+ * Brace-balanced rather than matched with a regex: the `stops` variant nests
+ * inside `@media (prefers-reduced-motion:no-preference)` for the snap classes,
+ * and `[^{}]*` would stop at the first inner brace and report an at-rule that
+ * wraps working rules as empty.
+ *
+ * @param {string} css
+ * @param {string} prelude
+ * @returns {string[]}
+ */
+export function atRuleBodies(css, prelude) {
+  const bodies = [];
+  const opener = `${prelude}{`;
+
+  for (let from = 0; ;) {
+    const start = css.indexOf(opener, from);
+    if (start === -1) return bodies;
+
+    let depth = 0;
+    let end = start + prelude.length;
+    for (; end < css.length; end += 1) {
+      if (css[end] === "{") depth += 1;
+      else if (css[end] === "}" && (depth -= 1) === 0) break;
+    }
+
+    bodies.push(css.slice(start + opener.length, end));
+    from = end + 1;
+  }
 }
 
 /**
@@ -164,6 +240,18 @@ export function auditStylesheets(stylesheets) {
       lines.push(`FAIL  ${utility} emits no declarations — ${expectation.why}`);
     } else {
       for (const rule of rules) lines.push(`ok    ${rule}`);
+    }
+  }
+
+  for (const { prelude, why } of AT_RULES) {
+    const wrapped = atRuleBodies(css, prelude).flatMap(selectorsIn);
+    if (wrapped.length === 0) {
+      ok = false;
+      lines.push(
+        `FAIL  ${prelude} wraps no rule that declares anything — ${why}`,
+      );
+    } else {
+      lines.push(`ok    ${prelude} wraps ${wrapped.join(" ")}`);
     }
   }
 

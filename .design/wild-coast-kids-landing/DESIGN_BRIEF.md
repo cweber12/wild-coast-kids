@@ -169,6 +169,39 @@ rewritten, so the original intent stays readable.
   recorded here because "one screen per section" is a brief-level claim, and
   it is currently false below roughly 780px of usable height.
 
+## Addendum — 2026-08-15 (the stops fit a 555px screen)
+
+- **"One screen per section" is true again, and the sections were changed to
+  make it true.** The page is six stops on a window at least `lg` wide and
+  39rem (624px) tall, and an ordinary scrolling page with its section padding
+  back on anything smaller. **A stop is 540px**, and every section is built to
+  fit that. This replaces the note above, which recorded the claim as false
+  below ~780px of usable height.
+
+  The number comes from the machine the site is reviewed on rather than from
+  the design: a 1920x1080 display at 125% scaling gives a maximised Chrome a
+  639px viewport and no more, so 555px is what a stop actually gets there. An
+  earlier attempt at this fixed the overflow by switching the stops off below
+  720px, which would have made the whole mechanic invisible on that machine.
+  See issue #37 and `docs/plans/stop-height-threshold.md`.
+
+- **What it cost the compositions.** The poster's text column lost 80px of
+  padding and 28px of internal margin — invisible above the threshold, because
+  the column is centred in a box already a screen tall. The program cards lost
+  16px of padding and 22px of line box around a decorative emoji. The interest
+  list's form card lost 56px it had only because it was sized to its success
+  state rather than to the form. No type sizes changed, and no copy was cut.
+
+- **The `md`–`lg` band no longer snaps.** The cards' two columns are narrow
+  enough there that the CTA pills wrap, which padding cannot fix. That band
+  swipes and scrolls — the same rule the gallery already follows.
+
+- **The gallery is still the exception.** Its stop's height grows with viewport
+  _width_ without limit — 473px at 1536, 559 at 1920, 703 at 2560 — so on a
+  short window it overflows above about 1850px wide. "Gallery strip: same
+  single-row strip at all widths" is what does it. Issue #40; the fix is the
+  `gallery-fit` cap already designed for issue #38.
+
 ## Out of Scope
 
 - Real photography or a logo — labeled placeholders ship; swapping in real

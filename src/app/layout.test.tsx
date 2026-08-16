@@ -49,7 +49,7 @@ test("anchor targets come to rest below the nav, not under it", () => {
   expect(html).toContain("md:scroll-pt-nav");
 });
 
-test("snapping is enabled only from md up, and only when motion is safe", () => {
+test("snapping is enabled only where a stop fits, and only when motion is safe", () => {
   render(
     <RootLayout params={Promise.resolve({})}>
       <main>page content</main>
@@ -62,7 +62,11 @@ test("snapping is enabled only from md up, and only when motion is safe", () => 
   // disabling one: that way snapping is never switched on for a reader who
   // asked for reduced motion, with no dependence on which utility the
   // stylesheet happens to emit last.
-  expect(html).toContain("motion-safe:md:snap-y");
-  expect(html).toContain("motion-safe:md:snap-mandatory");
+  expect(html).toContain("motion-safe:stops:snap-y");
+  expect(html).toContain("motion-safe:stops:snap-mandatory");
   expect(html).not.toContain("motion-reduce:");
+
+  // Width alone is not enough — three stops overflow a 639px viewport, so
+  // snapping over them reads as the page refusing to settle (issue #37).
+  expect(html).not.toContain("motion-safe:md:snap");
 });

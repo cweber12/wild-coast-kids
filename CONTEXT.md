@@ -42,10 +42,21 @@ moving, and a row the reader drives is not a strip.
 _Avoid_: carousel, ticker, marquee (the marquee is one strip, not the concept)
 
 **Stop**:
-One screen of the landing page, which the viewport comes to rest on from `md`
-up. The page is six of them. A stop owns its height and its surface, and the
-content inside it adds no vertical padding of its own — the stop is already
-supplying that space, and padding on both is counted twice.
+One screen of the landing page, which the viewport comes to rest on. The page
+is six of them. A stop owns its height and its surface, and the content inside
+it adds no vertical padding of its own — the stop is already supplying that
+space, and padding on both is counted twice.
+
+A stop exists only on a window big enough to hold one: from `lg` wide and
+`39rem` tall, expressed as the `stops` variant in `globals.css`. Below either
+threshold the page has no stops at all — the sections put their own padding
+back and it scrolls normally.
+
+A stop is **540px** tall at that threshold, and every section is built to fit
+it. Content that does not is a bug in the section: the budget is the constraint
+sections are designed against, not a number to raise.
+`docs/plans/stop-height-threshold.md` has the measurements and the reason the
+threshold cannot go above 39rem.
 _Avoid_: slide, panel, screen (a section is the content; the stop is the screen
 it fills)
 

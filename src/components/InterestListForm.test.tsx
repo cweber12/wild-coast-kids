@@ -44,3 +44,39 @@ test("the form carries no link to the community page", () => {
   // is what lets /community render the form without pointing at itself.
   expect(screen.queryByRole("link")).toBe(null);
 });
+
+test("the success swap does not change the card's height", () => {
+  const { container } = render(<InterestListForm />);
+  const card = container.firstElementChild as HTMLElement;
+
+  // jsdom applies no stylesheets, so the seam is the arithmetic the class
+  // names encode: Tailwind's spacing scale is n x 4px, and box-sizing is
+  // border-box, so the card's min-height has to be the success state's plus
+  // the card's own padding. They used to be 560 and 552 — the card sized to
+  // the success state rather than to the form, costing the interest-list stop
+  // 57px it did not have to spend (issue #37).
+  const scale = (className: string, prefix: string) => {
+    const found = new RegExp("(?:^| )" + prefix + "-(\\d+)(?: |$)").exec(
+      className,
+    );
+    if (!found) throw new Error(`no ${prefix}- utility in "${className}"`);
+    return Number(found[1]) * 4;
+  };
+
+  const cardMinHeight = scale(card.className, "min-h");
+  const cardPadding = scale(card.className, "p") * 2;
+
+  fireEvent.change(screen.getByLabelText("Your name"), {
+    target: { value: "Robin Parent" },
+  });
+  fireEvent.change(screen.getByLabelText("Email"), {
+    target: { value: "robin@example.com" },
+  });
+  fireEvent.click(
+    screen.getByRole("button", { name: /join the interest list/i }),
+  );
+
+  expect(
+    scale(screen.getByRole("status").className, "min-h") + cardPadding,
+  ).toBe(cardMinHeight);
+});

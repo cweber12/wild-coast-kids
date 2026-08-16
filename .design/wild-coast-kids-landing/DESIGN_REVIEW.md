@@ -151,6 +151,34 @@ is a separate, straightforwardly unfinished piece of interaction design.
     three fit, which is why it went unseen. Present on `main` and unrelated to
     the gallery. _Filed as its own issue; it is a page-level constraint, not a
     section's bug._
+    _Fixed, issue #37 (2026-08-15)._ **The three sections were trimmed to fit,
+    rather than the snapping being switched off above them.** All six stops now
+    come in under 540px, and the page snaps at 1536×639 with every stop whole:
+    the hero at 532, the cards at 531, the interest list at 504.
+
+    The first attempt did switch the snapping off instead, on a `stops` variant
+    of 45rem. That was wrong for a reason worth recording, because it is this
+    finding's own mistake repeated: **1920×1080 at 125% scaling is 864 CSS
+    pixels, and Chrome's furniture takes 177, so a maximised window cannot
+    exceed a 639px viewport on this machine.** A 720px threshold would have made
+    the mechanic permanently invisible here. The variant survives at
+    `lg` × 39rem (624px) — below the ceiling by design.
+
+    Where the height was hiding, none of it in the compositions: 120px of
+    padding on the poster's text column, which is centred in a box already a
+    screen tall and therefore unaffected above the threshold; 22px of line box
+    around a decorative emoji at `text-[44px]`; and 56px on the interest form's
+    card, which was sized to its success state rather than to the form.
+
+    Measuring across widths also turned up a **twelfth** finding, filed as
+    issue #40 and _not_ fixed: the gallery stop's height grows with viewport
+    _width_ without limit — 473px at 1536, 559 at 1920, 703 at 2560 — so on a
+    639px-tall window it overflows above about 1850px wide. No height threshold
+    reaches it. Between `md` and `lg` it was worse still, 734px at 1023, a
+    regression from finding 10's fix dropping the two-up tile step; that half is
+    moot now that the band has no stops. At 1536 and 1900, the widths both of
+    these findings were checked at, it stays inside its stop, which is why it
+    went unseen.
 
 ## What Works Well
 

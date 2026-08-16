@@ -27,7 +27,7 @@ test("#community lands on a snap stop, not mid-section", () => {
   const target = container.querySelector("#community");
 
   expect(target?.tagName).toBe("SECTION");
-  expect(target?.className).toContain("md:snap-start");
+  expect(target?.className).toContain("stops:snap-start");
 });
 
 test("the parent quotes close the page, below the interest list", () => {

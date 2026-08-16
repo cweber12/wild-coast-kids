@@ -9,6 +9,27 @@
 @source not "../../docs";
 @source not "../../.design";
 
+/* "This window can hold a stop." The landing page's one-screen layout — the
+   snap type, the stops' forced heights and centring, and the sections dropping
+   their own vertical padding because the stop supplies it — is all gated on
+   this one variant rather than on md.
+
+   39rem, because 40 would be too many. A 1920x1080 display at 125% scaling is
+   864 CSS pixels tall; the taskbar takes 48 and Chrome's own furniture 177, so
+   a maximised window's viewport tops out at 639. 40rem is 640 — one pixel past
+   the ceiling, and the stops would never appear on that machine at all. 39rem
+   is 624: the 540px every stop is trimmed to fit, plus the 84px nav.
+
+   64rem, not 48, for the width. Between 768 and 1023 the program cards' two
+   columns are narrow enough that the CTA pills wrap to a second line, which no
+   amount of padding buys back. That band scrolls instead — the same rule the
+   gallery already follows, small screens swipe and large screens grid.
+
+   Both halves live here rather than as a stacked lg: so that a call site
+   cannot take one without the other. See docs/plans/stop-height-threshold.md
+   for the measurements, including the ones that moved these numbers. */
+@custom-variant stops (@media (min-width: 64rem) and (min-height: 39rem));
+
 /* Wild Coast Kids design tokens — coastal pop editorial.
    Canonical record: .design/wild-coast-kids-landing/DESIGN_TOKENS.css.
    One fixed, art-directed palette: no dark mode by decision (see

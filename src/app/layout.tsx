@@ -27,10 +27,12 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     // scroll-pt keeps an anchored section clear of the nav when the browser
     // scrolls to it. Same tokens the nav sets its own height from, so the
-    // gap and the bar cannot drift apart.
+    // gap and the bar cannot drift apart. It stays on md rather than on the
+    // stops variant: the nav is sticky, so an anchor needs the offset whether
+    // or not anything on the page snaps.
     <html
       lang="en"
-      className={`${montserrat.variable} scroll-pt-nav-sm md:scroll-pt-nav h-full antialiased motion-safe:scroll-smooth motion-safe:md:snap-y motion-safe:md:snap-mandatory`}
+      className={`${montserrat.variable} scroll-pt-nav-sm md:scroll-pt-nav h-full antialiased motion-safe:scroll-smooth motion-safe:stops:snap-y motion-safe:stops:snap-mandatory`}
     >
       <body className="flex min-h-full flex-col overflow-x-hidden bg-cream font-sans text-dark">
         <Nav />

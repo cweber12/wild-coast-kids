@@ -164,3 +164,43 @@ Also deliberately not done:
 - **The `#conditions` id.** Nothing links to it — the teaser points at the
   `/conditions` route — but `Conditions.test.tsx` asserts it as stable API.
   Retiring it is its own slice.
+
+## Addendum — 2026-08-15 (the stops need a height threshold too)
+
+Issue #37, `docs/plans/stop-height-threshold.md`.
+
+- **"`md` and up only" is now "`lg` and up, and 39rem tall".** The reasoning
+  above sized the stops against phones and a 900px window, and never against a
+  scaled desktop. A 1080p display at 125% Windows scaling reports a 639px
+  viewport, which leaves a stop 555px; the hero needed 612, the program cards
+  623 at their tallest and the interest list 560. `md:` alone let mandatory
+  snapping run over three over-tall sections.
+
+  The gate is now a `stops` custom variant carrying both conditions, and every
+  class this plan put behind `md:` — the snap type on `html`, `SnapSection`'s
+  heights, centring and snap alignment, and the sections' `py-0` — sits behind
+  it instead. `md:snap-start` in the decisions and test seams above therefore
+  reads `stops:snap-start` in the code.
+
+- **The three over-tall sections were trimmed to fit, not gated around.** A
+  stop is 540px and every section comes in under it. The threshold exists for
+  windows smaller still, not to excuse a section from the budget. That order
+  matters: the first attempt set the threshold above the sections instead, at a
+  height the reviewer's display cannot reach, which would have retired the
+  whole mechanic on the machine it is judged on.
+
+- **`lg`, not `md`, for the width.** Between 768 and 1023 the cards' columns
+  are narrow enough that the CTA pills wrap, and no padding buys that back. The
+  premise above — "two sections cannot fit a phone" — turns out to extend to
+  tablets for the same reason.
+
+- **`motion-reduce:snap-none` was never implemented**, and this addendum is
+  where that stops being invisible. The code expresses the same intent with
+  `motion-safe:` on the enabling classes, which is why `snap-none` is a
+  FORBIDDEN row in `scripts/built-css.mjs` — the two lines of prose above are
+  its only occurrences in the repo, and its appearance in the built stylesheet
+  would mean this file was feeding Tailwind's scanner.
+
+- **Rejecting `proximity` still holds**, for a second reason: it would have
+  left the over-tall stops over-tall and only stopped the page fighting about
+  it.

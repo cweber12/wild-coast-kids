@@ -59,3 +59,21 @@ test("the reader drives the row", () => {
   ).toBeDefined();
   expect(screen.getByRole("button", { name: /next artwork/i })).toBeDefined();
 });
+
+test("the section puts its own padding back where there is no stop", () => {
+  const { container } = render(<GallerySection />);
+
+  // A stop supplies this section's vertical space, so the section drops its
+  // own to avoid counting it twice — but only where a stop exists. Gated on
+  // md instead, a 639px window would get six sections butted flush together
+  // (issue #37).
+  // Listed rather than searched for, so a stray vertical padding fails too.
+  // Spelling the md-gated class here to assert its absence would compile it
+  // into the shipped stylesheet, which is the hazard scripts/built-css.mjs
+  // documents.
+  const vertical = (container.firstElementChild?.className ?? "")
+    .split(/\s+/)
+    .filter((className) => /(^|:)p[byt]-/.test(className));
+
+  expect(vertical.sort()).toEqual(["py-section-sm", "stops:py-0"].sort());
+});
