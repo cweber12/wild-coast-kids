@@ -13,7 +13,7 @@ export function InterestListTeaser() {
   return (
     // The #community anchor lives on the SnapSection wrapping this, so the
     // links that target it land on a snap stop rather than mid-section.
-    <section className="px-gutter-sm py-section-sm grid items-start gap-10 md:grid-cols-2 md:gap-20 md:px-gutter md:py-0">
+    <section className="px-gutter-sm py-section-sm grid items-start gap-10 md:grid-cols-2 md:gap-20 md:px-gutter stops:py-0">
       <div>
         <h2 className="text-title leading-display mb-4 font-black italic">
           Stay in

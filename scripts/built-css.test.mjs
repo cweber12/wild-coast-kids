@@ -10,8 +10,10 @@ import {
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
+  AT_RULES,
   FORBIDDEN,
   REQUIRED,
+  atRuleBodies,
   auditStylesheets,
   checkBuiltCss,
   findStylesheets,
@@ -29,6 +31,7 @@ const PROBE = "gate-probe";
 const compiled = () =>
   [
     ...REQUIRED.map((expectation) => `.${utilityName(expectation)}{color:red}`),
+    ...AT_RULES.map(({ prelude }) => `${prelude}{.${PROBE}{color:red}}`),
     ".unrelated{display:block}",
   ].join("");
 
@@ -98,6 +101,42 @@ describe("rulesFor", () => {
   });
 });
 
+describe("atRuleBodies", () => {
+  const PRELUDE = "@media (min-width:48rem)";
+
+  test("returns the body of a matching at-rule", () => {
+    expect(atRuleBodies(`${PRELUDE}{.${PROBE}{a:b}}`, PRELUDE)).toEqual([
+      `.${PROBE}{a:b}`,
+    ]);
+  });
+
+  // The shape the real build emits: the snap classes sit under the variant
+  // *inside* a prefers-reduced-motion query. A [^{}]* matcher would stop at
+  // the first inner brace and call a working at-rule empty.
+  test("keeps a nested at-rule whole", () => {
+    const css = `${PRELUDE}{@media (prefers-reduced-motion:no-preference){.${PROBE}{a:b}}}`;
+    expect(atRuleBodies(css, PRELUDE)).toEqual([
+      `@media (prefers-reduced-motion:no-preference){.${PROBE}{a:b}}`,
+    ]);
+  });
+
+  test("finds every occurrence, not just the first", () => {
+    const css = `${PRELUDE}{.a{c:d}}.x{y:z}${PRELUDE}{.b{c:d}}`;
+    expect(atRuleBodies(css, PRELUDE)).toEqual([".a{c:d}", ".b{c:d}"]);
+  });
+
+  // A prelude that is a prefix of the emitted one is a different query, and
+  // reading it as a match would pass a threshold nobody chose.
+  test("does not match a longer prelude that starts with this one", () => {
+    const css = `${PRELUDE} and (min-height:45rem){.${PROBE}{a:b}}`;
+    expect(atRuleBodies(css, PRELUDE)).toEqual([]);
+  });
+
+  test("yields nothing when the prelude is absent", () => {
+    expect(atRuleBodies(".other{a:b}", PRELUDE)).toEqual([]);
+  });
+});
+
 describe("auditStylesheets", () => {
   test("passes when every required utility emits declarations", () => {
     expect(auditStylesheets(sheet(compiled())).ok).toBe(true);
@@ -143,12 +182,50 @@ describe("auditStylesheets", () => {
   });
 
   test("reads every stylesheet, not only the first", () => {
-    const split = REQUIRED.map((expectation, index) => ({
-      path: `${index}.css`,
-      css: `.${utilityName(expectation)}{color:red}`,
-    }));
+    const split = [
+      ...REQUIRED.map((expectation, index) => ({
+        path: `required-${index}.css`,
+        css: `.${utilityName(expectation)}{color:red}`,
+      })),
+      ...AT_RULES.map(({ prelude }, index) => ({
+        path: `at-rule-${index}.css`,
+        css: `${prelude}{.${PROBE}{color:red}}`,
+      })),
+    ];
 
     expect(auditStylesheets(split).ok).toBe(true);
+  });
+
+  // The failure this row exists for: an @custom-variant Tailwind never
+  // registered emits no query at all, and every class behind it vanishes
+  // while its name stays in the markup where the component tests still see it.
+  test("fails when a required at-rule is missing entirely", () => {
+    const { prelude, why } = AT_RULES[0];
+    const css = compiled().replace(`${prelude}{.${PROBE}{color:red}}`, "");
+    const { ok, lines } = auditStylesheets(sheet(css));
+
+    expect(ok).toBe(false);
+    expect(lines.join("\n")).toContain(`FAIL  ${prelude} wraps no rule`);
+    expect(lines.join("\n")).toContain(why);
+  });
+
+  // Present but empty is the other half: Tailwind emits the query and then
+  // compiles nothing into it if no source uses the variant.
+  test("fails when a required at-rule wraps nothing that declares anything", () => {
+    const { prelude } = AT_RULES[0];
+    const css = compiled().replace(
+      `${prelude}{.${PROBE}{color:red}}`,
+      `${prelude}{.${PROBE}{}}`,
+    );
+
+    expect(auditStylesheets(sheet(css)).ok).toBe(false);
+  });
+
+  test("prints the selectors a required at-rule wraps, as evidence", () => {
+    const { prelude } = AT_RULES[0];
+    const { lines } = auditStylesheets(sheet(compiled()));
+
+    expect(lines.join("\n")).toContain(`ok    ${prelude} wraps .${PROBE}`);
   });
 
   test("names the files it read", () => {
@@ -157,9 +234,10 @@ describe("auditStylesheets", () => {
   });
 
   // An empty table would make the row green while asserting nothing at all.
-  test("both expectation tables have rows", () => {
+  test("every expectation table has rows", () => {
     expect(FORBIDDEN.length).toBeGreaterThan(0);
     expect(REQUIRED.length).toBeGreaterThan(0);
+    expect(AT_RULES.length).toBeGreaterThan(0);
   });
 });
 

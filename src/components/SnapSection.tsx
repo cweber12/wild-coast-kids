@@ -10,14 +10,14 @@ type SnapSectionProps = {
   tone?: "cream" | "mist" | "ocean";
 };
 
-const CENTRED = "md:flex md:flex-col md:justify-center-safe";
+const CENTRED = "stops:flex stops:flex-col stops:justify-center-safe";
 
 const HEIGHTS = {
-  screen: `md:min-h-[calc(100dvh-var(--spacing-nav))] ${CENTRED}`,
+  screen: `stops:min-h-[calc(100dvh-var(--spacing-nav))] ${CENTRED}`,
   /* The footer sits below this stop and shares its screen, so the stop is
      the window less the nav less the footer. Both come from tokens the nav
      and footer set their own heights from, so nothing measures anything. */
-  "screen-less-footer": `md:min-h-[calc(100dvh-var(--spacing-nav)-var(--spacing-footer))] ${CENTRED}`,
+  "screen-less-footer": `stops:min-h-[calc(100dvh-var(--spacing-nav)-var(--spacing-footer))] ${CENTRED}`,
   /* The hero brings its own height, and fills the screen at every width
      rather than only from md up. */
   content: "",
@@ -41,9 +41,11 @@ const TONES = {
  * fold. Holding that subtraction here rather than at six call sites is the
  * point of the module.
  *
- * Everything is `md` and up. Two of the landing page's sections are taller
- * than a phone viewport, so below `md` there is no snapping and no forced
- * height — a phone gets an ordinary scrolling page.
+ * Everything is behind the `stops` variant: wide enough *and* tall enough for
+ * a stop. Two of the landing page's sections are taller than a phone viewport,
+ * and three are taller than a 639px desktop one, so outside that window there
+ * is no snapping and no forced height — the page scrolls normally, and the
+ * sections put their own vertical padding back.
  *
  * `justify-center-safe`, not `justify-center`: plain centring pushes an
  * over-tall child out of *both* ends of the box, and the top end of a snap
@@ -51,9 +53,10 @@ const TONES = {
  * the moment the content stops fitting, so the top of a section is always
  * reachable.
  *
- * Children do not add their own vertical padding at `md` — this box supplies
- * the space. Padding on both would be counted twice, which is what pushed
- * sections past the height they had to fit in.
+ * Children do not add their own vertical padding under `stops` — this box
+ * supplies the space. Padding on both would be counted twice, which is what
+ * pushed sections past the height they had to fit in. They gate that on the
+ * same variant, so the padding comes back wherever this height does not apply.
  */
 export function SnapSection({
   children,
@@ -64,7 +67,7 @@ export function SnapSection({
   return (
     <section
       id={id}
-      className={`md:snap-start ${TONES[tone]} ${HEIGHTS[height]}`}
+      className={`stops:snap-start ${TONES[tone]} ${HEIGHTS[height]}`}
     >
       {children}
     </section>

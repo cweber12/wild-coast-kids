@@ -9,6 +9,21 @@
 @source not "../../docs";
 @source not "../../.design";
 
+/* "This window can hold a stop." The landing page's one-screen layout — the
+   snap type, the stops' forced heights and centring, and the sections dropping
+   their own vertical padding because the stop supplies it — is all gated on
+   this one variant rather than on md.
+
+   The height half is why it exists: a 1080p display at 125% scaling gives a
+   639px viewport, 555px after the nav, and the program cards need 623 at their
+   tallest. 45rem is that 623 plus the 84px nav, rounded up to the next whole
+   rem. Below it the page scrolls normally, exactly as a phone's does.
+
+   The width half is carried here rather than left as a stacked md: so that a
+   call site cannot take one half without the other. See
+   docs/plans/stop-height-threshold.md for the measurements. */
+@custom-variant stops (@media (min-width: 48rem) and (min-height: 45rem));
+
 /* Wild Coast Kids design tokens — coastal pop editorial.
    Canonical record: .design/wild-coast-kids-landing/DESIGN_TOKENS.css.
    One fixed, art-directed palette: no dark mode by decision (see

@@ -18,7 +18,7 @@ export function QuoteStats() {
     // No divider: this stop and the one above it are never on screen at the
     // same time, and once the stop fills its screen a top border draws hard
     // against the nav rather than separating anything.
-    <section className="px-gutter-sm py-section-sm md:px-gutter md:py-0">
+    <section className="px-gutter-sm py-section-sm md:px-gutter stops:py-0">
       <div className="grid gap-8 md:grid-cols-2 md:gap-12">
         {QUOTES.map(({ lead, tail }) => (
           <figure key={lead}>

@@ -3,7 +3,7 @@ import { ReservedSlot } from "./ReservedSlot";
 
 export function Conditions() {
   return (
-    <section className="px-gutter-sm py-section-sm grid items-center gap-8 md:grid-cols-2 md:gap-12 md:px-gutter md:py-0">
+    <section className="px-gutter-sm py-section-sm grid items-center gap-8 md:grid-cols-2 md:gap-12 md:px-gutter stops:py-0">
       <div>
         <h2 className="text-title leading-tight mb-3.5 font-black text-white italic">
           Check
