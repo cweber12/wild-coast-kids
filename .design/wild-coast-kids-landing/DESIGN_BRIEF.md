@@ -10,22 +10,30 @@ conversations and a style template, not on the web.
 
 ## Solution
 
-A single high-energy landing page. The first window sells the identity: a bold
-purple hero with the marquee strip pinned exactly at the bottom edge of the
-viewport, so the page opens as one composed poster. Scrolling reveals proof
-(a film strip of kids' work gliding across the screen in sync with the marquee),
-then the two offerings as big tactile cards, then social proof, the conditions
-teaser, and finally the interest-list form. One page, two calls to action:
-book an art class, join the co-op list.
+A high-energy landing page, with a routed page behind each of its sections. The
+first window sells the identity: a bold purple hero with the marquee strip
+pinned exactly at the bottom edge of the viewport, so the page opens as one
+composed poster. Scrolling reveals proof (a row of kids' work the reader pages
+through), then the two offerings as big tactile cards, then the conditions
+teaser, then the interest-list form, and finally social proof closing the page.
+Two calls to action throughout: book an art class, join the co-op list.
+
+On a window at least `lg` wide and 39rem tall the six sections are snap stops,
+one screen each. Anything smaller is an ordinary scrolling page with the
+sections' own padding back.
 
 ## Experience Principles
 
 1. **Poster first, page second** — the opening viewport is a fixed composition
-   (hero + marquee at the fold), not the top of a scroll. Layout decisions that
-   break the one-window fit on desktop are wrong.
-2. **Motion as identity, never as obstacle** — the two synced strips give the
-   page its pulse, but they pause on hover and stop entirely under
-   `prefers-reduced-motion`. Energy must never cost legibility or access.
+   (hero + marquee at the fold), not the top of a scroll. This now applies to
+   every stop, not only the first: a section that cannot be composed inside the
+   540px a stop gets is a bug in the section, not a reason to raise the budget.
+2. **Motion as identity, never as obstacle** — the marquee gives the page its
+   pulse, pausing on hover and stopping entirely under
+   `prefers-reduced-motion`. Motion decorates; it does not carry. The gallery
+   is the artwork the page is offering as proof, so the reader drives it rather
+   than a clock. Energy must never cost legibility or access.
+   See `docs/adr/0007-reader-driven-gallery-over-synced-motion.md`.
 3. **Loud surfaces, quiet mechanics** — colors and type shout; the plumbing
    stays boring. Semantic HTML, role-reachable landmarks, a form that works
    with a keyboard. Nothing clever where clever isn't visible.
@@ -62,30 +70,48 @@ the design language.
 
 ## Component Inventory
 
-| Component      | Status | Notes                                                                                    |
-| -------------- | ------ | ---------------------------------------------------------------------------------------- |
-| Nav            | New    | Fixed top bar: logo placeholder, anchor links, yellow pill CTA                           |
-| HeroViewport   | New    | `min-h-dvh` flex column wrapping Hero + Marquee; marquee sits at the bottom edge         |
-| Hero           | New    | Purple split layout, italic 900 headline, two CTAs, photo placeholder (hidden on mobile) |
-| Marquee        | New    | Yellow looping text strip, duplicated track, pause on hover                              |
-| GallerySection | New    | Header ("What kids make here.") + GalleryStrip                                           |
-| GalleryStrip   | New    | Single-row infinite film strip of image placeholders, speed-synced to Marquee            |
-| ProgramCards   | New    | Two large cards (Art Classes / Tuesday Co-op) with tags, activities grid, CTAs           |
-| QuoteStats     | New    | Parent quote + K–8 / Charter stat tiles                                                  |
-| Conditions     | New    | Ocean-blue section with dashed "tool coming soon" embed box                              |
-| CommunityForm  | New    | Interest-list form; client-side success state only                                       |
-| Footer         | New    | Dark bar, logo, program summary                                                          |
-| Placeholder    | New    | Shared labeled dashed-border image placeholder (hero, cards, strip, logo)                |
+Every component below resolves to a file under `src/components/`. The column is
+the file rather than a build status so that the list can be checked against the
+tree rather than believed.
+
+| Component          | File                     | Notes                                                                                    |
+| ------------------ | ------------------------ | ---------------------------------------------------------------------------------------- |
+| Nav                | `Nav.tsx`                | Sticky top bar in the document flow: logo placeholder, routed links, yellow pill CTA     |
+| NavLink            | `NavLink.tsx`            | One nav link, at the 44px touch target ADR-0004 sets                                     |
+| HeroViewport       | `HeroViewport.tsx`       | Flex column of Hero + Marquee, `100dvh` less the nav; marquee sits at the bottom edge    |
+| Hero               | `Hero.tsx`               | Purple split layout, italic 900 headline, two CTAs, photo placeholder (hidden on mobile) |
+| Marquee            | `Marquee.tsx`            | Yellow looping text strip; the site's only strip                                         |
+| StripTrack         | `StripTrack.tsx`         | The looping mechanic: duplicated track, pause on hover. One caller, Marquee              |
+| GallerySection     | `GallerySection.tsx`     | Header ("What kids make here.") + GalleryRow, and the tiles' aspect shares               |
+| GalleryRow         | `GalleryRow.tsx`         | Paged row of artwork with prev/next controls; native scroll, snap-x, a named focus stop  |
+| galleryImages      | `galleryImages.ts`       | The nine tile labels and their provisional tall/wide tagging                             |
+| ProgramCards       | `ProgramCards.tsx`       | Two large cards (Art Classes / Tuesday Co-op) with tags, activities grid, CTAs           |
+| Conditions         | `Conditions.tsx`         | Ocean-blue section with a reserved slot for the tool                                     |
+| InterestListTeaser | `InterestListTeaser.tsx` | The landing page's interest-list section, wrapping the form                              |
+| InterestListForm   | `InterestListForm.tsx`   | Interest-list form; client-side success state only                                       |
+| QuoteStats         | `QuoteStats.tsx`         | Parent quotes + K–8 / Charter stat tiles; closes the page                                |
+| SnapSection        | `SnapSection.tsx`        | One stop: owns its height and surface, and the padding its content drops                 |
+| Footer             | `Footer.tsx`             | Dark bar, logo, program summary. Rendered by `layout.tsx`, so it is on every route       |
+| PillLink           | `PillLink.tsx`           | The site's CTA shape, in five closed tones                                               |
+| Placeholder        | `Placeholder.tsx`        | Shared labeled dashed-border stand-in for a future image (hero, cards, tiles, logo)      |
+| ReservedSlot       | `ReservedSlot.tsx`       | Shared labeled stand-in for decided-but-unbuilt content (schedule, booking, conditions)  |
 
 ## Key Interactions
 
-- **Strip motion**: marquee and gallery strip animate leftward continuously via
-  duplicated tracks. They share one pixels-per-second speed — the marquee's 20s
-  half-track loop defines it; the gallery strip's duration is computed from its
-  own track width. Hovering a strip pauses that strip; leaving resumes it.
-  `prefers-reduced-motion: reduce` stops both permanently.
-- **Nav anchors**: links smooth-scroll to `#art`, `#coop`, `#conditions`,
-  `#community`.
+- **Marquee motion**: the marquee animates leftward continuously via a
+  duplicated track, at a fixed pixels-per-second rate computed from the track's
+  own width so the speed holds however wide the content gets. Hovering pauses
+  it; leaving resumes it. `prefers-reduced-motion: reduce` stops it
+  permanently.
+- **Gallery paging**: prev/next controls at the row's edges move it one
+  screenful, and `snap-x mandatory` pulls the result back onto a tile edge, so
+  paging stays aligned without the control knowing how many tiles are visible.
+  The row is a named focus stop, so arrow keys and assistive tech reach it. It
+  never moves on its own.
+- **Nav links**: routed links to `/art`, `/coop`, `/conditions`, `/community`,
+  plus a pill CTA to `/book`. `#community` is the only anchor left on the site;
+  `#art`, `#coop` and `#conditions` were retired with the pages that replaced
+  them.
 - **Card hover**: program cards lift slightly (translateY) on hover.
 - **Form submit**: client-side only — the form hides and the success state
   ("You're in!") appears. No data leaves the page; wiring a destination is a
@@ -93,22 +119,38 @@ the design language.
 
 ## Responsive Behavior
 
-- **Viewport block**: `min-h-dvh`, hero `flex-1` — exactly one window on
-  desktop with the marquee at the fold; allowed to grow taller on small
-  screens so nothing clips.
+- **Snap stops**: the page is six stops on a window at least `lg` wide and
+  39rem (624px) tall, and an ordinary scrolling page below either threshold.
+  A stop is 540px on the machine the site is reviewed on, and every section is
+  built to fit that. The `md`–`lg` band scrolls rather than snapping, because
+  the program cards' two columns are narrow enough there that the CTA pills
+  wrap. See `docs/plans/stop-height-threshold.md`.
+- **Viewport block**: `100dvh` less the nav, hero `flex-1` — one window with
+  the marquee at the fold; a `min-h` rather than a fixed height, so it grows
+  instead of clipping on short screens.
 - **Hero**: photo column hidden ≤768px; text column full-width.
-- **Gallery strip**: same single-row strip at all widths; image tiles shrink.
+- **Gallery row**: below `lg`, one tile at a time at 85% width with the next
+  peeking, swiped or paged. From `lg`, three tiles share a screenful at the
+  0.3/0.3/0.4 shares their aspects normalise to. Its stop's height still grows
+  with viewport width without a cap, which overflows a short window above
+  roughly 1850px — issue #40, open.
 - **Program cards**: two columns → one column ≤768px.
 - **Quote, conditions, community**: two columns → stacked ≤768px.
-- **Nav**: tighter padding and smaller links ≤768px.
+- **Nav**: two rows below `md` — logo and CTA above, links beneath — because
+  four links plus the pill cannot share a 375px row. One row from `md`.
 
 ## Accessibility Requirements
 
-- Both strips stop under `prefers-reduced-motion: reduce`; pause on hover.
+- The marquee stops under `prefers-reduced-motion: reduce` and pauses on hover.
+  The gallery needs neither, having no motion of its own to stop; it carries
+  its own guarantees instead — the row is a named focus stop reachable by
+  arrow keys, and its controls are the affordance.
+- Snapping is itself behind `motion-safe`, so a reader who asked for less
+  motion gets an ordinary scrolling page at every width.
 - Image placeholders carry `role="img"` + `aria-label` describing the future
   image, matching the template's pattern.
-- Marquee/strip duplicate tracks are `aria-hidden` so screen readers hear the
-  content once.
+- The marquee's duplicate track is `aria-hidden` so screen readers hear the
+  content once. The gallery has no duplicate to hide: every tile renders once.
 - Form inputs have visible `<label>`s; success state is announced (rendered in
   DOM, not display-toggled invisibly to AT).
 - Keyboard: all CTAs and links focusable with visible focus rings; smooth
@@ -116,11 +158,21 @@ the design language.
 - Contrast: yellow `#E8FF00` surfaces use near-black `#1A1A00` text; body text
   on purple/ocean stays at the template's tested opacities or better.
 
-## Addendum — 2026-08-13 (what has changed since)
+## Change log
 
-This brief describes the single-page build of 2026-08-11. Four PRs have
-since changed things it still states as current. Recorded here rather than
-rewritten, so the original intent stays readable.
+Everything above states what the site is now. This section is the record of how
+it got there: what each entry describes has already been applied to the body,
+and the entries are kept verbatim — including the claims they supersede — so
+that a review can be matched to the state of the brief it was written against.
+
+Entries are not corrections waiting to be applied. Until 2026-08-15 they were,
+which is what made the body contradict them and got the same drift reported
+twice. See `docs/plans/design-doc-drift.md`.
+
+### 2026-08-13 (what has changed since)
+
+This brief described the single-page build of 2026-08-11. Four PRs had
+since changed things it still stated as current.
 
 - **The landing page snaps.** From `md` up it is six stops, one screen each:
   hero, gallery, program cards, conditions, interest list, quotes + footer.
@@ -150,7 +202,7 @@ rewritten, so the original intent stays readable.
 - **The Calendly `TODO(verify)` is retired** — booking CTAs point at
   `/book`, and the provider decision sits behind that page.
 
-## Addendum — 2026-08-14 (gallery tiles)
+### 2026-08-14 (gallery tiles)
 
 - **Gallery tiles are no longer one shape.** "Gallery strip: same single-row
   strip at all widths; image tiles shrink" now reads: a row is two 4:3 tiles
@@ -169,7 +221,7 @@ rewritten, so the original intent stays readable.
   recorded here because "one screen per section" is a brief-level claim, and
   it is currently false below roughly 780px of usable height.
 
-## Addendum — 2026-08-15 (the stops fit a 555px screen)
+### 2026-08-15 (the stops fit a 555px screen)
 
 - **"One screen per section" is true again, and the sections were changed to
   make it true.** The page is six stops on a window at least `lg` wide and
@@ -208,7 +260,8 @@ rewritten, so the original intent stays readable.
   images is a later content pass.
 - A working form backend — submissions are visual-only until a destination
   (email/sheet/service) is chosen.
-- A real booking URL — the Calendly link is `TODO(verify)`.
-- The conditions tool embed — the dashed placeholder box ships as-is.
-- Dark mode, additional pages, CMS, analytics.
+- A real booking destination — the CTAs point at `/book`, and which provider
+  sits behind that page is a decision that has not been made.
+- The conditions tool embed — the reserved slot ships as-is.
+- Dark mode, CMS, analytics.
 - The template's editorial block and yellow banner — cut, not deferred.
