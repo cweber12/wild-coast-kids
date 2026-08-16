@@ -151,6 +151,19 @@ is a separate, straightforwardly unfinished piece of interaction design.
     three fit, which is why it went unseen. Present on `main` and unrelated to
     the gallery. _Filed as its own issue; it is a page-level constraint, not a
     section's bug._
+    _Fixed, issue #37 (2026-08-15)._ The one-screen layout is gated on a
+    `stops` variant — `md` wide and 45rem tall — so a window this short is an
+    ordinary scrolling page with the sections' own padding back and nothing to
+    fight. The threshold is the program cards' 623px, which is their height at
+    the 768–940px widths where their columns wrap most, plus the 84px nav; the
+    577 measured here is not their worst case.
+    Measuring across widths also turned up a **twelfth** finding, filed as
+    issue #40 and _not_ fixed: the gallery stop's height grows with viewport
+    _width_ between `md` and `lg`, from 543px at 768 to 734px at 1023, then
+    collapsing to 347 once `lg` fits three tiles. No height threshold reaches
+    it. It is a regression from finding 10's fix, which dropped the two-up tile
+    step at `md`; at 1536 and 1900, the widths both of these findings were
+    checked at, `lg` applies and the band is invisible.
 
 ## What Works Well
 

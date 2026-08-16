@@ -169,6 +169,23 @@ rewritten, so the original intent stays readable.
   recorded here because "one screen per section" is a brief-level claim, and
   it is currently false below roughly 780px of usable height.
 
+## Addendum — 2026-08-15 (stops need a big enough window)
+
+- **"One screen per section" is now a scoped claim, and a true one.** The page
+  is six stops on a window at least `md` wide and 45rem (720px) tall, and an
+  ordinary scrolling page with its section padding back on anything smaller.
+  The threshold is measured, not chosen: the tallest stop the page has is the
+  program cards at 623px, plus the 84px nav. This replaces the note above,
+  which recorded the claim as false below ~780px. See issue #37 and
+  `docs/plans/stop-height-threshold.md`.
+- **The gallery is the exception, and it is still open.** Between `md` and `lg`
+  the gallery stop's height grows with viewport _width_ — 734px at 1023px wide
+  — so a window around 1000px wide has one stop that overflows its screen no
+  matter how tall the window is. "Gallery strip: same single-row strip at all
+  widths" is doing the damage: below `lg` that row is one 85%-wide tile, and
+  the two-up step it used to have at `md` went away with the aspect-ratio work.
+  Issue #40.
+
 ## Out of Scope
 
 - Real photography or a logo — labeled placeholders ship; swapping in real

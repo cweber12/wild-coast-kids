@@ -164,3 +164,31 @@ Also deliberately not done:
 - **The `#conditions` id.** Nothing links to it — the teaser points at the
   `/conditions` route — but `Conditions.test.tsx` asserts it as stable API.
   Retiring it is its own slice.
+
+## Addendum — 2026-08-15 (the stops need a height threshold too)
+
+Issue #37, `docs/plans/stop-height-threshold.md`.
+
+- **"`md` and up only" is now "`md` and up, and 45rem tall".** The reasoning
+  above sized the stops against phones and a 900px window, and never against a
+  scaled desktop. A 1080p display at 125% Windows scaling reports a 639px
+  viewport, which leaves a stop 555px; the hero needs 612, the program cards
+  623 at their tallest and the interest list 560. `md:` alone let mandatory
+  snapping run over three over-tall sections.
+
+  The gate is now a `stops` custom variant carrying both conditions, and every
+  class this plan put behind `md:` — the snap type on `html`, `SnapSection`'s
+  heights, centring and snap alignment, and the sections' `py-0` — sits behind
+  it instead. `md:snap-start` in the decisions and test seams above therefore
+  reads `stops:snap-start` in the code.
+
+- **`motion-reduce:snap-none` was never implemented**, and this addendum is
+  where that stops being invisible. The code expresses the same intent with
+  `motion-safe:` on the enabling classes, which is why `snap-none` is a
+  FORBIDDEN row in `scripts/built-css.mjs` — the two lines of prose above are
+  its only occurrences in the repo, and its appearance in the built stylesheet
+  would mean this file was feeding Tailwind's scanner.
+
+- **Rejecting `proximity` still holds**, for a second reason: it would have
+  left the over-tall stops over-tall and only stopped the page fighting about
+  it.
