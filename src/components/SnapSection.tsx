@@ -42,10 +42,10 @@ const TONES = {
  * point of the module.
  *
  * Everything is behind the `stops` variant: wide enough *and* tall enough for
- * a stop. Two of the landing page's sections are taller than a phone viewport,
- * and three are taller than a 639px desktop one, so outside that window there
- * is no snapping and no forced height — the page scrolls normally, and the
- * sections put their own vertical padding back.
+ * a stop. Below it — a phone, a tablet, a short window — there is no snapping
+ * and no forced height, and the sections put their own vertical padding back.
+ * The six stops are trimmed to fit the 540px that variant guarantees, so a
+ * stop that overflows is a bug in the section, not in this box.
  *
  * `justify-center-safe`, not `justify-center`: plain centring pushes an
  * over-tall child out of *both* ends of the box, and the top end of a snap

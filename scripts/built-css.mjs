@@ -83,8 +83,8 @@ export const FORBIDDEN = [
 /** @type {AtRuleExpectation[]} */
 export const AT_RULES = [
   {
-    prelude: "@media (min-width:48rem) and (min-height:45rem)",
-    why: "the `stops` variant gates the landing page's one-screen layout on it, and 45rem is the measured height a stop needs — see docs/plans/stop-height-threshold.md",
+    prelude: "@media (min-width:64rem) and (min-height:39rem)",
+    why: "the `stops` variant gates the landing page's one-screen layout on it; 39rem is the trimmed height a stop needs plus the nav, and it has to stay under the 640px ceiling a 125%-scaled 1080p display imposes — see docs/plans/stop-height-threshold.md",
   },
 ];
 
