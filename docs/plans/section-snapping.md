@@ -169,10 +169,10 @@ Also deliberately not done:
 
 Issue #37, `docs/plans/stop-height-threshold.md`.
 
-- **"`md` and up only" is now "`md` and up, and 45rem tall".** The reasoning
+- **"`md` and up only" is now "`lg` and up, and 39rem tall".** The reasoning
   above sized the stops against phones and a 900px window, and never against a
   scaled desktop. A 1080p display at 125% Windows scaling reports a 639px
-  viewport, which leaves a stop 555px; the hero needs 612, the program cards
+  viewport, which leaves a stop 555px; the hero needed 612, the program cards
   623 at their tallest and the interest list 560. `md:` alone let mandatory
   snapping run over three over-tall sections.
 
@@ -181,6 +181,18 @@ Issue #37, `docs/plans/stop-height-threshold.md`.
   heights, centring and snap alignment, and the sections' `py-0` — sits behind
   it instead. `md:snap-start` in the decisions and test seams above therefore
   reads `stops:snap-start` in the code.
+
+- **The three over-tall sections were trimmed to fit, not gated around.** A
+  stop is 540px and every section comes in under it. The threshold exists for
+  windows smaller still, not to excuse a section from the budget. That order
+  matters: the first attempt set the threshold above the sections instead, at a
+  height the reviewer's display cannot reach, which would have retired the
+  whole mechanic on the machine it is judged on.
+
+- **`lg`, not `md`, for the width.** Between 768 and 1023 the cards' columns
+  are narrow enough that the CTA pills wrap, and no padding buys that back. The
+  premise above — "two sections cannot fit a phone" — turns out to extend to
+  tablets for the same reason.
 
 - **`motion-reduce:snap-none` was never implemented**, and this addendum is
   where that stops being invisible. The code expresses the same intent with
