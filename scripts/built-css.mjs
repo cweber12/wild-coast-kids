@@ -4,9 +4,9 @@
  * Tailwind compiles a utility only when it finds the class name in a scanned
  * source, so the built stylesheet is where you learn whether a utility emits
  * real CSS or silently resolves to nothing. That reading only holds while
- * nothing outside the app feeds the scanner, which is what the `@source not`
- * lines in src/app/globals.css are for. Both directions are asserted here:
- * absence alone is also satisfied by an exclusion that compiled nothing.
+ * nothing outside the app feeds the scanner, which is what the `source(none)`
+ * import in src/app/globals.css is for. Both directions are asserted here:
+ * absence alone is also satisfied by a source list that compiled nothing.
  *
  * The only filesystem call takes the directory to read as an argument, so the
  * whole file is tested against a temp directory rather than a real build. Add
@@ -24,37 +24,16 @@ import { join } from "node:path";
 export const STYLESHEET_ROOT = ".next/static";
 
 /**
- * An expectation names its utility in segments rather than as a whole class
- * name, and `scripts/` is the reason: Tailwind's automatic source detection
- * scans this directory exactly as it scanned `docs/` before PR #22, so a
- * literal class name written here compiles into the very stylesheet this file
- * reads. That does not merely fail the row, it empties it — the forbidden name
- * would be present because this table names it, and the required ones would
- * emit from this table rather than from the app. No segment below is a
- * Tailwind utility on its own, so nothing compiles from them.
- *
- * `built-css.test.mjs` walks scripts/ and fails if any file spells one of
- * these names, so this stays true without anyone having to remember it.
- *
- * Issue #24 proposes replacing the exclusions with a positive `@source` for
- * `src/`, which inverts detection to opt-in and covers this directory. When it
- * lands, delete that test and make these plain strings.
- *
  * @typedef {object} Expectation
- * @property {string[]} segments  The class name, split so no part is a utility.
- * @property {string} why         Printed with the row, so a failure explains itself.
+ * @property {string} utility  The class name, as it is written in src/.
+ * @property {string} why      Printed with the row, so a failure explains itself.
  */
-
-/** @param {Expectation} expectation @returns {string} */
-export function utilityName({ segments }) {
-  return segments.join("-");
-}
 
 /** Utilities that must appear nowhere in the built stylesheet. */
 /** @type {Expectation[]} */
 export const FORBIDDEN = [
   {
-    segments: ["snap", "none"],
+    utility: "snap-none",
     why: "in no file under src/. CLAUDE.md's Project invariants names it while stating that prose never reaches the stylesheet, and that sentence is this row's canary: a root Markdown file is exactly what the opt-out arrangement could not exclude, so its return means detection has stopped being opt-in",
   },
 ];
@@ -92,15 +71,15 @@ export const AT_RULES = [
 /** @type {Expectation[]} */
 export const REQUIRED = [
   {
-    segments: ["justify", "center", "safe"],
+    utility: "justify-center-safe",
     why: "SnapSection centres a stop's content with it, and safe centring is what keeps an over-tall section reachable",
   },
   {
-    segments: ["min", "h", "footer"],
+    utility: "min-h-footer",
     why: "Footer takes its height from the --spacing-footer token through it",
   },
   {
-    segments: ["scroll", "pt", "nav", "sm"],
+    utility: "scroll-pt-nav-sm",
     why: "the root element offsets every snap stop by the nav height with it",
   },
 ];
@@ -120,13 +99,12 @@ function escapeForRegExp(text) {
  * Every rule in `css` whose selector carries this utility as a class token and
  * whose body holds at least one declaration.
  *
- * The token may be variant-prefixed: two of the required utilities are used in
- * src/ only under a variant — one under `md:`, one under `stops:` — so the
- * built selector escapes the variant into the class name and a matcher
- * anchored on a leading dot would report a working utility as missing. Naming
- * which two is exactly what the guard test at the foot of the test file
- * forbids. Matching a bare substring instead would count a mention in a
- * comment as a pass, which is the failure this whole check exists to remove.
+ * The token may be variant-prefixed, and one of the required utilities has no
+ * other form: `min-h-footer` is written in src/ only as `md:min-h-footer`, so
+ * the built selector escapes the variant into the class name and a matcher
+ * anchored on a leading dot would report a working utility as missing.
+ * Matching a bare substring instead would count a mention in a comment as a
+ * pass, which is the failure this whole check exists to remove.
  *
  * @param {string} css
  * @param {string} utility
@@ -222,22 +200,20 @@ export function auditStylesheets(stylesheets) {
   const lines = stylesheets.map((sheet) => `read  ${sheet.path}`);
   let ok = true;
 
-  for (const expectation of FORBIDDEN) {
-    const utility = utilityName(expectation);
+  for (const { utility, why } of FORBIDDEN) {
     if (css.includes(utility)) {
       ok = false;
-      lines.push(`FAIL  ${utility} is in the built CSS — ${expectation.why}`);
+      lines.push(`FAIL  ${utility} is in the built CSS — ${why}`);
     } else {
       lines.push(`ok    ${utility} absent`);
     }
   }
 
-  for (const expectation of REQUIRED) {
-    const utility = utilityName(expectation);
+  for (const { utility, why } of REQUIRED) {
     const rules = rulesFor(css, utility);
     if (rules.length === 0) {
       ok = false;
-      lines.push(`FAIL  ${utility} emits no declarations — ${expectation.why}`);
+      lines.push(`FAIL  ${utility} emits no declarations — ${why}`);
     } else {
       for (const rule of rules) lines.push(`ok    ${rule}`);
     }

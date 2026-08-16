@@ -1,12 +1,5 @@
 import { afterEach, describe, expect, test } from "vitest";
-import {
-  mkdirSync,
-  mkdtempSync,
-  readdirSync,
-  readFileSync,
-  rmSync,
-  writeFileSync,
-} from "node:fs";
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
@@ -18,19 +11,16 @@ import {
   checkBuiltCss,
   findStylesheets,
   rulesFor,
-  utilityName,
 } from "./built-css.mjs";
 
-// Utilities are named in segments in the table under test, so the literals
-// here are invented ones that Tailwind compiles to nothing. Spelling a real
-// one would put it in the shipped stylesheet — see the guard test at the foot
-// of this file.
+// An invented name rather than a real utility, so that what these tests assert
+// about the matcher stays true whatever rows the table happens to hold.
 const PROBE = "gate-probe";
 
 /** A stylesheet that satisfies every expectation, so tests can break one. */
 const compiled = () =>
   [
-    ...REQUIRED.map((expectation) => `.${utilityName(expectation)}{color:red}`),
+    ...REQUIRED.map((expectation) => `.${expectation.utility}{color:red}`),
     ...AT_RULES.map(({ prelude }) => `${prelude}{.${PROBE}{color:red}}`),
     ".unrelated{display:block}",
   ].join("");
@@ -143,7 +133,7 @@ describe("auditStylesheets", () => {
   });
 
   test("fails when a required utility emits nothing", () => {
-    const utility = utilityName(REQUIRED[0]);
+    const { utility } = REQUIRED[0];
     const css = compiled().replace(`.${utility}{color:red}`, "");
     const { ok, lines } = auditStylesheets(sheet(css));
 
@@ -153,10 +143,10 @@ describe("auditStylesheets", () => {
     );
   });
 
-  // Absence has to be asserted as well as presence: a broken exclusion is how
-  // prose gets back into the shipped stylesheet.
+  // Absence has to be asserted as well as presence: a source list that reaches
+  // past src/ is how prose gets back into the shipped stylesheet.
   test("fails when a forbidden utility is present", () => {
-    const utility = utilityName(FORBIDDEN[0]);
+    const { utility } = FORBIDDEN[0];
     const { ok, lines } = auditStylesheets(
       sheet(`${compiled()}.${utility}{scroll-snap-type:none}`),
     );
@@ -166,7 +156,7 @@ describe("auditStylesheets", () => {
   });
 
   test("fails on a forbidden utility mentioned anywhere, rule or not", () => {
-    const utility = utilityName(FORBIDDEN[0]);
+    const { utility } = FORBIDDEN[0];
     expect(auditStylesheets(sheet(`${compiled()}/* ${utility} */`)).ok).toBe(
       false,
     );
@@ -185,7 +175,7 @@ describe("auditStylesheets", () => {
     const split = [
       ...REQUIRED.map((expectation, index) => ({
         path: `required-${index}.css`,
-        css: `.${utilityName(expectation)}{color:red}`,
+        css: `.${expectation.utility}{color:red}`,
       })),
       ...AT_RULES.map(({ prelude }, index) => ({
         path: `at-rule-${index}.css`,
@@ -277,31 +267,5 @@ describe("checkBuiltCss", () => {
 
     expect(ok).toBe(false);
     expect(lines.join("\n")).toContain("no stylesheet to read");
-  });
-});
-
-// The regression that made this row assert nothing on its first run: Tailwind
-// scans scripts/, so a utility named here in full compiles into the stylesheet
-// this row reads. The forbidden one then always fails and the required ones
-// always pass, whatever the app does. Names are built at runtime for the same
-// reason. Delete this once issue #24 makes source detection opt-in for src/.
-describe("the checker's own sources", () => {
-  test("no file under scripts/ spells a utility the table checks", () => {
-    // import.meta.dirname, not a URL derived from import.meta.url: the jsdom
-    // environment shadows the global URL, and Node's fileURLToPath rejects
-    // what jsdom's constructor returns for a file: URL.
-    const directory = import.meta.dirname;
-    const utilities = [...FORBIDDEN, ...REQUIRED].map(utilityName);
-    const offenders = [];
-
-    for (const name of readdirSync(directory)) {
-      if (!name.endsWith(".mjs")) continue;
-      const source = readFileSync(join(directory, name), "utf8");
-      for (const utility of utilities) {
-        if (source.includes(utility)) offenders.push(`${name}: ${utility}`);
-      }
-    }
-
-    expect(offenders).toEqual([]);
   });
 });
