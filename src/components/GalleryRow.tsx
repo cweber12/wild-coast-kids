@@ -24,6 +24,11 @@ const CONTROL_CLASSES =
  * having to know how many items are visible at the current width. The
  * scrollbar is hidden because the controls are the affordance.
  *
+ * The scroll padding matches the padding because a snapport is the scrollport
+ * reduced by it. Left unset, `snap-start` would align the first tile with the
+ * padding box rather than the inset, and mandatory snapping would rest the row
+ * one whole gutter in — losing the inset the rest of the page keeps.
+ *
  * The row is a focus stop (`tabindex="0"`) so arrow keys scroll it — a
  * scrollable region with no way in is unreachable for anyone not using a
  * pointer, and the controls alone would not give it a name.
@@ -44,7 +49,7 @@ export function GalleryRow({ label, children }: GalleryRowProps) {
         tabIndex={0}
         role="group"
         aria-label={label}
-        className="no-scrollbar flex snap-x snap-mandatory gap-6 overflow-x-auto px-gutter-sm motion-safe:scroll-smooth md:px-gutter"
+        className="no-scrollbar flex snap-x snap-mandatory gap-6 overflow-x-auto px-gutter-sm scroll-pl-gutter-sm motion-safe:scroll-smooth md:px-gutter md:scroll-pl-gutter"
       >
         {children}
       </div>

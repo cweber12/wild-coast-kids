@@ -76,6 +76,19 @@ test("the controls do not animate for a reader who asked for less motion", () =>
   expect(row.className).not.toMatch(/(^|\s)scroll-smooth/);
 });
 
+test("the row's snap positions account for its own gutter", () => {
+  const { row } = renderRow();
+
+  // A snapport is the scrollport reduced by scroll-padding. With none, and
+  // snap-start on the tiles, the first tile's snap position is the padding box
+  // start — so under snap-mandatory the row rests at scrollLeft: padding-left,
+  // one whole gutter in, with the artwork flush to the screen edge and the
+  // gutter consumed. Measured at 48 (1536) and 24 (375) before this matched;
+  // see docs/plans/gallery-row-gutter.md.
+  expect(row.className).toContain("scroll-pl-gutter-sm");
+  expect(row.className).toContain("md:scroll-pl-gutter");
+});
+
 test("the controls sit on the row's edges", () => {
   renderRow();
 
