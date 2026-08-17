@@ -98,6 +98,9 @@ program card)
 
 **Conditions**:
 The real-time surf, tide, wind and visibility tool for San Diego's coast, built
-separately and embedded here. Has a teaser on the landing page and a page of
-its own; both currently carry a reserved slot for it.
+in this repo (ADR-0009). Has a teaser on the landing page and a page of its own;
+both currently carry a reserved slot, which comes out in the slice that has
+something to put in its place. It shows readings and forecasts relayed from
+public sources, attributed and timestamped — never a judgement this site makes
+about whether conditions are safe.
 _Avoid_: weather, forecast, surf report
