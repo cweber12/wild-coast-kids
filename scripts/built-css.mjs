@@ -82,6 +82,14 @@ export const REQUIRED = [
     utility: "scroll-pt-nav-sm",
     why: "the root element offsets every snap stop by the nav height with it",
   },
+  {
+    utility: "scroll-pl-gutter-sm",
+    why: "GalleryRow keeps its snapport off its own gutter with it; resolving to nothing puts the row back to resting one gutter in, which the class contract cannot see because the class name stays in the markup either way",
+  },
+  {
+    utility: "scroll-pl-gutter",
+    why: "the same, at the width where the gutter is 48px. Written in src/ only as md:scroll-pl-gutter, so this is the bare form for the reason min-h-footer above is — the built selector escapes the variant into the class name. The trailing boundary is what keeps it off scroll-pl-gutter-sm's rule",
+  },
 ];
 
 /** A rule body counts as emitting CSS only if it holds a declaration. */

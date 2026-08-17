@@ -1,69 +1,43 @@
-"use client";
-
-import { useRef, type ReactNode } from "react";
+import type { ReactNode, RefObject } from "react";
 
 type GalleryRowProps = {
+  /** What the pager's `aria-controls` names. */
+  id: string;
   /** Names the row for assistive tech, since it is a focus stop. */
   label: string;
+  /** From `useGalleryPaging`, whose `page` measures and scrolls this element. */
+  rowRef: RefObject<HTMLDivElement | null>;
   children: ReactNode;
 };
 
-const CONTROL_CLASSES =
-  "rounded-pill shadow-card absolute top-1/2 z-10 flex size-11 -translate-y-1/2 cursor-pointer items-center justify-center border-2 border-lavender bg-cream text-base font-black text-dark transition-colors duration-fast hover:border-purple hover:text-purple";
-
 /**
- * A horizontally paged row of artwork, driven by controls at its edges.
+ * A horizontally paged row of artwork.
  *
- * Native scrolling rather than a transform and an index: touch fling,
- * trackpad, arrow keys and screen-reader navigation all work without being
- * reimplemented, and there is no index to fall out of step with reality when
- * a resize changes how many items fit.
- *
- * A press moves one screenful, not one item, and `snap-x mandatory` pulls the
- * result back onto an item edge — so paging stays aligned without the button
- * having to know how many items are visible at the current width. The
- * scrollbar is hidden because the controls are the affordance.
+ * The scroller alone: `useGalleryPaging` owns the mechanic that moves it and
+ * `GalleryPager` owns the controls that drive it, because the controls sit
+ * outside the artwork rather than on this row's edges (ADR-0008). The
+ * scrollbar is hidden because those controls are the affordance.
  *
  * The row is a focus stop (`tabindex="0"`) so arrow keys scroll it — a
  * scrollable region with no way in is unreachable for anyone not using a
  * pointer, and the controls alone would not give it a name.
+ *
+ * The scroll padding matches the padding because a snapport is the scrollport
+ * reduced by it. Left unset, `snap-start` would align the first tile with the
+ * padding box rather than the inset, and mandatory snapping would rest the row
+ * one whole gutter in — losing the inset the rest of the page keeps.
  */
-export function GalleryRow({ label, children }: GalleryRowProps) {
-  const rowRef = useRef<HTMLDivElement>(null);
-
-  const page = (direction: 1 | -1) => {
-    const row = rowRef.current;
-    if (!row) return;
-    row.scrollBy({ left: row.clientWidth * direction });
-  };
-
+export function GalleryRow({ id, label, rowRef, children }: GalleryRowProps) {
   return (
-    <div className="relative">
-      <div
-        ref={rowRef}
-        tabIndex={0}
-        role="group"
-        aria-label={label}
-        className="no-scrollbar flex snap-x snap-mandatory gap-6 overflow-x-auto px-gutter-sm motion-safe:scroll-smooth md:px-gutter"
-      >
-        {children}
-      </div>
-      <button
-        type="button"
-        aria-label="Previous artwork"
-        className={`${CONTROL_CLASSES} left-3 md:left-6`}
-        onClick={() => page(-1)}
-      >
-        <span aria-hidden="true">←</span>
-      </button>
-      <button
-        type="button"
-        aria-label="Next artwork"
-        className={`${CONTROL_CLASSES} right-3 md:right-6`}
-        onClick={() => page(1)}
-      >
-        <span aria-hidden="true">→</span>
-      </button>
+    <div
+      id={id}
+      ref={rowRef}
+      tabIndex={0}
+      role="group"
+      aria-label={label}
+      className="no-scrollbar flex snap-x snap-mandatory gap-6 overflow-x-auto px-gutter-sm scroll-pl-gutter-sm motion-safe:scroll-smooth md:px-gutter md:scroll-pl-gutter"
+    >
+      {children}
     </div>
   );
 }

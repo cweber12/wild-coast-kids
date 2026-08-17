@@ -86,6 +86,21 @@ is a separate, straightforwardly unfinished piece of interaction design.
    right edges; size tiles so a fixed 3–4 are visible and scale them with
    the available width._
 
+   > **Note, 2026-08-17.** Three of these four fixes stand. The fourth —
+   > "move the controls onto the row's left and right edges" — is
+   > **superseded**, and the controls now sit above the row instead. PR #14
+   > did as this asked, and issue #45 then measured what it produced: a 44px
+   > control (ADR-0004) overhung the gutter by 20px at `md`+ and 32px below
+   > it, and below `md` no offset exists that would fit it, the gutter being
+   > 24px. A scroll container's padding is also empty space only at the
+   > scroll extremes, so an overlaid control covers artwork at some scroll
+   > position whatever the padding is.
+   >
+   > The finding was right about what it saw. Controls sitting below-left of
+   > a row with a visible scrollbar and per-item paging were unfinished, and
+   > the row's edges were the only home available to a row that had no other.
+   > See `docs/adr/0008-gallery-controls-outside-the-artwork.md`.
+
 5. **The row's smooth scroll ignores `prefers-reduced-motion`.**
    `src/components/GalleryRow.tsx` uses bare `scroll-smooth`. Everywhere else
    in this repo motion is gated — `motion-safe:scroll-smooth` on `html`,

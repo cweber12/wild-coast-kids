@@ -60,6 +60,41 @@ test("the reader drives the row", () => {
   expect(screen.getByRole("button", { name: /next artwork/i })).toBeDefined();
 });
 
+test("the controls sit in the heading block, not on the artwork", () => {
+  render(<GallerySection />);
+
+  // Where the pair sits is the whole of ADR-0008, and it is the one part of
+  // that decision jsdom can see: the heading block is a different element from
+  // the row, so containment is a real assertion even without a stylesheet.
+  const headingBlock = screen.getByRole("heading", { level: 2 }).parentElement;
+  const row = screen.getByRole("group", {
+    name: /artwork from wild coast kids/i,
+  });
+
+  for (const name of [/previous artwork/i, /next artwork/i]) {
+    const control = screen.getByRole("button", { name });
+    expect(headingBlock?.contains(control)).toBe(true);
+    expect(row.contains(control)).toBe(false);
+  }
+});
+
+test("the controls name the row they page", () => {
+  render(<GallerySection />);
+
+  // Wired here rather than in either component, so a row and a pager that
+  // disagree about the id fail rather than quietly controlling nothing.
+  const row = screen.getByRole("group", {
+    name: /artwork from wild coast kids/i,
+  });
+
+  expect(row.id).not.toBe("");
+  expect(
+    screen
+      .getByRole("button", { name: /previous artwork/i })
+      .getAttribute("aria-controls"),
+  ).toBe(row.id);
+});
+
 test("the section puts its own padding back where there is no stop", () => {
   const { container } = render(<GallerySection />);
 

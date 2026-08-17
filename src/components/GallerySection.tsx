@@ -1,5 +1,9 @@
+"use client";
+
+import { GalleryPager } from "./GalleryPager";
 import { GalleryRow } from "./GalleryRow";
 import { Placeholder } from "./Placeholder";
+import { useGalleryPaging } from "./useGalleryPaging";
 import { GALLERY_IMAGES, type GalleryAspect } from "./galleryImages";
 
 /* What a tile's aspect costs it in width. Two 4:3 tiles and one 16:9 share a
@@ -17,7 +21,16 @@ const TILE_ASPECT_CLASSES: Record<GalleryAspect, string> = {
   wide: "aspect-video lg:w-[calc((100%-3rem)*0.4)]",
 };
 
+/* Ties the pager to the row it drives. The two no longer sit together in the
+   DOM, so the relationship is stated rather than positional. */
+const GALLERY_ROW_ID = "gallery-row";
+
 export function GallerySection() {
+  /* The section is a client component because it holds the paging seam the
+     row and the pager share. Its own content is static; what is hydrated is
+     the wiring between the two. */
+  const { rowRef, page } = useGalleryPaging();
+
   return (
     // Surface lives on the SnapSection wrapping this, so it fills the stop
     // rather than only the height of the content.
@@ -28,16 +41,27 @@ export function GallerySection() {
           <br />
           make here.
         </h2>
-        <p className="leading-normal text-sm text-fog md:max-w-50 md:text-right">
-          Every class is different.
-          <br />
-          Every kid surprises us.
-        </p>
+        {/* Reversed below md so the controls sit nearest the row they drive.
+            From md the heading runs to two lines while this column's paragraph
+            is one, and the controls take the height that leaves empty — which
+            is why moving them off the row costs the stop nothing. */}
+        <div className="flex flex-col-reverse gap-3 md:flex-col md:items-end">
+          <GalleryPager controls={GALLERY_ROW_ID} page={page} />
+          <p className="leading-normal text-sm text-fog md:max-w-50 md:text-right">
+            Every class is different.
+            <br />
+            Every kid surprises us.
+          </p>
+        </div>
       </div>
       {/* The row is driven by the reader, not by a clock: a piece of artwork
           you want to look at should not slide away, and one you missed
           should be one press back. */}
-      <GalleryRow label="Artwork from Wild Coast Kids classes">
+      <GalleryRow
+        id={GALLERY_ROW_ID}
+        label="Artwork from Wild Coast Kids classes"
+        rowRef={rowRef}
+      >
         {GALLERY_IMAGES.map(({ label, aspect }) => (
           <Placeholder
             key={label}
