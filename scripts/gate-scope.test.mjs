@@ -27,7 +27,7 @@ import {
 } from "node:fs";
 import { join } from "node:path";
 import { ESLint } from "eslint";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, beforeAll, describe, expect, it } from "vitest";
 
 /**
  * A file in an agent worktree. The id is fake and the file need not exist —
@@ -180,21 +180,38 @@ describe("vitest", () => {
 });
 
 describe("eslint", () => {
+  // One resolver for all three assertions, constructed in a hook with room to do
+  // it. Constructing an ESLint resolves the entire flat-config chain --
+  // eslint-config-next and every plugin it pulls -- which is CPU-bound and takes
+  // seconds from cold. Doing that once per assertion did it three times, and the
+  // first one alone outgrew vitest's 5s default as soon as the suite had enough
+  // files to compete for the processor: measured at ~3.1s with this file run on
+  // its own and ~6.0s in a 37-file run, on the same machine minutes apart. So the
+  // number was never about this assertion, which is why raising its timeout would
+  // have been the wrong repair -- the work moves into a hook that is allowed to
+  // take as long as it takes, the way the vitest row above already is, and the
+  // three assertions then cost nothing each.
+  let eslint;
+
+  beforeAll(() => {
+    eslint = new ESLint();
+  }, 60_000);
+
   // Asked of eslint's own resolver rather than by running it: `npm run lint`
   // over a clean worktree reports nothing either way, so a green run would say
   // only that the other branch happens to lint.
   it("ignores agent worktrees", async () => {
-    expect(await new ESLint().isPathIgnored(IN_AGENT_WORKTREE)).toBe(true);
+    expect(await eslint.isPathIgnored(IN_AGENT_WORKTREE)).toBe(true);
   });
 
   // The `test` row writes coverage/ and `lint` runs next, so without this the
   // linter reads the output of the gate row before it — and its verdict on a
   // bare `npm run lint` depends on whether that row has ever run.
   it("ignores the coverage report the gate produces", async () => {
-    expect(await new ESLint().isPathIgnored(IN_GENERATED_OUTPUT)).toBe(true);
+    expect(await eslint.isPathIgnored(IN_GENERATED_OUTPUT)).toBe(true);
   });
 
   it("does not ignore this checkout's own source", async () => {
-    expect(await new ESLint().isPathIgnored(IN_THIS_CHECKOUT)).toBe(false);
+    expect(await eslint.isPathIgnored(IN_THIS_CHECKOUT)).toBe(false);
   });
 });
