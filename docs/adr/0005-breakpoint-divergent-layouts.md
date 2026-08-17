@@ -2,6 +2,24 @@
 
 Date: 2026-08-14. Status: accepted.
 
+> **Note, 2026-08-17.** The gallery grid this was written for never shipped. It
+> was descoped the day after this ADR was accepted and is now parked on issue
+> #38, so **the rule below has no instance in the code**: the gallery renders
+> nine tiles once, in one paged row, at every width.
+>
+> The Context therefore describes a layout in the present tense that has never
+> existed. That sentence is left as written, because this is a dated record of a
+> decision taken on 2026-08-14 and rewriting it would hide that the decision
+> outlived the thing that prompted it. Read it as the case that was made, not as
+> a description of the tree.
+>
+> The decision itself stands. It is a rule about when duplication is allowed,
+> not a claim that anything currently duplicates, and the next layout that
+> genuinely diverges in DOM structure is entitled to it — with the three
+> obligations attached. The `display: contents` finding below is the part most
+> worth keeping: it is the reason nobody should attempt to reparent a snap stop
+> with CSS again. See `docs/plans/gallery-aspect-rhythm.md`.
+
 ## Context
 
 The gallery shows the same nine images two ways. Below `lg` it is one
