@@ -243,6 +243,110 @@ Slices 3 and 4 above are therefore superseded: 3 is not built, and 4 becomes
 slice 3 of this branch. The rest of this file records what was decided for the
 grid, and stands as the design for the issue that will build it.
 
+## Addendum — 2026-08-17: the row stays, and the grid is parked
+
+The owner asked for the gallery row to be kept as it is. The grid is not
+withdrawn: the design above stands, and the point of this addendum is that
+nobody has to derive it a second time. What changes is its standing in the
+tracker. Issues #38 and #40 are consolidated into one `needs-triage` PRD on
+**#38**, so there is one place to look rather than two that each hold half the
+story.
+
+**Parked, not blocked.** The 2026-08-14 addendum filed #38 as blocked on #37, on
+the premise that fixing the stop's height would unblock it. #37 landed and did
+not. It made the stops fit 555px by trimming three sections rather than by
+giving them more room, so a stop is still 555px on the machine the site is
+reviewed from, and none of the grid's arithmetic moved. A capped grid gives a
+4:3 tile of `0.667 × (stopHeight − 72)` — the 322px the last addendum measured.
+Reaching parity with the **417px** tile the paged row already ships needs a
+**697px** stop, which is a 781px viewport, and `stop-height-threshold.md`'s own
+addendum established that this display cannot exceed 639. So the blocker was
+never #37. It is the display, and no issue in this repo can close it.
+
+That is why the label is `needs-triage` rather than `ready-for-agent` or
+`needs-human`: there is nothing to implement and nobody to unblock. There is a
+decision to re-evaluate if the circumstances change.
+
+### What survived of issue #40
+
+Three claims were made there. Checked against the tree on 2026-08-17:
+
+| claim                                                           | verdict                                                      |
+| --------------------------------------------------------------- | ------------------------------------------------------------ |
+| The stop's height grows 543 → 734 between `md` and `lg`         | **Dead.** #37 moved `stops` to `lg`; that band has no stops. |
+| It is a regression from `f4c3408` dropping the two-up `md` step | **Wrong.** The change was deliberate — see below.            |
+| Above `lg` the height grows with width without limit            | **Live.** Recorded below rather than fixed.                  |
+
+The regression claim is the one worth writing down, because the evidence for it
+was a commit message and the evidence against it is this plan. `f4c3408` did
+drop `md:w-[calc((100%-1rem)/2)]`, and its message did say "Below lg nothing
+changes shape", which is false for the `md`–`lg` band. But the body of this plan
+chose that shape before the code existed: "Tablets keep the swipe row, where a
+tile at 768 is 571 wide." 571 is `0.85 × (768 − 96)`, computed for the new
+behaviour, not inherited from the old. The plan is the record; the commit
+message was imprecise about a decision it had already taken.
+
+### The width-driven overflow is recorded, not fixed
+
+The live half is real. Fitted to the three measured points (473 at 1536, 559 at
+1920, 703 at 2560), the section's content height is `0.225 × W + 127`, so it
+exceeds its stop when
+
+```
+viewportHeight < 0.225 × viewportWidth + 211
+```
+
+A stop only exists from 39rem tall, so triggering it needs a window **wider than
+about 1836px and short for its width**. Worked through the maximised-window
+arithmetic in `stop-height-threshold.md` — display height less the taskbar and
+the browser's furniture — **no 16:9 or 16:10 display reaches it at any
+scaling**, and the reason is the threshold itself: such a window has to be
+shorter than about 727 CSS pixels of display to overflow, and it stops having
+stops at all at 849. It runs out of stop before it runs out of room. Wider
+ratios can: a 32:9 panel (5120×1440, 3840×1080) overflows, and a 21:9 does in a
+narrow band of scalings. So can any window sized by hand to be wide and short.
+
+The review machine cannot produce it at all, for a different reason than usual.
+Its 639px viewport would overflow above about 1902px of width, but its display
+is only 1536 CSS pixels wide, so no window on it is ever wide enough. This is
+the mirror image of the two-stop grid's problem: that one is blocked by a screen
+too short, and this one is hidden by a screen too narrow.
+
+**The `gallery-fit` cap designed above does not transfer to it.** That cap
+worked because stop B carried two rows and no heading, so the arithmetic had
+only rows to budget. In the single-stop row that shipped, the heading and the
+row share one stop, so a cap has to subtract the heading block — 160px measured
+at 1536, being the 473 total less the 313 tile. That is a constant standing in
+for something nobody measured on purpose, which is the failure `CLAUDE.md` names
+as fixing a symptom with a constant. Deriving it instead means restructuring the
+section so the row takes the leftover height, and that is a layout change, which
+is the thing this addendum exists to decline.
+
+So the overflow is stated as an exception rather than left implied: `CONTEXT.md`
+says a stop is 540px and every section is built to fit it, and one section does
+not.
+
+### What follows from this
+
+- `docs/adr/0005-breakpoint-divergent-layouts.md` gains a dated note that its
+  rule has no instance in the code, since the grid it was written for never
+  shipped. The body is left alone — it is a dated record, and the
+  `display: contents` finding in it is the reason nobody should try reparenting
+  again.
+- `CONTEXT.md`'s **Stop** entry names the gallery as the one section that does
+  not fit at every width, with the condition above.
+- `DESIGN_BRIEF.md` gains a dated addendum. Its 2026-08-15 entry promises "the
+  fix is the `gallery-fit` cap already designed for issue #38", and that promise
+  is now wrong twice over — the cap does not transfer, and no fix is scheduled.
+- `galleryImages.ts` and its test keep every composition invariant and change
+  their reasons. Rows of three, two tall and one wide, and the alternating side
+  are all still load-bearing, but not for the grid's flush edges: three tiles
+  and their two gaps total exactly one content width, which is what makes
+  `scrollBy(clientWidth)` land a whole page of three. Verified arithmetically at
+  1024, 1536 and 1900 — a press overshoots the stride by the gutter and
+  `snap-mandatory` pulls back to the correct tile. Mistag one image and a page
+  comes up short.
+
 ## Out of scope
 
 Real photography, and the final decision about which images are wide. Renaming

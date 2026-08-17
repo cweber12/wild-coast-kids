@@ -131,9 +131,11 @@ tree rather than believed.
 - **Hero**: photo column hidden ≤768px; text column full-width.
 - **Gallery row**: below `lg`, one tile at a time at 85% width with the next
   peeking, swiped or paged. From `lg`, three tiles share a screenful at the
-  0.3/0.3/0.4 shares their aspects normalise to. Its stop's height still grows
-  with viewport width without a cap, which overflows a short window above
-  roughly 1850px — issue #40, open.
+  0.3/0.3/0.4 shares their aspects normalise to. This is the shape the gallery
+  keeps; the static grid once planned for it is parked, not pending. Its stop's
+  height grows with viewport width without a cap, which overflows a window
+  wider than about 1836px and short for its width — a stated exception, not a
+  scheduled fix. Issue #38.
 - **Program cards**: two columns → one column ≤768px.
 - **Quote, conditions, community**: two columns → stacked ≤768px.
 - **Nav**: two rows below `md` — logo and CTA above, links beneath — because
@@ -253,6 +255,36 @@ since changed things it still stated as current.
   short window it overflows above about 1850px wide. "Gallery strip: same
   single-row strip at all widths" is what does it. Issue #40; the fix is the
   `gallery-fit` cap already designed for issue #38.
+
+### 2026-08-17 (the gallery row stays)
+
+- **The paged row is the gallery's final shape, not an interim one.** The owner
+  asked for it to be kept as it is. Every previous entry describing the gallery
+  did so against a planned static grid that would replace it at `lg`; that grid
+  is parked, and the brief no longer treats the row as a stage on the way to
+  something else.
+
+- **The grid is parked rather than cancelled.** Its design is kept in full in
+  `docs/plans/gallery-aspect-rhythm.md` — the 30/30/40 shares, the 16:9 choice,
+  the height-derived cap and the alternatives that were rejected. What changed
+  is that it has no scheduled build and no blocker that could clear: a capped
+  grid gives a 322px tile against the 417px the row already ships, and parity
+  needs a stop about 697px tall on a display whose ceiling is 639.
+
+- **The overflow above is a stated exception now, not a pending fix.** The entry
+  above promises "the `gallery-fit` cap already designed for issue #38". That
+  promise does not hold: the cap was derived for a second stop carrying rows and
+  no heading, and the stop that shipped carries the heading too, so applying it
+  needs a measured constant for the heading block. Nothing is scheduled. The
+  condition is written into `CONTEXT.md`'s **Stop** entry, and the window it
+  needs — wider than about 1836px and short for its width — is one no display
+  the site is reviewed on can produce.
+
+- **Issues #38 and #40 are one issue.** #40 folded into #38, which carries both
+  halves under `needs-triage`. Of #40's three claims only the width-driven
+  overflow survived review; the `md`–`lg` band it described has had no stops
+  since 2026-08-15, and the two-up step it called a regression was a deliberate
+  choice recorded in the plan before the code was written.
 
 ## Out of Scope
 

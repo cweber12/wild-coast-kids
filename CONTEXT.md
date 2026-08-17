@@ -57,6 +57,13 @@ it. Content that does not is a bug in the section: the budget is the constraint
 sections are designed against, not a number to raise.
 `docs/plans/stop-height-threshold.md` has the measurements and the reason the
 threshold cannot go above 39rem.
+
+The gallery is a stated exception, and the only one. Its tiles are a share of
+the row with a fixed aspect, so its height follows the window's _width_ rather
+than sitting under a budget: it exceeds its stop when `viewportHeight` is under
+`0.225 × viewportWidth + 211`, which takes a window wider than about 1836px and
+short for its width. Recorded rather than fixed — issue #38 — because no
+display the site is reviewed on is wide enough to produce one.
 _Avoid_: slide, panel, screen (a section is the content; the stop is the screen
 it fills)
 
