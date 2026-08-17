@@ -42,11 +42,20 @@ page. See _URL Strategy_ for the anchors that were retired.
    work scrolls by, synced with the marquee it sits beneath.
 3. **Programs (prog-grid)** — the two offerings, each with its own CTA. This is
    the conversion core; everything above earns attention for it.
-4. **Quote + stats** — social proof and the two facts parents filter on
-   (K–8, charter eligible).
-5. **Conditions** — differentiator teaser; placeholder until the tool exists.
-6. **Community form** — the catch-all conversion for anyone not ready to book.
-7. **Footer** — recap and identity close.
+4. **Conditions** — differentiator teaser; placeholder until the tool exists.
+5. **Community form** — the catch-all conversion for anyone not ready to book.
+6. **Quote + stats** — social proof and the two facts parents filter on
+   (K–8, charter eligible). It closes the page by decision, not by leftover
+   ordering: it was fourth until the sections became snap stops
+   (`docs/plans/section-snapping.md`).
+
+Six items, and they are the six `SnapSection`s of `src/app/page.tsx` in order.
+
+**The footer is not one of them.** It lives in `src/app/layout.tsx`, so it
+closes every route rather than the landing page. It still shares the quote's
+screen — that stop is `screen-less-footer`, the window less the nav less the
+footer — but it is not a stop of its own and nothing above it on this list
+applies to it.
 
 Cut from the template: editorial block ("Real kids…") and the yellow
 wordmark banner. Decided in the brief; not deferred.
