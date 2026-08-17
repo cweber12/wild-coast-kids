@@ -112,3 +112,41 @@ No gate reads prose, so the checks are stated and run by hand:
   that implements it, not against another document;
 - `npm run gate` still passes, which for a prose-only change asserts only that
   nothing was broken in passing — it is not evidence the prose is right.
+
+## Addendum — 2026-08-17: #27 is five items, and the gallery bugs have moved
+
+#26 has merged. This records what changed under #27 between the plan being
+written and the branch starting. Nothing in _Decisions_ changes: the IA doc is
+still corrected in place, with no addendum of its own.
+
+**#27 is five items, not three.** The plan above describes it as the three
+errors in the doc's Content Hierarchy and Component Reuse Map — the section
+order, the auto-scrolling gallery, and `GalleryStrip`. Re-checking the document
+against the code on 2026-08-17 found two more with the same cause and in
+sections the first three do not reach: the Content Growth Plan's **Gallery
+strip** bullet, which repeats the looping claim and adds that "adding photos is
+a data change, not a layout one"; and the Component Reuse Map's **Section
+shell** row, which predates `SnapSection`. A fix scoped to items 1–3 would have
+left both behind, in one case one table row below a row it corrected.
+
+The count is no longer free, which is why the growth-plan bullet is wrong
+twice. `src/components/galleryImages.test.ts` asserts the list divides into
+whole rows of three, that each row is two `tall` tiles and one `wide` one, and
+that the wide tile alternates side. Photos arrive in composed threes or the
+gate fails.
+
+**#40 is closed, so the _Out of scope_ bullet naming it is one issue stale.**
+It folded into #38 (PR #44): its `md`–`lg` claim died when #37 moved the `stops`
+variant to `lg` × 39rem, so that band has no stops left to overflow, and the
+width-driven growth above `lg` is recorded on #38 as a stated exception rather
+than a scheduled fix. What the bullet _decides_ is unchanged and still binding:
+**#38 is open and the two-stop grid is still parked** (`galleryImages.ts`,
+`docs/plans/gallery-aspect-rhythm.md`), so the prose states what is built — one
+paged row, three tiles to a page from `lg` — and describes no grid.
+
+**#45 closed and ADR-0008 landed, so the pager is part of what the prose must
+match.** When this plan was written the gallery's controls were overlaid on the
+row's left and right edges. They now sit in the section's heading block, above
+the artwork, and the row keeps the page's gutter with its snap positions offset
+to match. That makes item 2's "header + film strip" stale in both halves rather
+than one: the strip is a paged row, and the header is where the pager lives.

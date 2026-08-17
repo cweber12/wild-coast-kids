@@ -38,15 +38,28 @@ page. See _URL Strategy_ for the anchors that were retired.
 
 1. **Viewport block: Hero + Marquee** — identity and both CTAs in one composed
    window; the marquee pinned at the fold is the visual signature.
-2. **Gallery section (header + film strip)** — proof before pitch: kids' actual
-   work scrolls by, synced with the marquee it sits beneath.
+2. **Gallery section (header + paged row)** — proof before pitch: kids' actual
+   work holds still until the reader moves it, a screenful at a time
+   (ADR-0007). The header carries the prev/next pager as well as the heading,
+   because a control overlaid on the row covers artwork at some scroll
+   position whatever its padding is (ADR-0008). The marquee it sits beneath is
+   the only thing on the page that still moves on its own.
 3. **Programs (prog-grid)** — the two offerings, each with its own CTA. This is
    the conversion core; everything above earns attention for it.
-4. **Quote + stats** — social proof and the two facts parents filter on
-   (K–8, charter eligible).
-5. **Conditions** — differentiator teaser; placeholder until the tool exists.
-6. **Community form** — the catch-all conversion for anyone not ready to book.
-7. **Footer** — recap and identity close.
+4. **Conditions** — differentiator teaser; placeholder until the tool exists.
+5. **Community form** — the catch-all conversion for anyone not ready to book.
+6. **Quote + stats** — social proof and the two facts parents filter on
+   (K–8, charter eligible). It closes the page by decision, not by leftover
+   ordering: it was fourth until the sections became snap stops
+   (`docs/plans/section-snapping.md`).
+
+Six items, and they are the six `SnapSection`s of `src/app/page.tsx` in order.
+
+**The footer is not one of them.** It lives in `src/app/layout.tsx`, so it
+closes every route rather than the landing page. It still shares the quote's
+screen — that stop is `screen-less-footer`, the window less the nav less the
+footer — but it is not a stop of its own and nothing above it on this list
+applies to it.
 
 Cut from the template: editorial block ("Real kids…") and the yellow
 wordmark banner. Decided in the brief; not deferred.
@@ -102,17 +115,22 @@ lands on `/art` first; that page's CTA is "Book a class →" → `/book`.
 
 ## Component Reuse Map
 
-| Component     | Used on                                       | Behavior differences                                                                   |
-| ------------- | --------------------------------------------- | -------------------------------------------------------------------------------------- |
-| Placeholder   | Nav logo, hero photo, card backgrounds, strip | Label size varies; backgrounds drop the border                                         |
-| Pill button   | Nav CTA, hero CTAs, card CTAs, form submit    | Yellow/ghost/purple variants                                                           |
-| Looping track | Marquee, GalleryStrip                         | Shared duplicated-track + pause-on-hover mechanic; content and speed derivation differ |
-| Section shell | Gallery, quote, conditions, community         | Shared gutter/padding rhythm, varying backgrounds                                      |
+| Component     | Used on                                             | Behavior differences                                                                                              |
+| ------------- | --------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
+| Placeholder   | Nav logo, hero photo, card backgrounds, strip       | Label size varies; backgrounds drop the border                                                                    |
+| Pill button   | Nav CTA, hero CTAs, card CTAs, form submit          | Yellow/ghost/purple variants                                                                                      |
+| Looping track | Marquee                                             | `StripTrack`, and the marquee is its only caller — `GalleryRow` does not use it (ADR-0007)                        |
+| Section shell | All six sections of `/`, hero and programs included | `SnapSection` shares a height, a surface tone and `snap-start`; children drop their own vertical padding under it |
 
 ## Content Growth Plan
 
-- **Gallery strip**: designed to take any number of images — the strip loops
-  whatever list it is given; adding photos is a data change, not a layout one.
+- **Gallery row**: photos arrive in composed threes. The row pages a screenful
+  at a time, and from `lg` a page is three tiles — two 4:3 and one 16:9, the
+  wide one alternating side down the list — so the nine grow by whole pages or
+  not at all. `galleryImages.test.ts` asserts all three rules, so a tenth image
+  fails the gate rather than quietly leaving a final page holding one tile
+  against an empty row. Adding photos is a data change _and_ a composition
+  decision; what it is not is a layout one.
 - **Programs**: the grid accepts a third card if an offering is added.
 - **Conditions**: the dashed box is the reserved slot for the future embed.
 - **A new program area** is a route beside the existing five, plus a teaser
