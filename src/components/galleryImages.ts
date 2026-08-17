@@ -3,10 +3,20 @@
  *
  * A row of the gallery is three of these — two `tall` and one `wide`, sharing
  * one height, so the wide one is the wider tile rather than the shorter one.
- * The wide slot alternates right, left, right down the rows, which is what
- * gives the gallery its print-zine rhythm without ragging its edges: every row
- * holds the same set of ratios, so every row totals the same width whatever
- * the order. See docs/plans/gallery-aspect-rhythm.md.
+ * The wide slot alternates right, left, right, which is the print-zine rhythm
+ * the gallery was asked for. From `lg` the reader meets those rows one at a
+ * time, as successive pages of the paged row.
+ *
+ * Every row holding the same set of ratios is load-bearing rather than tidy.
+ * The 0.3/0.3/0.4 shares make three tiles and their two gaps total exactly one
+ * content width, which is what lets `GalleryRow`'s scrollBy(clientWidth) land a
+ * whole page of three on every press. Mistag one image and its page is short by
+ * the difference, and every page after it starts mid-tile.
+ *
+ * That reason is not the original one. The composition was designed for a
+ * static grid, where a constant row width kept the grid's outer edges flush;
+ * the grid is parked and the rule outlived it. See
+ * docs/plans/gallery-aspect-rhythm.md.
  *
  * The aspect belongs to the image rather than to its position. Deriving it
  * from the index cannot break, but it silently re-crops the gallery whenever
