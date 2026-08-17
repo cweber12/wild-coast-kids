@@ -1,25 +1,19 @@
-import { expect, test, vi } from "vitest";
-import { fireEvent, render, screen } from "@testing-library/react";
+import { expect, test } from "vitest";
+import { createRef } from "react";
+import { render, screen } from "@testing-library/react";
 import { GalleryRow } from "./GalleryRow";
 
 function renderRow() {
+  const rowRef = createRef<HTMLDivElement>();
+
   render(
-    <GalleryRow label="Artwork">
+    <GalleryRow id="gallery-row" label="Artwork" rowRef={rowRef}>
       <div>first</div>
       <div>second</div>
     </GalleryRow>,
   );
 
-  const row = screen.getByRole("group", { name: "Artwork" });
-
-  // jsdom has no layout, so the row cannot really scroll and measures zero.
-  // Stubbing both is what lets the assertion be about the distance asked for
-  // rather than about jsdom.
-  const scrollBy = vi.fn();
-  row.scrollBy = scrollBy;
-  Object.defineProperty(row, "clientWidth", { value: 900, configurable: true });
-
-  return { row, scrollBy };
+  return { row: screen.getByRole("group", { name: "Artwork" }), rowRef };
 }
 
 test("the row is reachable and named for a keyboard or screen reader", () => {
@@ -31,23 +25,20 @@ test("the row is reachable and named for a keyboard or screen reader", () => {
   expect(row.getAttribute("aria-label")).toBe("Artwork");
 });
 
-test("next pages forward by a screenful", () => {
-  const { scrollBy } = renderRow();
+test("the row carries the id its pager points at", () => {
+  const { row } = renderRow();
 
-  fireEvent.click(screen.getByRole("button", { name: /next artwork/i }));
-
-  // A screenful, not one item: how many items that is changes with the
-  // width, and snap-mandatory pulls the result back onto an item edge, so
-  // the control never has to know the count.
-  expect(scrollBy).toHaveBeenCalledWith({ left: 900 });
+  // The pager sits outside the row now, so aria-controls is the only thing
+  // tying the two together — and it can only name an id that is really here.
+  expect(row.id).toBe("gallery-row");
 });
 
-test("previous pages back by a screenful", () => {
-  const { scrollBy } = renderRow();
+test("the row hands itself to the paging mechanic", () => {
+  const { row, rowRef } = renderRow();
 
-  fireEvent.click(screen.getByRole("button", { name: /previous artwork/i }));
-
-  expect(scrollBy).toHaveBeenCalledWith({ left: -900 });
+  // page() measures clientWidth off this element. A ref pointed anywhere else
+  // scrolls nothing, silently.
+  expect(rowRef.current).toBe(row);
 });
 
 test("the row snaps horizontally without moving on its own", () => {
@@ -58,22 +49,6 @@ test("the row snaps horizontally without moving on its own", () => {
   expect(row.className).toContain("overflow-x-auto");
   expect(row.className).toContain("snap-x");
   expect(row.className).not.toContain("animate-strip");
-});
-
-test("the scrollbar is hidden, because the controls are the affordance", () => {
-  const { row } = renderRow();
-
-  expect(row.className).toContain("no-scrollbar");
-});
-
-test("the controls do not animate for a reader who asked for less motion", () => {
-  const { row } = renderRow();
-
-  // Every other piece of motion here is gated — motion-safe:scroll-smooth on
-  // html, motion-reduce:animate-none on the marquee, motion-safe on snapping
-  // itself. A bare scroll-smooth would animate every press regardless.
-  expect(row.className).toContain("motion-safe:scroll-smooth");
-  expect(row.className).not.toMatch(/(^|\s)scroll-smooth/);
 });
 
 test("the row's snap positions account for its own gutter", () => {
@@ -89,16 +64,30 @@ test("the row's snap positions account for its own gutter", () => {
   expect(row.className).toContain("md:scroll-pl-gutter");
 });
 
-test("the controls sit on the row's edges", () => {
-  renderRow();
+test("the scrollbar is hidden, because the controls are the affordance", () => {
+  const { row } = renderRow();
 
-  // Overlaid left and right rather than stacked beneath, so the row reads as
-  // one paged surface instead of a scroller with buttons parked under it.
-  const previous = screen.getByRole("button", { name: /previous artwork/i });
-  const next = screen.getByRole("button", { name: /next artwork/i });
+  expect(row.className).toContain("no-scrollbar");
+});
 
-  expect(previous.className).toContain("absolute");
-  expect(previous.className).toContain("left-3");
-  expect(next.className).toContain("absolute");
-  expect(next.className).toContain("right-3");
+test("the row does not animate for a reader who asked for less motion", () => {
+  const { row } = renderRow();
+
+  // Every other piece of motion here is gated — motion-safe:scroll-smooth on
+  // html, motion-reduce:animate-none on the marquee, motion-safe on snapping
+  // itself. A bare scroll-smooth would animate every press regardless.
+  expect(row.className).toContain("motion-safe:scroll-smooth");
+  expect(row.className).not.toMatch(/(^|\s)scroll-smooth/);
+});
+
+test("the row carries no control of its own", () => {
+  const { row } = renderRow();
+
+  // This replaces an assertion that the controls sat absolutely positioned on
+  // the row's left and right edges. That arrangement is what ADR-0008 removed:
+  // a 44px control does not fit a 24px gutter below md, and padding is empty
+  // space only at the scroll extremes, so an overlaid control covers artwork
+  // at some scroll position whatever the padding is.
+  expect(row.querySelector("button")).toBeNull();
+  expect(row.className).not.toContain("relative");
 });
