@@ -150,3 +150,43 @@ row's left and right edges. They now sit in the section's heading block, above
 the artwork, and the row keeps the page's gutter with its snap positions offset
 to match. That makes item 2's "header + film strip" stale in both halves rather
 than one: the strip is a paged row, and the header is where the pager lives.
+
+## Addendum — 2026-08-17: #47 takes two Component Reuse Map rows, and the pill row names a shape
+
+#27 has merged. Two rows of the Component Reuse Map were split out of it into
+#47 rather than fixed alongside it, because their cause is different: they
+drifted with the routed pages (`docs/plans/nav-pages-scaffolding.md`), not with
+the section-snapping reorder #27 corrects. They belong to this plan all the
+same — the same table in the same document, under the same decision that the IA
+doc is corrected in place with no addendum of its own. Nothing in _Decisions_
+or _Scope_ changes.
+
+**The pill row names a shape, and says so.** It read `Pill button` under a
+column headed `Component`, listing "Nav CTA, hero CTAs, card CTAs, form
+submit". Two of those four are not one component: the nav CTA is a `NavLink`
+(`src/components/Nav.tsx`) and the form submit is a bare
+`<button type="submit">` (`src/components/InterestListForm.tsx`). What every
+entry shares is `rounded-pill`.
+
+The alternative was to keep it a component row — name `PillLink` and list its
+eleven call sites. Rejected because this is a reuse map, and the reuse worth
+recording is that three implementations converge on one shape; that convergence
+is where the next drift will be, and a row naming only `PillLink` would have
+dropped the nav CTA and the form submit out of the map entirely. #47's scope is
+these two rows, so adding a third for them was not available. A descriptive
+name in the first column with the identifiers in the third is what `Looping
+track` and `Section shell` already do, so this costs the table no consistency.
+
+**The `Placeholder` row was short by three call sites and one retired name.**
+`Placeholder` has eight call sites. The row's "strip" is what `GalleryRow` was
+called, and the row omits the reserved gallery box on each of `/art`, `/coop`
+and `/community` — slots the routed pages added after the row was written.
+
+**The counts are the check, and _Verification_ above already requires it.**
+`grep -rn "<Placeholder" src/ --include=*.tsx` less its tests returns eight,
+and `<PillLink` returns eleven. #47 adds no new check.
+
+**`src/` stays out, and one thing in it now carries the retired name.**
+`Placeholder`'s own docstring says "gallery strip", and `globals.css` claims
+the gallery still runs the marquee animation — a claim `GalleryRow.test.tsx`
+asserts against. Both are filed as #54 rather than fixed here.
