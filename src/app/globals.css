@@ -118,9 +118,11 @@
   --duration-fast: 200ms;
   --duration-normal: 250ms;
 
-  /* Both strips (marquee, gallery) run this animation. 20s is the fallback
-     before StripTrack measures its track and sets the real duration from the
-     shared px/s speed. */
+  /* StripTrack is the only thing that runs this animation, and the marquee is
+     StripTrack's only caller: the gallery moves when the reader moves it
+     (ADR-0007), and GalleryRow.test.tsx asserts the row does not carry
+     animate-strip. 20s is the fallback before StripTrack measures its track
+     and sets the real duration from the shared px/s speed. */
   --duration-marquee: 20s;
   --animate-strip: strip-scroll var(--duration-marquee) linear infinite;
 
