@@ -38,8 +38,12 @@ page. See _URL Strategy_ for the anchors that were retired.
 
 1. **Viewport block: Hero + Marquee** — identity and both CTAs in one composed
    window; the marquee pinned at the fold is the visual signature.
-2. **Gallery section (header + film strip)** — proof before pitch: kids' actual
-   work scrolls by, synced with the marquee it sits beneath.
+2. **Gallery section (header + paged row)** — proof before pitch: kids' actual
+   work holds still until the reader moves it, a screenful at a time
+   (ADR-0007). The header carries the prev/next pager as well as the heading,
+   because a control overlaid on the row covers artwork at some scroll
+   position whatever its padding is (ADR-0008). The marquee it sits beneath is
+   the only thing on the page that still moves on its own.
 3. **Programs (prog-grid)** — the two offerings, each with its own CTA. This is
    the conversion core; everything above earns attention for it.
 4. **Conditions** — differentiator teaser; placeholder until the tool exists.
@@ -120,8 +124,13 @@ lands on `/art` first; that page's CTA is "Book a class →" → `/book`.
 
 ## Content Growth Plan
 
-- **Gallery strip**: designed to take any number of images — the strip loops
-  whatever list it is given; adding photos is a data change, not a layout one.
+- **Gallery row**: photos arrive in composed threes. The row pages a screenful
+  at a time, and from `lg` a page is three tiles — two 4:3 and one 16:9, the
+  wide one alternating side down the list — so the nine grow by whole pages or
+  not at all. `galleryImages.test.ts` asserts all three rules, so a tenth image
+  fails the gate rather than quietly leaving a final page holding one tile
+  against an empty row. Adding photos is a data change _and_ a composition
+  decision; what it is not is a layout one.
 - **Programs**: the grid accepts a third card if an offering is added.
 - **Conditions**: the dashed box is the reserved slot for the future embed.
 - **A new program area** is a route beside the existing five, plus a teaser
