@@ -115,12 +115,12 @@ lands on `/art` first; that page's CTA is "Book a class →" → `/book`.
 
 ## Component Reuse Map
 
-| Component     | Used on                                       | Behavior differences                                                                   |
-| ------------- | --------------------------------------------- | -------------------------------------------------------------------------------------- |
-| Placeholder   | Nav logo, hero photo, card backgrounds, strip | Label size varies; backgrounds drop the border                                         |
-| Pill button   | Nav CTA, hero CTAs, card CTAs, form submit    | Yellow/ghost/purple variants                                                           |
-| Looping track | Marquee, GalleryStrip                         | Shared duplicated-track + pause-on-hover mechanic; content and speed derivation differ |
-| Section shell | Gallery, quote, conditions, community         | Shared gutter/padding rhythm, varying backgrounds                                      |
+| Component     | Used on                                             | Behavior differences                                                                                              |
+| ------------- | --------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
+| Placeholder   | Nav logo, hero photo, card backgrounds, strip       | Label size varies; backgrounds drop the border                                                                    |
+| Pill button   | Nav CTA, hero CTAs, card CTAs, form submit          | Yellow/ghost/purple variants                                                                                      |
+| Looping track | Marquee                                             | `StripTrack`, and the marquee is its only caller — `GalleryRow` does not use it (ADR-0007)                        |
+| Section shell | All six sections of `/`, hero and programs included | `SnapSection` shares a height, a surface tone and `snap-start`; children drop their own vertical padding under it |
 
 ## Content Growth Plan
 
