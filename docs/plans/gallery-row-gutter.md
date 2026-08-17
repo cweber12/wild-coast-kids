@@ -246,3 +246,35 @@ reader should not conclude it was overlooked.
   but it is a separate decision.
 - **Verifying anything in Firefox or Safari.** Every measurement here is Chrome.
 - **The gallery grid**, still parked on issue #38.
+
+## Addendum — 2026-08-17: what implementing it changed
+
+Four things the plan above did not say, recorded rather than edited in.
+
+**`GallerySection` is now a client component.** It holds the paging seam the
+row and the pager share, so it holds the hook, so it carries `"use client"`.
+The plan said "`GallerySection` composes both" without noticing that follows.
+Its own content is static; what hydrates is the wiring between the two. The
+alternative — a client wrapper owning the heading block so the section could
+stay a server component — was not taken, because it would put the section's
+heading layout inside a component named for the row.
+
+**The built-CSS row is `scroll-pl-gutter`, not `md:scroll-pl-gutter`.** The
+variant form does not match: the built selector escapes the colon, so
+`rulesFor` reads `.md\:scroll-pl-gutter` and a table entry written with a bare
+colon finds nothing. This is the case `min-h-footer`'s comment already
+documents. The trailing `(?![\w-])` boundary in that matcher is what keeps the
+bare form off `scroll-pl-gutter-sm`'s rule, so the two rows do not alias.
+
+**768 and 1024 are now verified**, which the Test seams section listed as an
+open obligation. At rest, all four widths: `scrollLeft` 0, first tile on the
+gutter. Across four scroll states each — rest, two pages, and the end — the
+artwork covered by either control is **0px at every width and every state**,
+measured as true rect intersection clipped to the scrollport, and a partial
+tile survives in every one.
+
+**Below `md` the section grows by 56px** — the control's 44px plus a `gap-3`.
+The plan said there was no height cost to worry about there, which was right
+about the consequence and silent about the number. At 1536x639 the stop is
+still 555 and the section still 473, unchanged, so the claim that the move is
+free holds where a stop exists.

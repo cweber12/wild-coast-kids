@@ -41,6 +41,21 @@ left: the gallery was a strip until PR #14 gave it controls and stopped it
 moving, and a row the reader drives is not a strip.
 _Avoid_: carousel, ticker, marquee (the marquee is one strip, not the concept)
 
+**Row**:
+The gallery's nine tiles in one horizontal scroller the reader pages through a
+screenful at a time. What a strip stopped being: it holds still until someone
+moves it (ADR-0007). It keeps the page's gutter on both sides, and its snap
+positions are offset to match — without that it comes to rest one gutter in,
+having eaten its own inset.
+_Avoid_: carousel, slider, gallery strip
+
+**Pager**:
+The row's prev/next pair. It sits above the row rather than on its edges,
+because a control overlaid on a scroller covers artwork at some scroll position
+whatever the padding is (ADR-0008). It names what it drives with
+`aria-controls`, the row having stopped being its neighbour.
+_Avoid_: arrows, nav buttons, controls (unqualified — the nav has controls too)
+
 **Stop**:
 One screen of the landing page, which the viewport comes to rest on. The page
 is six of them. A stop owns its height and its surface, and the content inside
