@@ -10,9 +10,10 @@ type PlaceholderProps = {
 };
 
 /**
- * Labeled stand-in for every image slot (logo, hero photo, card backgrounds,
- * gallery strip). Real photography replaces these in a later content pass —
- * swapping one for an <img> keeps the same accessible name.
+ * Labeled stand-in for every image slot — the logo, the hero photo, card
+ * backgrounds and gallery tiles among them. Real photography replaces these in
+ * a later content pass — swapping one for an <img> keeps the same accessible
+ * name.
  */
 export function Placeholder({
   label,
