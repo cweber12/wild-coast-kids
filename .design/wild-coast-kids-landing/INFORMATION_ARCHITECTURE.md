@@ -132,7 +132,11 @@ lands on `/art` first; that page's CTA is "Book a class →" → `/book`.
   against an empty row. Adding photos is a data change _and_ a composition
   decision; what it is not is a layout one.
 - **Programs**: the grid accepts a third card if an offering is added.
-- **Conditions**: the dashed box is the reserved slot for the future embed.
+- **Conditions**: the teaser's dashed box is the reserved slot for the
+  conditions tool, which is built in this repo rather than embedded from
+  elsewhere (ADR-0009). `/conditions` has already dropped its own slot for a
+  first reading; the teaser keeps its box until a slice has something to put in
+  it. `docs/plans/conditions-tool.md` is where that state is recorded, not here.
 - **A new program area** is a route beside the existing five, plus a teaser
   section on `/` that links to it. That path is established; adding one
   decides nothing new.
