@@ -190,3 +190,42 @@ and `<PillLink` returns eleven. #47 adds no new check.
 `Placeholder`'s own docstring says "gallery strip", and `globals.css` claims
 the gallery still runs the marquee animation — a claim `GalleryRow.test.tsx`
 asserts against. Both are filed as #54 rather than fixed here.
+
+## Addendum — 2026-08-18: #53 corrects two "embed" sentences, and the reader-facing copy splits off
+
+#54 has merged. #53 corrects the last two places in these two documents that
+still describe the conditions tool as an embed, a plan ADR-0009 retired. It
+belongs to this plan for the same reason #47 did: the same two documents, under
+the same decision that each is corrected in place. Nothing in _Decisions_ or
+_Scope_ changes.
+
+**The scope is two sentences, and the third candidate became its own issue.**
+The issue named a third target — the reserved slots' own copy, "Drop the URL and
+it embeds here automatically" — and left to triage whether it belonged here or
+to the first conditions slice. It belongs to neither, and is now #59. Two
+reasons. It is copy a visitor reads rather than a note for the team, so no gate
+and no plan can settle it: what it should say is a content decision, and
+`docs/plans/conditions-tool.md` has slices 4 and 5 open, which makes "how
+finished is the tool" a live question rather than a settled one. And #50 already
+removed the `/conditions` half of it, so what remains is one line in one file
+with a different owner.
+
+**What the sentences must not do is claim the tool is unbuilt.** ADR-0009 says
+built here; #50 shipped the first reading, so `/conditions` names today's lowest
+tide at La Jolla Shores today. But the landing teaser still carries its reserved
+slot, and slices 4 and 5 are open. So the corrected sentences say three things
+and no more: the tool is built here rather than embedded, the teaser's dashed box
+still waits, and `docs/plans/conditions-tool.md` is where its state is recorded.
+Naming a slice count or a completion state here would put this plan's prose in
+the business of tracking another plan's progress, which is how both go stale.
+
+**The brief's bullet stays an _Out of Scope_ bullet.** It is tempting to delete
+it now that the tool is real, but this brief is the landing page's, and the
+conditions tool is genuinely not part of it — it is built under its own plan.
+What was wrong was the word for the thing excluded, not the exclusion.
+
+**A third drift was found and filed, not folded in.** `CONTEXT.md:102` says the
+teaser and `/conditions` "both currently carry a reserved slot". #50 made that
+false. It is #60 rather than a third slice here, because the cause differs — a
+count broken by #50, not the word retired by ADR-0009 — and because `CONTEXT.md`
+is the glossary rather than one of this plan's two documents.
