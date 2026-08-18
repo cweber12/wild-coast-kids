@@ -20,10 +20,18 @@ export function Conditions() {
           Learn more →
         </PillLink>
       </div>
+      {/*
+        The slot stays until the teaser has conditions of its own to show. What
+        changed is who the copy is addressed to: it read "Drop the URL and it
+        embeds here automatically" — an instruction to whoever builds the site,
+        describing an embed ADR-0009 retired — three lines above a pill leading
+        to a page that now shows a real reading. It says nothing about how many
+        beaches or how many slices, so adding beaches does not make it false.
+      */}
       <ReservedSlot
         emoji="🌊"
-        headline="Conditions tool coming soon."
-        detail="Drop the URL and it embeds here automatically."
+        headline="Today's low tide is live."
+        detail="Surf, wind and visibility are still to come."
         tone="ocean"
       />
     </section>
