@@ -180,21 +180,33 @@ describe("vitest", () => {
 });
 
 describe("eslint", () => {
-  // One resolver for all three assertions, constructed in a hook with room to do
-  // it. Constructing an ESLint resolves the entire flat-config chain --
-  // eslint-config-next and every plugin it pulls -- which is CPU-bound and takes
-  // seconds from cold. Doing that once per assertion did it three times, and the
-  // first one alone outgrew vitest's 5s default as soon as the suite had enough
-  // files to compete for the processor: measured at ~3.1s with this file run on
-  // its own and ~6.0s in a 37-file run, on the same machine minutes apart. So the
-  // number was never about this assertion, which is why raising its timeout would
-  // have been the wrong repair -- the work moves into a hook that is allowed to
-  // take as long as it takes, the way the vitest row above already is, and the
-  // three assertions then cost nothing each.
+  // One resolver for all three assertions, warmed here where the budget is.
+  //
+  // THE COST IS NOT IN THE CONSTRUCTOR, which an earlier repair assumed and this
+  // comment used to assert. Measured in this repo on an idle machine:
+  // `new ESLint()` returns in 1ms, the FIRST `isPathIgnored` pays 1708ms
+  // resolving the whole flat-config chain -- eslint-config-next and every plugin
+  // it pulls -- and every call after that is cached and costs ~0ms. Resolution is
+  // lazy, so moving only the constructor into this hook wrapped a 1ms operation
+  // in a 60s budget and kept the seconds inside the first assertion, where
+  // vitest's 5s default still applied. It then timed out at 6072ms on main under
+  // parallel load while the other two assertions passed -- the signature of
+  // exactly that.
+  //
+  // 1708ms idle against a 5s limit is 3x headroom, which a 37-file run competing
+  // for the processor erases. So the resolution is done here, in a hook allowed
+  // to take as long as the work takes, the way the vitest row above already is,
+  // and the three assertions then cost nothing each. Raising an assertion's
+  // timeout would still be the wrong repair: the number was never about the
+  // assertion.
+  //
+  // Warming with IN_THIS_CHECKOUT weakens nothing. The third assertion asks for
+  // that same path again, from cache, and still requires it to be false.
   let eslint;
 
-  beforeAll(() => {
+  beforeAll(async () => {
     eslint = new ESLint();
+    await eslint.isPathIgnored(IN_THIS_CHECKOUT);
   }, 60_000);
 
   // Asked of eslint's own resolver rather than by running it: `npm run lint`
