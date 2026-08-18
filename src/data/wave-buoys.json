@@ -2,14 +2,15 @@
   "version": "0.1.0",
   "generated": "2026-08-18",
   "_provenance": "Station ids, names and coordinates read from NOAA NDBC's active station list, https://www.ndbc.noaa.gov/activestations.xml, filtered to 32.4-33.5N and -118.2 to -117.0E, on 2026-08-18. Nineteen stations were listed. Delivery was then measured one station at a time against https://www.ndbc.noaa.gov/data/realtime2/<id>.txt, the same endpoint this site reads, rather than inferred from the list.",
-  "_what_was_measured": "Every delivering buoy publishes WVHT, DPD, MWD and WTMP. NOT ONE publishes WDIR, WSPD or VIS -- ten out of ten leave them MM. Slice 3 saw this on 46254 and recorded it as one station's quirk; it is categorical. The only station in the box with wind is 46086, twenty-seven nautical miles offshore in the San Clemente Basin, and it publishes no waves at all. That is why this site's wind and visibility must come from the National Weather Service gridpoint forecast and can never come from a buoy.",
+  "_what_was_measured": "Every delivering buoy publishes WVHT, DPD, MWD and WTMP. NOT ONE publishes WDIR, WSPD or VIS -- ten out of ten leave them MM. Slice 3 saw this on 46254 and recorded it as one station's quirk; it is categorical. The only station in the box with wind is 46086, twenty-seven nautical miles offshore in the San Clemente Basin, and it lies outside the corridor every beach in this file sits on. That is why this site's wind and visibility must come from the National Weather Service gridpoint forecast and can never come from a buoy.",
   "_schema": {
     "name": "NDBC's own station name.",
     "cdip": "The CDIP station number NDBC prints in parentheses after the name, where it prints one. Recorded because it is published, and because the relay is what makes these nearshore buoys wave-only.",
     "lat": "Decimal degrees north, from the NDBC station list.",
     "lon": "Decimal degrees east, negative for west.",
     "delivers": "Whether realtime2 actually answers with data rows, measured rather than assumed. A station that does not deliver is kept and marked, never deleted.",
-    "publishes_waves": "Whether the delivering station's rows carry WVHT. Recorded separately from `delivers` because one station does neither the same way.",
+    "publishes_waves": "Whether this station's wave height is one a beach may bind to -- the wave join's second filter, read beside `delivers`. NOT a claim that the rows carry WVHT, though the name says so: 46086 carries it on 27 of the 48 newest rows and is false here because it sits twenty-seven nautical miles offshore, outside the corridor, where the swell is not this coast's. The name predates that measurement; see #70 and `waves_note`.",
+    "waves_note": "Present only when `publishes_waves` is false for a reason other than absence. What the station's rows actually carry, and why it is left out anyway.",
     "dead_note": "Present only when delivers is false. What the station did when asked."
   },
   "buoys": {
@@ -118,12 +119,13 @@
       "lon": -118.029,
       "delivers": true,
       "publishes_waves": false,
+      "waves_note": "Carries WVHT on 27 of the 48 newest rows, and on 3567 of 6482 over the whole file, measured against realtime2 on 2026-08-18. WVHT lands on two rows in three -- the rows at :00 and :30 are MM -- so its wave cycle is slower than its reporting cycle and a single read has a one-in-three chance of an empty one. `publishes_waves` is false above for the distance, not for the measurement.",
       "dead_note": null
     }
   },
   "unresolved": [
     "46235 Imperial Beach Nearshore is the only buoy south of Point Loma and it does not deliver, so every south-county beach reads a buoy well to its north-west across water of different exposure. The join records the distance rather than hiding it. This is a gap in what NDBC publishes, not one this site can close.",
     "A buoy's significant wave height is not the height of the wave breaking at the shore. No shoaling or refraction transform is applied, and none is planned: the number shown is what the buoy reported, which is the only thing actually measured.",
-    "46086 San Clemente Basin delivers wind and water temp but no waves, and sits twenty-seven nautical miles offshore outside the county. It is recorded here because it is the only station in the box with wind, and it is bound to no beach."
+    "46086 San Clemente Basin sits twenty-seven nautical miles offshore, outside the county, and no beach is bound to it. It publishes wind, water temperature, and wave height on 27 of the 48 newest rows -- its wave cycle is slower than its reporting cycle, so a third of its rows carry none. It is recorded here because it is the only station in the box with wind, and it is left out of the wave join by that distance rather than by what it measures."
   ]
 }

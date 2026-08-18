@@ -42,8 +42,10 @@ describe("bindWaveBuoy", () => {
     expect(bound.buoyId).toBe("46232");
   });
 
-  it("never chooses a delivering station that carries no wave height", () => {
-    // 46086 answers with rows, and none of them has WVHT in it.
+  it("never chooses a delivering station the table marks unbindable", () => {
+    // 46086 answers perfectly and does publish waves, but sits twenty-seven
+    // nautical miles offshore where the swell is not this coast's, so the table
+    // sets publishes_waves false and the filter has to honour that.
     const bound = bindWaveBuoy(
       { segment: at(32.5, -117.9), waterBodyType: "Open Coast" },
       BUOYS,

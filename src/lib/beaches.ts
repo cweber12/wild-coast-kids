@@ -74,8 +74,14 @@ export interface WaveBuoy {
   lon: number;
   /** Measured, not assumed. A buoy that does not deliver is kept and marked. */
   delivers: boolean;
-  /** One delivering station carries no wave height at all, so this is separate. */
+  /**
+   * The wave join's verdict on a station, not a count of WVHT rows. The one
+   * station it excludes does publish waves, and is left out for its distance --
+   * see `waves_note` and wave-buoys.json's schema.
+   */
   publishes_waves: boolean;
+  /** Present when `publishes_waves` is false for a reason other than absence. */
+  waves_note?: string | null;
   dead_note?: string | null;
 }
 
