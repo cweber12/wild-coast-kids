@@ -35,10 +35,10 @@ export default defineConfig({
       // purpose, and all four drag these figures down in plain sight rather
       // than quietly.
       thresholds: {
-        statements: 89.3,
-        branches: 89.45,
+        statements: 89.35,
+        branches: 89.52,
         functions: 93.56,
-        lines: 89.32,
+        lines: 89.38,
       },
     },
   },

@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import { PillLink } from "@/components/PillLink";
 import { Placeholder } from "@/components/Placeholder";
-import { ReservedSlot } from "@/components/ReservedSlot";
+import { SessionSchedule } from "@/components/SessionSchedule";
+import { fetchSessions } from "@/lib/sessions";
 
 export const metadata: Metadata = {
   title: "Art Classes",
@@ -9,7 +10,17 @@ export const metadata: Metadata = {
     "Watercolors, ink, collage and printmaking for K–8 kids, inspired by the San Diego coast. Group and private sessions, charter fund eligible.",
 };
 
-export default function Art() {
+/** Per request, and for the reasons given in full on `/coop`. */
+export const dynamic = "force-dynamic";
+
+export default async function Art() {
+  const schedule = await fetchSessions("art");
+
+  if (schedule.kind === "unavailable")
+    console.error(
+      `[sessions] art schedule unavailable${schedule.drift ? " (drift)" : ""}: ${schedule.reason}`,
+    );
+
   return (
     <main className="flex-1">
       <section className="px-gutter-sm py-section-sm md:px-gutter md:py-section">
@@ -29,10 +40,13 @@ export default function Art() {
             Book a class →
           </PillLink>
         </div>
-        {/* Reserved slots for the content pass: real schedule, pricing and
-            student photos. */}
+        {/* The schedule fills the slot that promised session times and pricing.
+            Charter-fund details are page copy still to be written, not data, so
+            the slot's wording keeps naming them while it stands in. */}
         <div className="grid gap-4 md:grid-cols-2">
-          <ReservedSlot
+          <SessionSchedule
+            result={schedule}
+            program="art"
             emoji="🎨"
             headline="Schedule & pricing coming soon."
             detail="Session times, group and private options, and charter-fund details land here."
