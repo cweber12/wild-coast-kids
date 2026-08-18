@@ -78,19 +78,20 @@ authority can state which beaches this repo chose to ask about.
 
 ### What is fetched, and its contract
 
-| Product                              | Serves                             | Horizon         | Contract facts, measured                                                                                                                                                                                                                                         |
-| ------------------------------------ | ---------------------------------- | --------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| CO-OPS predictions                   | tides                              | years           | `time_zone=gmt`, `units=english`, `datum=MLLW`. Returned timestamps carry no offset. Serves `{"error":{...}}` under HTTP 200 — a dead response, not a payload.                                                                                                   |
-| NDBC `realtime2`                     | waves, water temp                  | now             | 19-column pinned header. Wave height in metres, `WTMP` in °C. On 46254, `WDIR`, `WSPD`, `GST`, `ATMP`, `VIS` are all `MM` — so wave and water temp yes, **wind and visibility no**. A reading older than 180 minutes is reported unknown.                        |
-| NWS `/points` → `/gridpoints`        | wind, visibility, air temp, sky    | 7 d             | Resolve `gridId`/`gridX`/`gridY` once per beach and commit it, so an NWS re-grid appears as a diff. Self-identifying User-Agent required.                                                                                                                        |
-| NWS active alerts                    | hazards                            | now             | An empty `features` array is a valid empty response, not a failure.                                                                                                                                                                                              |
-| NWS surf zone forecast, SGX          | rip current risk, surf, water temp | ~3 d            | Two zones cover the whole extent: `CAZ043` San Diego County Coastal and `CAZ552` Orange County Coastal. Measured 2026-08-17: rip current risk "Moderate", surf 2 to 4 feet, water temperature "65 to 73 degrees", tides quoted at La Jolla. Already °F and feet. |
-| CO-OPS `water_temperature` @ 9410230 | swimmers                           | now             | `&date=latest`. A real station reading where the SRF gives a county range.                                                                                                                                                                                       |
-| SCCOOS ERDDAP                        | water science                      | trailing weekly | Columns are `time,Temp,Salinity,Avg_Chloro,Pseudo_nitzschia_seriata_group` — capitalised `Temp`; `temperature` exists on no SCCOOS dataset. A 404 carrying "no matching results" means the query was valid and the window empty.                                 |
-| iNaturalist                          | education                          | trailing 14 d   | One request per beach on its own coordinates and radius, never a corridor bbox: the bbox needs ~12 pages and ~144 MB and still misses coastal sites, where per-beach requests total ~142 kB. HTTP 422 is a rejected query, not an empty one.                     |
-| CDFW ds582 marine protected areas    | tidepoolers                        | dated snapshot  | Content date 2019-01-01, layer last edit 2024-01-09 — both recorded. `Type` is a join result, never string-matched off the name. Publisher disclaimer: "not intended for navigational use or defining legal boundaries."                                         |
-| Beach advisories archive             | water quality                      | historical only | See below.                                                                                                                                                                                                                                                       |
-| Daylight                             | all                                | any             | Computed in-repo. There is no sun API here and there should not be.                                                                                                                                                                                              |
+| Product                              | Serves                             | Horizon         | Contract facts, measured                                                                                                                                                                                                                                                                                                                                                                   |
+| ------------------------------------ | ---------------------------------- | --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| CO-OPS predictions                   | tides                              | years           | `time_zone=gmt`, `units=english`, `datum=MLLW`. Returned timestamps carry no offset. Serves `{"error":{...}}` under HTTP 200 — a dead response, not a payload.                                                                                                                                                                                                                             |
+| NDBC `realtime2`                     | waves, water temp                  | now             | 19-column pinned header. Wave height in metres, `WTMP` in °C. On 46254, `WDIR`, `WSPD`, `GST`, `ATMP`, `VIS` are all `MM` — so wave and water temp yes, **wind and visibility no**. A reading older than 180 minutes is reported unknown.                                                                                                                                                  |
+| NWS `/points` → `/gridpoints`        | wind, air temp, sky                | 7 d             | Resolve `gridId`/`gridX`/`gridY` once per beach and commit it, so an NWS re-grid appears as a diff. Self-identifying User-Agent required. **Publishes no visibility**: the key is present and its `values` array is empty at every grid in the county, measured 2026-08-18. `/points` 301-redirects on coordinates finer than four decimals and returns no marine zone.                    |
+| NWS `/stations/{id}/observations`    | visibility, wind, air temp, sky    | now             | `wmoUnit:m`, `wmoUnit:degC`, `wmoUnit:km_h-1`, asserted per field. Visibility tops out at ten statute miles, published as 16093.44 m or 16090 m, so the ceiling is a floor. A station that stops publishing serves `{"value": null}` rather than dropping the key. Only 9 of the 56 candidates in the county publish visibility, and the two nearest the default beach are not among them. |
+| NWS active alerts                    | hazards                            | now             | An empty `features` array is a valid empty response, not a failure.                                                                                                                                                                                                                                                                                                                        |
+| NWS surf zone forecast, SGX          | rip current risk, surf, water temp | ~3 d            | Two zones cover the whole extent: `CAZ043` San Diego County Coastal and `CAZ552` Orange County Coastal. Measured 2026-08-17: rip current risk "Moderate", surf 2 to 4 feet, water temperature "65 to 73 degrees", tides quoted at La Jolla. Already °F and feet.                                                                                                                           |
+| CO-OPS `water_temperature` @ 9410230 | swimmers                           | now             | `&date=latest`. A real station reading where the SRF gives a county range.                                                                                                                                                                                                                                                                                                                 |
+| SCCOOS ERDDAP                        | water science                      | trailing weekly | Columns are `time,Temp,Salinity,Avg_Chloro,Pseudo_nitzschia_seriata_group` — capitalised `Temp`; `temperature` exists on no SCCOOS dataset. A 404 carrying "no matching results" means the query was valid and the window empty.                                                                                                                                                           |
+| iNaturalist                          | education                          | trailing 14 d   | One request per beach on its own coordinates and radius, never a corridor bbox: the bbox needs ~12 pages and ~144 MB and still misses coastal sites, where per-beach requests total ~142 kB. HTTP 422 is a rejected query, not an empty one.                                                                                                                                               |
+| CDFW ds582 marine protected areas    | tidepoolers                        | dated snapshot  | Content date 2019-01-01, layer last edit 2024-01-09 — both recorded. `Type` is a join result, never string-matched off the name. Publisher disclaimer: "not intended for navigational use or defining legal boundaries."                                                                                                                                                                   |
+| Beach advisories archive             | water quality                      | historical only | See below.                                                                                                                                                                                                                                                                                                                                                                                 |
+| Daylight                             | all                                | any             | Computed in-repo. There is no sun API here and there should not be.                                                                                                                                                                                                                                                                                                                        |
 
 **The surf zone forecast is zone-level.** Its values render identically at all 82
 beaches, so it is presented as what the county forecast says, never as a reading
@@ -209,9 +210,13 @@ boundaries, because five slices or ~400 lines is the reviewable limit.
 6. Waves and water temp from NDBC: buoy binding with fallback, the 180-minute
    limit, substitution disclosed, and the "no water temp at this buoy" state,
    which is measured rather than hypothetical.
-7. Wind, visibility, air temp and sky from NWS gridpoint. Until this lands, two
-   of the four words in "Surf · Tide · Wind · Visibility" have nothing behind
-   them.
+7. Split after measurement; see the 2026-08-18 addendum.
+   - **7a.** Visibility, wind, air temp and sky from the NWS **observation
+     station**, joined on measured delivery. Until this lands, two of the four
+     words in "Surf · Tide · Wind · Visibility" have nothing behind them.
+   - **7b.** The gridpoint's wind, air temp and sky, which are a forecast and
+     therefore belong with the forward panel in slice 8 rather than beside a
+     reading.
 
 **PR D — planning and safety**
 
@@ -297,7 +302,8 @@ the 82 beaches.
    coast, 9410170 is bay only, and the lagoons are neither.
 3. **Does SCCOOS still cover anything in San Diego County beyond Scripps Pier?**
    If not, the water-science panel is one location's data and must say so rather
-   than render blank elsewhere.
+   than render blank elsewhere. **Answered — no. See the 2026-08-18 slice 7a
+   addendum.**
 4. **Next 16.3's caching API.** Every revalidate interval here is provisional
    until slice 3 reads the shipped documentation. **Answered — see the addendum.**
 
@@ -452,6 +458,11 @@ nautical miles offshore and publishes no waves. So slice 7 is not an enhancement
 two of the four words in the site's own "Surf · Tide · Wind · Visibility" can only
 ever come from the National Weather Service gridpoint forecast.
 
+> Corrected 2026-08-18 by the slice 7a addendum below, on two counts. The
+> gridpoint publishes no visibility anywhere in the county, so visibility comes
+> from an observation station rather than the gridpoint; and 46086 does publish
+> waves, on 27 of 48 rows — see #70. Neither changes what slice 6 shipped.
+
 **Two more listed-but-dead stations.** 46273 Torrey Pines Inner and 46235 Imperial
 Beach both 404 while listed active — 46235 independently confirming what
 `socal-coastal-data` recorded. That is the third time the pattern has appeared,
@@ -479,3 +490,86 @@ match. The new fetch policy is tested by stubbing `fetch` rather than left as
 plumbing: what a 404 means, when a reading is too old to be called current, and
 which failures are drift are rules, not wiring, and none of them can be asserted
 against a live buoy that is having a good day.
+
+### 2026-08-18 — slice 7a, and the gridpoint that has no visibility
+
+**The plan was wrong about where visibility comes from, and slice 6's addendum
+repeated it.** Both said wind and visibility "can only ever come from the
+National Weather Service gridpoint forecast". Measured by calling
+`/gridpoints/SGX/{x},{y}` at four widely separated points, the gridpoint
+publishes **no visibility at all** — the key is present, its `values` array is
+empty, and it carries no `uom`:
+
+```
+Oceanside      SGX/52,36  vis=0  wind=56  temp=74  sky=35
+La Jolla       SGX/55,22  vis=0  wind=63  temp=92  sky=34
+Mission Beach  SGX/54,17  vis=0  wind=65  temp=91  sky=36
+Imperial Beach SGX/57,8   vis=0  wind=58  temp=85  sky=36
+```
+
+Visibility is an **observation**, served by `/stations/{id}/observations/latest`.
+That reclassifies the work: the gridpoint is a seven-day forecast, and PR C is
+where the site's promised _readings_ live. So slice 7 split. 7a is this slice —
+the observed reading. 7b is the gridpoint, folded into slice 8's forward panel,
+where forecast provenance is already the frame and the plan's rule against
+blending a forecast into a reading is already enforced by a type.
+
+**The listed-but-dead trap, a fourth and fifth time.** Of 163 candidate stations
+across the 35 distinct grids the 73 beaches resolve to, 159 answered and **only
+24 published a visibility value** — every one an airport METAR. Inside the county
+box: 56 candidates, **9 publish visibility**, 46 answer perfectly without it, and
+`KF70` 404s while listed. The two stations nearest the default beach, `D3101` and
+`MSDSD`, are both in the 46. A nearest-station join would therefore have bound
+this site's visibility promise to a station that has never published one, which
+is why the join filters on measured `publishes_visibility` rather than on
+distance alone. It also means one station supplies all four values, so the panel
+never blends two provenances.
+
+The join produces KSAN 36, KNKX 14, KCRQ 11, KOKB 5, KSDM 5, KNFG 1, and no
+station for the one beach whose coordinates upstream publishes transposed —
+the same beach the tide and wave joins already refuse. Median distance 7.3 km,
+farthest 16.8 km.
+
+**This join is deliberately not asymmetric the way the wave join is.** Every
+beach binds a station, bays and lagoons included: ocean swell does not propagate
+into enclosed water, and air does. Making the two joins symmetric out of a sense
+of tidiness would silently strip wind and visibility from twenty-six beaches, so
+`weather-join.test.mjs` asserts a bay beach binds.
+
+**Ten miles is a ceiling, not a measurement**, decided with Cole. METAR stops
+there, and the nine stations publish it as either 16093.44 m or 16090 m, so an
+equality test against one spelling would let the other render as a measurement.
+The parser carries `visibilityAtCeiling` out as a flag rather than leaving the
+view to rediscover it from a magic number, and the view renders "10 miles or
+more".
+
+**Open question 3 is answered: no.** SCCOOS ERDDAP lists 35 datasets, four inside
+the county box, and only the Scripps Pier pair still delivers:
+
+```
+HABs-ScrippsPier   32.867  -117.257    newest 2026-07-13  ALIVE (Temp 21.9)
+SPATT-ScrippsPier  32.867  -117.257    (Scripps Pier)
+delmar_salinity    32.93   -117.32     newest 2022-05-18  DEAD, no temperature column
+pH-AHL             33.1425 -117.3275   newest 2021-01-06  DEAD
+```
+
+`delmar_salinity` carries no temperature column at all, and `pH-AHL` — a SeapHOx
+in Agua Hedionda Lagoon, which would have been the one instrument inside any of
+the lagoons — stopped in January 2021. The water-science panel is one location's
+data and must say so rather than render blank elsewhere, exactly as the question
+anticipated. `HABs-ScrippsPier`'s newest sample is 35 days old against a trailing
+weekly product, which is its own thing to watch.
+
+**One thing outside this slice came with it.** `wave-buoys.json` records that
+46086 "delivers wind and water temp but no waves". Measured twice, it publishes
+`WVHT` on 27 of 48 rows and the newest row carried 1.6 m; the buoy reports on a
+shorter cycle than it measures waves, and a single read lands on an `MM` row
+about a third of the time. Nothing renders it — 46086 is bound to no beach — but
+the sentence reaches a reader through the caveats gate. Filed as #70 rather than
+folded into this diff.
+
+**Coverage rose to 88.1 / 88.66 / 92.48 / 88.12** and the floor was raised to
+match. Raising it surfaced a real gap rather than a bookkeeping one: `document()`
+was only ever exercised with a single beach, so its `reduce` and `sort`
+callbacks never ran and "the farthest beach from its station" was asserted by
+nothing. That test now builds two.
