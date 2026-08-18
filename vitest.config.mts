@@ -31,13 +31,14 @@ export default defineConfig({
       //   2. covered code was deleted, which pulls the whole-project ratio
       //      toward the 0% plumbing even though no test was lost.
       // Nothing is excluded to flatter the number: run-gates.mjs,
-      // run-vitest.mjs and check-built-css.mjs sit at 0% on purpose, and all
-      // three drag these figures down in plain sight rather than quietly.
+      // run-vitest.mjs, check-built-css.mjs and check-db.mjs sit at 0% on
+      // purpose, and all four drag these figures down in plain sight rather
+      // than quietly.
       thresholds: {
-        statements: 88.1,
-        branches: 88.66,
-        functions: 92.48,
-        lines: 88.12,
+        statements: 88.36,
+        branches: 89.26,
+        functions: 93.04,
+        lines: 88.35,
       },
     },
   },
