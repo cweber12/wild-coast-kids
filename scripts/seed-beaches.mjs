@@ -28,6 +28,7 @@ import { pathToFileURL } from "node:url";
 import { distanceMetres } from "./geo.mjs";
 import { bindTideStation } from "./tide-join.mjs";
 import { bindWaveBuoy } from "./wave-join.mjs";
+import { bindWeatherStation } from "./weather-join.mjs";
 
 const PORTAL = "https://data.cnra.ca.gov";
 const RESOURCE = "cc674e59-036c-45c3-bec2-5d3d294e0e3d";
@@ -39,6 +40,10 @@ const BEACHES_PATH = new URL("../src/data/beaches.json", import.meta.url);
 const BUOYS_PATH = new URL("../src/data/wave-buoys.json", import.meta.url);
 const STATIONS_PATH = new URL(
   "../src/data/tide-stations.json",
+  import.meta.url,
+);
+const WEATHER_PATH = new URL(
+  "../src/data/weather-stations.json",
   import.meta.url,
 );
 
@@ -192,7 +197,7 @@ export function regionOf(waterClass, meanLat) {
   return "South County coast";
 }
 
-export function build(rows, stations, buoys) {
+export function build(rows, stations, buoys, weatherStations) {
   const seen = new Map();
 
   const beaches = rows.map((row) => {
@@ -230,6 +235,10 @@ export function build(rows, stations, buoys) {
     const wave = fault
       ? { buoyId: null, reason: fault }
       : bindWaveBuoy({ segment, waterBodyType: row.WaterBodyType }, buoys);
+    // No water-class rule here, unlike the wave join: air reaches a lagoon.
+    const weather = fault
+      ? { stationId: null, reason: fault }
+      : bindWeatherStation({ segment }, weatherStations);
 
     const meanLat = (segment.upper.lat + segment.lower.lat) / 2;
 
@@ -258,6 +267,14 @@ export function build(rows, stations, buoys) {
       wave_buoy_distance_m: wave.buoyId ? Math.round(wave.distanceM) : null,
       wave_buoy_from_end: wave.buoyId ? wave.fromEnd : null,
       wave_buoy_null_reason: wave.buoyId ? undefined : wave.reason,
+      weather_station: weather.stationId,
+      weather_station_distance_m: weather.stationId
+        ? Math.round(weather.distanceM)
+        : null,
+      weather_station_from_end: weather.stationId ? weather.fromEnd : null,
+      weather_station_null_reason: weather.stationId
+        ? undefined
+        : weather.reason,
     };
   });
 
@@ -274,6 +291,14 @@ export function build(rows, stations, buoys) {
 
 export function document(beaches) {
   const unbound = beaches.filter((b) => b.tide_station === null);
+  const withWeather = beaches.filter((b) => b.weather_station !== null);
+  const farthestWeather = withWeather.reduce((a, b) =>
+    b.weather_station_distance_m > a.weather_station_distance_m ? b : a,
+  );
+  const weatherKm = withWeather
+    .map((b) => b.weather_station_distance_m / 1000)
+    .sort((a, b) => a - b);
+  const medianWeatherKm = weatherKm[Math.floor(weatherKm.length / 2)];
   const farthest = beaches
     .filter((b) => b.tide_station !== null)
     .reduce((a, b) =>
@@ -322,6 +347,15 @@ export function document(beaches) {
         "Great-circle metres from the nearer segment end to the station.",
       tide_station_from_end:
         "Which end of the segment supplied the distance, upper or lower.",
+      weather_station:
+        "Joined, never typed: the nearest station that both answers and publishes visibility. " +
+        "Unlike the wave buoy, every beach binds one -- air reaches a lagoon. null means the " +
+        "join could not bind one, and weather_station_null_reason says why.",
+      weather_station_distance_m:
+        "Great-circle metres from the nearer segment end to the station. Larger than the tide " +
+        "and buoy distances by nature: the stations that publish visibility are airports.",
+      weather_station_from_end:
+        "Which end of the segment supplied the distance, upper or lower.",
     },
     beaches,
     // Written out in full every run, never merged with what is already on disk:
@@ -343,6 +377,12 @@ export function document(beaches) {
         `Their water temperature is missing for the same reason and is not yet filled from another source.`,
       "A tide prediction is for the station, not for the beach. It is the best published figure " +
         "for that stretch of shore and it is not a measurement taken there.",
+      `Visibility, wind, air temperature and sky are read at an airport, because the airports are ` +
+        `the only stations in this county that publish visibility at all. The median beach here ` +
+        `reads a station ${Math.round(medianWeatherKm * 10) / 10} km away and the farthest reads ` +
+        `one ${(farthestWeather.weather_station_distance_m / 1000).toFixed(1)} km away, at ` +
+        `${farthestWeather.name}. Coastal fog is precisely what changes over that distance, so ` +
+        `those four figures describe the airport and not the shoreline.`,
       ...(unbound.length > 0
         ? [
             `${unbound.length} beach(es) could not be bound to a station: ` +
@@ -372,6 +412,9 @@ async function main() {
 
   const stations = JSON.parse(readFileSync(STATIONS_PATH, "utf8")).stations;
   const buoys = JSON.parse(readFileSync(BUOYS_PATH, "utf8")).buoys;
+  const weatherStations = JSON.parse(
+    readFileSync(WEATHER_PATH, "utf8"),
+  ).stations;
   let existing = null;
   try {
     existing = JSON.parse(readFileSync(BEACHES_PATH, "utf8"));
@@ -380,7 +423,7 @@ async function main() {
   }
 
   const rows = await fetchRows();
-  const built = document(build(rows, stations, buoys));
+  const built = document(build(rows, stations, buoys, weatherStations));
 
   // `generated` is the one field that moves on every run by design, so comparing
   // it would make every check fail and mean nothing.

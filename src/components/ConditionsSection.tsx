@@ -14,6 +14,7 @@ import { BeachSelector } from "./BeachSelector";
 import { Caveats } from "./Caveats";
 import { TidePanel } from "./TidePanel";
 import { WavePanel } from "./WavePanel";
+import { WindPanel } from "./WindPanel";
 
 export function ConditionsSection({ slug }: { slug: string }) {
   const groups = beachesByRegion().map((group) => ({
@@ -58,6 +59,21 @@ export function ConditionsSection({ slug }: { slug: string }) {
         fallback={<p className="mt-9 text-base text-fog">Reading the buoy…</p>}
       >
         <WavePanel slug={slug} />
+      </Suspense>
+
+      {/*
+        Its own boundary again. Three agencies, three failure modes: NOAA's tide
+        service, NDBC's buoys and the National Weather Service's stations all go
+        quiet independently, and none of them should hold up the other two.
+      */}
+      <Suspense
+        fallback={
+          <p className="mt-9 text-base text-fog">
+            Reading the weather station…
+          </p>
+        }
+      >
+        <WindPanel slug={slug} />
       </Suspense>
 
       <Caveats entries={inventoryCaveats()} />

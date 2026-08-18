@@ -1,0 +1,114 @@
+{
+  "version": "0.1.0",
+  "generated": "2026-08-18",
+  "_provenance": "Station ids, names and coordinates read from the National Weather Service API, https://api.weather.gov/gridpoints/<grid>/stations, taking the union over the 35 distinct gridpoints the 73 beaches in beaches.json resolve to, on 2026-08-18. That union listed 163 stations. Delivery was then measured one station at a time against https://api.weather.gov/stations/<id>/observations/latest, the same endpoint this site reads, rather than inferred from the list. The state-wide listing at /stations?state=CA is NOT the source: it is capped at 500 results and truncates before reaching either KSAN or KNKX.",
+  "_what_was_measured": "Of the 163 candidates, 159 answered and only 24 published a visibility value -- every one of the 24 an airport METAR. Inside the county box used here (32.4-33.6N, -117.7 to -116.8E) there are 56 candidates: 9 publish visibility, 46 answer without it, and KF70 404s while listed. The two stations nearest La Jolla Shores, D3101 and MSDSD, are both in the second group, so a join on proximity alone would bind this site's visibility promise to a station that has never published one. That is why publishes_visibility is measured, and why it filters the join rather than sitting beside it as a note. Units are stated by the payload per field and are identical across all nine: wmoUnit:m for visibility, wmoUnit:degC for temperature, wmoUnit:km_h-1 for wind.",
+  "_schema": {
+    "name": "The NWS station name, reproduced as the API serves it. D3101's carries the run of spaces and the trailing 'CA US' that upstream publishes.",
+    "lat": "Decimal degrees north, from the NWS station list.",
+    "lon": "Decimal degrees east, negative for west.",
+    "delivers": "Whether the latest-observation endpoint answers at all, measured rather than assumed. A station that does not deliver is kept and marked, never deleted.",
+    "publishes_visibility": "Whether the answering station carries a visibility value. Recorded separately from delivers because 46 of the 56 candidates in the box answer perfectly and carry no visibility at all. This is the join's filter.",
+    "dead_note": "Present only when delivers is false. What the station did when asked."
+  },
+  "stations": {
+    "KL18": {
+      "name": "Fallbrook Community Airpark",
+      "lat": 33.3542,
+      "lon": -117.2509,
+      "delivers": true,
+      "publishes_visibility": true
+    },
+    "KNFG": {
+      "name": "Oceanside, Camp Pendleton, Marine Corps Air Station",
+      "lat": 33.30472,
+      "lon": -117.35389,
+      "delivers": true,
+      "publishes_visibility": true
+    },
+    "KOKB": {
+      "name": "Oceanside, Oceanside Municipal Airport",
+      "lat": 33.21806,
+      "lon": -117.35139,
+      "delivers": true,
+      "publishes_visibility": true
+    },
+    "KCRQ": {
+      "name": "Carlsbad, McClellan-Palomar Airport",
+      "lat": 33.13,
+      "lon": -117.27583,
+      "delivers": true,
+      "publishes_visibility": true
+    },
+    "KRNM": {
+      "name": "Ramona, Ramona Airport",
+      "lat": 33.0375,
+      "lon": -116.91583,
+      "delivers": true,
+      "publishes_visibility": true
+    },
+    "KNKX": {
+      "name": "San Diego, Miramar MCAS/Mitscher Field Airport",
+      "lat": 32.86833,
+      "lon": -117.1425,
+      "delivers": true,
+      "publishes_visibility": true
+    },
+    "KMYF": {
+      "name": "San Diego, Montgomery Field",
+      "lat": 32.81444,
+      "lon": -117.13639,
+      "delivers": true,
+      "publishes_visibility": true
+    },
+    "KSAN": {
+      "name": "San Diego International Airport",
+      "lat": 32.73361,
+      "lon": -117.18306,
+      "delivers": true,
+      "publishes_visibility": true
+    },
+    "KSDM": {
+      "name": "San Diego, Brown Field Municipal Airport",
+      "lat": 32.57528,
+      "lon": -116.99306,
+      "delivers": true,
+      "publishes_visibility": true
+    },
+    "KF70": {
+      "name": "Murrieta/Temecula French Valley",
+      "lat": 33.5742,
+      "lon": -117.1285,
+      "delivers": false,
+      "publishes_visibility": false,
+      "dead_note": "Returns HTTP 404 for its latest observation while listed as serving these grids. Kept and marked rather than deleted, so the next probe compares against a station that was measured rather than one that quietly vanished."
+    },
+    "DMHSD": {
+      "name": "Del Mar Heights",
+      "lat": 32.96404,
+      "lon": -117.22284,
+      "delivers": true,
+      "publishes_visibility": false
+    },
+    "D3101": {
+      "name": "DW3101 Torrey Pines Reserve       CA US",
+      "lat": 32.92083,
+      "lon": -117.25283,
+      "delivers": true,
+      "publishes_visibility": false
+    },
+    "MSDSD": {
+      "name": "Mt. Soledad",
+      "lat": 32.81418,
+      "lon": -117.24088,
+      "delivers": true,
+      "publishes_visibility": false
+    }
+  },
+  "unresolved": [
+    "Every station that publishes visibility is an airport, and airports sit inland of the beaches they are bound to: the median beach reads a station 7.3 km away and the farthest reads one 16.8 km away. Coastal fog is exactly the thing that differs across that distance, so a visibility figure here describes the airport and not the shoreline. The distance is recorded per beach and shown to the reader rather than hidden.",
+    "METAR stops at ten statute miles. The nine stations publish that ceiling as either 16093.44 m or 16090 m depending on the station, so a reading at the top of the range means \"at least ten miles\" and never \"exactly ten miles\". It is rendered as \"10 miles or more\" for that reason.",
+    "KF70 Murrieta/Temecula French Valley is listed as serving these grids and returns HTTP 404 for its observations. That is the fifth listed-but-dead station this repo has measured, after TWC0405 in the tide join and 46273 and 46235 in the wave join, and it is why every station table here carries a measured delivers rather than an inherited one.",
+    "Wind, air temperature and sky come from the same station as visibility, so the four values in this panel always share one provenance. That is a deliberate constraint rather than a fact about the network: several stations nearer each beach publish wind and temperature without visibility, and binding those separately would put two stations behind one panel."
+  ]
+}

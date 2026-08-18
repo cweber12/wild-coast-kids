@@ -48,6 +48,12 @@ import {
   parseNdbcRealtime2,
   type WaveObservation,
 } from "./ndbc-realtime2";
+import {
+  NwsObservationDriftError,
+  NwsObservationNoDataError,
+  parseNwsObservation,
+  type StationObservation,
+} from "./nws-observation";
 
 /** Six hours. Astronomical predictions do not change; the window only rolls forward. */
 export const PREDICTIONS_REVALIDATE_SECONDS = 21600;
@@ -216,6 +222,116 @@ export async function fetchLatestWave(
     return unavailable(
       `NDBC ${buoyId}'s newest observation is ${Math.round(ageMinutes)} minutes old, past the ` +
         `${MAX_WAVE_AGE_MINUTES} minute limit. Reported as unknown rather than as a current reading.`,
+    );
+  }
+
+  return { kind: "ok", observation, ageMinutes, url };
+}
+
+/* ===========================================================================
+ * NWS station observations: visibility, wind, air temperature and sky
+ * ========================================================================= */
+
+/**
+ * Fifteen minutes, matching the page's own revalidate. These stations publish
+ * hourly, with unscheduled specials when conditions change sharply — and a
+ * special is exactly the moment worth catching, since it is what a bank of fog
+ * rolling in looks like from here.
+ */
+export const OBSERVATIONS_REVALIDATE_SECONDS = 900;
+
+/**
+ * Beyond this, a "current" observation is not current. These stations publish
+ * hourly, so three hours means at least three missed cycles: the station is
+ * answering and not observing. Reported as unknown rather than as a stale
+ * number wearing no warning.
+ */
+export const MAX_OBSERVATION_AGE_MINUTES = 180;
+
+const NWS_BASE = "https://api.weather.gov";
+
+export type ObservationResult =
+  | {
+      kind: "ok";
+      observation: StationObservation;
+      ageMinutes: number;
+      url: string;
+    }
+  | { kind: "unavailable"; reason: string; drift: boolean; url: string };
+
+/**
+ * Fetch one station's newest observation.
+ *
+ * Never throws. `nowMs` is passed in rather than read here, so the freshness
+ * limit is testable against a fixed instant and no clock is read during a
+ * render.
+ */
+export async function fetchLatestObservation(
+  stationId: string,
+  nowMs: number,
+): Promise<ObservationResult> {
+  const url = `${NWS_BASE}/stations/${stationId}/observations/latest`;
+
+  const unavailable = (reason: string, drift = false): ObservationResult => ({
+    kind: "unavailable",
+    reason,
+    drift,
+    url,
+  });
+
+  let response: Response;
+  try {
+    response = await fetch(url, {
+      headers: { "User-Agent": USER_AGENT },
+      next: { revalidate: OBSERVATIONS_REVALIDATE_SECONDS },
+    });
+  } catch (cause) {
+    return unavailable(
+      `The request to the National Weather Service for station ${stationId} did not ` +
+        `complete: ${cause instanceof Error ? cause.message : String(cause)}`,
+    );
+  }
+
+  if (response.status === 404) {
+    // What a retired station does while still listed as serving a grid. KF70
+    // does exactly this, which is why the inventory records measured delivery.
+    return unavailable(
+      `NWS ${stationId} returns 404 for its latest observation. The station is not publishing.`,
+    );
+  }
+  if (!response.ok) {
+    return unavailable(
+      `The National Weather Service returned HTTP ${response.status} for station ${stationId}.`,
+    );
+  }
+
+  let payload: unknown;
+  try {
+    payload = await response.json();
+  } catch (cause) {
+    return unavailable(
+      `The National Weather Service's response for station ${stationId} was not JSON: ` +
+        `${cause instanceof Error ? cause.message : String(cause)}`,
+    );
+  }
+
+  let observation: StationObservation;
+  try {
+    observation = parseNwsObservation(payload, stationId);
+  } catch (cause) {
+    if (cause instanceof NwsObservationDriftError)
+      return unavailable(cause.message, true);
+    if (cause instanceof NwsObservationNoDataError)
+      return unavailable(cause.message);
+    return unavailable(cause instanceof Error ? cause.message : String(cause));
+  }
+
+  const ageMinutes = (nowMs - observation.atMs) / 60_000;
+  if (ageMinutes > MAX_OBSERVATION_AGE_MINUTES) {
+    return unavailable(
+      `NWS ${stationId}'s newest observation is ${Math.round(ageMinutes)} minutes old, past ` +
+        `the ${MAX_OBSERVATION_AGE_MINUTES} minute limit. Reported as unknown rather than as ` +
+        `a current reading.`,
     );
   }
 

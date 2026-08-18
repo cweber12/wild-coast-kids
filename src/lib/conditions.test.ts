@@ -2,9 +2,15 @@ import { beforeEach, expect, test, vi } from "vitest";
 
 const fetchTideExtremes = vi.fn();
 const fetchLatestWave = vi.fn();
-vi.mock("./upstream", () => ({ fetchTideExtremes, fetchLatestWave }));
+const fetchLatestObservation = vi.fn();
+vi.mock("./upstream", () => ({
+  fetchTideExtremes,
+  fetchLatestWave,
+  fetchLatestObservation,
+}));
 
-const { readTodaysLowestLow, readLatestWaves } = await import("./conditions");
+const { readTodaysLowestLow, readLatestWaves, readLatestAir } =
+  await import("./conditions");
 
 const BEACH = "la-jolla-shores-beach";
 
@@ -23,6 +29,7 @@ const JUST_AFTER_MIDNIGHT_20260817 = Date.UTC(2026, 7, 17, 7, 30);
 beforeEach(() => {
   fetchTideExtremes.mockReset();
   fetchLatestWave.mockReset();
+  fetchLatestObservation.mockReset();
 });
 
 function ok(extremes: { atMs: number; feet: number; kind: "low" | "high" }[]) {
@@ -226,4 +233,106 @@ test("the clock is passed to the fetch, so freshness is judged not guessed", asy
   await readLatestWaves("la-jolla-shores-beach", NOON_PACIFIC_20260817);
 
   expect(fetchLatestWave).toHaveBeenCalledWith("46254", NOON_PACIFIC_20260817);
+});
+
+/** What KNKX served on 2026-08-18, as the parser hands it on. */
+const KNKX_OBSERVATION = {
+  atMs: Date.UTC(2026, 7, 18, 4, 55),
+  visibilityMi: 10.0,
+  visibilityAtCeiling: true,
+  airTempF: 69.98,
+  windMph: 5.82,
+  gustMph: null,
+  windDirDegT: 320,
+  sky: "Clear",
+};
+
+test("the air reading names its station and carries the ceiling flag through", async () => {
+  fetchLatestObservation.mockResolvedValue({
+    kind: "ok",
+    observation: KNKX_OBSERVATION,
+    ageMinutes: 12,
+    url: "https://example.invalid",
+  });
+
+  const view = await readLatestAir(BEACH, NOON_PACIFIC_20260817);
+
+  expect(view.station?.name).toMatch(/Miramar/);
+  expect(view.station?.distanceM).toBe(10429);
+  expect(view.state.kind).toBe("reading");
+  if (view.state.kind === "reading") {
+    // The flag has to survive the trip, or the view re-derives it from a
+    // magic number and the two can disagree.
+    expect(view.state.visibilityAtCeiling).toBe(true);
+    expect(view.state.visibilityMi).toBe(10.0);
+    expect(view.state.sky).toBe("Clear");
+  }
+});
+
+test("a bay beach still gets an air reading, unlike its waves", async () => {
+  fetchLatestObservation.mockResolvedValue({
+    kind: "ok",
+    observation: KNKX_OBSERVATION,
+    ageMinutes: 3,
+    url: "https://example.invalid",
+  });
+
+  // A lagoon: no wave buoy by design, and an observation station all the same,
+  // because air reaches enclosed water and swell does not.
+  const view = await readLatestAir(
+    "agua-hedionda-lagoon",
+    NOON_PACIFIC_20260817,
+  );
+
+  expect(view.station).not.toBeNull();
+  expect(view.state.kind).toBe("reading");
+});
+
+test("the beach the join refused asks nobody and says why", async () => {
+  const view = await readLatestAir(UNBOUND_BEACH, NOON_PACIFIC_20260817);
+
+  expect(view.state.kind).toBe("no-station");
+  expect(view.station).toBeNull();
+  // No station means nothing to ask. A request here would be a wasted call
+  // whose failure would then be reported as a transient one.
+  expect(fetchLatestObservation).not.toHaveBeenCalled();
+});
+
+test("an unavailable station carries its reason and its drift flag through", async () => {
+  fetchLatestObservation.mockResolvedValue({
+    kind: "unavailable",
+    reason: "NWS KNKX returns 404 for its latest observation.",
+    drift: false,
+    url: "https://example.invalid",
+  });
+
+  const view = await readLatestAir(BEACH, NOON_PACIFIC_20260817);
+
+  expect(view.state).toEqual({
+    kind: "unavailable",
+    detail: "NWS KNKX returns 404 for its latest observation.",
+    drift: false,
+  });
+});
+
+test("the clock is passed to the fetch, so freshness is judged not guessed", async () => {
+  fetchLatestObservation.mockResolvedValue({
+    kind: "unavailable",
+    reason: "stale",
+    drift: false,
+    url: "https://example.invalid",
+  });
+
+  await readLatestAir(BEACH, NOON_PACIFIC_20260817);
+
+  expect(fetchLatestObservation).toHaveBeenCalledWith(
+    "KNKX",
+    NOON_PACIFIC_20260817,
+  );
+});
+
+test("an unknown slug is a coding error, not a quiet feed", async () => {
+  await expect(
+    readLatestAir("not-a-beach", NOON_PACIFIC_20260817),
+  ).rejects.toThrow(/no beach in the inventory/);
 });

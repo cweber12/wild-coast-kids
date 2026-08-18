@@ -7,6 +7,9 @@ vi.mock("@/components/TidePanel", () => ({
 vi.mock("@/components/WavePanel", () => ({
   WavePanel: ({ slug }: { slug: string }) => <p>waves for {slug}</p>,
 }));
+vi.mock("@/components/WindPanel", () => ({
+  WindPanel: ({ slug }: { slug: string }) => <p>wind for {slug}</p>,
+}));
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push: vi.fn() }) }));
 
 const { ConditionsSection } = await import("./ConditionsSection");
@@ -18,6 +21,10 @@ test("the view carries the chooser, the reading and the caveats", () => {
   expect(screen.getByLabelText("Choose a beach")).toBeDefined();
   expect(screen.getByText(`panel for ${DEFAULT_BEACH_SLUG}`)).toBeDefined();
   expect(screen.getByText(`waves for ${DEFAULT_BEACH_SLUG}`)).toBeDefined();
+  // Reachable by a reader, not merely built: the three panels come from three
+  // agencies and each is mounted on its own Suspense boundary, so a section
+  // that dropped one would still render and still pass every other assertion.
+  expect(screen.getByText(`wind for ${DEFAULT_BEACH_SLUG}`)).toBeDefined();
   expect(
     screen.getByText("What we are unsure about in this data"),
   ).toBeDefined();

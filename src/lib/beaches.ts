@@ -14,6 +14,7 @@
 import inventory from "@/data/beaches.json";
 import stationTable from "@/data/tide-stations.json";
 import buoyTable from "@/data/wave-buoys.json";
+import weatherTable from "@/data/weather-stations.json";
 
 export interface Coordinate {
   lat: number;
@@ -58,6 +59,12 @@ export interface Beach {
   wave_buoy_from_end: string | null;
   /** Present exactly when wave_buoy is null, and required then. */
   wave_buoy_null_reason?: string;
+  /** Joined, never typed. Unlike the buoy, every beach binds one: air reaches a lagoon. */
+  weather_station: string | null;
+  weather_station_distance_m: number | null;
+  weather_station_from_end: string | null;
+  /** Present exactly when weather_station is null, and required then. */
+  weather_station_null_reason?: string;
 }
 
 export interface WaveBuoy {
@@ -70,6 +77,21 @@ export interface WaveBuoy {
   /** One delivering station carries no wave height at all, so this is separate. */
   publishes_waves: boolean;
   dead_note?: string | null;
+}
+
+export interface WeatherStation {
+  name: string;
+  lat: number;
+  lon: number;
+  /** Measured, not assumed. A station that does not deliver is kept and marked. */
+  delivers: boolean;
+  /**
+   * Measured separately from `delivers`, and the join's filter. Forty-six of the
+   * fifty-six candidates in this county answer perfectly and publish no
+   * visibility, including the two nearest the default beach.
+   */
+  publishes_visibility: boolean;
+  dead_note?: string;
 }
 
 export interface TideStation {
@@ -87,6 +109,9 @@ export interface TideStation {
 const BEACHES = inventory.beaches as readonly Beach[];
 const STATIONS = stationTable.stations as Readonly<Record<string, TideStation>>;
 const BUOYS = buoyTable.buoys as Readonly<Record<string, WaveBuoy>>;
+const WEATHER = weatherTable.stations as Readonly<
+  Record<string, WeatherStation>
+>;
 
 /**
  * The beach the conditions view opens on when no other is asked for.
@@ -187,11 +212,34 @@ export function waveBuoyFor(beach: Beach): (WaveBuoy & { id: string }) | null {
   return { id: beach.wave_buoy, ...buoy };
 }
 
+/**
+ * The observation station a beach reads, or null when the join bound none.
+ *
+ * Throws when a beach names a station the table does not describe -- a broken
+ * pair of data files, which should stop a build rather than render an
+ * unlabelled number.
+ */
+export function weatherStationFor(
+  beach: Beach,
+): (WeatherStation & { id: string }) | null {
+  if (beach.weather_station === null) return null;
+
+  const station = WEATHER[beach.weather_station];
+  if (!station) {
+    throw new Error(
+      `beaches.json: ${beach.slug} names weather station ${beach.weather_station}, ` +
+        `which has no entry in weather-stations.json.`,
+    );
+  }
+  return { id: beach.weather_station, ...station };
+}
+
 /** Caveats carried by every data file. Every one owes the reader a rendering. */
 export function inventoryCaveats(): readonly string[] {
   return [
     ...(inventory.unresolved as readonly string[]),
     ...(stationTable.unresolved as readonly string[]),
     ...(buoyTable.unresolved as readonly string[]),
+    ...(weatherTable.unresolved as readonly string[]),
   ];
 }
