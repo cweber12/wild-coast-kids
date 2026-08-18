@@ -7,8 +7,10 @@ import { render, screen } from "@testing-library/react";
 vi.mock("@/components/TidePanel", () => ({
   TidePanel: ({ slug }: { slug: string }) => <p>panel for {slug}</p>,
 }));
+vi.mock("next/navigation", () => ({ useRouter: () => ({ push: vi.fn() }) }));
 
 const { default: Conditions, revalidate } = await import("./page");
+const { DEFAULT_BEACH_SLUG } = await import("@/lib/beaches");
 
 test("the conditions page exposes its landmark and heading", () => {
   render(<Conditions />);
@@ -19,11 +21,20 @@ test("the conditions page exposes its landmark and heading", () => {
   expect(heading.textContent).toContain("conditions");
 });
 
-test("the reserved slot is gone, replaced by the tide panel", () => {
+test("it opens on the named default beach", () => {
   render(<Conditions />);
 
   expect(screen.queryByText(/conditions tool coming soon/i)).toBeNull();
-  expect(screen.getByText("panel for la-jolla-shores")).toBeDefined();
+  expect(screen.getByText(`panel for ${DEFAULT_BEACH_SLUG}`)).toBeDefined();
+});
+
+test("a reader can choose another beach from here", () => {
+  render(<Conditions />);
+
+  const select = screen.getByLabelText("Choose a beach") as HTMLSelectElement;
+  expect(select.value).toBe(DEFAULT_BEACH_SLUG);
+  // Every beach in the inventory is offered, not a curated subset.
+  expect(select.querySelectorAll("option").length).toBe(73);
 });
 
 test("the page revalidates often enough that 'today' does not go stale", () => {

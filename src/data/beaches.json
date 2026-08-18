@@ -1,35 +1,645 @@
 {
-  "version": "0.1.0",
-  "generated": "2026-08-17",
+  "version": "0.2.0",
+  "generated": "2026-08-18",
   "time_zone": "America/Los_Angeles",
-  "_provenance": "Seeded from the Beach Detail Information resource of 'Beach Advisories (Postings and Closures) and Beach Water Quality Monitoring', published by the California State Water Resources Control Board on the CNRA portal: https://data.cnra.ca.gov/dataset/beach-advisories-postings-and-closures-and-beach-water-quality-monitoring, resource cc674e59-036c-45c3-bec2-5d3d294e0e3d, read 2026-08-17. The data.ca.gov copy (resource fcbc9250-06e3-437d-b0c6-3cc5ddde93fc) serves identical content and is the mirror. Field values are reproduced as the resource serves them, including BeachType 'UNKNOWN'. This file is machine-formatted on purpose: a generator may rewrite it, which is why no two keys share a line.",
+  "_provenance": "Seeded from the Beach Detail Information resource of \"Beach Advisories (Postings and Closures) and Beach Water Quality Monitoring\", published by the California State Water Resources Control Board: https://data.cnra.ca.gov/dataset/beach-advisories-postings-and-closures-and-beach-water-quality-monitoring, resource cc674e59-036c-45c3-bec2-5d3d294e0e3d. The data.ca.gov copy (resource fcbc9250-06e3-437d-b0c6-3cc5ddde93fc) serves identical content and is the mirror. Rebuilt by scripts/seed-beaches.mjs; re-runnable and diffable with --check. Field values are reproduced as the resource serves them, including BeachType \"UNKNOWN\".",
+  "_inclusion": "County San Diego, Status Active, BeachAccess PUBLIC, CountAsBeach 1. A predicate over published fields rather than a judgement about which beaches are worth listing.",
   "_pinned": {
-    "field_name_with_a_space": "Upstream names one field 'Beach_ UpperLon', with an embedded space. That is the resource's own spelling, and any reader must quote it exactly.",
-    "numerics_are_strings": "The datastore serialises numeric columns as JSON strings -- '32.883647', '1'. Coordinates here are converted to numbers once, at seed time, and the conversion is the seed script's job rather than a reader's.",
-    "a_beach_is_a_segment": "Coordinates arrive as an upper/lower pair, so a beach is a shoreline segment and not a point. Every join must say which end it joined from, and a marine protected area test is a segment-versus-polygon question: a segment can straddle a boundary."
+    "field_name_with_a_space": "Upstream names one field 'Beach_ UpperLon', with an embedded space. That is the resource's own spelling, and the seeding script asserts it rather than tolerating its absence.",
+    "numerics_are_strings": "The datastore serialises numeric columns as JSON strings. They are converted once, at seed time, and anything that does not parse stops the seed.",
+    "a_beach_is_a_segment": "Coordinates arrive as an upper/lower pair, so a beach is a shoreline segment and not a point. tide_station_from_end records which end the join measured from."
   },
   "_schema": {
-    "slug": "Stable primary key. Never change after first write.",
+    "slug": "Stable primary key, from the published name. Never change after first write.",
     "name": "Display name, as the resource publishes it.",
-    "segment": "The shoreline extent, upper and lower endpoints, in WGS84 decimal degrees.",
-    "upstream": "Fields reproduced from the resource, unmodified. beach_type 'UNKNOWN' is upstream's own value and must not be rendered as a fact about the beach.",
-    "tide_station": "NOAA CO-OPS station id whose predictions this beach reads.",
-    "tide_station_basis": "Why that station, and by what method it was chosen. Recorded because slice 3 has one beach and no join script: this is a stated basis, not a join result, and it says so."
-  },
-  "tide_stations": {
-    "9410230": {
-      "name": "La Jolla (Scripps Pier)",
-      "role": "open coast"
-    },
-    "9410170": {
-      "name": "San Diego Bay",
-      "role": "bay side only"
-    }
+    "region": "Display grouping only, derived from water class and mean latitude. Never a join input.",
+    "segment": "The shoreline extent, upper and lower endpoints, WGS84 decimal degrees.",
+    "upstream": "Fields reproduced from the resource, unmodified.",
+    "tide_station": "Joined, never typed: the nearest delivering station of the beach's own water class. Re-runnable with scripts/seed-beaches.mjs --check. null means the join could not bind one, and tide_station_null_reason says why.",
+    "tide_station_distance_m": "Great-circle metres from the nearer segment end to the station.",
+    "tide_station_from_end": "Which end of the segment supplied the distance, upper or lower."
   },
   "beaches": [
     {
-      "slug": "la-jolla-shores",
+      "slug": "san-onofre-state-beach",
+      "name": "San Onofre State Beach",
+      "region": "North County coast",
+      "segment": {
+        "upper": {
+          "lat": 33.38685,
+          "lon": -117.59623
+        },
+        "lower": {
+          "lat": 33.331617,
+          "lon": -117.503883
+        }
+      },
+      "upstream": {
+        "usepa_id": "CA981113",
+        "agency": "County of San Diego Department of Environmental Health",
+        "water_body_name": "Pacific Ocean",
+        "water_body_type": "Open Coast",
+        "beach_type": "UNKNOWN",
+        "beach_access": "PUBLIC",
+        "status": "Active",
+        "nearest_city": "USMC Camp Pendleton"
+      },
+      "tide_station": "9410230",
+      "tide_station_distance_m": 56557,
+      "tide_station_from_end": "lower"
+    },
+    {
+      "slug": "oceanside-harbor",
+      "name": "Oceanside Harbor",
+      "region": "North County coast",
+      "segment": {
+        "upper": {
+          "lat": 33.208892,
+          "lon": -117.397348
+        },
+        "lower": {
+          "lat": 33.207721,
+          "lon": -117.396431
+        }
+      },
+      "upstream": {
+        "usepa_id": "CA359747",
+        "agency": "County of San Diego Department of Environmental Health",
+        "water_body_name": "Pacific Ocean",
+        "water_body_type": "Open Coast",
+        "beach_type": "UNKNOWN",
+        "beach_access": "PUBLIC",
+        "status": "Active",
+        "nearest_city": "Oceanside"
+      },
+      "tide_station": "9410230",
+      "tide_station_distance_m": 40061,
+      "tide_station_from_end": "lower"
+    },
+    {
+      "slug": "harbor-beach",
+      "name": "Harbor Beach",
+      "region": "North County coast",
+      "segment": {
+        "upper": {
+          "lat": 33.206959,
+          "lon": -117.398525
+        },
+        "lower": {
+          "lat": 33.202442,
+          "lon": -117.392907
+        }
+      },
+      "upstream": {
+        "usepa_id": "CA624767",
+        "agency": "County of San Diego Department of Environmental Health",
+        "water_body_name": "Pacific Ocean",
+        "water_body_type": "Open Coast",
+        "beach_type": "UNKNOWN",
+        "beach_access": "PUBLIC",
+        "status": "Active",
+        "nearest_city": "Oceanside"
+      },
+      "tide_station": "9410230",
+      "tide_station_distance_m": 39400,
+      "tide_station_from_end": "lower"
+    },
+    {
+      "slug": "oceanside-municipal-beach-other",
+      "name": "Oceanside municipal beach, other",
+      "region": "North County coast",
+      "segment": {
+        "upper": {
+          "lat": 33.206959,
+          "lon": -117.398525
+        },
+        "lower": {
+          "lat": 33.165153,
+          "lon": -117.359478
+        }
+      },
+      "upstream": {
+        "usepa_id": "CA333308",
+        "agency": "County of San Diego Department of Environmental Health",
+        "water_body_name": "Pacific Ocean",
+        "water_body_type": "Open Coast",
+        "beach_type": "UNKNOWN",
+        "beach_access": "PUBLIC",
+        "status": "Active",
+        "nearest_city": "Oceanside"
+      },
+      "tide_station": "9410230",
+      "tide_station_distance_m": 34511,
+      "tide_station_from_end": "lower"
+    },
+    {
+      "slug": "buccaneer-beach",
+      "name": "Buccaneer Beach",
+      "region": "North County coast",
+      "segment": {
+        "upper": {
+          "lat": 33.176962,
+          "lon": -117.370063
+        },
+        "lower": {
+          "lat": 33.17577,
+          "lon": -117.368925
+        }
+      },
+      "upstream": {
+        "usepa_id": "CA976061",
+        "agency": "County of San Diego Department of Environmental Health",
+        "water_body_name": "Pacific Ocean",
+        "water_body_type": "Open Coast",
+        "beach_type": "UNKNOWN",
+        "beach_access": "PUBLIC",
+        "status": "Active",
+        "nearest_city": "Oceanside"
+      },
+      "tide_station": "9410230",
+      "tide_station_distance_m": 35892,
+      "tide_station_from_end": "lower"
+    },
+    {
+      "slug": "carlsbad-municipal-beach",
+      "name": "Carlsbad municipal beach",
+      "region": "North County coast",
+      "segment": {
+        "upper": {
+          "lat": 33.1651,
+          "lon": -117.3594
+        },
+        "lower": {
+          "lat": 33.1559,
+          "lon": -117.3526
+        }
+      },
+      "upstream": {
+        "usepa_id": "CA789152",
+        "agency": "County of San Diego Department of Environmental Health",
+        "water_body_name": "Pacific Ocean",
+        "water_body_type": "Open Coast",
+        "beach_type": "UNKNOWN",
+        "beach_access": "PUBLIC",
+        "status": "Active",
+        "nearest_city": "Carlsbad"
+      },
+      "tide_station": "9410230",
+      "tide_station_distance_m": 33346,
+      "tide_station_from_end": "lower"
+    },
+    {
+      "slug": "carlsbad-state-beach",
+      "name": "Carlsbad State Beach",
+      "region": "North County coast",
+      "segment": {
+        "upper": {
+          "lat": 33.1559,
+          "lon": -117.3526
+        },
+        "lower": {
+          "lat": 33.1338,
+          "lon": -117.3375
+        }
+      },
+      "upstream": {
+        "usepa_id": "CA009204",
+        "agency": "County of San Diego Department of Environmental Health",
+        "water_body_name": "Pacific Ocean",
+        "water_body_type": "Open Coast",
+        "beach_type": "UNKNOWN",
+        "beach_access": "PUBLIC",
+        "status": "Active",
+        "nearest_city": "Carlsbad"
+      },
+      "tide_station": "9410230",
+      "tide_station_distance_m": 30610,
+      "tide_station_from_end": "lower"
+    },
+    {
+      "slug": "agua-hedionda-lagoon",
+      "name": "Agua Hedionda Lagoon",
+      "region": "Bays, lagoons and inlets",
+      "segment": {
+        "upper": {
+          "lat": 33.147393,
+          "lon": -117.333249
+        },
+        "lower": {
+          "lat": 33.141831,
+          "lon": -117.319977
+        }
+      },
+      "upstream": {
+        "usepa_id": "CA953023",
+        "agency": "County of San Diego Department of Environmental Health",
+        "water_body_name": "Pacific Ocean",
+        "water_body_type": "Sound, Bay, or Inlet",
+        "beach_type": "UNKNOWN",
+        "beach_access": "PUBLIC",
+        "status": "Active",
+        "nearest_city": "Del Mar"
+      },
+      "tide_station": "9410196",
+      "tide_station_distance_m": 39737,
+      "tide_station_from_end": "lower"
+    },
+    {
+      "slug": "south-carlsbad-state-beach",
+      "name": "South Carlsbad State Beach",
+      "region": "North County coast",
+      "segment": {
+        "upper": {
+          "lat": 33.1285,
+          "lon": -117.3338
+        },
+        "lower": {
+          "lat": 33.0815,
+          "lon": -117.3115
+        }
+      },
+      "upstream": {
+        "usepa_id": "CA606869",
+        "agency": "County of San Diego Department of Environmental Health",
+        "water_body_name": "Pacific Ocean",
+        "water_body_type": "Open Coast",
+        "beach_type": "UNKNOWN",
+        "beach_access": "PUBLIC",
+        "status": "Active",
+        "nearest_city": "Carlsbad"
+      },
+      "tide_station": "9410230",
+      "tide_station_distance_m": 24396,
+      "tide_station_from_end": "lower"
+    },
+    {
+      "slug": "leucadia",
+      "name": "Leucadia",
+      "region": "North County coast",
+      "segment": {
+        "upper": {
+          "lat": 33.0817,
+          "lon": -117.3114
+        },
+        "lower": {
+          "lat": 33.0482,
+          "lon": -117.2986
+        }
+      },
+      "upstream": {
+        "usepa_id": "CA331931",
+        "agency": "County of San Diego Department of Environmental Health",
+        "water_body_name": "Pacific Ocean",
+        "water_body_type": "Open Coast",
+        "beach_type": "UNKNOWN",
+        "beach_access": "PUBLIC",
+        "status": "Active",
+        "nearest_city": "Encinitas"
+      },
+      "tide_station": "9410230",
+      "tide_station_distance_m": 20528,
+      "tide_station_from_end": "lower"
+    },
+    {
+      "slug": "encinitas-city-beaches",
+      "name": "Encinitas City Beaches",
+      "region": "North County coast",
+      "segment": {
+        "upper": {
+          "lat": 33.086824,
+          "lon": -117.313045
+        },
+        "lower": {
+          "lat": 33.031856,
+          "lon": -117.290849
+        }
+      },
+      "upstream": {
+        "usepa_id": "CA121276",
+        "agency": "County of San Diego Department of Environmental Health",
+        "water_body_name": "Pacific Ocean",
+        "water_body_type": "Open Coast",
+        "beach_type": "UNKNOWN",
+        "beach_access": "PUBLIC",
+        "status": "Active",
+        "nearest_city": "Encinitas"
+      },
+      "tide_station": "9410230",
+      "tide_station_distance_m": 18611,
+      "tide_station_from_end": "lower"
+    },
+    {
+      "slug": "moonlight-beach",
+      "name": "Moonlight Beach",
+      "region": "North County coast",
+      "segment": {
+        "upper": {
+          "lat": 33.04831,
+          "lon": -117.299051
+        },
+        "lower": {
+          "lat": 33.0438,
+          "lon": -117.2925
+        }
+      },
+      "upstream": {
+        "usepa_id": "CA326620",
+        "agency": "County of San Diego Department of Environmental Health",
+        "water_body_name": "Pacific Ocean",
+        "water_body_type": "Open Coast",
+        "beach_type": "UNKNOWN",
+        "beach_access": "PUBLIC",
+        "status": "Active",
+        "nearest_city": "Encinitas"
+      },
+      "tide_station": "9410230",
+      "tide_station_distance_m": 19946,
+      "tide_station_from_end": "lower"
+    },
+    {
+      "slug": "swami-s-park",
+      "name": "Swami's Park",
+      "region": "North County coast",
+      "segment": {
+        "upper": {
+          "lat": 33.034763,
+          "lon": -117.293736
+        },
+        "lower": {
+          "lat": 33.031856,
+          "lon": -117.290849
+        }
+      },
+      "upstream": {
+        "usepa_id": "CA789562",
+        "agency": "County of San Diego Department of Environmental Health",
+        "water_body_name": "Pacific Ocean",
+        "water_body_type": "Open Coast",
+        "beach_type": "UNKNOWN",
+        "beach_access": "PUBLIC",
+        "status": "Active",
+        "nearest_city": "Encinitas"
+      },
+      "tide_station": "9410230",
+      "tide_station_distance_m": 18611,
+      "tide_station_from_end": "lower"
+    },
+    {
+      "slug": "san-elijo-state-beach",
+      "name": "San Elijo State Beach",
+      "region": "North County coast",
+      "segment": {
+        "upper": {
+          "lat": 33.031855,
+          "lon": -117.290849
+        },
+        "lower": {
+          "lat": 33.016626,
+          "lon": -117.282485
+        }
+      },
+      "upstream": {
+        "usepa_id": "CA059339",
+        "agency": "County of San Diego Department of Environmental Health",
+        "water_body_name": "Pacific Ocean",
+        "water_body_type": "Open Coast",
+        "beach_type": "UNKNOWN",
+        "beach_access": "PUBLIC",
+        "status": "Active",
+        "nearest_city": "Del Mar"
+      },
+      "tide_station": "9410230",
+      "tide_station_distance_m": 16816,
+      "tide_station_from_end": "lower"
+    },
+    {
+      "slug": "cardiff-state-beach",
+      "name": "Cardiff State Beach",
+      "region": "North County coast",
+      "segment": {
+        "upper": {
+          "lat": 33.01556,
+          "lon": -117.281346
+        },
+        "lower": {
+          "lat": 32.99947,
+          "lon": -117.277931
+        }
+      },
+      "upstream": {
+        "usepa_id": "CA152716",
+        "agency": "County of San Diego Department of Environmental Health",
+        "water_body_name": "Pacific Ocean",
+        "water_body_type": "Open Coast",
+        "beach_type": "UNKNOWN",
+        "beach_access": "PUBLIC",
+        "status": "Active",
+        "nearest_city": "Del Mar"
+      },
+      "tide_station": "9410230",
+      "tide_station_distance_m": 14869,
+      "tide_station_from_end": "lower"
+    },
+    {
+      "slug": "solana-beach-city-beaches",
+      "name": "Solana Beach City Beaches",
+      "region": "La Jolla and Pacific Beach",
+      "segment": {
+        "upper": {
+          "lat": 32.99947,
+          "lon": -117.277931
+        },
+        "lower": {
+          "lat": 32.980308,
+          "lon": -117.272381
+        }
+      },
+      "upstream": {
+        "usepa_id": "CA505182",
+        "agency": "County of San Diego Department of Environmental Health",
+        "water_body_name": "Pacific Ocean",
+        "water_body_type": "Open Coast",
+        "beach_type": "UNKNOWN",
+        "beach_access": "PUBLIC",
+        "status": "Active",
+        "nearest_city": "Solana Beach"
+      },
+      "tide_station": "9410230",
+      "tide_station_distance_m": 12691,
+      "tide_station_from_end": "lower"
+    },
+    {
+      "slug": "seascape-beach-park",
+      "name": "Seascape Beach Park",
+      "region": "La Jolla and Pacific Beach",
+      "segment": {
+        "upper": {
+          "lat": 32.982363,
+          "lon": -117.273475
+        },
+        "lower": {
+          "lat": 32.980308,
+          "lon": -117.272381
+        }
+      },
+      "upstream": {
+        "usepa_id": "CA723256",
+        "agency": "County of San Diego Department of Environmental Health",
+        "water_body_name": "Pacific Ocean",
+        "water_body_type": "Open Coast",
+        "beach_type": "UNKNOWN",
+        "beach_access": "PUBLIC",
+        "status": "Active",
+        "nearest_city": "Solana Beach"
+      },
+      "tide_station": "9410230",
+      "tide_station_distance_m": 12691,
+      "tide_station_from_end": "lower"
+    },
+    {
+      "slug": "san-dieguito-river-beach",
+      "name": "San Dieguito River Beach",
+      "region": "La Jolla and Pacific Beach",
+      "segment": {
+        "upper": {
+          "lat": 32.976558,
+          "lon": -117.270906
+        },
+        "lower": {
+          "lat": 32.974609,
+          "lon": -117.27033
+        }
+      },
+      "upstream": {
+        "usepa_id": "CA531242",
+        "agency": "County of San Diego Department of Environmental Health",
+        "water_body_name": "Pacific Ocean",
+        "water_body_type": "Open Coast",
+        "beach_type": "UNKNOWN",
+        "beach_access": "PUBLIC",
+        "status": "Active",
+        "nearest_city": "Del Mar"
+      },
+      "tide_station": "9410230",
+      "tide_station_distance_m": 12040,
+      "tide_station_from_end": "lower"
+    },
+    {
+      "slug": "del-mar-city-beach",
+      "name": "Del Mar City Beach",
+      "region": "La Jolla and Pacific Beach",
+      "segment": {
+        "upper": {
+          "lat": 32.980308,
+          "lon": -117.272381
+        },
+        "lower": {
+          "lat": 32.948992,
+          "lon": -117.265203
+        }
+      },
+      "upstream": {
+        "usepa_id": "CA593616",
+        "agency": "County of San Diego Department of Environmental Health",
+        "water_body_name": "Pacific Ocean",
+        "water_body_type": "Open Coast",
+        "beach_type": "UNKNOWN",
+        "beach_access": "PUBLIC",
+        "status": "Active",
+        "nearest_city": "Del Mar"
+      },
+      "tide_station": "9410230",
+      "tide_station_distance_m": 9160,
+      "tide_station_from_end": "lower"
+    },
+    {
+      "slug": "powerhouse-park-15th-street",
+      "name": "Powerhouse Park 15th Street",
+      "region": "La Jolla and Pacific Beach",
+      "segment": {
+        "upper": {
+          "lat": 32.961524,
+          "lon": -117.268705
+        },
+        "lower": {
+          "lat": 32.959689,
+          "lon": -117.268595
+        }
+      },
+      "upstream": {
+        "usepa_id": "CA650180",
+        "agency": "County of San Diego Department of Environmental Health",
+        "water_body_name": "Pacific Ocean",
+        "water_body_type": "Open Coast",
+        "beach_type": "UNKNOWN",
+        "beach_access": "PUBLIC",
+        "status": "Active",
+        "nearest_city": "Del Mar"
+      },
+      "tide_station": "9410230",
+      "tide_station_distance_m": 10373,
+      "tide_station_from_end": "lower"
+    },
+    {
+      "slug": "torrey-pines-state-beach",
+      "name": "Torrey Pines State Beach",
+      "region": "La Jolla and Pacific Beach",
+      "segment": {
+        "upper": {
+          "lat": 32.948992,
+          "lon": -117.265203
+        },
+        "lower": {
+          "lat": 32.895772,
+          "lon": -117.253408
+        }
+      },
+      "upstream": {
+        "usepa_id": "CA785240",
+        "agency": "County of San Diego Department of Environmental Health",
+        "water_body_name": "Pacific Ocean",
+        "water_body_type": "Open Coast",
+        "beach_type": "UNKNOWN",
+        "beach_access": "PUBLIC",
+        "status": "Active",
+        "nearest_city": "Del Mar"
+      },
+      "tide_station": "9410230",
+      "tide_station_distance_m": 3229,
+      "tide_station_from_end": "lower"
+    },
+    {
+      "slug": "torrey-pines-city-beach",
+      "name": "Torrey Pines City Beach",
+      "region": "La Jolla and Pacific Beach",
+      "segment": {
+        "upper": {
+          "lat": 32.895772,
+          "lon": -117.253408
+        },
+        "lower": {
+          "lat": 32.883647,
+          "lon": -117.252681
+        }
+      },
+      "upstream": {
+        "usepa_id": "CA922367",
+        "agency": "County of San Diego Department of Environmental Health",
+        "water_body_name": "Pacific Ocean",
+        "water_body_type": "Open Coast",
+        "beach_type": "UNKNOWN",
+        "beach_access": "PUBLIC",
+        "status": "Active",
+        "nearest_city": "San Diego"
+      },
+      "tide_station": "9410230",
+      "tide_station_distance_m": 1907,
+      "tide_station_from_end": "lower"
+    },
+    {
+      "slug": "la-jolla-shores-beach",
       "name": "La Jolla Shores Beach",
+      "region": "La Jolla and Pacific Beach",
       "segment": {
         "upper": {
           "lat": 32.883647,
@@ -51,12 +661,1416 @@
         "nearest_city": "San Diego"
       },
       "tide_station": "9410230",
-      "tide_station_basis": "Open coast, so the open-coast station rather than the bay-side one. Confirmed against an independent product rather than assumed: the National Weather Service surf zone forecast for San Diego County Coastal (CAZ043), issued 12:41 PM PDT 2026-08-17, quotes La Jolla tides of 3.4 ft at 01:29 AM, 2.0 ft at 06:47 AM and 4.9 ft at 01:41 PM for 2026-08-18, and station 9410230's own predictions for those instants are 3.447, 2.006 and 4.938 ft. Three values agreeing to the rounding is what establishes that this station is the one NWS means by 'La Jolla'."
+      "tide_station_distance_m": 1369,
+      "tide_station_from_end": "lower"
+    },
+    {
+      "slug": "la-jolla-cove",
+      "name": "La Jolla Cove",
+      "region": "La Jolla and Pacific Beach",
+      "segment": {
+        "upper": {
+          "lat": 32.850235,
+          "lon": -117.272347
+        },
+        "lower": {
+          "lat": 32.850825,
+          "lon": -117.273034
+        }
+      },
+      "upstream": {
+        "usepa_id": "CA997086",
+        "agency": "County of San Diego Department of Environmental Health",
+        "water_body_name": "Pacific Ocean",
+        "water_body_type": "Open Coast",
+        "beach_type": "UNKNOWN",
+        "beach_access": "PUBLIC",
+        "status": "Active",
+        "nearest_city": "San Diego"
+      },
+      "tide_station": "9410230",
+      "tide_station_distance_m": 2326,
+      "tide_station_from_end": "lower"
+    },
+    {
+      "slug": "shell-beach",
+      "name": "Shell Beach",
+      "region": "La Jolla and Pacific Beach",
+      "segment": {
+        "upper": {
+          "lat": 32.850043,
+          "lon": -117.274805
+        },
+        "lower": {
+          "lat": 32.849578,
+          "lon": -117.27544
+        }
+      },
+      "upstream": {
+        "usepa_id": "CA310313",
+        "agency": "County of San Diego Department of Environmental Health",
+        "water_body_name": "Pacific Ocean",
+        "water_body_type": "Open Coast",
+        "beach_type": "UNKNOWN",
+        "beach_access": "PUBLIC",
+        "status": "Active",
+        "nearest_city": "San Diego"
+      },
+      "tide_station": "9410230",
+      "tide_station_distance_m": 2500,
+      "tide_station_from_end": "upper"
+    },
+    {
+      "slug": "childrens-pool",
+      "name": "Childrens Pool",
+      "region": "Bays, lagoons and inlets",
+      "segment": {
+        "upper": {
+          "lat": 32.8478,
+          "lon": -117.2787
+        },
+        "lower": {
+          "lat": 32.8474,
+          "lon": -117.2782
+        }
+      },
+      "upstream": {
+        "usepa_id": "CA499806",
+        "agency": "County of San Diego Department of Environmental Health",
+        "water_body_name": null,
+        "water_body_type": "Sound, Bay, or Inlet",
+        "beach_type": "UNKNOWN",
+        "beach_access": "PUBLIC",
+        "status": "Active",
+        "nearest_city": "La Jolla"
+      },
+      "tide_station": "9410196",
+      "tide_station_distance_m": 7842,
+      "tide_station_from_end": "lower"
+    },
+    {
+      "slug": "south-casa-beach-s-d",
+      "name": "South Casa Beach S.D.",
+      "region": "La Jolla and Pacific Beach",
+      "segment": {
+        "upper": {
+          "lat": 32.847306,
+          "lon": -117.278886
+        },
+        "lower": {
+          "lat": 32.845896,
+          "lon": -117.279105
+        }
+      },
+      "upstream": {
+        "usepa_id": "CA273334",
+        "agency": "County of San Diego Department of Environmental Health",
+        "water_body_name": "Pacific Ocean",
+        "water_body_type": "Open Coast",
+        "beach_type": "UNKNOWN",
+        "beach_access": "PUBLIC",
+        "status": "Active",
+        "nearest_city": "San Diego"
+      },
+      "tide_station": "9410230",
+      "tide_station_distance_m": 2981,
+      "tide_station_from_end": "upper"
+    },
+    {
+      "slug": "whispering-sands-nicholson-pt",
+      "name": "Whispering Sands  Nicholson Pt.",
+      "region": "La Jolla and Pacific Beach",
+      "segment": {
+        "upper": {
+          "lat": 32.845887,
+          "lon": -117.278994
+        },
+        "lower": {
+          "lat": 32.836703,
+          "lon": -117.281569
+        }
+      },
+      "upstream": {
+        "usepa_id": "CA549566",
+        "agency": "County of San Diego Department of Environmental Health",
+        "water_body_name": "Pacific Ocean",
+        "water_body_type": "Open Coast",
+        "beach_type": "UNKNOWN",
+        "beach_access": "PUBLIC",
+        "status": "Active",
+        "nearest_city": "San Diego"
+      },
+      "tide_station": "9410230",
+      "tide_station_distance_m": 3105,
+      "tide_station_from_end": "upper"
+    },
+    {
+      "slug": "marine-street-beach",
+      "name": "Marine Street Beach",
+      "region": "La Jolla and Pacific Beach",
+      "segment": {
+        "upper": {
+          "lat": 32.839494,
+          "lon": -117.282322
+        },
+        "lower": {
+          "lat": 32.836703,
+          "lon": -117.281569
+        }
+      },
+      "upstream": {
+        "usepa_id": "CA982426",
+        "agency": "County of San Diego Department of Environmental Health",
+        "water_body_name": "Pacific Ocean",
+        "water_body_type": "Open Coast",
+        "beach_type": "UNKNOWN",
+        "beach_access": "PUBLIC",
+        "status": "Active",
+        "nearest_city": "San Diego"
+      },
+      "tide_station": "9410230",
+      "tide_station_distance_m": 3852,
+      "tide_station_from_end": "upper"
+    },
+    {
+      "slug": "la-jolla-community-beach",
+      "name": "La Jolla Community Beach",
+      "region": "La Jolla and Pacific Beach",
+      "segment": {
+        "upper": {
+          "lat": 32.854717,
+          "lon": -117.259183
+        },
+        "lower": {
+          "lat": 32.809867,
+          "lon": -117.269317
+        }
+      },
+      "upstream": {
+        "usepa_id": "CA211756",
+        "agency": "County of San Diego Department of Environmental Health",
+        "water_body_name": "Pacific Ocean",
+        "water_body_type": "Open Coast",
+        "beach_type": "UNKNOWN",
+        "beach_access": "PUBLIC",
+        "status": "Active",
+        "nearest_city": "San Diego"
+      },
+      "tide_station": "9410230",
+      "tide_station_distance_m": 1369,
+      "tide_station_from_end": "upper"
+    },
+    {
+      "slug": "windansea-beach",
+      "name": "WindanSea Beach",
+      "region": "La Jolla and Pacific Beach",
+      "segment": {
+        "upper": {
+          "lat": 32.836703,
+          "lon": -117.281569
+        },
+        "lower": {
+          "lat": 32.824588,
+          "lon": -117.28006
+        }
+      },
+      "upstream": {
+        "usepa_id": "CA499735",
+        "agency": "County of San Diego Department of Environmental Health",
+        "water_body_name": "Pacific Ocean",
+        "water_body_type": "Open Coast",
+        "beach_type": "UNKNOWN",
+        "beach_access": "PUBLIC",
+        "status": "Active",
+        "nearest_city": "San Diego"
+      },
+      "tide_station": "9410230",
+      "tide_station_distance_m": 4062,
+      "tide_station_from_end": "upper"
+    },
+    {
+      "slug": "bird-rock-nr",
+      "name": "Bird Rock (NR)",
+      "region": "La Jolla and Pacific Beach",
+      "segment": {
+        "upper": {
+          "lat": 32.815476,
+          "lon": -117.273951
+        },
+        "lower": {
+          "lat": 32.809867,
+          "lon": -117.269317
+        }
+      },
+      "upstream": {
+        "usepa_id": "CA479103",
+        "agency": "County of San Diego Department of Environmental Health",
+        "water_body_name": "Pacific Ocean",
+        "water_body_type": "Open Coast",
+        "beach_type": "UNKNOWN",
+        "beach_access": "PUBLIC",
+        "status": "Active",
+        "nearest_city": "San Diego"
+      },
+      "tide_station": "9410230",
+      "tide_station_distance_m": 5931,
+      "tide_station_from_end": "upper"
+    },
+    {
+      "slug": "tourmaline-surfing-park",
+      "name": "Tourmaline Surfing Park",
+      "region": "La Jolla and Pacific Beach",
+      "segment": {
+        "upper": {
+          "lat": 32.8079,
+          "lon": -117.2662
+        },
+        "lower": {
+          "lat": 32.8008,
+          "lon": -117.2594
+        }
+      },
+      "upstream": {
+        "usepa_id": "CA748587",
+        "agency": "County of San Diego Department of Environmental Health",
+        "water_body_name": "Pacific Ocean",
+        "water_body_type": "Open Coast",
+        "beach_type": "UNKNOWN",
+        "beach_access": "PUBLIC",
+        "status": "Active",
+        "nearest_city": "San Diego"
+      },
+      "tide_station": "9410230",
+      "tide_station_distance_m": 6615,
+      "tide_station_from_end": "upper"
+    },
+    {
+      "slug": "pacific-beach",
+      "name": "Pacific Beach",
+      "region": "Point Loma and Ocean Beach",
+      "segment": {
+        "upper": {
+          "lat": 32.8008,
+          "lon": -117.2594
+        },
+        "lower": {
+          "lat": 32.7933,
+          "lon": -117.2561
+        }
+      },
+      "upstream": {
+        "usepa_id": "CA631432",
+        "agency": "County of San Diego Department of Environmental Health",
+        "water_body_name": "Pacific Ocean",
+        "water_body_type": "Open Coast",
+        "beach_type": "UNKNOWN",
+        "beach_access": "PUBLIC",
+        "status": "Active",
+        "nearest_city": "San Diego"
+      },
+      "tide_station": "9410230",
+      "tide_station_distance_m": 7353,
+      "tide_station_from_end": "upper"
+    },
+    {
+      "slug": "mission-bay-campland-on-the-bay",
+      "name": "Mission Bay, Campland On The Bay",
+      "region": "Bays, lagoons and inlets",
+      "segment": {
+        "upper": {
+          "lat": 32.794406,
+          "lon": -117.22355
+        },
+        "lower": {
+          "lat": 32.795784,
+          "lon": -117.220812
+        }
+      },
+      "upstream": {
+        "usepa_id": "CA397227",
+        "agency": "County of San Diego Department of Environmental Health",
+        "water_body_name": "Pacific Ocean",
+        "water_body_type": "Sound, Bay, or Inlet",
+        "beach_type": "UNKNOWN",
+        "beach_access": "PUBLIC",
+        "status": "Active",
+        "nearest_city": "San Diego"
+      },
+      "tide_station": "9410196",
+      "tide_station_distance_m": 82,
+      "tide_station_from_end": "upper"
+    },
+    {
+      "slug": "mission-bay-de-anza-cove",
+      "name": "Mission Bay, De Anza Cove",
+      "region": "Bays, lagoons and inlets",
+      "segment": {
+        "upper": {
+          "lat": 32.794,
+          "lon": -117.2116
+        },
+        "lower": {
+          "lat": 32.7935,
+          "lon": -117.2093
+        }
+      },
+      "upstream": {
+        "usepa_id": "CA895390",
+        "agency": "County of San Diego Department of Environmental Health",
+        "water_body_name": "Pacific Ocean",
+        "water_body_type": "Sound, Bay, or Inlet",
+        "beach_type": "UNKNOWN",
+        "beach_access": "PUBLIC",
+        "status": "Active",
+        "nearest_city": "San Diego"
+      },
+      "tide_station": "9410196",
+      "tide_station_distance_m": 1141,
+      "tide_station_from_end": "upper"
+    },
+    {
+      "slug": "mission-bay-visitor-s-center",
+      "name": "Mission Bay, Visitor's Center",
+      "region": "Bays, lagoons and inlets",
+      "segment": {
+        "upper": {
+          "lat": 32.7932,
+          "lon": -117.209522
+        },
+        "lower": {
+          "lat": 32.788497,
+          "lon": -117.209584
+        }
+      },
+      "upstream": {
+        "usepa_id": "CA891580",
+        "agency": "County of San Diego Department of Environmental Health",
+        "water_body_name": "Pacific Ocean",
+        "water_body_type": "Sound, Bay, or Inlet",
+        "beach_type": "UNKNOWN",
+        "beach_access": "PUBLIC",
+        "status": "Active",
+        "nearest_city": "San Diego"
+      },
+      "tide_station": "9410196",
+      "tide_station_distance_m": 1336,
+      "tide_station_from_end": "upper"
+    },
+    {
+      "slug": "mission-bay-fanuel-park",
+      "name": "Mission Bay, Fanuel Park",
+      "region": "Bays, lagoons and inlets",
+      "segment": {
+        "upper": {
+          "lat": 32.7913,
+          "lon": -117.248952
+        },
+        "lower": {
+          "lat": 32.785963,
+          "lon": -117.240459
+        }
+      },
+      "upstream": {
+        "usepa_id": "CA377016",
+        "agency": "County of San Diego Department of Environmental Health",
+        "water_body_name": "Pacific Ocean",
+        "water_body_type": "Sound, Bay, or Inlet",
+        "beach_type": "UNKNOWN",
+        "beach_access": "PUBLIC",
+        "status": "Active",
+        "nearest_city": "San Diego"
+      },
+      "tide_station": "9410196",
+      "tide_station_distance_m": 1779,
+      "tide_station_from_end": "lower"
+    },
+    {
+      "slug": "mission-bay-leisure-lagoon",
+      "name": "Mission Bay, Leisure Lagoon",
+      "region": "Bays, lagoons and inlets",
+      "segment": {
+        "upper": {
+          "lat": 32.7868,
+          "lon": -117.2089
+        },
+        "lower": {
+          "lat": 32.784023,
+          "lon": -117.2112
+        }
+      },
+      "upstream": {
+        "usepa_id": "CA246103",
+        "agency": "County of San Diego Department of Environmental Health",
+        "water_body_name": "Pacific Ocean",
+        "water_body_type": "Sound, Bay, or Inlet",
+        "beach_type": "UNKNOWN",
+        "beach_access": "PUBLIC",
+        "status": "Active",
+        "nearest_city": "San Diego"
+      },
+      "tide_station": "9410196",
+      "tide_station_distance_m": 1590,
+      "tide_station_from_end": "upper"
+    },
+    {
+      "slug": "mission-bay-crown-point-shores",
+      "name": "Mission Bay, Crown Point Shores",
+      "region": "Bays, lagoons and inlets",
+      "segment": {
+        "upper": {
+          "lat": 32.788545,
+          "lon": -117.231675
+        },
+        "lower": {
+          "lat": 32.779582,
+          "lon": -117.23593
+        }
+      },
+      "upstream": {
+        "usepa_id": "CA373657",
+        "agency": "County of San Diego Department of Environmental Health",
+        "water_body_name": "Pacific Ocean",
+        "water_body_type": "Sound, Bay, or Inlet",
+        "beach_type": "UNKNOWN",
+        "beach_access": "PUBLIC",
+        "status": "Active",
+        "nearest_city": "San Diego"
+      },
+      "tide_station": "9410196",
+      "tide_station_distance_m": 933,
+      "tide_station_from_end": "upper"
+    },
+    {
+      "slug": "mission-bay-riviera-shores",
+      "name": "Mission Bay, Riviera Shores",
+      "region": "Bays, lagoons and inlets",
+      "segment": {
+        "upper": {
+          "lat": 32.78596,
+          "lon": -117.240459
+        },
+        "lower": {
+          "lat": 32.779445,
+          "lon": -117.236301
+        }
+      },
+      "upstream": {
+        "usepa_id": "CA153271",
+        "agency": "County of San Diego Department of Environmental Health",
+        "water_body_name": "Pacific Ocean",
+        "water_body_type": "Sound, Bay, or Inlet",
+        "beach_type": "UNKNOWN",
+        "beach_access": "PUBLIC",
+        "status": "Active",
+        "nearest_city": "San Diego"
+      },
+      "tide_station": "TWC0413",
+      "tide_station_distance_m": 1445,
+      "tide_station_from_end": "lower"
+    },
+    {
+      "slug": "mission-bay-north-pacific-passage",
+      "name": "Mission Bay, north pacific passage",
+      "region": "Bays, lagoons and inlets",
+      "segment": {
+        "upper": {
+          "lat": 32.784023,
+          "lon": -117.21121
+        },
+        "lower": {
+          "lat": 32.777328,
+          "lon": -117.211393
+        }
+      },
+      "upstream": {
+        "usepa_id": "CA414803",
+        "agency": "County of San Diego Department of Environmental Health",
+        "water_body_name": "Pacific Ocean",
+        "water_body_type": "Sound, Bay, or Inlet",
+        "beach_type": "UNKNOWN",
+        "beach_access": "PUBLIC",
+        "status": "Active",
+        "nearest_city": "San Diego"
+      },
+      "tide_station": "9410196",
+      "tide_station_distance_m": 1595,
+      "tide_station_from_end": "upper"
+    },
+    {
+      "slug": "mission-bay-san-juan-cove",
+      "name": "Mission Bay, San Juan Cove",
+      "region": "Bays, lagoons and inlets",
+      "segment": {
+        "upper": {
+          "lat": 32.781296,
+          "lon": -117.24875
+        },
+        "lower": {
+          "lat": 32.779968,
+          "lon": -117.24838
+        }
+      },
+      "upstream": {
+        "usepa_id": "CA160930",
+        "agency": "County of San Diego Department of Environmental Health",
+        "water_body_name": "Pacific Ocean",
+        "water_body_type": "Sound, Bay, or Inlet",
+        "beach_type": "UNKNOWN",
+        "beach_access": "PUBLIC",
+        "status": "Active",
+        "nearest_city": "San Diego"
+      },
+      "tide_station": "TWC0413",
+      "tide_station_distance_m": 2041,
+      "tide_station_from_end": "lower"
+    },
+    {
+      "slug": "mission-bay-sail-bay",
+      "name": "Mission Bay, Sail Bay",
+      "region": "Bays, lagoons and inlets",
+      "segment": {
+        "upper": {
+          "lat": 32.7799,
+          "lon": -117.2483
+        },
+        "lower": {
+          "lat": 32.7775,
+          "lon": -117.2473
+        }
+      },
+      "upstream": {
+        "usepa_id": "CA424988",
+        "agency": "County of San Diego Department of Environmental Health",
+        "water_body_name": "Pacific Ocean",
+        "water_body_type": "Sound, Bay, or Inlet",
+        "beach_type": "UNKNOWN",
+        "beach_access": "PUBLIC",
+        "status": "Active",
+        "nearest_city": "San Diego"
+      },
+      "tide_station": "TWC0413",
+      "tide_station_distance_m": 1776,
+      "tide_station_from_end": "lower"
+    },
+    {
+      "slug": "mission-bay-santa-barbara-cove",
+      "name": "Mission Bay, Santa Barbara Cove",
+      "region": "Bays, lagoons and inlets",
+      "segment": {
+        "upper": {
+          "lat": 32.777576,
+          "lon": -117.247327
+        },
+        "lower": {
+          "lat": 32.775961,
+          "lon": -117.246786
+        }
+      },
+      "upstream": {
+        "usepa_id": "CA260791",
+        "agency": "County of San Diego Department of Environmental Health",
+        "water_body_name": "Pacific Ocean",
+        "water_body_type": "Sound, Bay, or Inlet",
+        "beach_type": "UNKNOWN",
+        "beach_access": "PUBLIC",
+        "status": "Active",
+        "nearest_city": "San Diego"
+      },
+      "tide_station": "TWC0413",
+      "tide_station_distance_m": 1628,
+      "tide_station_from_end": "lower"
+    },
+    {
+      "slug": "mission-beach",
+      "name": "Mission Beach",
+      "region": "Point Loma and Ocean Beach",
+      "segment": {
+        "upper": {
+          "lat": 32.793314,
+          "lon": -117.256197
+        },
+        "lower": {
+          "lat": 32.759253,
+          "lon": -117.254047
+        }
+      },
+      "upstream": {
+        "usepa_id": "CA208646",
+        "agency": "County of San Diego Department of Environmental Health",
+        "water_body_name": "Pacific Ocean",
+        "water_body_type": "Open Coast",
+        "beach_type": "UNKNOWN",
+        "beach_access": "PUBLIC",
+        "status": "Active",
+        "nearest_city": "San Diego"
+      },
+      "tide_station": "9410230",
+      "tide_station_distance_m": 8183,
+      "tide_station_from_end": "upper"
+    },
+    {
+      "slug": "tecolote-shores",
+      "name": "Tecolote Shores",
+      "region": "Bays, lagoons and inlets",
+      "segment": {
+        "upper": {
+          "lat": 32.777317,
+          "lon": -117.211315
+        },
+        "lower": {
+          "lat": 32.771283,
+          "lon": -117.20965
+        }
+      },
+      "upstream": {
+        "usepa_id": "CA801852",
+        "agency": "County of San Diego Department of Environmental Health",
+        "water_body_name": "Pacific Ocean",
+        "water_body_type": "Sound, Bay, or Inlet",
+        "beach_type": "UNKNOWN",
+        "beach_access": "PUBLIC",
+        "status": "Active",
+        "nearest_city": "San Diego"
+      },
+      "tide_station": "9410196",
+      "tide_station_distance_m": 2164,
+      "tide_station_from_end": "upper"
+    },
+    {
+      "slug": "mission-bay-bahia-point",
+      "name": "Mission Bay, Bahia Point",
+      "region": "Bays, lagoons and inlets",
+      "segment": {
+        "upper": {
+          "lat": 32.7759,
+          "lon": -117.2467
+        },
+        "lower": {
+          "lat": 32.7724,
+          "lon": -117.2455
+        }
+      },
+      "upstream": {
+        "usepa_id": "CA954630",
+        "agency": "County of San Diego Department of Environmental Health",
+        "water_body_name": "Pacific Ocean",
+        "water_body_type": "Sound, Bay, or Inlet",
+        "beach_type": "UNKNOWN",
+        "beach_access": "PUBLIC",
+        "status": "Active",
+        "nearest_city": "San Diego"
+      },
+      "tide_station": "TWC0413",
+      "tide_station_distance_m": 1305,
+      "tide_station_from_end": "lower"
+    },
+    {
+      "slug": "mission-bay-vacation-isle",
+      "name": "Mission Bay, Vacation Isle",
+      "region": "Bays, lagoons and inlets",
+      "segment": {
+        "upper": {
+          "lat": 32.7737,
+          "lon": -117.2402
+        },
+        "lower": {
+          "lat": 32.7737,
+          "lon": -117.2402
+        }
+      },
+      "upstream": {
+        "usepa_id": "CA211999",
+        "agency": "County of San Diego Department of Environmental Health",
+        "water_body_name": "Pacific Ocean",
+        "water_body_type": "Sound, Bay, or Inlet",
+        "beach_type": "UNKNOWN",
+        "beach_access": "PUBLIC",
+        "status": "Active",
+        "nearest_city": "San Diego"
+      },
+      "tide_station": "TWC0413",
+      "tide_station_distance_m": 1011,
+      "tide_station_from_end": "upper"
+    },
+    {
+      "slug": "mission-bay-ventura-cove",
+      "name": "Mission Bay, Ventura Cove",
+      "region": "Bays, lagoons and inlets",
+      "segment": {
+        "upper": {
+          "lat": 32.773704,
+          "lon": -117.244602
+        },
+        "lower": {
+          "lat": 32.770928,
+          "lon": -117.243216
+        }
+      },
+      "upstream": {
+        "usepa_id": "CA289877",
+        "agency": "County of San Diego Department of Environmental Health",
+        "water_body_name": "Pacific Ocean",
+        "water_body_type": "Sound, Bay, or Inlet",
+        "beach_type": "UNKNOWN",
+        "beach_access": "PUBLIC",
+        "status": "Active",
+        "nearest_city": "San Diego"
+      },
+      "tide_station": "TWC0413",
+      "tide_station_distance_m": 1040,
+      "tide_station_from_end": "lower"
+    },
+    {
+      "slug": "fiesta-island",
+      "name": "Fiesta Island",
+      "region": "Point Loma and Ocean Beach",
+      "segment": {
+        "upper": {
+          "lat": 32.7694,
+          "lon": -117.2111
+        },
+        "lower": {
+          "lat": 32.769,
+          "lon": -117.2109
+        }
+      },
+      "upstream": {
+        "usepa_id": null,
+        "agency": "County of San Diego Department of Environmental Health",
+        "water_body_name": null,
+        "water_body_type": "Open Coast",
+        "beach_type": "UNKNOWN",
+        "beach_access": "PUBLIC",
+        "status": "Active",
+        "nearest_city": "San Diego"
+      },
+      "tide_station": "9410230",
+      "tide_station_distance_m": 11663,
+      "tide_station_from_end": "upper"
+    },
+    {
+      "slug": "mission-bay-sea-world",
+      "name": "Mission Bay, Sea World",
+      "region": "Bays, lagoons and inlets",
+      "segment": {
+        "upper": {
+          "lat": 32.769509,
+          "lon": -117.233724
+        },
+        "lower": {
+          "lat": 32.766121,
+          "lon": -117.221506
+        }
+      },
+      "upstream": {
+        "usepa_id": "CA108339",
+        "agency": "County of San Diego Department of Environmental Health",
+        "water_body_name": "Pacific Ocean",
+        "water_body_type": "Sound, Bay, or Inlet",
+        "beach_type": "UNKNOWN",
+        "beach_access": "PUBLIC",
+        "status": "Active",
+        "nearest_city": "San Diego"
+      },
+      "tide_station": "TWC0413",
+      "tide_station_distance_m": 315,
+      "tide_station_from_end": "upper"
+    },
+    {
+      "slug": "mission-bay-mariners-basin",
+      "name": "Mission Bay, Mariners Basin",
+      "region": "Bays, lagoons and inlets",
+      "segment": {
+        "upper": {
+          "lat": 32.762084,
+          "lon": -117.245973
+        },
+        "lower": {
+          "lat": 32.764278,
+          "lon": -117.246744
+        }
+      },
+      "upstream": {
+        "usepa_id": "CA192160",
+        "agency": "County of San Diego Department of Environmental Health",
+        "water_body_name": "Pacific Ocean",
+        "water_body_type": "Sound, Bay, or Inlet",
+        "beach_type": "UNKNOWN",
+        "beach_access": "PUBLIC",
+        "status": "Active",
+        "nearest_city": "San Diego"
+      },
+      "tide_station": "TWC0413",
+      "tide_station_distance_m": 1286,
+      "tide_station_from_end": "lower"
+    },
+    {
+      "slug": "mission-bay-quivera-basin",
+      "name": "Mission Bay, Quivera Basin",
+      "region": "Bays, lagoons and inlets",
+      "segment": {
+        "upper": {
+          "lat": 32.763274,
+          "lon": -117.241533
+        },
+        "lower": {
+          "lat": 32.76194,
+          "lon": -117.241338
+        }
+      },
+      "upstream": {
+        "usepa_id": "CA712752",
+        "agency": "County of San Diego Department of Environmental Health",
+        "water_body_name": "Pacific Ocean",
+        "water_body_type": "Sound, Bay, or Inlet",
+        "beach_type": "UNKNOWN",
+        "beach_access": "PUBLIC",
+        "status": "Active",
+        "nearest_city": "San Diego"
+      },
+      "tide_station": "TWC0413",
+      "tide_station_distance_m": 859,
+      "tide_station_from_end": "upper"
+    },
+    {
+      "slug": "mission-bay",
+      "name": "Mission Bay",
+      "region": "Bays, lagoons and inlets",
+      "segment": {
+        "upper": {
+          "lat": 32.760031,
+          "lon": -117.247919
+        },
+        "lower": {
+          "lat": 32.761722,
+          "lon": -117.241383
+        }
+      },
+      "upstream": {
+        "usepa_id": "CA108339",
+        "agency": "County of San Diego Department of Environmental Health",
+        "water_body_name": "Pacific Ocean",
+        "water_body_type": "Sound, Bay, or Inlet",
+        "beach_type": "UNKNOWN",
+        "beach_access": "PUBLIC",
+        "status": "Active",
+        "nearest_city": "San Diego"
+      },
+      "tide_station": "TWC0413",
+      "tide_station_distance_m": 937,
+      "tide_station_from_end": "lower"
+    },
+    {
+      "slug": "dog-beach-o-b",
+      "name": "Dog Beach, O.B.",
+      "region": "Point Loma and Ocean Beach",
+      "segment": {
+        "upper": {
+          "lat": 32.75617,
+          "lon": -117.252734
+        },
+        "lower": {
+          "lat": 32.747069,
+          "lon": -117.254253
+        }
+      },
+      "upstream": {
+        "usepa_id": "CA316627",
+        "agency": "County of San Diego Department of Environmental Health",
+        "water_body_name": "Pacific Ocean",
+        "water_body_type": "Open Coast",
+        "beach_type": "UNKNOWN",
+        "beach_access": "PUBLIC",
+        "status": "Active",
+        "nearest_city": "San Diego"
+      },
+      "tide_station": "9410230",
+      "tide_station_distance_m": 12319,
+      "tide_station_from_end": "upper"
+    },
+    {
+      "slug": "ocean-beach",
+      "name": "Ocean Beach",
+      "region": "Point Loma and Ocean Beach",
+      "segment": {
+        "upper": {
+          "lat": 32.756524,
+          "lon": -117.251911
+        },
+        "lower": {
+          "lat": 32.735192,
+          "lon": -117.255806
+        }
+      },
+      "upstream": {
+        "usepa_id": "CA799523",
+        "agency": "County of San Diego Department of Environmental Health",
+        "water_body_name": "Pacific Ocean",
+        "water_body_type": "Open Coast",
+        "beach_type": "UNKNOWN",
+        "beach_access": "PUBLIC",
+        "status": "Active",
+        "nearest_city": "San Diego"
+      },
+      "tide_station": "9410230",
+      "tide_station_distance_m": 12283,
+      "tide_station_from_end": "upper"
+    },
+    {
+      "slug": "spanish-landing-park",
+      "name": "Spanish Landing Park",
+      "region": "Bays, lagoons and inlets",
+      "segment": {
+        "upper": {
+          "lat": 32.728278,
+          "lon": -117.213857
+        },
+        "lower": {
+          "lat": 32.728458,
+          "lon": -117.199202
+        }
+      },
+      "upstream": {
+        "usepa_id": "CA769604",
+        "agency": "County of San Diego Department of Environmental Health",
+        "water_body_name": "Pacific Ocean",
+        "water_body_type": "Sound, Bay, or Inlet",
+        "beach_type": "UNKNOWN",
+        "beach_access": "PUBLIC",
+        "status": "Active",
+        "nearest_city": "San Diego"
+      },
+      "tide_station": "9410170",
+      "tide_station_distance_m": 2545,
+      "tide_station_from_end": "lower"
+    },
+    {
+      "slug": "sunset-cliffs-park",
+      "name": "Sunset Cliffs Park",
+      "region": "Point Loma and Ocean Beach",
+      "segment": {
+        "upper": {
+          "lat": 32.735192,
+          "lon": -117.255806
+        },
+        "lower": {
+          "lat": 32.713183,
+          "lon": -117.256222
+        }
+      },
+      "upstream": {
+        "usepa_id": "CA628494",
+        "agency": "County of San Diego Department of Environmental Health",
+        "water_body_name": "Pacific Ocean",
+        "water_body_type": "Open Coast",
+        "beach_type": "UNKNOWN",
+        "beach_access": "PUBLIC",
+        "status": "Active",
+        "nearest_city": "San Diego"
+      },
+      "tide_station": "9410230",
+      "tide_station_distance_m": 14646,
+      "tide_station_from_end": "upper"
+    },
+    {
+      "slug": "shoreline-park",
+      "name": "Shoreline Park",
+      "region": "Bays, lagoons and inlets",
+      "segment": {
+        "upper": {
+          "lat": 32.708872,
+          "lon": -117.234734
+        },
+        "lower": {
+          "lat": 32.719678,
+          "lon": -117.220187
+        }
+      },
+      "upstream": {
+        "usepa_id": null,
+        "agency": "County of San Diego Department of Environmental Health",
+        "water_body_name": null,
+        "water_body_type": "Sound, Bay, or Inlet",
+        "beach_type": "UNKNOWN",
+        "beach_access": "PUBLIC",
+        "status": "Active",
+        "nearest_city": "San Diego"
+      },
+      "tide_station": "9410166",
+      "tide_station_distance_m": 620,
+      "tide_station_from_end": "upper"
+    },
+    {
+      "slug": "san-diego-bay",
+      "name": "San Diego Bay",
+      "region": "Bays, lagoons and inlets",
+      "segment": {
+        "upper": {
+          "lat": 32.707794,
+          "lon": -117.237025
+        },
+        "lower": {
+          "lat": 32.703083,
+          "lon": -117.180908
+        }
+      },
+      "upstream": {
+        "usepa_id": "CA506450",
+        "agency": "County of San Diego Department of Environmental Health",
+        "water_body_name": "Pacific Ocean",
+        "water_body_type": "Sound, Bay, or Inlet",
+        "beach_type": "UNKNOWN",
+        "beach_access": "PUBLIC",
+        "status": "Active",
+        "nearest_city": "San Diego"
+      },
+      "tide_station": "9410166",
+      "tide_station_distance_m": 534,
+      "tide_station_from_end": "upper"
+    },
+    {
+      "slug": "tide-beach-park",
+      "name": "Tide Beach Park",
+      "region": "Point Loma and Ocean Beach",
+      "segment": {
+        "upper": {
+          "lat": 32.692502,
+          "lon": -117.16396
+        },
+        "lower": {
+          "lat": 32.688449,
+          "lon": -117.163634
+        }
+      },
+      "upstream": {
+        "usepa_id": "CA654912",
+        "agency": "County of San Diego Department of Environmental Health",
+        "water_body_name": "Pacific Ocean",
+        "water_body_type": "Open Coast",
+        "beach_type": "UNKNOWN",
+        "beach_access": "PUBLIC",
+        "status": "Active",
+        "nearest_city": "Solana Beach"
+      },
+      "tide_station": "9410120",
+      "tide_station_distance_m": 12538,
+      "tide_station_from_end": "lower"
+    },
+    {
+      "slug": "coronado-north-beach",
+      "name": "Coronado north beach",
+      "region": "Point Loma and Ocean Beach",
+      "segment": {
+        "upper": {
+          "lat": 32.683267,
+          "lon": -117.223496
+        },
+        "lower": {
+          "lat": 32.6864,
+          "lon": -117.194
+        }
+      },
+      "upstream": {
+        "usepa_id": "CA604254",
+        "agency": "County of San Diego Department of Environmental Health",
+        "water_body_name": "Pacific Ocean",
+        "water_body_type": "Open Coast",
+        "beach_type": "UNKNOWN",
+        "beach_access": "PUBLIC",
+        "status": "Active",
+        "nearest_city": "San Diego"
+      },
+      "tide_station": "9410120",
+      "tide_station_distance_m": 13229,
+      "tide_station_from_end": "lower"
+    },
+    {
+      "slug": "coronado-central-beach",
+      "name": "Coronado, Central beach",
+      "region": "Point Loma and Ocean Beach",
+      "segment": {
+        "upper": {
+          "lat": 32.684744,
+          "lon": -117.19049
+        },
+        "lower": {
+          "lat": 32.680392,
+          "lon": -117.18199
+        }
+      },
+      "upstream": {
+        "usepa_id": "CA594160",
+        "agency": "County of San Diego Department of Environmental Health",
+        "water_body_name": "Pacific Ocean",
+        "water_body_type": "Open Coast",
+        "beach_type": "UNKNOWN",
+        "beach_access": "PUBLIC",
+        "status": "Active",
+        "nearest_city": "Coronado"
+      },
+      "tide_station": "9410120",
+      "tide_station_distance_m": 12175,
+      "tide_station_from_end": "lower"
+    },
+    {
+      "slug": "coronado-city-beaches",
+      "name": "Coronado City beaches",
+      "region": "Point Loma and Ocean Beach",
+      "segment": {
+        "upper": {
+          "lat": 32.6867,
+          "lon": -117.1976
+        },
+        "lower": {
+          "lat": 32.6739,
+          "lon": -117.1721
+        }
+      },
+      "upstream": {
+        "usepa_id": "CA204955",
+        "agency": "County of San Diego Department of Environmental Health",
+        "water_body_name": "Pacific Ocean",
+        "water_body_type": "Open Coast",
+        "beach_type": "UNKNOWN",
+        "beach_access": "PUBLIC",
+        "status": "Active",
+        "nearest_city": "Coronado"
+      },
+      "tide_station": "9410120",
+      "tide_station_distance_m": 11184,
+      "tide_station_from_end": "lower"
+    },
+    {
+      "slug": "coronado-cays-nr",
+      "name": "Coronado Cays (NR)",
+      "region": "Bays, lagoons and inlets",
+      "segment": {
+        "upper": {
+          "lat": 32.637678,
+          "lon": -117.138767
+        },
+        "lower": {
+          "lat": 32.630722,
+          "lon": -117.138047
+        }
+      },
+      "upstream": {
+        "usepa_id": "CA125172",
+        "agency": "County of San Diego Department of Environmental Health",
+        "water_body_name": "Pacific Ocean",
+        "water_body_type": "Sound, Bay, or Inlet",
+        "beach_type": "UNKNOWN",
+        "beach_access": "PUBLIC",
+        "status": "Active",
+        "nearest_city": "Coronado"
+      },
+      "tide_station": "9410135",
+      "tide_station_distance_m": 2838,
+      "tide_station_from_end": "lower"
+    },
+    {
+      "slug": "silver-strand-state-beach",
+      "name": "Silver Strand State Beach",
+      "region": "South County coast",
+      "segment": {
+        "upper": {
+          "lat": 32.636836,
+          "lon": -117.144303
+        },
+        "lower": {
+          "lat": 32.608936,
+          "lon": -117.134783
+        }
+      },
+      "upstream": {
+        "usepa_id": "CA801475",
+        "agency": "County of San Diego Department of Environmental Health",
+        "water_body_name": "Pacific Ocean",
+        "water_body_type": "Open Coast",
+        "beach_type": "UNKNOWN",
+        "beach_access": "PUBLIC",
+        "status": "Active",
+        "nearest_city": "San Diego"
+      },
+      "tide_station": "9410120",
+      "tide_station_distance_m": 3407,
+      "tide_station_from_end": "lower"
+    },
+    {
+      "slug": "north-imperial-beach",
+      "name": "north Imperial Beach",
+      "region": "South County coast",
+      "segment": {
+        "upper": {
+          "lat": 32.6089,
+          "lon": -117.1347
+        },
+        "lower": {
+          "lat": 32.5866,
+          "lon": -117.1327
+        }
+      },
+      "upstream": {
+        "usepa_id": "CA134387",
+        "agency": "County of San Diego Department of Environmental Health",
+        "water_body_name": "Pacific Ocean",
+        "water_body_type": "Open Coast",
+        "beach_type": "UNKNOWN",
+        "beach_access": "PUBLIC",
+        "status": "Active",
+        "nearest_city": "Imperial Beach"
+      },
+      "tide_station": "9410120",
+      "tide_station_distance_m": 948,
+      "tide_station_from_end": "lower"
+    },
+    {
+      "slug": "imperial-beach-municipal-beach-other",
+      "name": "Imperial Beach municipal beach, other",
+      "region": "South County coast",
+      "segment": {
+        "upper": {
+          "lat": 32.587527,
+          "lon": -117.132598
+        },
+        "lower": {
+          "lat": 32.566219,
+          "lon": -117.133006
+        }
+      },
+      "upstream": {
+        "usepa_id": "CA068221",
+        "agency": "County of San Diego Department of Environmental Health",
+        "water_body_name": "Pacific Ocean",
+        "water_body_type": "Open Coast",
+        "beach_type": "UNKNOWN",
+        "beach_access": "PUBLIC",
+        "status": "Active",
+        "nearest_city": "Imperial Beach"
+      },
+      "tide_station": "9410120",
+      "tide_station_distance_m": 1050,
+      "tide_station_from_end": "upper"
+    },
+    {
+      "slug": "tijuana-slough-national-wildlife-refuge",
+      "name": "Tijuana Slough National Wildlife Refuge",
+      "region": "Bays, lagoons and inlets",
+      "segment": {
+        "upper": {
+          "lat": 32.5662,
+          "lon": -117.133
+        },
+        "lower": {
+          "lat": 32.5529,
+          "lon": -117.1276
+        }
+      },
+      "upstream": {
+        "usepa_id": "CA104746",
+        "agency": "County of San Diego Department of Environmental Health",
+        "water_body_name": "Pacific Ocean",
+        "water_body_type": "Sound, Bay, or Inlet",
+        "beach_type": "ROCKY",
+        "beach_access": "PUBLIC",
+        "status": "Active",
+        "nearest_city": "San Diego"
+      },
+      "tide_station": "9410135",
+      "tide_station_distance_m": 7382,
+      "tide_station_from_end": "upper"
+    },
+    {
+      "slug": "tijana-river",
+      "name": "Tijana River",
+      "region": "South County coast",
+      "segment": {
+        "upper": {
+          "lat": 32.55358,
+          "lon": -117.06321
+        },
+        "lower": {
+          "lat": 32.54168,
+          "lon": -117.04485
+        }
+      },
+      "upstream": {
+        "usepa_id": "CA630931",
+        "agency": "County of San Diego Department of Environmental Health",
+        "water_body_name": "Pacific Ocean",
+        "water_body_type": "Open Coast",
+        "beach_type": "UNKNOWN",
+        "beach_access": "PUBLIC",
+        "status": "Active",
+        "nearest_city": "Chula Vista"
+      },
+      "tide_station": "9410120",
+      "tide_station_distance_m": 7267,
+      "tide_station_from_end": "upper"
+    },
+    {
+      "slug": "border-field-state-park",
+      "name": "Border Field State Park",
+      "region": "South County coast",
+      "segment": {
+        "upper": {
+          "lat": 32.55282,
+          "lon": -117.127708
+        },
+        "lower": {
+          "lat": 32.534367,
+          "lon": -117.124197
+        }
+      },
+      "upstream": {
+        "usepa_id": "CA809706",
+        "agency": "County of San Diego Department of Environmental Health",
+        "water_body_name": "Pacific Ocean",
+        "water_body_type": "Open Coast",
+        "beach_type": "UNKNOWN",
+        "beach_access": "PUBLIC",
+        "status": "Active",
+        "nearest_city": "San Diego"
+      },
+      "tide_station": "9410120",
+      "tide_station_distance_m": 2914,
+      "tide_station_from_end": "upper"
+    },
+    {
+      "slug": "imperial-beach-pier-area",
+      "name": "Imperial Beach pier area",
+      "region": "South County coast",
+      "segment": {
+        "upper": {
+          "lat": 32.5804,
+          "lon": -117.5866
+        },
+        "lower": {
+          "lat": 32.1327,
+          "lon": -117.1332
+        }
+      },
+      "upstream": {
+        "usepa_id": "CA432983",
+        "agency": "County of San Diego Department of Environmental Health",
+        "water_body_name": "Pacific Ocean",
+        "water_body_type": "Open Coast",
+        "beach_type": "UNKNOWN",
+        "beach_access": "PUBLIC",
+        "status": "Active",
+        "nearest_city": "Imperial Beach"
+      },
+      "tide_station": null,
+      "tide_station_distance_m": null,
+      "tide_station_from_end": null,
+      "tide_station_null_reason": "the lower endpoint published upstream (32.1327, -117.1332) is outside San Diego County, so no station can be joined to it"
     }
   ],
   "unresolved": [
-    "There is no tide-station join script yet. This beach's station is a stated basis checked against one independent product, which is weaker than a re-runnable join and is the whole reason slice 4 exists. Until it lands, a second beach must not be added to this file by hand.",
-    "beach_type is 'UNKNOWN' upstream for this beach. That is a gap in the resource, not a shorthand for sand, and nothing may render it as a description of what the shore is made of.",
-    "The network module carries no build-time guard against being imported by a browser bundle. The `server-only` package is the intended enforcement and is not installed: importing it breaks these tests under jsdom until vitest is configured with the `react-server` resolve condition. Today the guarantee rests on the module having no client-side importer, which nothing checks."
+    "beach_type is UNKNOWN upstream for most of these beaches. That is a gap in the resource, not a shorthand for sand, and nothing may render it as a description of what the shore is made of.",
+    "The join binds by nearest station of matching water class, and the distances are large where NOAA publishes no nearby station: the farthest is San Onofre State Beach at 56.6 km. See tide-stations.json, whose own unresolved list records that the one open-coast station between La Jolla and Imperial Beach does not deliver predictions.",
+    "A tide prediction is for the station, not for the beach. It is the best published figure for that stretch of shore and it is not a measurement taken there.",
+    "1 beach(es) could not be bound to a station: Imperial Beach pier area (the lower endpoint published upstream (32.1327, -117.1332) is outside San Diego County, so no station can be joined to it). A null station must never render as a reading.",
+    "The network module carries no build-time guard against being imported by a browser bundle. The `server-only` package is the intended enforcement and is not installed: importing it breaks the tests under jsdom until vitest is configured with the `react-server` resolve condition. Today the guarantee rests on the module having no client-side importer, which nothing checks."
   ]
 }

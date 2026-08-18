@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
-import { Suspense } from "react";
-import { TidePanel } from "@/components/TidePanel";
+import { ConditionsSection } from "@/components/ConditionsSection";
+import { DEFAULT_BEACH_SLUG, defaultBeach } from "@/lib/beaches";
 
 export const metadata: Metadata = {
   title: "Conditions",
@@ -25,39 +25,21 @@ export const metadata: Metadata = {
  * override every fetch to `no-store` and reach NOAA on every request.
  *
  * The value must be statically analyzable, so it is a literal: 900, not 15 * 60.
+ * `[slug]/page.tsx` carries the same number for the same reason, and they must
+ * agree: the two routes render one section, and which URL a reader arrived at
+ * should not decide how fresh their answer is.
  */
 export const revalidate = 900;
 
 export default function Conditions() {
+  // Asserts the named default is still in the inventory, which a script rewrites
+  // from an upstream resource. A rename upstream should stop a build rather than
+  // render a page about nothing.
+  defaultBeach();
+
   return (
     <main className="flex-1">
-      <section className="px-gutter-sm py-section-sm md:px-gutter md:py-section">
-        <p className="mb-7 text-2xs font-extrabold tracking-widest text-ocean uppercase">
-          Surf · Tide · Wind · Visibility
-        </p>
-        <h1 className="text-title leading-display mb-4 font-black italic">
-          Check <span className="text-ocean">conditions</span> first.
-        </h1>
-        <p className="leading-relaxed mb-9 max-w-130 text-base text-fog">
-          Real-time surf, tide, wind and visibility for San Diego&apos;s coast —
-          built by a local, for families planning tidepool visits and hikes.
-          Know before you go.
-        </p>
-        {/*
-          The slot this page used to carry is gone, because there is now something
-          to put in its place. The landing-page teaser keeps its slot until the
-          slice that fills it.
-        */}
-        <Suspense
-          fallback={
-            <p className="text-base text-fog">
-              Reading today&apos;s tide from NOAA…
-            </p>
-          }
-        >
-          <TidePanel slug="la-jolla-shores" />
-        </Suspense>
-      </section>
+      <ConditionsSection slug={DEFAULT_BEACH_SLUG} />
     </main>
   );
 }
