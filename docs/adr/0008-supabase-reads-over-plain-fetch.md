@@ -116,3 +116,35 @@ decide whether to adopt the SDK then — which is the right moment for it, becau
 token refresh is real work that a library should do. Adopting it later is
 contained: one module changes, and the injected-`fetch` seam its callers depend
 on can stay exactly as it is.
+
+## Amendment, 2026-08-18: the seam is the global fetch, not an injected one
+
+The Context above claims that "a seam that needs a mocked module would be the
+first of its kind here". **That was false when it was written.**
+`src/lib/upstream.test.ts` already stubs the global — `vi.stubGlobal("fetch",
+fetchMock)` — with a docstring explaining why. The conditions work landed while
+this decision was being drafted, and the claim was made against the repository
+as it stood earlier in the same session.
+
+So the decision changes to match the repository rather than the other way
+round. `src/lib/sessions.ts` calls the global `fetch` and its tests stub it, the
+way `upstream.ts` does. Changing this repo's fetch-testing convention would be
+its own slice with its own justification, and there is none: the argument for
+injection was never that it was better, only that nothing here did otherwise.
+
+Using the global is in fact the stronger choice for a second reason the original
+draft missed. Next instruments `fetch` itself — caching, revalidation, and the
+`no-store` override that `force-dynamic` applies. A module holding an injected
+function has no guarantee it was handed the instrumented one, which for a
+framework whose caching is a property of that function is a seam that can lie.
+
+`scripts/db-check.mjs` keeps its injected fetch. It is a command-line script
+rather than a rendered route, there is no Next instrumentation to preserve, and
+nothing under `scripts/` sets a contrary precedent — `gates.test.mjs` and
+`built-css.test.mjs` avoid the question entirely by having no I/O to seam. Two
+neighbourhoods, each following its own established practice, is the outcome
+CLAUDE.md's "follow the patterns already in the repo" actually asks for.
+
+Everything else stands: no SDK, nothing throws, failures become an
+`unavailable` result carrying their reason, and the configuration is read at
+runtime without a `NEXT_PUBLIC_` prefix.

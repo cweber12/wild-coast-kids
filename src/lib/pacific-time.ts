@@ -51,3 +51,23 @@ export function localTimeOf(
     hour12: true,
   }).format(new Date(atMs));
 }
+
+/**
+ * The calendar day an instant falls on, in `timeZone`, as `Tue, Sep 8`.
+ *
+ * Weekday included because the co-op's whole identity is which day of the week
+ * it meets, and a reader scanning a term of Tuesdays should be able to see one
+ * that is not a Tuesday. No year: the schedule only ever lists sessions still
+ * to come, so the year is either this one or obvious from context.
+ */
+export function localDayOf(
+  atMs: number,
+  timeZone: string = SITE_TIME_ZONE,
+): string {
+  return new Intl.DateTimeFormat("en-US", {
+    timeZone,
+    weekday: "short",
+    month: "short",
+    day: "numeric",
+  }).format(new Date(atMs));
+}
