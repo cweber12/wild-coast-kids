@@ -398,3 +398,42 @@ San Diego rows down to 73.
 **Slice 4 ships without slice 5**, for the same reason slice 3 shipped alone: size.
 `inventoryCaveats()` exists and is tested, and nothing renders it yet — that is
 slice 5, together with the gate row that fails when a caveat reaches no reader.
+
+### 2026-08-18 — slice 5 lands, and the "gate row" is two tests
+
+Slice 5 said a gate row that fails when an `unresolved` entry has no path to a
+reader. It is **two tests under the existing `test` row** instead, and the
+distinction is worth stating because it is a deviation from the plan.
+
+Half the check has to render React to know whether a caveat reached a reader, and
+the test runner already does that. A separate row would have had to stand up its
+own renderer to assert the same thing, so the row would have been a second way of
+running the suite rather than a second check. `test` is a gate row; the guarantee
+is unchanged.
+
+The two halves are deliberately in different files, because they guard different
+seams:
+
+- `src/lib/caveats.test.ts` walks `src/data/` and asserts nothing is dropped
+  between the **files and the loader**. It walks rather than reading a list, so a
+  data file added later is discovered instead of forgotten.
+- `src/components/ConditionsSection.test.tsx` asserts nothing is dropped between
+  the **loader and the reader**.
+
+Both are two-sided. The walk asserts it found files and entries at all, since a
+discovery that found nothing would satisfy every other assertion while checking
+nothing; and the loader is asserted to show nothing the data files do not carry,
+so a caveat cannot be invented in code.
+
+**Demonstrated rather than assumed.** A `src/data/probe-unwired.json` carrying one
+caveat and imported by nothing was added; the suite failed with
+`probe-unwired.json carries a caveat that nothing loads, so no reader will ever
+see it`. Removing the file returned it to green. A check that has never failed is
+not yet evidence.
+
+Seven caveats render on `/conditions` today, from two data files.
+
+**This completes the plan's slices 3 to 5.** Slices 6 onwards — waves and water
+temp, wind and visibility, the forward panel, the safety layer, water quality,
+the education layer, the weekly probe, and the landing-page teaser — are
+unstarted.
