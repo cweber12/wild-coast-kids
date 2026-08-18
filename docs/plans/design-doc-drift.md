@@ -190,3 +190,66 @@ and `<PillLink` returns eleven. #47 adds no new check.
 `Placeholder`'s own docstring says "gallery strip", and `globals.css` claims
 the gallery still runs the marquee animation — a claim `GalleryRow.test.tsx`
 asserts against. Both are filed as #54 rather than fixed here.
+
+## Addendum — 2026-08-18: #53 corrects two "embed" sentences, and the reader-facing copy splits off
+
+#54 has merged. #53 corrects the last two places in these two documents that
+still describe the conditions tool as an embed, a plan ADR-0009 retired. It
+belongs to this plan for the same reason #47 did: the same two documents, under
+the same decision that each is corrected in place. Nothing in _Decisions_ or
+_Scope_ changes.
+
+**The scope is two sentences, and the third candidate became its own issue.**
+The issue named a third target — the reserved slots' own copy, "Drop the URL and
+it embeds here automatically" — and left to triage whether it belonged here or
+to the first conditions slice. It belongs to neither, and is now #59. Two
+reasons. It is copy a visitor reads rather than a note for the team, so no gate
+and no plan can settle it: what it should say is a content decision, and
+`docs/plans/conditions-tool.md` has slices 4 and 5 open, which makes "how
+finished is the tool" a live question rather than a settled one. And #50 already
+removed the `/conditions` half of it, so what remains is one line in one file
+with a different owner.
+
+**What the sentences must not do is claim the tool is unbuilt.** ADR-0009 says
+built here; #50 shipped the first reading, so `/conditions` names today's lowest
+tide at La Jolla Shores today. But the landing teaser still carries its reserved
+slot, and slices 4 and 5 are open. So the corrected sentences say three things
+and no more: the tool is built here rather than embedded, the teaser's dashed box
+still waits, and `docs/plans/conditions-tool.md` is where its state is recorded.
+Naming a slice count or a completion state here would put this plan's prose in
+the business of tracking another plan's progress, which is how both go stale.
+
+**The brief's bullet stays an _Out of Scope_ bullet.** It is tempting to delete
+it now that the tool is real, but this brief is the landing page's, and the
+conditions tool is genuinely not part of it — it is built under its own plan.
+What was wrong was the word for the thing excluded, not the exclusion.
+
+**A third drift was found and filed, not folded in.** `CONTEXT.md:102` says the
+teaser and `/conditions` "both currently carry a reserved slot". #50 made that
+false. It is #60 rather than a third slice here, because the cause differs — a
+count broken by #50, not the word retired by ADR-0009 — and because `CONTEXT.md`
+is the glossary rather than one of this plan's two documents.
+
+### Amended 2026-08-18: #53 is three specs, not two
+
+Confirmed with Cole mid-branch rather than expanded quietly. #53 reasons that
+"three design docs were not [amended], and two of them are specs rather than
+dated records", and counts `INFORMATION_ARCHITECTURE.md`, `DESIGN_BRIEF.md` and
+`TASKS.md`. It missed a fourth file, and that file is a third spec:
+`DESIGN_TOKENS.css:74` reads `--radius-box: 20px; /* conditions embed box */`.
+
+It qualifies on the issue's own test. Its header says the block "replaces the
+scaffold tokens in `src/app/globals.css`" during the build, so it is the
+authoritative source for the tokens rather than a record of what they once were
+— the same standing as the brief and the IA doc, and the opposite of `TASKS.md`.
+
+The comment is wrong twice, and only one half is this plan's drift. `embed` is
+ADR-0009's, and it is what brings the line into scope. The other half is that
+`rounded-box` is no longer the conditions box alone: `ReservedSlot` uses it for
+all five slots and the three routed pages use it for their gallery boxes. Both
+are corrected in one line, because a comment naming the wrong thing for the
+wrong reason cannot be half-fixed — and the sibling tokens already list their
+callers this way (`co-op activity tiles, inputs`), so the shape was set.
+
+This does not reopen the `src/`-stays-out decision. `globals.css:110` carries the
+same token with no comment on it, so there is nothing there to correct.

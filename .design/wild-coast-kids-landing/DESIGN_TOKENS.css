@@ -71,7 +71,7 @@
   /* ---- Radii ------------------------------------------------------------ */
   --radius-tile: 12px; /* co-op activity tiles, inputs */
   --radius-thumb: 16px; /* gallery images, stat tiles */
-  --radius-box: 20px; /* conditions embed box */
+  --radius-box: 20px; /* reserved slots, routed-page gallery boxes */
   --radius-card: 24px; /* program cards, form card */
   --radius-pill: 99px; /* every button */
 
