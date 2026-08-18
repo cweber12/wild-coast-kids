@@ -25,7 +25,8 @@
 
 import { readFileSync, writeFileSync } from "node:fs";
 import { pathToFileURL } from "node:url";
-import { bindTideStation, distanceMetres } from "./tide-join.mjs";
+import { distanceMetres } from "./geo.mjs";
+import { bindTideStation } from "./tide-join.mjs";
 
 const PORTAL = "https://data.cnra.ca.gov";
 const RESOURCE = "cc674e59-036c-45c3-bec2-5d3d294e0e3d";
