@@ -68,9 +68,21 @@ wordmark banner. Decided in the brief; not deferred.
 
 `/art`, `/coop`, `/conditions`, `/community` and `/book` share one shape: an
 eyebrow line, an italic title, a lead paragraph, at most one CTA, then
-reserved slots where real content lands. They are structural shells — the
-schedule, pricing, photos, booking scheduler and conditions tool are all
-labeled placeholders, by decision in `docs/plans/nav-pages-scaffolding.md`.
+reserved slots where real content lands. They were structural shells
+throughout, by decision in `docs/plans/nav-pages-scaffolding.md`; photos, the
+booking scheduler and charter-fund details still are.
+
+**The schedule is no longer among them.** `/art` and `/coop` render their own
+program's upcoming sessions in the slot that was reserved for one, read from
+Supabase per request — day, hours, title, an optional summary, a map link and,
+on `/art`, a price. The slot has not been deleted: it is still what the page
+shows when the term has nothing booked yet, and equally when the database
+cannot be reached, because a reader can act on neither. See
+`docs/plans/session-schedule-from-supabase.md`.
+
+A session belongs to a program and is not a page. There is no `/sessions`
+route, no per-session URL and no fifth nav link; the schedule reads inside the
+page a parent already came to.
 
 `/community` is the one that differs: below its reserved slots it renders the
 interest-list form under its own heading, without the landing page's teaser
@@ -140,8 +152,15 @@ lands on `/art` first; that page's CTA is "Book a class →" → `/book`.
 - **A new program area** is a route beside the existing five, plus a teaser
   section on `/` that links to it. That path is established; adding one
   decides nothing new.
-- Anything beyond that (a blog, real schedules, nested or dynamic routes) is a
-  new IA exercise.
+- **Real schedules** arrived, and did not need a new address: they render
+  inside the two program pages rather than at one of their own. Adding a
+  combined `/schedule` route later would be a genuine IA exercise, and is
+  deliberately not one this took.
+- **Dynamic routes** arrived too, in `/conditions/[slug]`, and this document
+  does not describe them anywhere — the sentence you are reading is currently
+  their only mention. That gap belongs to the conditions work rather than to
+  the schedule, and is filed as #78.
+- Anything beyond that (a blog, a store, a login) is a new IA exercise.
 
 ## URL Strategy
 
