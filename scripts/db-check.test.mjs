@@ -33,7 +33,7 @@ describe("judge", () => {
 
   test("a bad configuration fails and marks everything downstream unchecked", () => {
     const { ok, lines } = judge({
-      configError: "NEXT_PUBLIC_SUPABASE_URL is not set",
+      configError: "SUPABASE_URL is not set",
       reachError: null,
       columns: null,
       anonVisible: null,
@@ -43,7 +43,7 @@ describe("judge", () => {
     });
 
     expect(ok).toBe(false);
-    expect(lines.join("\n")).toContain("NEXT_PUBLIC_SUPABASE_URL is not set");
+    expect(lines.join("\n")).toContain("SUPABASE_URL is not set");
     expect(lines.join("\n")).toContain("could not be checked");
   });
 
@@ -141,8 +141,8 @@ describe("configErrorFor", () => {
   });
 
   test.each([
-    ["url", undefined, "anon", "service", "NEXT_PUBLIC_SUPABASE_URL"],
-    ["anon key", url, "", "service", "NEXT_PUBLIC_SUPABASE_ANON_KEY"],
+    ["url", undefined, "anon", "service", "SUPABASE_URL"],
+    ["anon key", url, "", "service", "SUPABASE_ANON_KEY"],
     ["service key", url, "anon", undefined, "SUPABASE_SERVICE_ROLE_KEY"],
   ])("a missing %s is named", (_what, u, a, s, expected) => {
     expect(configErrorFor(u, a, s)).toContain(expected);
@@ -248,7 +248,7 @@ describe("gatherObservations", () => {
 
     const seen = await gatherObservations({ ...deps(fetch), url: undefined });
 
-    expect(seen.configError).toContain("NEXT_PUBLIC_SUPABASE_URL");
+    expect(seen.configError).toContain("SUPABASE_URL");
     expect(calls).toEqual([]);
   });
 

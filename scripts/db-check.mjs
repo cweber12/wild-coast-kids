@@ -98,7 +98,7 @@ export function judge(observations) {
     row(
       "config",
       configError === null,
-      configError ?? "NEXT_PUBLIC_SUPABASE_URL and both keys are usable",
+      configError ?? "SUPABASE_URL and both keys are usable",
     ),
     row(
       "table reachable",
@@ -341,17 +341,17 @@ export async function gatherObservations({ fetch, url, anonKey, serviceKey }) {
  * @returns {string|null} The reason it is unusable, or null when it is fine.
  */
 export function configErrorFor(url, anonKey, serviceKey) {
-  if (!url) return "NEXT_PUBLIC_SUPABASE_URL is not set";
-  if (!anonKey) return "NEXT_PUBLIC_SUPABASE_ANON_KEY is not set";
+  if (!url) return "SUPABASE_URL is not set";
+  if (!anonKey) return "SUPABASE_ANON_KEY is not set";
   if (!serviceKey) return "SUPABASE_SERVICE_ROLE_KEY is not set";
   if (!url.startsWith("https://"))
-    return `NEXT_PUBLIC_SUPABASE_URL must start with https:// — got ${url.slice(0, 8)}…`;
+    return `SUPABASE_URL must start with https:// — got ${url.slice(0, 8)}…`;
   if (url.endsWith("/"))
-    return "NEXT_PUBLIC_SUPABASE_URL has a trailing slash; it must be the bare project URL";
+    return "SUPABASE_URL has a trailing slash; it must be the bare project URL";
   // `new URL("https://x.supabase.co").pathname` is "/", not "" — a bare origin
   // still has a root path. Only anything beyond that is a real path.
   const { pathname } = new URL(url);
   if (pathname !== "/" && pathname !== "")
-    return `NEXT_PUBLIC_SUPABASE_URL must have no path — got "${pathname}". Use https://<ref>.supabase.co, not the REST endpoint`;
+    return `SUPABASE_URL must have no path — got "${pathname}". Use https://<ref>.supabase.co, not the REST endpoint`;
   return null;
 }

@@ -52,6 +52,9 @@ A read has three outcomes and the caller must handle all three: rows, no rows,
 or an explicit failure carrying its reason. A failure renders `ReservedSlot` and
 logs why on the server. It does not throw.
 
+Neither the project URL nor the anon key carries a `NEXT_PUBLIC_` prefix. They
+are `SUPABASE_URL` and `SUPABASE_ANON_KEY`, read at runtime on the server.
+
 This decision covers reads of public data. It says nothing about R2, and
 nothing about authenticated access, which does not exist yet.
 
@@ -81,6 +84,24 @@ dashed box on `/art` and `/coop`; the rest of both pages, and the whole of the
 rest of the site, are untouched. This is what makes the source build plan's
 `NEXT_PUBLIC_EVENTS_ENABLED` flag unnecessary — the isolation it was there to
 provide is structural, not a switch someone has to remember to throw.
+
+Dropping the `NEXT_PUBLIC_` prefix is not about secrecy — the anon key is
+public by design, and RLS is what protects the data. It is about when the value
+is read. A `NEXT_PUBLIC_` variable is substituted into the bundle at build time,
+including in server code: a probe page built on 2026-08-18 with
+`NEXT_PUBLIC_PROBE_SENTINEL=ZZPUBLICZZ` and `PROBE_SENTINEL=ZZSERVERZZ` put the
+literal `ZZPUBLICZZ` into `.next/server/chunks/ssr/`, while the unprefixed one
+survived as a `process.env` lookup and its value appeared nowhere.
+
+So a prefixed variable would make the environment part of the artefact. Fixing
+a wrong URL in Vercel would need a redeploy rather than an edit, and a preview
+deployment built before its variables existed would serve `undefined` until
+rebuilt — which is exactly the state this project's Preview environment was in.
+That directly contradicts the reason these routes render dynamically at all: a
+change should be live on the next request. Unprefixed, both the data and the
+configuration behave that way. The cost is that a future client component
+wanting Supabase directly would need the names changed back, and ADR-0008's
+own advice is that such a component is the moment to adopt the SDK anyway.
 
 Validating at the boundary is cheap insurance bought after the fact rather than
 before it, which is the honest description. The malformed URL is fixed and

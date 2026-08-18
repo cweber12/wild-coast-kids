@@ -206,24 +206,26 @@ vercel_env_push() {
 
 banner "Wild Coast Kids — secrets setup (Supabase, R2, Vercel)"
 
-# ── Stage 1: Supabase public config ───────────────────────────────────────
+# ── Stage 1: Supabase project config ───────────────────────────────────────
 stage "Supabase — project URL and publishable key"
-say "These two are browser-safe by design; Row Level Security is what protects data."
+say "Row Level Security protects the data, so these two would be safe in a"
+say "browser -- but nothing client-side reads Supabase, so they stay server-only"
+say "and carry no NEXT_PUBLIC_ prefix. See docs/adr/0008."
 open_url "https://supabase.com/dashboard/project/_/settings/api"
 step "Pick your project if prompted. On API Settings, copy the Project URL"
 step "(https://<ref>.supabase.co). If the page only shows keys, the URL is"
 step "under Project Settings → Data API."
-ask NEXT_PUBLIC_SUPABASE_URL "Paste the project URL:"
+ask SUPABASE_URL "Paste the project URL:"
 step "Copy the publishable key (sb_publishable_...) — on older dashboards this"
 step "is the 'anon / public' key under Project API keys."
-ask NEXT_PUBLIC_SUPABASE_ANON_KEY "Paste the publishable/anon key:"
-write_env NEXT_PUBLIC_SUPABASE_URL "$NEXT_PUBLIC_SUPABASE_URL"
-write_env NEXT_PUBLIC_SUPABASE_ANON_KEY "$NEXT_PUBLIC_SUPABASE_ANON_KEY"
+ask SUPABASE_ANON_KEY "Paste the publishable/anon key:"
+write_env SUPABASE_URL "$SUPABASE_URL"
+write_env SUPABASE_ANON_KEY "$SUPABASE_ANON_KEY"
 
 # ── Stage 2: Supabase secret key ──────────────────────────────────────────
 stage "Supabase — service-role (secret) key"
-say "Server-only: it bypasses Row Level Security. It never gets a NEXT_PUBLIC_"
-say "prefix and must only be read in route handlers / server actions."
+say "Server-only, and unlike the two above it bypasses Row Level Security"
+say "entirely. Read it in route handlers and server components, nowhere else."
 step "On the same API settings page, reveal and copy the secret key"
 step "(sb_secret_...) — on older dashboards, the 'service_role' key."
 ask_secret SUPABASE_SERVICE_ROLE_KEY "Paste the secret key (input hidden):"
@@ -263,12 +265,12 @@ fi
 
 # ── Stage 5: Push the values to Vercel ────────────────────────────────────
 stage "Vercel — push environment variables"
-say "Public vars go to all three environments; secrets go to production and"
-say "preview only (marked sensitive), so local dev stays on .env.local."
+say "Non-secret vars go to all three environments; the secrets go to production"
+say "and preview only (marked sensitive), so local dev stays on .env.local."
 if confirm "Push the captured values to Vercel now?"; then
   for target in production preview development; do
-    vercel_env_push NEXT_PUBLIC_SUPABASE_URL "$NEXT_PUBLIC_SUPABASE_URL" "$target"
-    vercel_env_push NEXT_PUBLIC_SUPABASE_ANON_KEY "$NEXT_PUBLIC_SUPABASE_ANON_KEY" "$target"
+    vercel_env_push SUPABASE_URL "$SUPABASE_URL" "$target"
+    vercel_env_push SUPABASE_ANON_KEY "$SUPABASE_ANON_KEY" "$target"
     vercel_env_push R2_ACCOUNT_ID "$R2_ACCOUNT_ID" "$target"
     vercel_env_push R2_BUCKET_NAME "$R2_BUCKET_NAME" "$target"
   done

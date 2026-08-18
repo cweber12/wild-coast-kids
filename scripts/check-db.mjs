@@ -18,13 +18,13 @@ import { gatherObservations, judge } from "./db-check.mjs";
 
 if (existsSync(".env.local")) process.loadEnvFile(".env.local");
 
-const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const url = process.env.SUPABASE_URL;
 
 const { ok, lines } = judge(
   await gatherObservations({
     fetch,
     url,
-    anonKey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+    anonKey: process.env.SUPABASE_ANON_KEY,
     serviceKey: process.env.SUPABASE_SERVICE_ROLE_KEY,
   }),
 );

@@ -77,7 +77,7 @@ Three defects in the source document are corrected here rather than copied:
 
 - **The base URL is normalized and validated where it enters.** `getSessions`
   trims a trailing slash and a trailing `/rest/v1` off
-  `NEXT_PUBLIC_SUPABASE_URL`, and rejects a value that is not an `https://` URL,
+  `SUPABASE_URL`, and rejects a value that is not an `https://` URL,
   logging the reason and returning the unavailable result. This is not
   hypothetical hardening: that exact malformation was in `.env.local` during
   planning and made every request fail with a PostgREST error that named nothing
@@ -306,19 +306,20 @@ uncovered and why — which is what the config's own comment requires.
 ## Open questions
 
 - **Resolved.** The Supabase project responded `PGRST125` on every REST path
-  during planning. The cause was `NEXT_PUBLIC_SUPABASE_URL` carrying a
+  during planning. The cause was `SUPABASE_URL` carrying a
   `/rest/v1/` suffix, so every request asked for `/rest/v1//rest/v1/…`. The
   project, both keys and GoTrue are all healthy; `.env.local` is corrected and
   the anon key now returns `PGRST205` — "no such table" — which is what slice 1
   creates. See the boundary-validation decision above, which exists because of
   this.
-- `TODO(verify)` — the same bad URL was pushed to Vercel and cannot be read back
-  because the variable is marked Sensitive there. Re-set
-  `NEXT_PUBLIC_SUPABASE_URL` for Production before slice 2 deploys. Preview
-  currently has **no** variables at all, so preview deploys will render the
-  reserved slot rather than a schedule until they are added.
-- `TODO(verify)` — whether art-class prices vary per session. If they do not,
-  `price_cents` is speculative and pricing belongs in page copy.
+- **Resolved.** Vercel held the same malformed URL under the old
+  `NEXT_PUBLIC_SUPABASE_URL` name, unreadable because the variable was marked
+  Sensitive. Rather than repair it, the rename slice replaced both variables
+  with `SUPABASE_URL` and `SUPABASE_ANON_KEY` across Production, Preview and
+  Development — Preview had none of them at all, which under the old prefix
+  would have baked `undefined` into every preview build until each was rebuilt.
+- **Resolved.** Art-class prices vary per session, confirmed 2026-08-18, so
+  `price_cents` is a real column rather than speculative and slice 3 renders it.
 - **Resolved.** One issue, not four. The slices are strictly sequential and
   touch overlapping files, so two people could not pick two of them up without
   colliding — which is the test CLAUDE.md sets for whether splitting earns its
