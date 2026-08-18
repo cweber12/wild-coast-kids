@@ -11,10 +11,19 @@
  * instants rather than against whatever the test runner's clock says.
  */
 
-import { beachBySlug, tideStationFor, waveBuoyFor } from "./beaches";
+import {
+  beachBySlug,
+  tideStationFor,
+  waveBuoyFor,
+  weatherStationFor,
+} from "./beaches";
 import { localDateOf, localTimeOf } from "./pacific-time";
 import { lowestLowOn } from "./tide-day";
-import { fetchLatestWave, fetchTideExtremes } from "./upstream";
+import {
+  fetchLatestObservation,
+  fetchLatestWave,
+  fetchTideExtremes,
+} from "./upstream";
 
 /**
  * What the view renders. Four states, kept distinct on purpose, because the
@@ -212,6 +221,106 @@ export async function readLatestWaves(
       periodS: result.observation.periodS,
       directionDegT: result.observation.directionDegT,
       waterTempF: result.observation.waterTempF,
+    },
+  };
+}
+
+/**
+ * What the wind-and-visibility view renders. The same three-way split as the
+ * tide and the waves, and for the same reason: `no-station` is a permanent fact
+ * about a place, `unavailable` is a transient fact about a feed.
+ *
+ * Unlike the wave view, `no-station` is rare here rather than routine — every
+ * beach binds a station because air reaches a lagoon, and the only beach without
+ * one is the beach whose coordinates upstream publishes transposed.
+ */
+export type AirState =
+  | {
+      kind: "reading";
+      /** Statute miles, or null when the bound station published none this hour. */
+      visibilityMi: number | null;
+      /** True when visibility is at METAR's ten-mile ceiling, so it is a floor. */
+      visibilityAtCeiling: boolean;
+      airTempF: number | null;
+      windMph: number | null;
+      gustMph: number | null;
+      windDirDegT: number | null;
+      sky: string | null;
+    }
+  | { kind: "no-station"; reason: string }
+  | { kind: "unavailable"; detail: string; drift: boolean };
+
+export interface AirView {
+  beachName: string;
+  /** null exactly when the state is `no-station`. */
+  station: { name: string; distanceM: number | null } | null;
+  state: AirState;
+}
+
+/**
+ * Read the newest observation for one beach: visibility, wind, air temperature
+ * and sky, all from the one station, so the panel never blends two.
+ *
+ * Throws only when the slug is not in the inventory, which is a coding error
+ * rather than a quiet feed.
+ */
+export async function readLatestAir(
+  slug: string,
+  nowMs: number = Date.now(),
+): Promise<AirView> {
+  const beach = beachBySlug(slug);
+  if (!beach) {
+    throw new Error(
+      `readLatestAir: no beach in the inventory with slug "${slug}".`,
+    );
+  }
+
+  const station = weatherStationFor(beach);
+  if (station === null) {
+    return {
+      beachName: beach.name,
+      station: null,
+      state: {
+        kind: "no-station",
+        reason:
+          beach.weather_station_null_reason ??
+          "the join bound no observation station to this beach, and recorded no reason",
+      },
+    };
+  }
+
+  const binding = {
+    beachName: beach.name,
+    station: {
+      name: station.name,
+      distanceM: beach.weather_station_distance_m,
+    },
+  };
+
+  const result = await fetchLatestObservation(station.id, nowMs);
+  if (result.kind === "unavailable") {
+    return {
+      ...binding,
+      state: {
+        kind: "unavailable",
+        detail: result.reason,
+        drift: result.drift,
+      },
+    };
+  }
+
+  const { observation } = result;
+  return {
+    ...binding,
+    state: {
+      kind: "reading",
+      visibilityMi: observation.visibilityMi,
+      visibilityAtCeiling: observation.visibilityAtCeiling,
+      airTempF: observation.airTempF,
+      windMph: observation.windMph,
+      gustMph: observation.gustMph,
+      windDirDegT: observation.windDirDegT,
+      sky: observation.sky,
     },
   };
 }

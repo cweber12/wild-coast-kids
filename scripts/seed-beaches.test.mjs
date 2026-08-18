@@ -32,6 +32,29 @@ const STATIONS = {
   9410170: { lat: 32.7156, lon: -117.1767, water: "bay", delivers: true },
 };
 
+const WEATHER = {
+  KNKX: {
+    lat: 32.86833,
+    lon: -117.1425,
+    delivers: true,
+    publishes_visibility: true,
+  },
+  KSAN: {
+    lat: 32.73361,
+    lon: -117.18306,
+    delivers: true,
+    publishes_visibility: true,
+  },
+  // Answers, publishes no visibility. Nearer most of these beaches than either
+  // of the above, and refused by the join for exactly that reason.
+  D3101: {
+    lat: 32.92083,
+    lon: -117.25283,
+    delivers: true,
+    publishes_visibility: false,
+  },
+};
+
 const at = (lat, lon, dLat = 0.01) => ({
   upper: { lat: lat + dLat, lon },
   lower: { lat, lon },
@@ -120,7 +143,7 @@ describe("regionOf", () => {
 
 describe("build", () => {
   it("binds a beach and records how the join measured it", () => {
-    const [beach] = build([row()], STATIONS, BUOYS);
+    const [beach] = build([row()], STATIONS, BUOYS, WEATHER);
 
     expect(beach.slug).toBe("somewhere-beach");
     expect(beach.tide_station).toBe("9410230");
@@ -131,6 +154,13 @@ describe("build", () => {
     // gets one.
     expect(beach.wave_buoy).toBe("46254");
     expect(beach.wave_buoy_distance_m).toBeGreaterThan(0);
+
+    // So does the observation station, and it is the nearest one that
+    // publishes visibility rather than the nearest one full stop: D3101 is
+    // closer to this row than KNKX and publishes none.
+    expect(beach.weather_station).toBe("KNKX");
+    expect(beach.weather_station_distance_m).toBeGreaterThan(0);
+    expect(["upper", "lower"]).toContain(beach.weather_station_from_end);
   });
 
   it("gives a bay beach a tide station and no wave buoy", () => {
@@ -138,12 +168,18 @@ describe("build", () => {
       [row({ WaterBodyType: "Sound, Bay, or Inlet" })],
       STATIONS,
       BUOYS,
+      WEATHER,
     );
 
     // Swell does not reach into a bay, and the tide certainly does.
     expect(beach.tide_station).toBe("9410170");
     expect(beach.wave_buoy).toBeNull();
     expect(beach.wave_buoy_null_reason).toMatch(/does not reach into a bay/);
+
+    // Air does reach into a bay, so this join is not asymmetric the way the
+    // wave join is. Making the two symmetric would silently strip wind and
+    // visibility from twenty-six beaches.
+    expect(beach.weather_station).not.toBeNull();
   });
 
   it("refuses a beach whose coordinates cannot be used, and says why", () => {
@@ -159,16 +195,23 @@ describe("build", () => {
       ],
       STATIONS,
       BUOYS,
+      WEATHER,
     );
 
     expect(beach.tide_station).toBeNull();
     expect(beach.tide_station_null_reason).toMatch(/outside San Diego County/);
+    // The fault stops every join, not just the tide one. A coordinate nobody
+    // can trust must not produce a confident airport reading either.
+    expect(beach.weather_station).toBeNull();
+    expect(beach.weather_station_null_reason).toMatch(
+      /outside San Diego County/,
+    );
   });
 
   it("stops on a duplicate slug rather than disambiguating one", () => {
     // A slug is a primary key. Making one unique automatically would make it
     // unstable, and data accumulates against it.
-    expect(() => build([row(), row()], STATIONS, BUOYS)).toThrow(
+    expect(() => build([row(), row()], STATIONS, BUOYS, WEATHER)).toThrow(
       /is claimed by both/,
     );
   });
@@ -176,12 +219,14 @@ describe("build", () => {
   it("stops when a pinned column is missing", () => {
     const missing = row();
     delete missing["Beach_ UpperLon"];
-    expect(() => build([missing], STATIONS, BUOYS)).toThrow(/has drifted/);
+    expect(() => build([missing], STATIONS, BUOYS, WEATHER)).toThrow(
+      /has drifted/,
+    );
   });
 
   it("stops when a coordinate does not parse", () => {
     expect(() =>
-      build([row({ Beach_UpperLat: "north a bit" })], STATIONS, BUOYS),
+      build([row({ Beach_UpperLat: "north a bit" })], STATIONS, BUOYS, WEATHER),
     ).toThrow(/did not parse as numbers/);
   });
 
@@ -201,6 +246,7 @@ describe("build", () => {
       ],
       STATIONS,
       BUOYS,
+      WEATHER,
     );
     expect(built.map((b) => b.slug)).toEqual(["north-one", "south-one"]);
   });
@@ -218,6 +264,7 @@ describe("document", () => {
       ],
       STATIONS,
       BUOYS,
+      WEATHER,
     );
     const doc = document(built);
 
@@ -226,11 +273,52 @@ describe("document", () => {
     );
   });
 
+  it("tells a reader the weather figures are read at an airport", () => {
+    const built = document(build([row()], STATIONS, BUOYS, WEATHER));
+    const airport = built.unresolved.find((entry) =>
+      entry.includes("read at an airport"),
+    );
+
+    // The four values in that panel come from a station some kilometres
+    // inland, and coastal fog is precisely what changes over that distance.
+    // A reader who is not told that will read it as a beach measurement.
+    expect(airport).toBeDefined();
+    expect(airport).toMatch(/km away/);
+  });
+
+  it("names the farthest beach from its station, not merely the first", () => {
+    // Two beaches, so the reduce and the sort actually run. With one, the
+    // callbacks never fire and "farthest" is whatever happened to be there --
+    // which is how a single-row fixture can leave a real rule unasserted.
+    const near = row({
+      Beach_Name: "Near The Airport",
+      Beach_UpperLat: "32.87",
+      "Beach_ UpperLon": "-117.15",
+      Beach_LowerLat: "32.86",
+      Beach_LowerLon: "-117.16",
+    });
+    const far = row({
+      Beach_Name: "Far From The Airport",
+      Beach_UpperLat: "33.05",
+      "Beach_ UpperLon": "-117.30",
+      Beach_LowerLat: "33.04",
+      Beach_LowerLon: "-117.31",
+    });
+
+    const built = document(build([near, far], STATIONS, BUOYS, WEATHER));
+    const airport = built.unresolved.find((entry) =>
+      entry.includes("read at an airport"),
+    );
+
+    expect(airport).toContain("Far From The Airport");
+    expect(airport).not.toContain("at Near The Airport");
+  });
+
   it("writes its caveats out in full, so two runs agree", () => {
     // Carrying entries forward from the file duplicated them on the second run,
     // and made --check report movement immediately after a seed. A check that
     // cannot say "unchanged" says nothing.
-    const built = build([row()], STATIONS, BUOYS);
+    const built = build([row()], STATIONS, BUOYS, WEATHER);
     const first = document(built).unresolved;
     const second = document(built).unresolved;
 

@@ -17,7 +17,10 @@
     "upstream": "Fields reproduced from the resource, unmodified.",
     "tide_station": "Joined, never typed: the nearest delivering station of the beach's own water class. Re-runnable with scripts/seed-beaches.mjs --check. null means the join could not bind one, and tide_station_null_reason says why.",
     "tide_station_distance_m": "Great-circle metres from the nearer segment end to the station.",
-    "tide_station_from_end": "Which end of the segment supplied the distance, upper or lower."
+    "tide_station_from_end": "Which end of the segment supplied the distance, upper or lower.",
+    "weather_station": "Joined, never typed: the nearest station that both answers and publishes visibility. Unlike the wave buoy, every beach binds one -- air reaches a lagoon. null means the join could not bind one, and weather_station_null_reason says why.",
+    "weather_station_distance_m": "Great-circle metres from the nearer segment end to the station. Larger than the tide and buoy distances by nature: the stations that publish visibility are airports.",
+    "weather_station_from_end": "Which end of the segment supplied the distance, upper or lower."
   },
   "beaches": [
     {
@@ -49,7 +52,10 @@
       "tide_station_from_end": "lower",
       "wave_buoy": "46275",
       "wave_buoy_distance_m": 4524,
-      "wave_buoy_from_end": "lower"
+      "wave_buoy_from_end": "lower",
+      "weather_station": "KNFG",
+      "weather_station_distance_m": 14254,
+      "weather_station_from_end": "lower"
     },
     {
       "slug": "oceanside-harbor",
@@ -80,7 +86,10 @@
       "tide_station_from_end": "lower",
       "wave_buoy": "46224",
       "wave_buoy_distance_m": 7749,
-      "wave_buoy_from_end": "upper"
+      "wave_buoy_from_end": "upper",
+      "weather_station": "KOKB",
+      "weather_station_distance_m": 4345,
+      "weather_station_from_end": "lower"
     },
     {
       "slug": "harbor-beach",
@@ -111,7 +120,10 @@
       "tide_station_from_end": "lower",
       "wave_buoy": "46224",
       "wave_buoy_distance_m": 7557,
-      "wave_buoy_from_end": "upper"
+      "wave_buoy_from_end": "upper",
+      "weather_station": "KOKB",
+      "weather_station_distance_m": 4235,
+      "weather_station_from_end": "lower"
     },
     {
       "slug": "oceanside-municipal-beach-other",
@@ -142,7 +154,10 @@
       "tide_station_from_end": "lower",
       "wave_buoy": "46224",
       "wave_buoy_distance_m": 7557,
-      "wave_buoy_from_end": "upper"
+      "wave_buoy_from_end": "upper",
+      "weather_station": "KOKB",
+      "weather_station_distance_m": 4555,
+      "weather_station_from_end": "upper"
     },
     {
       "slug": "buccaneer-beach",
@@ -173,7 +188,10 @@
       "tide_station_from_end": "lower",
       "wave_buoy": "46224",
       "wave_buoy_distance_m": 9488,
-      "wave_buoy_from_end": "upper"
+      "wave_buoy_from_end": "upper",
+      "weather_station": "KOKB",
+      "weather_station_distance_m": 4889,
+      "weather_station_from_end": "upper"
     },
     {
       "slug": "carlsbad-municipal-beach",
@@ -204,7 +222,10 @@
       "tide_station_from_end": "lower",
       "wave_buoy": "46224",
       "wave_buoy_distance_m": 10578,
-      "wave_buoy_from_end": "upper"
+      "wave_buoy_from_end": "upper",
+      "weather_station": "KOKB",
+      "weather_station_distance_m": 5936,
+      "weather_station_from_end": "upper"
     },
     {
       "slug": "carlsbad-state-beach",
@@ -235,7 +256,10 @@
       "tide_station_from_end": "lower",
       "wave_buoy": "46274",
       "wave_buoy_distance_m": 8278,
-      "wave_buoy_from_end": "lower"
+      "wave_buoy_from_end": "lower",
+      "weather_station": "KCRQ",
+      "weather_station_distance_m": 5758,
+      "weather_station_from_end": "lower"
     },
     {
       "slug": "agua-hedionda-lagoon",
@@ -267,7 +291,10 @@
       "wave_buoy": null,
       "wave_buoy_distance_m": null,
       "wave_buoy_from_end": null,
-      "wave_buoy_null_reason": "every wave buoy sits on the open coast, and ocean swell does not reach into a bay or lagoon, so no buoy describes the water here"
+      "wave_buoy_null_reason": "every wave buoy sits on the open coast, and ocean swell does not reach into a bay or lagoon, so no buoy describes the water here",
+      "weather_station": "KCRQ",
+      "weather_station_distance_m": 4316,
+      "weather_station_from_end": "lower"
     },
     {
       "slug": "south-carlsbad-state-beach",
@@ -298,7 +325,10 @@
       "tide_station_from_end": "lower",
       "wave_buoy": "46274",
       "wave_buoy_distance_m": 2181,
-      "wave_buoy_from_end": "lower"
+      "wave_buoy_from_end": "lower",
+      "weather_station": "KCRQ",
+      "weather_station_distance_m": 5401,
+      "weather_station_from_end": "upper"
     },
     {
       "slug": "leucadia",
@@ -329,7 +359,10 @@
       "tide_station_from_end": "lower",
       "wave_buoy": "46274",
       "wave_buoy_distance_m": 2101,
-      "wave_buoy_from_end": "lower"
+      "wave_buoy_from_end": "lower",
+      "weather_station": "KCRQ",
+      "weather_station_distance_m": 6310,
+      "weather_station_from_end": "upper"
     },
     {
       "slug": "encinitas-city-beaches",
@@ -360,7 +393,10 @@
       "tide_station_from_end": "lower",
       "wave_buoy": "46274",
       "wave_buoy_distance_m": 2762,
-      "wave_buoy_from_end": "upper"
+      "wave_buoy_from_end": "upper",
+      "weather_station": "KCRQ",
+      "weather_station_distance_m": 5921,
+      "weather_station_from_end": "upper"
     },
     {
       "slug": "moonlight-beach",
@@ -391,7 +427,10 @@
       "tide_station_from_end": "lower",
       "wave_buoy": "46274",
       "wave_buoy_distance_m": 2064,
-      "wave_buoy_from_end": "upper"
+      "wave_buoy_from_end": "upper",
+      "weather_station": "KCRQ",
+      "weather_station_distance_m": 9338,
+      "weather_station_from_end": "upper"
     },
     {
       "slug": "swami-s-park",
@@ -422,7 +461,10 @@
       "tide_station_from_end": "lower",
       "wave_buoy": "46274",
       "wave_buoy_distance_m": 3569,
-      "wave_buoy_from_end": "upper"
+      "wave_buoy_from_end": "upper",
+      "weather_station": "KCRQ",
+      "weather_station_distance_m": 10720,
+      "weather_station_from_end": "upper"
     },
     {
       "slug": "san-elijo-state-beach",
@@ -453,7 +495,10 @@
       "tide_station_from_end": "lower",
       "wave_buoy": "46274",
       "wave_buoy_distance_m": 3986,
-      "wave_buoy_from_end": "upper"
+      "wave_buoy_from_end": "upper",
+      "weather_station": "KCRQ",
+      "weather_station_distance_m": 11003,
+      "weather_station_from_end": "upper"
     },
     {
       "slug": "cardiff-state-beach",
@@ -484,7 +529,10 @@
       "tide_station_from_end": "lower",
       "wave_buoy": "46266",
       "wave_buoy_distance_m": 4724,
-      "wave_buoy_from_end": "lower"
+      "wave_buoy_from_end": "lower",
+      "weather_station": "KCRQ",
+      "weather_station_distance_m": 12736,
+      "weather_station_from_end": "upper"
     },
     {
       "slug": "solana-beach-city-beaches",
@@ -515,7 +563,10 @@
       "tide_station_from_end": "lower",
       "wave_buoy": "46266",
       "wave_buoy_distance_m": 2664,
-      "wave_buoy_from_end": "lower"
+      "wave_buoy_from_end": "lower",
+      "weather_station": "KCRQ",
+      "weather_station_distance_m": 14516,
+      "weather_station_from_end": "upper"
     },
     {
       "slug": "seascape-beach-park",
@@ -546,7 +597,10 @@
       "tide_station_from_end": "lower",
       "wave_buoy": "46266",
       "wave_buoy_distance_m": 2664,
-      "wave_buoy_from_end": "lower"
+      "wave_buoy_from_end": "lower",
+      "weather_station": "KCRQ",
+      "weather_station_distance_m": 16418,
+      "weather_station_from_end": "upper"
     },
     {
       "slug": "san-dieguito-river-beach",
@@ -577,7 +631,10 @@
       "tide_station_from_end": "lower",
       "wave_buoy": "46266",
       "wave_buoy_distance_m": 2119,
-      "wave_buoy_from_end": "lower"
+      "wave_buoy_from_end": "lower",
+      "weather_station": "KNKX",
+      "weather_station_distance_m": 16793,
+      "weather_station_from_end": "lower"
     },
     {
       "slug": "del-mar-city-beach",
@@ -608,7 +665,10 @@
       "tide_station_from_end": "lower",
       "wave_buoy": "46266",
       "wave_buoy_distance_m": 1565,
-      "wave_buoy_from_end": "lower"
+      "wave_buoy_from_end": "lower",
+      "weather_station": "KNKX",
+      "weather_station_distance_m": 14548,
+      "weather_station_from_end": "lower"
     },
     {
       "slug": "powerhouse-park-15th-street",
@@ -639,7 +699,10 @@
       "tide_station_from_end": "lower",
       "wave_buoy": "46266",
       "wave_buoy_distance_m": 1016,
-      "wave_buoy_from_end": "lower"
+      "wave_buoy_from_end": "lower",
+      "weather_station": "KNKX",
+      "weather_station_distance_m": 15548,
+      "weather_station_from_end": "lower"
     },
     {
       "slug": "torrey-pines-state-beach",
@@ -670,7 +733,10 @@
       "tide_station_from_end": "lower",
       "wave_buoy": "46266",
       "wave_buoy_distance_m": 1565,
-      "wave_buoy_from_end": "upper"
+      "wave_buoy_from_end": "upper",
+      "weather_station": "KNKX",
+      "weather_station_distance_m": 10797,
+      "weather_station_from_end": "lower"
     },
     {
       "slug": "torrey-pines-city-beach",
@@ -701,7 +767,10 @@
       "tide_station_from_end": "lower",
       "wave_buoy": "46254",
       "wave_buoy_distance_m": 2194,
-      "wave_buoy_from_end": "lower"
+      "wave_buoy_from_end": "lower",
+      "weather_station": "KNKX",
+      "weather_station_distance_m": 10429,
+      "weather_station_from_end": "lower"
     },
     {
       "slug": "la-jolla-shores-beach",
@@ -732,7 +801,10 @@
       "tide_station_from_end": "lower",
       "wave_buoy": "46254",
       "wave_buoy_distance_m": 1648,
-      "wave_buoy_from_end": "lower"
+      "wave_buoy_from_end": "lower",
+      "weather_station": "KNKX",
+      "weather_station_distance_m": 10429,
+      "weather_station_from_end": "upper"
     },
     {
       "slug": "la-jolla-cove",
@@ -763,7 +835,10 @@
       "tide_station_from_end": "lower",
       "wave_buoy": "46254",
       "wave_buoy_distance_m": 1991,
-      "wave_buoy_from_end": "lower"
+      "wave_buoy_from_end": "lower",
+      "weather_station": "KNKX",
+      "weather_station_distance_m": 12294,
+      "weather_station_from_end": "upper"
     },
     {
       "slug": "shell-beach",
@@ -794,7 +869,10 @@
       "tide_station_from_end": "upper",
       "wave_buoy": "46254",
       "wave_buoy_distance_m": 2126,
-      "wave_buoy_from_end": "upper"
+      "wave_buoy_from_end": "upper",
+      "weather_station": "KNKX",
+      "weather_station_distance_m": 12524,
+      "weather_station_from_end": "upper"
     },
     {
       "slug": "childrens-pool",
@@ -826,7 +904,10 @@
       "wave_buoy": null,
       "wave_buoy_distance_m": null,
       "wave_buoy_from_end": null,
-      "wave_buoy_null_reason": "every wave buoy sits on the open coast, and ocean swell does not reach into a bay or lagoon, so no buoy describes the water here"
+      "wave_buoy_null_reason": "every wave buoy sits on the open coast, and ocean swell does not reach into a bay or lagoon, so no buoy describes the water here",
+      "weather_station": "KNKX",
+      "weather_station_distance_m": 12887,
+      "weather_station_from_end": "lower"
     },
     {
       "slug": "south-casa-beach-s-d",
@@ -857,7 +938,10 @@
       "tide_station_from_end": "upper",
       "wave_buoy": "46254",
       "wave_buoy_distance_m": 2555,
-      "wave_buoy_from_end": "upper"
+      "wave_buoy_from_end": "upper",
+      "weather_station": "KNKX",
+      "weather_station_distance_m": 12952,
+      "weather_station_from_end": "upper"
     },
     {
       "slug": "whispering-sands-nicholson-pt",
@@ -888,7 +972,10 @@
       "tide_station_from_end": "upper",
       "wave_buoy": "46254",
       "wave_buoy_distance_m": 2702,
-      "wave_buoy_from_end": "upper"
+      "wave_buoy_from_end": "upper",
+      "weather_station": "KNKX",
+      "weather_station_distance_m": 12991,
+      "weather_station_from_end": "upper"
     },
     {
       "slug": "marine-street-beach",
@@ -919,7 +1006,10 @@
       "tide_station_from_end": "upper",
       "wave_buoy": "46254",
       "wave_buoy_distance_m": 3478,
-      "wave_buoy_from_end": "upper"
+      "wave_buoy_from_end": "upper",
+      "weather_station": "KNKX",
+      "weather_station_distance_m": 13449,
+      "weather_station_from_end": "upper"
     },
     {
       "slug": "la-jolla-community-beach",
@@ -950,7 +1040,10 @@
       "tide_station_from_end": "upper",
       "wave_buoy": "46254",
       "wave_buoy_distance_m": 1648,
-      "wave_buoy_from_end": "upper"
+      "wave_buoy_from_end": "upper",
+      "weather_station": "KNKX",
+      "weather_station_distance_m": 11003,
+      "weather_station_from_end": "upper"
     },
     {
       "slug": "windansea-beach",
@@ -981,7 +1074,10 @@
       "tide_station_from_end": "upper",
       "wave_buoy": "46254",
       "wave_buoy_distance_m": 3737,
-      "wave_buoy_from_end": "upper"
+      "wave_buoy_from_end": "upper",
+      "weather_station": "KNKX",
+      "weather_station_distance_m": 13458,
+      "weather_station_from_end": "upper"
     },
     {
       "slug": "bird-rock-nr",
@@ -1012,7 +1108,10 @@
       "tide_station_from_end": "upper",
       "wave_buoy": "46254",
       "wave_buoy_distance_m": 5876,
-      "wave_buoy_from_end": "upper"
+      "wave_buoy_from_end": "upper",
+      "weather_station": "KSAN",
+      "weather_station_distance_m": 11702,
+      "weather_station_from_end": "lower"
     },
     {
       "slug": "tourmaline-surfing-park",
@@ -1043,7 +1142,10 @@
       "tide_station_from_end": "upper",
       "wave_buoy": "46254",
       "wave_buoy_distance_m": 6683,
-      "wave_buoy_from_end": "upper"
+      "wave_buoy_from_end": "upper",
+      "weather_station": "KSAN",
+      "weather_station_distance_m": 10333,
+      "weather_station_from_end": "lower"
     },
     {
       "slug": "pacific-beach",
@@ -1074,7 +1176,10 @@
       "tide_station_from_end": "upper",
       "wave_buoy": "46254",
       "wave_buoy_distance_m": 7506,
-      "wave_buoy_from_end": "upper"
+      "wave_buoy_from_end": "upper",
+      "weather_station": "KSAN",
+      "weather_station_distance_m": 9523,
+      "weather_station_from_end": "lower"
     },
     {
       "slug": "mission-bay-campland-on-the-bay",
@@ -1106,7 +1211,10 @@
       "wave_buoy": null,
       "wave_buoy_distance_m": null,
       "wave_buoy_from_end": null,
-      "wave_buoy_null_reason": "every wave buoy sits on the open coast, and ocean swell does not reach into a bay or lagoon, so no buoy describes the water here"
+      "wave_buoy_null_reason": "every wave buoy sits on the open coast, and ocean swell does not reach into a bay or lagoon, so no buoy describes the water here",
+      "weather_station": "KSAN",
+      "weather_station_distance_m": 7748,
+      "weather_station_from_end": "upper"
     },
     {
       "slug": "mission-bay-de-anza-cove",
@@ -1138,7 +1246,10 @@
       "wave_buoy": null,
       "wave_buoy_distance_m": null,
       "wave_buoy_from_end": null,
-      "wave_buoy_null_reason": "every wave buoy sits on the open coast, and ocean swell does not reach into a bay or lagoon, so no buoy describes the water here"
+      "wave_buoy_null_reason": "every wave buoy sits on the open coast, and ocean swell does not reach into a bay or lagoon, so no buoy describes the water here",
+      "weather_station": "KSAN",
+      "weather_station_distance_m": 7097,
+      "weather_station_from_end": "lower"
     },
     {
       "slug": "mission-bay-visitor-s-center",
@@ -1170,7 +1281,10 @@
       "wave_buoy": null,
       "wave_buoy_distance_m": null,
       "wave_buoy_from_end": null,
-      "wave_buoy_null_reason": "every wave buoy sits on the open coast, and ocean swell does not reach into a bay or lagoon, so no buoy describes the water here"
+      "wave_buoy_null_reason": "every wave buoy sits on the open coast, and ocean swell does not reach into a bay or lagoon, so no buoy describes the water here",
+      "weather_station": "KSAN",
+      "weather_station_distance_m": 6588,
+      "weather_station_from_end": "lower"
     },
     {
       "slug": "mission-bay-fanuel-park",
@@ -1202,7 +1316,10 @@
       "wave_buoy": null,
       "wave_buoy_distance_m": null,
       "wave_buoy_from_end": null,
-      "wave_buoy_null_reason": "every wave buoy sits on the open coast, and ocean swell does not reach into a bay or lagoon, so no buoy describes the water here"
+      "wave_buoy_null_reason": "every wave buoy sits on the open coast, and ocean swell does not reach into a bay or lagoon, so no buoy describes the water here",
+      "weather_station": "KSAN",
+      "weather_station_distance_m": 7918,
+      "weather_station_from_end": "lower"
     },
     {
       "slug": "mission-bay-leisure-lagoon",
@@ -1234,7 +1351,10 @@
       "wave_buoy": null,
       "wave_buoy_distance_m": null,
       "wave_buoy_from_end": null,
-      "wave_buoy_null_reason": "every wave buoy sits on the open coast, and ocean swell does not reach into a bay or lagoon, so no buoy describes the water here"
+      "wave_buoy_null_reason": "every wave buoy sits on the open coast, and ocean swell does not reach into a bay or lagoon, so no buoy describes the water here",
+      "weather_station": "KSAN",
+      "weather_station_distance_m": 6193,
+      "weather_station_from_end": "lower"
     },
     {
       "slug": "mission-bay-crown-point-shores",
@@ -1266,7 +1386,10 @@
       "wave_buoy": null,
       "wave_buoy_distance_m": null,
       "wave_buoy_from_end": null,
-      "wave_buoy_null_reason": "every wave buoy sits on the open coast, and ocean swell does not reach into a bay or lagoon, so no buoy describes the water here"
+      "wave_buoy_null_reason": "every wave buoy sits on the open coast, and ocean swell does not reach into a bay or lagoon, so no buoy describes the water here",
+      "weather_station": "KSAN",
+      "weather_station_distance_m": 7112,
+      "weather_station_from_end": "lower"
     },
     {
       "slug": "mission-bay-riviera-shores",
@@ -1298,7 +1421,10 @@
       "wave_buoy": null,
       "wave_buoy_distance_m": null,
       "wave_buoy_from_end": null,
-      "wave_buoy_null_reason": "every wave buoy sits on the open coast, and ocean swell does not reach into a bay or lagoon, so no buoy describes the water here"
+      "wave_buoy_null_reason": "every wave buoy sits on the open coast, and ocean swell does not reach into a bay or lagoon, so no buoy describes the water here",
+      "weather_station": "KSAN",
+      "weather_station_distance_m": 7125,
+      "weather_station_from_end": "lower"
     },
     {
       "slug": "mission-bay-north-pacific-passage",
@@ -1330,7 +1456,10 @@
       "wave_buoy": null,
       "wave_buoy_distance_m": null,
       "wave_buoy_from_end": null,
-      "wave_buoy_null_reason": "every wave buoy sits on the open coast, and ocean swell does not reach into a bay or lagoon, so no buoy describes the water here"
+      "wave_buoy_null_reason": "every wave buoy sits on the open coast, and ocean swell does not reach into a bay or lagoon, so no buoy describes the water here",
+      "weather_station": "KSAN",
+      "weather_station_distance_m": 5536,
+      "weather_station_from_end": "lower"
     },
     {
       "slug": "mission-bay-san-juan-cove",
@@ -1362,7 +1491,10 @@
       "wave_buoy": null,
       "wave_buoy_distance_m": null,
       "wave_buoy_from_end": null,
-      "wave_buoy_null_reason": "every wave buoy sits on the open coast, and ocean swell does not reach into a bay or lagoon, so no buoy describes the water here"
+      "wave_buoy_null_reason": "every wave buoy sits on the open coast, and ocean swell does not reach into a bay or lagoon, so no buoy describes the water here",
+      "weather_station": "KSAN",
+      "weather_station_distance_m": 7993,
+      "weather_station_from_end": "lower"
     },
     {
       "slug": "mission-bay-sail-bay",
@@ -1394,7 +1526,10 @@
       "wave_buoy": null,
       "wave_buoy_distance_m": null,
       "wave_buoy_from_end": null,
-      "wave_buoy_null_reason": "every wave buoy sits on the open coast, and ocean swell does not reach into a bay or lagoon, so no buoy describes the water here"
+      "wave_buoy_null_reason": "every wave buoy sits on the open coast, and ocean swell does not reach into a bay or lagoon, so no buoy describes the water here",
+      "weather_station": "KSAN",
+      "weather_station_distance_m": 7740,
+      "weather_station_from_end": "lower"
     },
     {
       "slug": "mission-bay-santa-barbara-cove",
@@ -1426,7 +1561,10 @@
       "wave_buoy": null,
       "wave_buoy_distance_m": null,
       "wave_buoy_from_end": null,
-      "wave_buoy_null_reason": "every wave buoy sits on the open coast, and ocean swell does not reach into a bay or lagoon, so no buoy describes the water here"
+      "wave_buoy_null_reason": "every wave buoy sits on the open coast, and ocean swell does not reach into a bay or lagoon, so no buoy describes the water here",
+      "weather_station": "KSAN",
+      "weather_station_distance_m": 7595,
+      "weather_station_from_end": "lower"
     },
     {
       "slug": "mission-beach",
@@ -1457,7 +1595,10 @@
       "tide_station_from_end": "upper",
       "wave_buoy": "46254",
       "wave_buoy_distance_m": 8366,
-      "wave_buoy_from_end": "upper"
+      "wave_buoy_from_end": "upper",
+      "weather_station": "KSAN",
+      "weather_station_distance_m": 7225,
+      "weather_station_from_end": "lower"
     },
     {
       "slug": "tecolote-shores",
@@ -1489,7 +1630,10 @@
       "wave_buoy": null,
       "wave_buoy_distance_m": null,
       "wave_buoy_from_end": null,
-      "wave_buoy_null_reason": "every wave buoy sits on the open coast, and ocean swell does not reach into a bay or lagoon, so no buoy describes the water here"
+      "wave_buoy_null_reason": "every wave buoy sits on the open coast, and ocean swell does not reach into a bay or lagoon, so no buoy describes the water here",
+      "weather_station": "KSAN",
+      "weather_station_distance_m": 4871,
+      "weather_station_from_end": "lower"
     },
     {
       "slug": "mission-bay-bahia-point",
@@ -1521,7 +1665,10 @@
       "wave_buoy": null,
       "wave_buoy_distance_m": null,
       "wave_buoy_from_end": null,
-      "wave_buoy_null_reason": "every wave buoy sits on the open coast, and ocean swell does not reach into a bay or lagoon, so no buoy describes the water here"
+      "wave_buoy_null_reason": "every wave buoy sits on the open coast, and ocean swell does not reach into a bay or lagoon, so no buoy describes the water here",
+      "weather_station": "KSAN",
+      "weather_station_distance_m": 7259,
+      "weather_station_from_end": "lower"
     },
     {
       "slug": "mission-bay-vacation-isle",
@@ -1553,7 +1700,10 @@
       "wave_buoy": null,
       "wave_buoy_distance_m": null,
       "wave_buoy_from_end": null,
-      "wave_buoy_null_reason": "every wave buoy sits on the open coast, and ocean swell does not reach into a bay or lagoon, so no buoy describes the water here"
+      "wave_buoy_null_reason": "every wave buoy sits on the open coast, and ocean swell does not reach into a bay or lagoon, so no buoy describes the water here",
+      "weather_station": "KSAN",
+      "weather_station_distance_m": 6959,
+      "weather_station_from_end": "upper"
     },
     {
       "slug": "mission-bay-ventura-cove",
@@ -1585,7 +1735,10 @@
       "wave_buoy": null,
       "wave_buoy_distance_m": null,
       "wave_buoy_from_end": null,
-      "wave_buoy_null_reason": "every wave buoy sits on the open coast, and ocean swell does not reach into a bay or lagoon, so no buoy describes the water here"
+      "wave_buoy_null_reason": "every wave buoy sits on the open coast, and ocean swell does not reach into a bay or lagoon, so no buoy describes the water here",
+      "weather_station": "KSAN",
+      "weather_station_distance_m": 6990,
+      "weather_station_from_end": "lower"
     },
     {
       "slug": "fiesta-island",
@@ -1616,7 +1769,10 @@
       "tide_station_from_end": "upper",
       "wave_buoy": "46254",
       "wave_buoy_distance_m": 12145,
-      "wave_buoy_from_end": "upper"
+      "wave_buoy_from_end": "upper",
+      "weather_station": "KSAN",
+      "weather_station_distance_m": 4718,
+      "weather_station_from_end": "lower"
     },
     {
       "slug": "mission-bay-sea-world",
@@ -1648,7 +1804,10 @@
       "wave_buoy": null,
       "wave_buoy_distance_m": null,
       "wave_buoy_from_end": null,
-      "wave_buoy_null_reason": "every wave buoy sits on the open coast, and ocean swell does not reach into a bay or lagoon, so no buoy describes the water here"
+      "wave_buoy_null_reason": "every wave buoy sits on the open coast, and ocean swell does not reach into a bay or lagoon, so no buoy describes the water here",
+      "weather_station": "KSAN",
+      "weather_station_distance_m": 5099,
+      "weather_station_from_end": "lower"
     },
     {
       "slug": "mission-bay-mariners-basin",
@@ -1680,7 +1839,10 @@
       "wave_buoy": null,
       "wave_buoy_distance_m": null,
       "wave_buoy_from_end": null,
-      "wave_buoy_null_reason": "every wave buoy sits on the open coast, and ocean swell does not reach into a bay or lagoon, so no buoy describes the water here"
+      "wave_buoy_null_reason": "every wave buoy sits on the open coast, and ocean swell does not reach into a bay or lagoon, so no buoy describes the water here",
+      "weather_station": "KSAN",
+      "weather_station_distance_m": 6682,
+      "weather_station_from_end": "upper"
     },
     {
       "slug": "mission-bay-quivera-basin",
@@ -1712,7 +1874,10 @@
       "wave_buoy": null,
       "wave_buoy_distance_m": null,
       "wave_buoy_from_end": null,
-      "wave_buoy_null_reason": "every wave buoy sits on the open coast, and ocean swell does not reach into a bay or lagoon, so no buoy describes the water here"
+      "wave_buoy_null_reason": "every wave buoy sits on the open coast, and ocean swell does not reach into a bay or lagoon, so no buoy describes the water here",
+      "weather_station": "KSAN",
+      "weather_station_distance_m": 6295,
+      "weather_station_from_end": "lower"
     },
     {
       "slug": "mission-bay",
@@ -1744,7 +1909,10 @@
       "wave_buoy": null,
       "wave_buoy_distance_m": null,
       "wave_buoy_from_end": null,
-      "wave_buoy_null_reason": "every wave buoy sits on the open coast, and ocean swell does not reach into a bay or lagoon, so no buoy describes the water here"
+      "wave_buoy_null_reason": "every wave buoy sits on the open coast, and ocean swell does not reach into a bay or lagoon, so no buoy describes the water here",
+      "weather_station": "KSAN",
+      "weather_station_distance_m": 6287,
+      "weather_station_from_end": "lower"
     },
     {
       "slug": "dog-beach-o-b",
@@ -1775,7 +1943,10 @@
       "tide_station_from_end": "upper",
       "wave_buoy": "46254",
       "wave_buoy_distance_m": 12506,
-      "wave_buoy_from_end": "upper"
+      "wave_buoy_from_end": "upper",
+      "weather_station": "KSAN",
+      "weather_station_distance_m": 6825,
+      "weather_station_from_end": "lower"
     },
     {
       "slug": "ocean-beach",
@@ -1806,7 +1977,10 @@
       "tide_station_from_end": "upper",
       "wave_buoy": "46254",
       "wave_buoy_distance_m": 12476,
-      "wave_buoy_from_end": "upper"
+      "wave_buoy_from_end": "upper",
+      "weather_station": "KSAN",
+      "weather_station_distance_m": 6807,
+      "weather_station_from_end": "lower"
     },
     {
       "slug": "spanish-landing-park",
@@ -1838,7 +2012,10 @@
       "wave_buoy": null,
       "wave_buoy_distance_m": null,
       "wave_buoy_from_end": null,
-      "wave_buoy_null_reason": "every wave buoy sits on the open coast, and ocean swell does not reach into a bay or lagoon, so no buoy describes the water here"
+      "wave_buoy_null_reason": "every wave buoy sits on the open coast, and ocean swell does not reach into a bay or lagoon, so no buoy describes the water here",
+      "weather_station": "KSAN",
+      "weather_station_distance_m": 1615,
+      "weather_station_from_end": "lower"
     },
     {
       "slug": "sunset-cliffs-park",
@@ -1869,7 +2046,10 @@
       "tide_station_from_end": "upper",
       "wave_buoy": "46254",
       "wave_buoy_distance_m": 14805,
-      "wave_buoy_from_end": "upper"
+      "wave_buoy_from_end": "upper",
+      "weather_station": "KSAN",
+      "weather_station_distance_m": 6807,
+      "weather_station_from_end": "upper"
     },
     {
       "slug": "shoreline-park",
@@ -1901,7 +2081,10 @@
       "wave_buoy": null,
       "wave_buoy_distance_m": null,
       "wave_buoy_from_end": null,
-      "wave_buoy_null_reason": "every wave buoy sits on the open coast, and ocean swell does not reach into a bay or lagoon, so no buoy describes the water here"
+      "wave_buoy_null_reason": "every wave buoy sits on the open coast, and ocean swell does not reach into a bay or lagoon, so no buoy describes the water here",
+      "weather_station": "KSAN",
+      "weather_station_distance_m": 3803,
+      "weather_station_from_end": "lower"
     },
     {
       "slug": "san-diego-bay",
@@ -1933,7 +2116,10 @@
       "wave_buoy": null,
       "wave_buoy_distance_m": null,
       "wave_buoy_from_end": null,
-      "wave_buoy_null_reason": "every wave buoy sits on the open coast, and ocean swell does not reach into a bay or lagoon, so no buoy describes the water here"
+      "wave_buoy_null_reason": "every wave buoy sits on the open coast, and ocean swell does not reach into a bay or lagoon, so no buoy describes the water here",
+      "weather_station": "KSAN",
+      "weather_station_distance_m": 3400,
+      "weather_station_from_end": "lower"
     },
     {
       "slug": "tide-beach-park",
@@ -1964,7 +2150,10 @@
       "tide_station_from_end": "lower",
       "wave_buoy": "46254",
       "wave_buoy_distance_m": 21763,
-      "wave_buoy_from_end": "upper"
+      "wave_buoy_from_end": "upper",
+      "weather_station": "KSAN",
+      "weather_station_distance_m": 4908,
+      "weather_station_from_end": "upper"
     },
     {
       "slug": "coronado-north-beach",
@@ -1995,7 +2184,10 @@
       "tide_station_from_end": "lower",
       "wave_buoy": "46254",
       "wave_buoy_distance_m": 20940,
-      "wave_buoy_from_end": "upper"
+      "wave_buoy_from_end": "upper",
+      "weather_station": "KSAN",
+      "weather_station_distance_m": 5348,
+      "weather_station_from_end": "lower"
     },
     {
       "slug": "coronado-central-beach",
@@ -2026,7 +2218,10 @@
       "tide_station_from_end": "lower",
       "wave_buoy": "46254",
       "wave_buoy_distance_m": 21596,
-      "wave_buoy_from_end": "upper"
+      "wave_buoy_from_end": "upper",
+      "weather_station": "KSAN",
+      "weather_station_distance_m": 5478,
+      "weather_station_from_end": "upper"
     },
     {
       "slug": "coronado-city-beaches",
@@ -2057,7 +2252,10 @@
       "tide_station_from_end": "lower",
       "wave_buoy": "46254",
       "wave_buoy_distance_m": 21178,
-      "wave_buoy_from_end": "upper"
+      "wave_buoy_from_end": "upper",
+      "weather_station": "KSAN",
+      "weather_station_distance_m": 5391,
+      "weather_station_from_end": "upper"
     },
     {
       "slug": "coronado-cays-nr",
@@ -2089,7 +2287,10 @@
       "wave_buoy": null,
       "wave_buoy_distance_m": null,
       "wave_buoy_from_end": null,
-      "wave_buoy_null_reason": "every wave buoy sits on the open coast, and ocean swell does not reach into a bay or lagoon, so no buoy describes the water here"
+      "wave_buoy_null_reason": "every wave buoy sits on the open coast, and ocean swell does not reach into a bay or lagoon, so no buoy describes the water here",
+      "weather_station": "KSAN",
+      "weather_station_distance_m": 11444,
+      "weather_station_from_end": "upper"
     },
     {
       "slug": "silver-strand-state-beach",
@@ -2120,7 +2321,10 @@
       "tide_station_from_end": "lower",
       "wave_buoy": "46254",
       "wave_buoy_distance_m": 28149,
-      "wave_buoy_from_end": "upper"
+      "wave_buoy_from_end": "upper",
+      "weather_station": "KSAN",
+      "weather_station_distance_m": 11356,
+      "weather_station_from_end": "upper"
     },
     {
       "slug": "north-imperial-beach",
@@ -2151,7 +2355,10 @@
       "tide_station_from_end": "lower",
       "wave_buoy": "46232",
       "wave_buoy_distance_m": 28469,
-      "wave_buoy_from_end": "lower"
+      "wave_buoy_from_end": "lower",
+      "weather_station": "KSDM",
+      "weather_station_distance_m": 13144,
+      "weather_station_from_end": "lower"
     },
     {
       "slug": "imperial-beach-municipal-beach-other",
@@ -2182,7 +2389,10 @@
       "tide_station_from_end": "upper",
       "wave_buoy": "46232",
       "wave_buoy_distance_m": 27913,
-      "wave_buoy_from_end": "lower"
+      "wave_buoy_from_end": "lower",
+      "weather_station": "KSDM",
+      "weather_station_distance_m": 13145,
+      "weather_station_from_end": "upper"
     },
     {
       "slug": "tijuana-slough-national-wildlife-refuge",
@@ -2214,7 +2424,10 @@
       "wave_buoy": null,
       "wave_buoy_distance_m": null,
       "wave_buoy_from_end": null,
-      "wave_buoy_null_reason": "every wave buoy sits on the open coast, and ocean swell does not reach into a bay or lagoon, so no buoy describes the water here"
+      "wave_buoy_null_reason": "every wave buoy sits on the open coast, and ocean swell does not reach into a bay or lagoon, so no buoy describes the water here",
+      "weather_station": "KSDM",
+      "weather_station_distance_m": 12852,
+      "weather_station_from_end": "lower"
     },
     {
       "slug": "tijana-river",
@@ -2245,7 +2458,10 @@
       "tide_station_from_end": "upper",
       "wave_buoy": "46232",
       "wave_buoy_distance_m": 34159,
-      "wave_buoy_from_end": "upper"
+      "wave_buoy_from_end": "upper",
+      "weather_station": "KSDM",
+      "weather_station_distance_m": 6125,
+      "weather_station_from_end": "lower"
     },
     {
       "slug": "border-field-state-park",
@@ -2276,7 +2492,10 @@
       "tide_station_from_end": "upper",
       "wave_buoy": "46232",
       "wave_buoy_distance_m": 28153,
-      "wave_buoy_from_end": "upper"
+      "wave_buoy_from_end": "upper",
+      "weather_station": "KSDM",
+      "weather_station_distance_m": 12863,
+      "weather_station_from_end": "upper"
     },
     {
       "slug": "imperial-beach-pier-area",
@@ -2309,7 +2528,11 @@
       "wave_buoy": null,
       "wave_buoy_distance_m": null,
       "wave_buoy_from_end": null,
-      "wave_buoy_null_reason": "the lower endpoint published upstream (32.1327, -117.1332) is outside San Diego County, so no station can be joined to it"
+      "wave_buoy_null_reason": "the lower endpoint published upstream (32.1327, -117.1332) is outside San Diego County, so no station can be joined to it",
+      "weather_station": null,
+      "weather_station_distance_m": null,
+      "weather_station_from_end": null,
+      "weather_station_null_reason": "the lower endpoint published upstream (32.1327, -117.1332) is outside San Diego County, so no station can be joined to it"
     }
   ],
   "unresolved": [
@@ -2317,6 +2540,7 @@
     "The join binds by nearest station of matching water class, and the distances are large where NOAA publishes no nearby station: the farthest is San Onofre State Beach at 56.6 km. See tide-stations.json, whose own unresolved list records that the one open-coast station between La Jolla and Imperial Beach does not deliver predictions.",
     "27 of these beaches get no wave height at all. Every NDBC wave buoy sits on the open coast, and ocean swell does not reach into a bay or lagoon, so binding one to the nearest buoy would put an open-ocean number on enclosed water. Their water temperature is missing for the same reason and is not yet filled from another source.",
     "A tide prediction is for the station, not for the beach. It is the best published figure for that stretch of shore and it is not a measurement taken there.",
+    "Visibility, wind, air temperature and sky are read at an airport, because the airports are the only stations in this county that publish visibility at all. The median beach here reads a station 7.3 km away and the farthest reads one 16.8 km away, at San Dieguito River Beach. Coastal fog is precisely what changes over that distance, so those four figures describe the airport and not the shoreline.",
     "1 beach(es) could not be bound to a station: Imperial Beach pier area (the lower endpoint published upstream (32.1327, -117.1332) is outside San Diego County, so no station can be joined to it). A null station must never render as a reading.",
     "The network module carries no build-time guard against being imported by a browser bundle. The `server-only` package is the intended enforcement and is not installed: importing it breaks the tests under jsdom until vitest is configured with the `react-server` resolve condition. Today the guarantee rests on the module having no client-side importer, which nothing checks."
   ]
