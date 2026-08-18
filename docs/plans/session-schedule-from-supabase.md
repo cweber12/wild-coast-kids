@@ -324,3 +324,24 @@ uncovered and why — which is what the config's own comment requires.
   touch overlapping files, so two people could not pick two of them up without
   colliding — which is the test CLAUDE.md sets for whether splitting earns its
   keep. Worked from this file on one branch.
+
+## Addenda
+
+### 2026-08-18 — a fifth slice, before slice 2
+
+The plan above lists four slices. A fifth was added between slices 1 and 2,
+after a question about how the Supabase variables were labelled in Vercel:
+**read the Supabase config at runtime, not from the bundle**
+(`SUPABASE_URL` / `SUPABASE_ANON_KEY`, no `NEXT_PUBLIC_` prefix).
+
+It is not a tidying pass. A `NEXT_PUBLIC_` value is substituted into the build
+output rather than read at run time — measured, not assumed; see ADR-0008 —
+which would have made two of this project's existing problems unfixable without
+a redeploy: the malformed Production URL, and a Preview environment that had no
+Supabase variables at all and would have inlined `undefined` into every build.
+That defeats the reason "The routes render dynamically" was chosen above.
+
+Taken before slice 2 because it was cheapest there: no application code read the
+variables yet, only `check-db.mjs` named them.
+
+The slice order is therefore 0, 1, **runtime config**, 2, 3, 4.
