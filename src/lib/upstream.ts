@@ -1,8 +1,13 @@
 /**
- * The only module here that touches the network.
+ * The only module here that touches NOAA.
  *
- * Fetching, caching and deciding what a failure means live together, and nowhere
- * else: the parsers next door are pure so they can be asserted against committed
+ * Not the only one that touches the network any more: `sessions.ts` reads the
+ * schedule from Supabase and follows this module's shape deliberately. The two
+ * stay apart because they share no upstream, no failure vocabulary and no
+ * cache policy -- only a form.
+ *
+ * Fetching, caching and deciding what a failure means live together for these
+ * three feeds, and nowhere else: the parsers next door are pure so they can be asserted against committed
  * payloads, and a component that wants a reading calls this rather than reaching
  * for `fetch`.
  *

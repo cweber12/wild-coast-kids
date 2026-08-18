@@ -9,8 +9,22 @@ for one concept, this file picks one and lists the rest under _Avoid_.
 
 **Program**:
 One of the two things the site offers — art classes, and the Tuesday co-op.
-Each has a card on the landing page and a page of its own.
+Each has a card on the landing page and a page of its own. A program is the
+standing offer; a **session** is one occasion of it.
 _Avoid_: offering, service, class (a class is one session of the art program)
+
+**Session**:
+One dated occasion of a program — a single art class, or one Tuesday of the
+co-op. It carries its own time, place and optional price, because those vary
+between one occasion and the next. `public.sessions` holds one row per session,
+and the schedule on `/art` and `/coop` is a list of the published ones still to
+come.
+
+The two programs are not sessions and are not data: they are the two cards in
+`ProgramCards.tsx`, and a session's `program` column names one of them.
+_Avoid_: event (in `src/` the word means a DOM event), occurrence, date,
+booking, class (that is one session of the art program), slot (a reserved slot
+stands in for content, not for a date)
 
 **Teaser**:
 A landing-page section that summarises a topic and links to its full page. The
