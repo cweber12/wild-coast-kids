@@ -14,7 +14,10 @@
  * is better than a confident wrong one.
  *
  * `publishes_waves` is checked separately from `delivers` because one station in
- * the table answers perfectly and carries no wave height at all.
+ * the table answers perfectly, publishes waves, and still must not be bound:
+ * 46086 sits twenty-seven nautical miles offshore, outside the corridor these
+ * beaches share. The field is this join's verdict on a station rather than a
+ * claim about what its rows carry.
  */
 
 import { segmentDistance } from "./geo.mjs";

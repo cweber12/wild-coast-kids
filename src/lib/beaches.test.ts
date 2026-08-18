@@ -190,4 +190,22 @@ describe("the wave buoy binding", () => {
     const caveats = inventoryCaveats();
     expect(caveats.some((c) => c.includes("46235"))).toBe(true);
   });
+
+  test("the excluded offshore buoy is excluded for its distance, not for waves", () => {
+    // 46086 was recorded as publishing no waves. It publishes WVHT on 27 of 48
+    // rows -- #70. Nothing renders the station, but this sentence reaches a
+    // reader through the caveats gate, and it is the whole reason the station
+    // is in the table, so a future slice looking for an offshore wave reference
+    // would take the false clause at face value.
+    //
+    // This holds the sentence still. It cannot hold NDBC still: a gate must not
+    // fetch realtime2, so nothing here notices if what 46086 publishes changes.
+    // The measurement is evidence in the plan file, not in this assertion.
+    const caveat = inventoryCaveats().find((c) => c.includes("46086"));
+
+    expect(caveat, "no caveat mentions 46086 at all").toBeTruthy();
+    expect(caveat).not.toMatch(/no waves/i);
+    expect(caveat).toMatch(/27 of the 48/);
+    expect(caveat).toMatch(/distance/i);
+  });
 });

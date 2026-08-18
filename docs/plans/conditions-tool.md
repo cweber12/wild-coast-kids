@@ -573,3 +573,70 @@ match. Raising it surfaced a real gap rather than a bookkeeping one: `document()
 was only ever exercised with a single beach, so its `reduce` and `sort`
 callbacks never ran and "the farthest beach from its station" was asserted by
 nothing. That test now builds two.
+
+### 2026-08-18 — #70, and the field that outlived its reason
+
+**46086 publishes waves.** The claim that it does not was measured a third time
+against `https://www.ndbc.noaa.gov/data/realtime2/46086.txt`, the endpoint this
+site reads, over the whole file rather than a window:
+
+```
+rows          : 6482 (newest 2026 08 18 06 00 UTC)
+WVHT present  : 27 / 48 newest      3567 / 6482 whole file (55%)
+WSPD present  : 48 / 48             6446 / 6482
+WTMP present  : 47 / 48             6281 / 6482
+VIS  present  :  0 / 48                0 / 6482
+```
+
+The gap is a cadence, not an absence. `WVHT` lands on exactly two rows in three —
+the rows at `:00` and `:30` are `MM` — and the values repeat in pairs, so a
+slower wave cycle is being carried on ten-minute met rows. A single read has
+about a one-in-three chance of landing on an `MM` row, which is how "no waves"
+was arrived at honestly and recorded wrongly.
+
+Everything else in the entry survived the re-measurement: 46086 does publish wind
+and water temperature, publishes **no** visibility anywhere in 6,482 rows, sits
+twenty-seven nautical miles offshore, and is bound to no beach.
+
+**The false clause was in six places, not one.** `_what_was_measured` and
+`unresolved[2]` in `wave-buoys.json`; the `publishes_waves: false` datum itself;
+and three code comments — `wave-join.mjs`, `wave-join.test.mjs` and
+`beaches.ts` — each restating "carries no wave height at all" as the reason the
+field exists. Correcting the caveat alone would have left five copies of the
+thing the caveat was corrected for.
+
+**`publishes_waves` was invented for a belief that turned out false.** The field
+exists to give the join a second filter beside `delivers`, and the only station
+it was ever meant to exclude was 46086. With the measurement corrected, no
+station in the table fails it on its own terms: `delivers && publishes_waves`
+became equivalent to `delivers`, and 46086's exclusion needed a reason it did not
+have.
+
+**Decided with Cole: redefine the field, do not change the join.** The
+`_schema` entry now says what the join actually uses the field for — whether the
+station's wave height is one a beach may bind to — and 46086 carries `false` with
+its real reason, distance, alongside the measured `WVHT` ratio so the number and
+the exclusion are never again the same sentence.
+
+Two alternatives were rejected:
+
+- **Flip the field to `true` and change nothing else.** Verified against all 73
+  beaches: no binding changes today, because every open-coast beach has a
+  nearshore buoy closer than twenty-seven nautical miles. But it makes 46086 an
+  eligible wave source held out by distance alone, and 46235 and 46273 have
+  already died. If 46232 Point Loma South follows them, a south-county beach
+  reaches twenty-seven miles offshore for a height that describes different
+  water, and nothing in the repo would say so.
+- **Flip the field to `true` and add an eligibility rule** — an explicit
+  out-of-corridor flag as a second condition in the join's filter. The honest
+  shape, and where this goes if a second out-of-corridor station ever appears.
+  Rejected now because it changes the join to express something one station
+  needs, and the issue that raised this put the join out of scope. The
+  redefinition leaves that door open: the field's meaning is already
+  "bindable", so the rename is all that would be left to do.
+
+**What the regression test can and cannot do.** It asserts the caveat's sentence
+through `inventoryCaveats()`, the seam the caveats gate already walks — the claim
+cannot silently revert. It does not assert the ocean: a gate must not fetch NDBC,
+so nothing in CI notices if NOAA changes what 46086 publishes. The measurement
+above is the evidence for the sentence; the test only holds the sentence still.
