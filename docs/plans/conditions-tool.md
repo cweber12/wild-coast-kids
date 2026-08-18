@@ -358,3 +358,43 @@ default: it constructed a fresh `ESLint` per assertion, and that construction is
 CPU-bound. `main` at 30 test files is green; 37 turns it red. Fixed as its own
 commit and its own issue rather than folded into the feature, because the number
 was never about the assertion.
+
+### 2026-08-18 — open question 2 is answered, and slice 4 ships without slice 5
+
+**Open question 2 is closed, and the plan underestimated it.** It asked what tide
+station serves the lagoons and Mission Bay, assuming the two stations the source
+repo used. NOAA publishes **nine** tide-prediction stations in the corridor. Eight
+deliver; `TWC0405` Point Loma answers HTTP 200 carrying an error object, which is
+the failure this stack pins its parser against — a join built from the published
+station list without measuring delivery would have bound the middle of the open
+coast to a station that never answers.
+
+Station choice is not cosmetic: for the same low tide on 2026-08-18 the eight
+working stations predicted between 1.442 and 1.700 ft, across 13 minutes.
+
+**The join rule, decided with Cole.** The nearest _delivering_ station whose water
+class matches the beach's, measured from whichever end of the segment is closer.
+The water class of a station is hand-written, because NOAA publishes no such
+field; it has the standing of a join input rather than a joined value, and it is
+what stops an ocean-facing beach near the bay mouth reading a bay tide curve.
+
+**A fourth state exists now, and it is not an outage.** `no-station` is a
+permanent fact about a place; `unavailable` is a transient fact about a feed.
+Telling a reader to try again later about the first would be telling them to wait
+for something that will never arrive.
+
+**Upstream publishes at least one row with transposed coordinates.** "Imperial
+Beach pier area" gives an upper longitude of −117.5866 and a lower latitude of
+32.1327, against neighbouring rows at 32.5866/−117.1327 — a fifty-kilometre
+"beach" running from well offshore to inside Baja California. It is detected and
+refused rather than corrected, because correcting it would be inventing a
+location. Two checks are needed: a bounding box alone misses an endpoint that
+lands in the ocean at a plausible latitude.
+
+**73 beaches, not 82.** The inclusion predicate — Active, PUBLIC, CountAsBeach —
+is a filter over published fields rather than a judgement, and it takes the 82
+San Diego rows down to 73.
+
+**Slice 4 ships without slice 5**, for the same reason slice 3 shipped alone: size.
+`inventoryCaveats()` exists and is tested, and nothing renders it yet — that is
+slice 5, together with the gate row that fails when a caveat reaches no reader.

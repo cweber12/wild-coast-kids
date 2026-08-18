@@ -17,16 +17,23 @@ import { lowestLowOn } from "./tide-day";
 import { fetchTideExtremes } from "./upstream";
 
 /**
- * What the view renders. Three states, kept distinct on purpose: a reading, a
- * window that held no low for the day, and nothing available. Collapsing any two
- * of them would let one render as another, and the dangerous direction is an
- * absent reading reading as a calm sea.
+ * What the view renders. Four states, kept distinct on purpose, because the
+ * dangerous direction is any of the last three reading as a calm sea:
+ *
+ *   reading        a predicted low for today
+ *   no-low-today   the window held none, which is a gap in our request
+ *   no-station     the join bound no station to this beach at all
+ *   unavailable    a station exists and upstream could not answer
+ *
+ * `no-station` is a permanent fact about the place; `unavailable` is a transient
+ * fact about the feed. Collapsing them would tell a reader to try again later
+ * about something that will never work, or the reverse.
  */
 export type TideTodayState =
   | { kind: "reading"; timeLabel: string; feet: number }
   | { kind: "no-low-today" }
+  | { kind: "no-station"; reason: string }
   | {
-      /** Upstream could not answer. The wording shown to a reader belongs to the view. */
       kind: "unavailable";
       /** The exact upstream reason, for the disclosure. */
       detail: string;
@@ -36,8 +43,8 @@ export type TideTodayState =
 
 export interface TideTodayView {
   beachName: string;
-  stationName: string;
-  stationRole: string;
+  /** null exactly when the state is `no-station`. */
+  station: { name: string; water: string; distanceM: number | null } | null;
   state: TideTodayState;
 }
 
@@ -57,8 +64,8 @@ function compact(localDate: string): string {
  * low off the end.
  *
  * Throws only when the slug is not in the inventory, which is a coding error
- * rather than a quiet feed. Everything an upstream can do wrong arrives as the
- * `unavailable` state instead.
+ * rather than a quiet feed. Everything an upstream can do wrong, and every beach
+ * the join could not bind, arrives as a state instead.
  */
 export async function readTodaysLowestLow(
   slug: string,
@@ -70,19 +77,35 @@ export async function readTodaysLowestLow(
       `readTodaysLowestLow: no beach in the inventory with slug "${slug}".`,
     );
   }
+
   const station = tideStationFor(beach);
+  if (station === null) {
+    return {
+      beachName: beach.name,
+      station: null,
+      state: {
+        kind: "no-station",
+        reason:
+          beach.tide_station_null_reason ??
+          "the join bound no tide station to this beach, and recorded no reason",
+      },
+    };
+  }
+
+  const binding = {
+    beachName: beach.name,
+    station: {
+      name: station.name,
+      water: station.water,
+      distanceM: beach.tide_station_distance_m,
+    },
+  };
 
   const result = await fetchTideExtremes({
     stationId: station.id,
     beginDate: compact(localDateOf(nowMs - ONE_DAY_MS)),
     endDate: compact(localDateOf(nowMs + ONE_DAY_MS)),
   });
-
-  const binding = {
-    beachName: beach.name,
-    stationName: station.name,
-    stationRole: station.role,
-  };
 
   if (result.kind === "unavailable") {
     return {

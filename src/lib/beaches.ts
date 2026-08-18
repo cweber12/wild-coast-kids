@@ -1,17 +1,18 @@
 /**
- * The beach inventory, typed.
+ * The beach inventory and the tide stations it binds to, typed.
  *
- * `src/data/beaches.json` is the record; this is the only way to read it, so a
- * caller cannot reach past the types into a raw shape. The JSON is
- * machine-formatted on purpose -- a generator may rewrite it -- and the types
- * here are hand-written until a generator exists to emit them.
+ * `src/data/beaches.json` is written by `scripts/seed-beaches.mjs` and is never
+ * edited by hand: every station binding there is a join result, re-runnable and
+ * diffable with `--check`. `src/data/tide-stations.json` is its counterpart, and
+ * holds the one field that is written by hand — a station's water class, which
+ * no upstream authority publishes and which the join needs as an input.
  *
- * Nothing in this module fetches anything. A beach's bindings are values
- * resolved against upstream authorities and committed; reading them is a file
- * read, and that is the point.
+ * Nothing here fetches anything. Reading a binding is a file read, and that is
+ * the point: the join ran offline, and a reader is served its committed result.
  */
 
 import inventory from "@/data/beaches.json";
+import stationTable from "@/data/tide-stations.json";
 
 export interface Coordinate {
   lat: number;
@@ -19,9 +20,8 @@ export interface Coordinate {
 }
 
 /**
- * A beach is a shoreline **segment**, upper and lower endpoints, because that is
- * how the state publishes it. It is not a point, and code that needs one has to
- * say which end it took and why.
+ * A beach is a shoreline **segment**, because that is how the state publishes
+ * it. Code that needs a single point has to say which end it took and why.
  */
 export interface BeachSegment {
   upper: Coordinate;
@@ -31,40 +31,75 @@ export interface BeachSegment {
 export interface Beach {
   slug: string;
   name: string;
+  /** Display grouping only. Never an input to any join. */
+  region: string;
   segment: BeachSegment;
-  /** Fields reproduced from the upstream resource, unmodified. */
   upstream: {
     usepa_id: string;
     agency: string;
     water_body_name: string;
     water_body_type: string;
-    /**
-     * Upstream's own value, which is `UNKNOWN` for some beaches. That is a gap in
-     * the resource and must never be rendered as a description of the shore.
-     */
+    /** Upstream's own value, `UNKNOWN` for most beaches. Never a description of the shore. */
     beach_type: string;
     beach_access: string;
     status: string;
     nearest_city: string;
   };
-  tide_station: string;
-  tide_station_basis: string;
+  /** Joined, never typed. null means the join could not bind one. */
+  tide_station: string | null;
+  tide_station_distance_m: number | null;
+  tide_station_from_end: string | null;
+  /** Present exactly when tide_station is null, and required then. */
+  tide_station_null_reason?: string;
 }
 
 export interface TideStation {
   name: string;
-  /** `open coast` or `bay side only`. Reading a bay station for an open-coast beach yields a wrong curve. */
-  role: string;
+  lat: number;
+  lon: number;
+  kind: string;
+  /** `open-coast` or `bay`. The join input; see tide-stations.json. */
+  water: string;
+  /** Measured, not assumed. A station that does not deliver is kept and marked. */
+  delivers: boolean;
+  dead_note?: string;
 }
 
 const BEACHES = inventory.beaches as readonly Beach[];
-const TIDE_STATIONS = inventory.tide_stations as Readonly<
-  Record<string, TideStation>
->;
+const STATIONS = stationTable.stations as Readonly<Record<string, TideStation>>;
 
-/** Every beach in the inventory, in file order. */
+/**
+ * The beach the conditions view opens on when no other is asked for.
+ *
+ * Named rather than derived. "First in the inventory" would be San Onofre, at
+ * the county's northern edge and 57 km from the nearest station that publishes
+ * predictions, which is the worst-supported reading on the site. This one is
+ * central, sits 1.4 km from its station, and is the beach the National Weather
+ * Service means when its surf zone forecast says "La Jolla".
+ */
+export const DEFAULT_BEACH_SLUG = "la-jolla-shores-beach";
+
+/** Every beach, north to south. */
 export function allBeaches(): readonly Beach[] {
   return BEACHES;
+}
+
+/**
+ * The default beach, or a loud failure.
+ *
+ * The inventory is rewritten by a script from an upstream resource, so a rename
+ * upstream could take the default slug with it. That must stop a build rather
+ * than render an empty page.
+ */
+export function defaultBeach(): Beach {
+  const beach = beachBySlug(DEFAULT_BEACH_SLUG);
+  if (!beach) {
+    throw new Error(
+      `beaches.json no longer contains ${DEFAULT_BEACH_SLUG}, which the conditions view ` +
+        `opens on. Upstream may have renamed it; pick a new default deliberately.`,
+    );
+  }
+  return beach;
 }
 
 /** One beach by slug, or null. Null means the slug is not in the inventory. */
@@ -73,24 +108,49 @@ export function beachBySlug(slug: string): Beach | null {
 }
 
 /**
- * The tide station a beach reads, with its role.
- *
- * Throws when a beach names a station the inventory does not describe. That is a
- * broken data file rather than a missing reading, and it should stop a build
- * rather than render an unlabelled number.
+ * Beaches grouped for a chooser, in inventory order within each group and with
+ * the groups in the order they first appear — which, the inventory being sorted
+ * north to south, runs down the coast.
  */
-export function tideStationFor(beach: Beach): TideStation & { id: string } {
-  const station = TIDE_STATIONS[beach.tide_station];
+export function beachesByRegion(): {
+  region: string;
+  beaches: readonly Beach[];
+}[] {
+  const groups = new Map<string, Beach[]>();
+  for (const beach of BEACHES) {
+    const existing = groups.get(beach.region);
+    if (existing) existing.push(beach);
+    else groups.set(beach.region, [beach]);
+  }
+  return [...groups].map(([region, beaches]) => ({ region, beaches }));
+}
+
+/**
+ * The station a beach reads, or null when the join could not bind one.
+ *
+ * Throws when a beach names a station the table does not describe. That is a
+ * broken pair of data files rather than a missing reading, and it should stop a
+ * build rather than render an unlabelled number.
+ */
+export function tideStationFor(
+  beach: Beach,
+): (TideStation & { id: string }) | null {
+  if (beach.tide_station === null) return null;
+
+  const station = STATIONS[beach.tide_station];
   if (!station) {
     throw new Error(
       `beaches.json: ${beach.slug} names tide station ${beach.tide_station}, ` +
-        `which has no entry under tide_stations.`,
+        `which has no entry in tide-stations.json.`,
     );
   }
   return { id: beach.tide_station, ...station };
 }
 
-/** Caveats carried by the inventory. Every one of these owes the reader a rendering. */
+/** Caveats carried by both data files. Every one owes the reader a rendering. */
 export function inventoryCaveats(): readonly string[] {
-  return inventory.unresolved as readonly string[];
+  return [
+    ...(inventory.unresolved as readonly string[]),
+    ...(stationTable.unresolved as readonly string[]),
+  ];
 }

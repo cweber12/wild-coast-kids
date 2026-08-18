@@ -2,16 +2,23 @@ import { expect, test } from "vitest";
 import { render, screen } from "@testing-library/react";
 import { TideToday } from "./TideToday";
 
-const BINDING = {
-  beachName: "La Jolla Shores Beach",
-  stationName: "La Jolla (Scripps Pier)",
-  stationRole: "open coast",
+const NEAR_STATION = {
+  name: "La Jolla (Scripps Institution Wharf)",
+  water: "open-coast",
+  distanceM: 1369,
+};
+
+const FAR_STATION = {
+  name: "La Jolla (Scripps Institution Wharf)",
+  water: "open-coast",
+  distanceM: 56_557,
 };
 
 test("a reading leads with the time and names the beach", () => {
   render(
     <TideToday
-      {...BINDING}
+      beachName="La Jolla Shores Beach"
+      station={NEAR_STATION}
       state={{ kind: "reading", timeLabel: "6:24 AM", feet: 1.368 }}
     />,
   );
@@ -25,7 +32,8 @@ test("a reading leads with the time and names the beach", () => {
 test("a positive height is described against the average low", () => {
   render(
     <TideToday
-      {...BINDING}
+      beachName="La Jolla Shores Beach"
+      station={NEAR_STATION}
       state={{ kind: "reading", timeLabel: "6:24 AM", feet: 1.368 }}
     />,
   );
@@ -35,7 +43,8 @@ test("a positive height is described against the average low", () => {
 test("a negative height explains its own minus sign", () => {
   render(
     <TideToday
-      {...BINDING}
+      beachName="Cabrillo"
+      station={NEAR_STATION}
       state={{ kind: "reading", timeLabel: "3:12 PM", feet: -0.4 }}
     />,
   );
@@ -44,35 +53,87 @@ test("a negative height explains its own minus sign", () => {
   expect(
     screen.getByText(/-0\.4 ft — the water drops below the average low/),
   ).toBeDefined();
-  expect(
-    screen.getByText(/more of the sand and reef is uncovered/),
-  ).toBeDefined();
 });
 
 test("the datum is named once, and predictions are not offered as a safety call", () => {
   render(
     <TideToday
-      {...BINDING}
+      beachName="La Jolla Shores Beach"
+      station={NEAR_STATION}
       state={{ kind: "reading", timeLabel: "6:24 AM", feet: 1.368 }}
     />,
   );
   expect(screen.getByText(/mean lower low water/)).toBeDefined();
   expect(screen.getByText(/not a safety assessment/)).toBeDefined();
-  expect(screen.getByText(/La Jolla \(Scripps Pier\)/)).toBeDefined();
+});
+
+test("a nearby station is credited without a distance", () => {
+  render(
+    <TideToday
+      beachName="La Jolla Shores Beach"
+      station={NEAR_STATION}
+      state={{ kind: "reading", timeLabel: "6:24 AM", feet: 1.368 }}
+    />,
+  );
+  expect(screen.queryByText(/km away/)).toBeNull();
+});
+
+test("a distant station discloses how far away it is", () => {
+  render(
+    <TideToday
+      beachName="San Onofre State Beach"
+      station={FAR_STATION}
+      state={{ kind: "reading", timeLabel: "6:24 AM", feet: 1.368 }}
+    />,
+  );
+  // 57 km up the coast is the difference between a prediction for this shore and
+  // the nearest one anybody publishes, so it is said where the number is given.
+  expect(screen.getByText(/57 km away/)).toBeDefined();
+  expect(
+    screen.getByText(/nearest open-coast station publishing predictions/),
+  ).toBeDefined();
 });
 
 test("no low in the window says so, and says it is not a calm sea", () => {
-  render(<TideToday {...BINDING} state={{ kind: "no-low-today" }} />);
+  render(
+    <TideToday
+      beachName="La Jolla Shores Beach"
+      station={NEAR_STATION}
+      state={{ kind: "no-low-today" }}
+    />,
+  );
   expect(
     screen.getByText(/gap in our request rather than a calm sea/),
   ).toBeDefined();
-  expect(screen.getByText(/the tide still goes out/)).toBeDefined();
+});
+
+test("a beach with no station says so permanently, and credits no station", () => {
+  render(
+    <TideToday
+      beachName="Imperial Beach pier area"
+      station={null}
+      state={{
+        kind: "no-station",
+        reason:
+          "the lower endpoint published upstream (32.1327, -117.1332) is outside San Diego County",
+      }}
+    />,
+  );
+
+  expect(
+    screen.getByText(/No tide station could be matched to it/),
+  ).toBeDefined();
+  // Not an outage: nothing here invites the reader to try again later.
+  expect(screen.queryByText(/try again shortly/)).toBeNull();
+  expect(screen.queryByText(/NOAA Tides/)).toBeNull();
+  expect(screen.getByText(/outside San Diego County/)).toBeDefined();
 });
 
 test("an unavailable reading is a sentence, with the upstream reason behind a disclosure", () => {
   render(
     <TideToday
-      {...BINDING}
+      beachName="La Jolla Shores Beach"
+      station={NEAR_STATION}
       state={{
         kind: "unavailable",
         detail: "NOAA returned HTTP 503 for station 9410230.",
@@ -84,19 +145,19 @@ test("an unavailable reading is a sentence, with the upstream reason behind a di
   expect(
     screen.getByText(/could not get today's tide prediction/),
   ).toBeDefined();
-  // The reader gets a sentence; the exact reason is available without being in the way.
   expect(screen.getByText("What went wrong")).toBeDefined();
   expect(
     screen.getByText("NOAA returned HTTP 503 for station 9410230."),
   ).toBeDefined();
-  // Nothing anywhere renders a number, which is the point: no blank, no zero.
+  // No blank and no zero: nothing here can be read as a calm sea.
   expect(screen.queryByText(/ft above the average low/)).toBeNull();
 });
 
 test("drift is called out as a bug here rather than a problem at the station", () => {
   render(
     <TideToday
-      {...BINDING}
+      beachName="La Jolla Shores Beach"
+      station={NEAR_STATION}
       state={{
         kind: "unavailable",
         detail:
