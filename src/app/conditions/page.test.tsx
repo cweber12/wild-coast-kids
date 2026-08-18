@@ -7,6 +7,9 @@ import { render, screen } from "@testing-library/react";
 vi.mock("@/components/TidePanel", () => ({
   TidePanel: ({ slug }: { slug: string }) => <p>panel for {slug}</p>,
 }));
+vi.mock("@/components/WavePanel", () => ({
+  WavePanel: ({ slug }: { slug: string }) => <p>waves for {slug}</p>,
+}));
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push: vi.fn() }) }));
 
 const { default: Conditions, revalidate } = await import("./page");

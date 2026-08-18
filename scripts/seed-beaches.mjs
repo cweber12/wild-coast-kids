@@ -27,6 +27,7 @@ import { readFileSync, writeFileSync } from "node:fs";
 import { pathToFileURL } from "node:url";
 import { distanceMetres } from "./geo.mjs";
 import { bindTideStation } from "./tide-join.mjs";
+import { bindWaveBuoy } from "./wave-join.mjs";
 
 const PORTAL = "https://data.cnra.ca.gov";
 const RESOURCE = "cc674e59-036c-45c3-bec2-5d3d294e0e3d";
@@ -35,6 +36,7 @@ const DATASET =
 const MIRROR_RESOURCE = "fcbc9250-06e3-437d-b0c6-3cc5ddde93fc";
 
 const BEACHES_PATH = new URL("../src/data/beaches.json", import.meta.url);
+const BUOYS_PATH = new URL("../src/data/wave-buoys.json", import.meta.url);
 const STATIONS_PATH = new URL(
   "../src/data/tide-stations.json",
   import.meta.url,
@@ -190,7 +192,7 @@ export function regionOf(waterClass, meanLat) {
   return "South County coast";
 }
 
-export function build(rows, stations) {
+export function build(rows, stations, buoys) {
   const seen = new Map();
 
   const beaches = rows.map((row) => {
@@ -225,6 +227,9 @@ export function build(rows, stations) {
           { segment, waterBodyType: row.WaterBodyType },
           stations,
         );
+    const wave = fault
+      ? { buoyId: null, reason: fault }
+      : bindWaveBuoy({ segment, waterBodyType: row.WaterBodyType }, buoys);
 
     const meanLat = (segment.upper.lat + segment.lower.lat) / 2;
 
@@ -249,6 +254,10 @@ export function build(rows, stations) {
         : null,
       tide_station_from_end: bound.stationId ? bound.fromEnd : null,
       tide_station_null_reason: bound.stationId ? undefined : bound.reason,
+      wave_buoy: wave.buoyId,
+      wave_buoy_distance_m: wave.buoyId ? Math.round(wave.distanceM) : null,
+      wave_buoy_from_end: wave.buoyId ? wave.fromEnd : null,
+      wave_buoy_null_reason: wave.buoyId ? undefined : wave.reason,
     };
   });
 
@@ -328,6 +337,10 @@ export function document(beaches) {
         `${(farthest.tide_station_distance_m / 1000).toFixed(1)} km. See tide-stations.json, ` +
         `whose own unresolved list records that the one open-coast station between La Jolla and ` +
         `Imperial Beach does not deliver predictions.`,
+      `${beaches.filter((b) => b.wave_buoy === null).length} of these beaches get no wave height at all. ` +
+        `Every NDBC wave buoy sits on the open coast, and ocean swell does not reach into a bay or ` +
+        `lagoon, so binding one to the nearest buoy would put an open-ocean number on enclosed water. ` +
+        `Their water temperature is missing for the same reason and is not yet filled from another source.`,
       "A tide prediction is for the station, not for the beach. It is the best published figure " +
         "for that stretch of shore and it is not a measurement taken there.",
       ...(unbound.length > 0
@@ -358,6 +371,7 @@ async function main() {
   const checkOnly = process.argv.includes("--check");
 
   const stations = JSON.parse(readFileSync(STATIONS_PATH, "utf8")).stations;
+  const buoys = JSON.parse(readFileSync(BUOYS_PATH, "utf8")).buoys;
   let existing = null;
   try {
     existing = JSON.parse(readFileSync(BEACHES_PATH, "utf8"));
@@ -366,7 +380,7 @@ async function main() {
   }
 
   const rows = await fetchRows();
-  const built = document(build(rows, stations));
+  const built = document(build(rows, stations, buoys));
 
   // `generated` is the one field that moves on every run by design, so comparing
   // it would make every check fail and mean nothing.

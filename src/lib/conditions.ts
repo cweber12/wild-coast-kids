@@ -11,10 +11,10 @@
  * instants rather than against whatever the test runner's clock says.
  */
 
-import { beachBySlug, tideStationFor } from "./beaches";
+import { beachBySlug, tideStationFor, waveBuoyFor } from "./beaches";
 import { localDateOf, localTimeOf } from "./pacific-time";
 import { lowestLowOn } from "./tide-day";
-import { fetchTideExtremes } from "./upstream";
+import { fetchLatestWave, fetchTideExtremes } from "./upstream";
 
 /**
  * What the view renders. Four states, kept distinct on purpose, because the
@@ -129,5 +129,89 @@ export async function readTodaysLowestLow(
             timeLabel: localTimeOf(lowest.atMs),
             feet: lowest.feet,
           },
+  };
+}
+
+/**
+ * What the waves view renders. The same three-way split as the tide, and for the
+ * same reason: `no-buoy` is a permanent fact about a place, `unavailable` is a
+ * transient fact about a feed.
+ */
+export type WavesState =
+  | {
+      kind: "reading";
+      heightFt: number;
+      periodS: number | null;
+      directionDegT: number | null;
+      waterTempF: number | null;
+    }
+  | { kind: "no-buoy"; reason: string }
+  | { kind: "unavailable"; detail: string; drift: boolean };
+
+export interface WavesView {
+  beachName: string;
+  /** null exactly when the state is `no-buoy`. */
+  buoy: { name: string; distanceM: number | null } | null;
+  state: WavesState;
+}
+
+/**
+ * Read the newest wave observation for one beach.
+ *
+ * Throws only when the slug is not in the inventory. A beach the join bound no
+ * buoy to -- every bay, lagoon and inlet -- arrives as `no-buoy` without a
+ * request being made, because there is nothing to ask.
+ */
+export async function readLatestWaves(
+  slug: string,
+  nowMs: number = Date.now(),
+): Promise<WavesView> {
+  const beach = beachBySlug(slug);
+  if (!beach) {
+    throw new Error(
+      `readLatestWaves: no beach in the inventory with slug "${slug}".`,
+    );
+  }
+
+  const buoy = waveBuoyFor(beach);
+  if (buoy === null) {
+    return {
+      beachName: beach.name,
+      buoy: null,
+      state: {
+        kind: "no-buoy",
+        reason:
+          beach.wave_buoy_null_reason ??
+          "the join bound no wave buoy to this beach, and recorded no reason",
+      },
+    };
+  }
+
+  const binding = {
+    beachName: beach.name,
+    buoy: { name: buoy.name, distanceM: beach.wave_buoy_distance_m },
+  };
+
+  const result = await fetchLatestWave(buoy.id, nowMs);
+  if (result.kind === "unavailable") {
+    return {
+      ...binding,
+      state: {
+        kind: "unavailable",
+        detail: result.reason,
+        drift: result.drift,
+      },
+    };
+  }
+
+  return {
+    ...binding,
+    state: {
+      kind: "reading",
+      heightFt: result.observation.heightFt,
+      periodS: result.observation.periodS,
+      directionDegT: result.observation.directionDegT,
+      waterTempF: result.observation.waterTempF,
+    },
   };
 }

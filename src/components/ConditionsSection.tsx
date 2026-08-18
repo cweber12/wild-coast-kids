@@ -13,6 +13,7 @@ import { beachesByRegion, inventoryCaveats } from "@/lib/beaches";
 import { BeachSelector } from "./BeachSelector";
 import { Caveats } from "./Caveats";
 import { TidePanel } from "./TidePanel";
+import { WavePanel } from "./WavePanel";
 
 export function ConditionsSection({ slug }: { slug: string }) {
   const groups = beachesByRegion().map((group) => ({
@@ -47,6 +48,16 @@ export function ConditionsSection({ slug }: { slug: string }) {
         }
       >
         <TidePanel slug={slug} />
+      </Suspense>
+
+      {/*
+        Its own boundary, so a slow buoy cannot hold up the tide time. The two
+        readings come from different agencies and fail independently.
+      */}
+      <Suspense
+        fallback={<p className="mt-9 text-base text-fog">Reading the buoy…</p>}
+      >
+        <WavePanel slug={slug} />
       </Suspense>
 
       <Caveats entries={inventoryCaveats()} />

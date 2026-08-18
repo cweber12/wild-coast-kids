@@ -1,0 +1,129 @@
+{
+  "version": "0.1.0",
+  "generated": "2026-08-18",
+  "_provenance": "Station ids, names and coordinates read from NOAA NDBC's active station list, https://www.ndbc.noaa.gov/activestations.xml, filtered to 32.4-33.5N and -118.2 to -117.0E, on 2026-08-18. Nineteen stations were listed. Delivery was then measured one station at a time against https://www.ndbc.noaa.gov/data/realtime2/<id>.txt, the same endpoint this site reads, rather than inferred from the list.",
+  "_what_was_measured": "Every delivering buoy publishes WVHT, DPD, MWD and WTMP. NOT ONE publishes WDIR, WSPD or VIS -- ten out of ten leave them MM. Slice 3 saw this on 46254 and recorded it as one station's quirk; it is categorical. The only station in the box with wind is 46086, twenty-seven nautical miles offshore in the San Clemente Basin, and it publishes no waves at all. That is why this site's wind and visibility must come from the National Weather Service gridpoint forecast and can never come from a buoy.",
+  "_schema": {
+    "name": "NDBC's own station name.",
+    "cdip": "The CDIP station number NDBC prints in parentheses after the name, where it prints one. Recorded because it is published, and because the relay is what makes these nearshore buoys wave-only.",
+    "lat": "Decimal degrees north, from the NDBC station list.",
+    "lon": "Decimal degrees east, negative for west.",
+    "delivers": "Whether realtime2 actually answers with data rows, measured rather than assumed. A station that does not deliver is kept and marked, never deleted.",
+    "publishes_waves": "Whether the delivering station's rows carry WVHT. Recorded separately from `delivers` because one station does neither the same way.",
+    "dead_note": "Present only when delivers is false. What the station did when asked."
+  },
+  "buoys": {
+    "46285": {
+      "name": "Capistrano Beach Nearshore",
+      "cdip": "284",
+      "lat": 33.445,
+      "lon": -117.68,
+      "delivers": true,
+      "publishes_waves": true
+    },
+    "46277": {
+      "name": "Green Beach Offshore",
+      "cdip": "271",
+      "lat": 33.336,
+      "lon": -117.659,
+      "delivers": true,
+      "publishes_waves": true
+    },
+    "46275": {
+      "name": "Red Beach Nearshore",
+      "cdip": "264",
+      "lat": 33.291,
+      "lon": -117.501,
+      "delivers": true,
+      "publishes_waves": true
+    },
+    "46224": {
+      "name": "Oceanside Offshore",
+      "cdip": "045",
+      "lat": 33.178,
+      "lon": -117.472,
+      "delivers": true,
+      "publishes_waves": true
+    },
+    "46274": {
+      "name": "Leucadia Nearshore",
+      "cdip": "262",
+      "lat": 33.062,
+      "lon": -117.314,
+      "delivers": true,
+      "publishes_waves": true
+    },
+    "46266": {
+      "name": "Del Mar Nearshore",
+      "cdip": "153",
+      "lat": 32.957,
+      "lon": -117.279,
+      "delivers": true,
+      "publishes_waves": true
+    },
+    "46225": {
+      "name": "Torrey Pines Outer",
+      "cdip": "100",
+      "lat": 32.933,
+      "lon": -117.391,
+      "delivers": true,
+      "publishes_waves": true
+    },
+    "46254": {
+      "name": "Scripps Nearshore",
+      "cdip": "201",
+      "lat": 32.868,
+      "lon": -117.267,
+      "delivers": true,
+      "publishes_waves": true
+    },
+    "46258": {
+      "name": "Mission Bay West",
+      "cdip": "220",
+      "lat": 32.749,
+      "lon": -117.502,
+      "delivers": true,
+      "publishes_waves": true
+    },
+    "46232": {
+      "name": "Point Loma South",
+      "cdip": "191",
+      "lat": 32.517,
+      "lon": -117.425,
+      "delivers": true,
+      "publishes_waves": true
+    },
+    "46273": {
+      "name": "Torrey Pines Inner",
+      "cdip": "101",
+      "lat": 32.93,
+      "lon": -117.274,
+      "delivers": false,
+      "publishes_waves": false,
+      "dead_note": "Listed in NDBC's active station list on 2026-08-18 and answered 404 on realtime2 the same day. Its entry carries met=n. Listed but not delivering is the same trap TWC0405 sets in the tide join, and the reason delivery is measured here rather than read off the list."
+    },
+    "46235": {
+      "name": "Imperial Beach Nearshore",
+      "cdip": "155",
+      "lat": 32.57,
+      "lon": -117.169,
+      "delivers": false,
+      "publishes_waves": false,
+      "dead_note": "Answered 404 on realtime2 on 2026-08-18. Independently confirms cweber12/socal-coastal-data, which recorded it as dead since 2026-05-03 with the death date read from CDIP archive deployment 155p1_d14. It is the only buoy south of Point Loma, so its absence is why south-county beaches reach a long way for a wave height."
+    },
+    "46086": {
+      "name": "San Clemente Basin",
+      "cdip": null,
+      "lat": 32.504,
+      "lon": -118.029,
+      "delivers": true,
+      "publishes_waves": false,
+      "dead_note": null
+    }
+  },
+  "unresolved": [
+    "46235 Imperial Beach Nearshore is the only buoy south of Point Loma and it does not deliver, so every south-county beach reads a buoy well to its north-west across water of different exposure. The join records the distance rather than hiding it. This is a gap in what NDBC publishes, not one this site can close.",
+    "A buoy's significant wave height is not the height of the wave breaking at the shore. No shoaling or refraction transform is applied, and none is planned: the number shown is what the buoy reported, which is the only thing actually measured.",
+    "46086 San Clemente Basin delivers wind and water temp but no waves, and sits twenty-seven nautical miles offshore outside the county. It is recorded here because it is the only station in the box with wind, and it is bound to no beach."
+  ]
+}

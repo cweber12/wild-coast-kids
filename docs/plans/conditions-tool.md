@@ -437,3 +437,45 @@ Seven caveats render on `/conditions` today, from two data files.
 temp, wind and visibility, the forward panel, the safety layer, water quality,
 the education layer, the weekly probe, and the landing-page teaser — are
 unstarted.
+
+### 2026-08-18 — slice 6, and wind stops being optional
+
+**Ten delivering wave buoys**, measured one at a time against `realtime2` rather
+than read off `activestations.xml`, which lists nineteen stations in the box.
+Every delivering one publishes `WVHT`, `DPD`, `MWD` **and `WTMP`**, so waves and
+water temperature arrive in a single fetch.
+
+**No nearshore buoy publishes wind or visibility — none of the ten.** Slice 3 saw
+this on 46254 and recorded it as one station's quirk; across the corridor it is
+categorical. The only station in the box with wind, 46086, is twenty-seven
+nautical miles offshore and publishes no waves. So slice 7 is not an enhancement:
+two of the four words in the site's own "Surf · Tide · Wind · Visibility" can only
+ever come from the National Weather Service gridpoint forecast.
+
+**Two more listed-but-dead stations.** 46273 Torrey Pines Inner and 46235 Imperial
+Beach both 404 while listed active — 46235 independently confirming what
+`socal-coastal-data` recorded. That is the third time the pattern has appeared,
+after `TWC0405` in the tide join, and it is why every station table in this repo
+carries a measured `delivers` rather than an inherited one.
+
+**Bay beaches get no wave reading at all**, decided with Cole. The wave join is
+deliberately asymmetric with the tide join: the tide has two classes and binds to
+the matching one, while every wave buoy is open-coast, so a bay, lagoon or inlet
+binds to nothing. 27 of the 73 beaches have no wave height, and their pages say
+why. Their water temperature is missing for the same reason and waits for the
+surf zone forecast's county-wide range in slice 9.
+
+**The geometry moved out of the tide join first**, into `scripts/geo.mjs`, as its
+own commit. Two joins need great-circle distance now, and geometry filed under
+either would be found by whoever was not looking for it.
+
+**The parser reads its own units.** Unusually, `realtime2` states them on its
+second header line, so `m` and `degC` are asserted rather than assumed — an
+upstream switch to feet would otherwise be invisible and would read as a very
+calm day.
+
+**Coverage rose to 86.14 / 86.87 / 90.9 / 86.06** and the floor was raised to
+match. The new fetch policy is tested by stubbing `fetch` rather than left as
+plumbing: what a 404 means, when a reading is too old to be called current, and
+which failures are drift are rules, not wiring, and none of them can be asserted
+against a live buoy that is having a good day.
