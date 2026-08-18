@@ -1,0 +1,62 @@
+{
+  "version": "0.1.0",
+  "generated": "2026-08-17",
+  "time_zone": "America/Los_Angeles",
+  "_provenance": "Seeded from the Beach Detail Information resource of 'Beach Advisories (Postings and Closures) and Beach Water Quality Monitoring', published by the California State Water Resources Control Board on the CNRA portal: https://data.cnra.ca.gov/dataset/beach-advisories-postings-and-closures-and-beach-water-quality-monitoring, resource cc674e59-036c-45c3-bec2-5d3d294e0e3d, read 2026-08-17. The data.ca.gov copy (resource fcbc9250-06e3-437d-b0c6-3cc5ddde93fc) serves identical content and is the mirror. Field values are reproduced as the resource serves them, including BeachType 'UNKNOWN'. This file is machine-formatted on purpose: a generator may rewrite it, which is why no two keys share a line.",
+  "_pinned": {
+    "field_name_with_a_space": "Upstream names one field 'Beach_ UpperLon', with an embedded space. That is the resource's own spelling, and any reader must quote it exactly.",
+    "numerics_are_strings": "The datastore serialises numeric columns as JSON strings -- '32.883647', '1'. Coordinates here are converted to numbers once, at seed time, and the conversion is the seed script's job rather than a reader's.",
+    "a_beach_is_a_segment": "Coordinates arrive as an upper/lower pair, so a beach is a shoreline segment and not a point. Every join must say which end it joined from, and a marine protected area test is a segment-versus-polygon question: a segment can straddle a boundary."
+  },
+  "_schema": {
+    "slug": "Stable primary key. Never change after first write.",
+    "name": "Display name, as the resource publishes it.",
+    "segment": "The shoreline extent, upper and lower endpoints, in WGS84 decimal degrees.",
+    "upstream": "Fields reproduced from the resource, unmodified. beach_type 'UNKNOWN' is upstream's own value and must not be rendered as a fact about the beach.",
+    "tide_station": "NOAA CO-OPS station id whose predictions this beach reads.",
+    "tide_station_basis": "Why that station, and by what method it was chosen. Recorded because slice 3 has one beach and no join script: this is a stated basis, not a join result, and it says so."
+  },
+  "tide_stations": {
+    "9410230": {
+      "name": "La Jolla (Scripps Pier)",
+      "role": "open coast"
+    },
+    "9410170": {
+      "name": "San Diego Bay",
+      "role": "bay side only"
+    }
+  },
+  "beaches": [
+    {
+      "slug": "la-jolla-shores",
+      "name": "La Jolla Shores Beach",
+      "segment": {
+        "upper": {
+          "lat": 32.883647,
+          "lon": -117.252681
+        },
+        "lower": {
+          "lat": 32.854717,
+          "lon": -117.259183
+        }
+      },
+      "upstream": {
+        "usepa_id": "CA876094",
+        "agency": "County of San Diego Department of Environmental Health",
+        "water_body_name": "Pacific Ocean",
+        "water_body_type": "Open Coast",
+        "beach_type": "UNKNOWN",
+        "beach_access": "PUBLIC",
+        "status": "Active",
+        "nearest_city": "San Diego"
+      },
+      "tide_station": "9410230",
+      "tide_station_basis": "Open coast, so the open-coast station rather than the bay-side one. Confirmed against an independent product rather than assumed: the National Weather Service surf zone forecast for San Diego County Coastal (CAZ043), issued 12:41 PM PDT 2026-08-17, quotes La Jolla tides of 3.4 ft at 01:29 AM, 2.0 ft at 06:47 AM and 4.9 ft at 01:41 PM for 2026-08-18, and station 9410230's own predictions for those instants are 3.447, 2.006 and 4.938 ft. Three values agreeing to the rounding is what establishes that this station is the one NWS means by 'La Jolla'."
+    }
+  ],
+  "unresolved": [
+    "There is no tide-station join script yet. This beach's station is a stated basis checked against one independent product, which is weaker than a re-runnable join and is the whole reason slice 4 exists. Until it lands, a second beach must not be added to this file by hand.",
+    "beach_type is 'UNKNOWN' upstream for this beach. That is a gap in the resource, not a shorthand for sand, and nothing may render it as a description of what the shore is made of.",
+    "The network module carries no build-time guard against being imported by a browser bundle. The `server-only` package is the intended enforcement and is not installed: importing it breaks these tests under jsdom until vitest is configured with the `react-server` resolve condition. Today the guarantee rests on the module having no client-side importer, which nothing checks."
+  ]
+}

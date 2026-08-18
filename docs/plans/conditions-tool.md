@@ -299,4 +299,62 @@ the 82 beaches.
    If not, the water-science panel is one location's data and must say so rather
    than render blank elsewhere.
 4. **Next 16.3's caching API.** Every revalidate interval here is provisional
-   until slice 3 reads the shipped documentation.
+   until slice 3 reads the shipped documentation. **Answered — see the addendum.**
+
+## Addenda
+
+### 2026-08-17 — what slice 3 settled, and what it changed
+
+**Open question 4 is closed.** `next.config.ts` does not set
+`cacheComponents`, so the previous caching model applies and `next: { revalidate }`
+is the right mechanism after all. Three facts came out of the shipped docs that
+the plan had wrong or unstated:
+
+- **`fetch` is not cached by default in Next 16**, a change from earlier
+  versions. Every request must opt in explicitly or it reaches upstream on every
+  render. The plan's revalidate table was written as though caching were the
+  default and opting out were the exception; it is the other way round.
+- **A route-segment `revalidate` must be statically analyzable** — `900`, never
+  `15 * 60`.
+- **Enabling Cache Components is its own decision, not a side effect of this
+  work.** It would make Partial Prerendering the default for every route and
+  switch client navigation to React's `<Activity>`, preserving component state
+  across the gallery and the nav. That belongs in an ADR of its own if it is ever
+  wanted.
+
+**A new constraint the plan did not anticipate: the clock cannot be read during
+render.** `react-hooks/purity` rejects `Date.now()` in a component, and it is
+right — a value that changes between renders makes the render unstable. Since
+"which day is today" is exactly a clock read, this reshapes the fetch layer: the
+clock is resolved in the data layer beside the fetch, `nowMs` is injectable, and
+what reaches a component is a settled value model with no clock in it. The
+benefit is that the day-selection rule is now tested against fixed instants
+instead of a faked system clock. Every later slice that needs "now" — the
+180-minute freshness limit on buoy readings especially — inherits this shape.
+
+**How "today" stays current, and the error that remains.** Predictions are cached
+six hours; the page revalidates every fifteen minutes, for the calendar rather
+than the tide. The residual error is a window of up to fifteen minutes after local
+midnight in which the page still names the previous day. Forcing the route dynamic
+would close it and would also, in this version of Next, override every fetch to
+`no-store` and reach NOAA on every request. The bounded error is the better trade,
+and it is stated in the code rather than left for someone to find.
+
+**`server-only` is not installed, so the enforcement the plan claimed does not
+exist yet.** Importing it throws when resolved under jsdom, which would take the
+test suite with it until vitest is configured with the `react-server` resolve
+condition. Today the guarantee that no upstream request reaches a browser rests on
+the module having no client-side importer, which nothing checks. Recorded in
+`beaches.json`'s `unresolved` array.
+
+**Scope: slice 3 shipped on its own**, not with slices 4 and 5 as PR B intended.
+It came to ~1,500 lines with its tests, which is past the reviewable limit this
+repo sets, so the dependency boundary moved: slices 4 and 5 are the next pull
+request.
+
+**One thing outside the plan came with it.** Adding seven test files pushed an
+existing assertion in `scripts/gate-scope.test.mjs` past vitest's 5-second
+default: it constructed a fresh `ESLint` per assertion, and that construction is
+CPU-bound. `main` at 30 test files is green; 37 turns it red. Fixed as its own
+commit and its own issue rather than folded into the feature, because the number
+was never about the assertion.
