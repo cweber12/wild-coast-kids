@@ -2,12 +2,25 @@ import { expect, test } from "vitest";
 import { render, screen } from "@testing-library/react";
 import { Conditions } from "./Conditions";
 
-test("the conditions teaser renders its heading and embed slot", () => {
+test("the conditions teaser renders its heading and reserved slot", () => {
   render(<Conditions />);
 
   const heading = screen.getByRole("heading", { level: 2 });
   expect(heading.textContent).toContain("conditions");
-  expect(screen.getByText(/conditions tool coming soon/i)).toBeDefined();
+  expect(screen.getByText(/today's low tide is live/i)).toBeDefined();
+  expect(
+    screen.getByText(/surf, wind and visibility are still to come/i),
+  ).toBeDefined();
+});
+
+test("the slot's copy is addressed to a visitor, not to whoever builds the site", () => {
+  render(<Conditions />);
+
+  // It read "Drop the URL and it embeds here automatically" until #59: an
+  // instruction to a builder, describing an embed ADR-0009 retired, on the copy
+  // a parent actually reads.
+  expect(screen.queryByText(/drop the url/i)).toBeNull();
+  expect(screen.queryByText(/embed/i)).toBeNull();
 });
 
 test("the section teases the full conditions page", () => {
