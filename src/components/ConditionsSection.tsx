@@ -9,8 +9,9 @@
  */
 
 import { Suspense } from "react";
-import { beachesByRegion } from "@/lib/beaches";
+import { beachesByRegion, inventoryCaveats } from "@/lib/beaches";
 import { BeachSelector } from "./BeachSelector";
+import { Caveats } from "./Caveats";
 import { TidePanel } from "./TidePanel";
 
 export function ConditionsSection({ slug }: { slug: string }) {
@@ -47,6 +48,8 @@ export function ConditionsSection({ slug }: { slug: string }) {
       >
         <TidePanel slug={slug} />
       </Suspense>
+
+      <Caveats entries={inventoryCaveats()} />
     </section>
   );
 }
