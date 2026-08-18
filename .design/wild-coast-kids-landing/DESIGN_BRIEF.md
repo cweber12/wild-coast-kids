@@ -294,6 +294,8 @@ since changed things it still stated as current.
   (email/sheet/service) is chosen.
 - A real booking destination — the CTAs point at `/book`, and which provider
   sits behind that page is a decision that has not been made.
-- The conditions tool embed — the reserved slot ships as-is.
+- The conditions tool — built in this repo rather than embedded from elsewhere
+  (ADR-0009), under its own plan (`docs/plans/conditions-tool.md`) rather than
+  this brief. The landing teaser's reserved slot ships as-is.
 - Dark mode, CMS, analytics.
 - The template's editorial block and yellow banner — cut, not deferred.
