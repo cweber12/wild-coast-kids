@@ -4,6 +4,9 @@ import { render, screen } from "@testing-library/react";
 vi.mock("@/components/TidePanel", () => ({
   TidePanel: ({ slug }: { slug: string }) => <p>panel for {slug}</p>,
 }));
+vi.mock("@/components/WavePanel", () => ({
+  WavePanel: ({ slug }: { slug: string }) => <p>waves for {slug}</p>,
+}));
 
 const notFound = vi.fn(() => {
   throw new Error("NEXT_NOT_FOUND");

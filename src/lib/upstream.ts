@@ -42,6 +42,12 @@ import {
   type CoopsRequestContract,
   type TideExtreme,
 } from "./coops-predictions";
+import {
+  NdbcDriftError,
+  NdbcNoDataError,
+  parseNdbcRealtime2,
+  type WaveObservation,
+} from "./ndbc-realtime2";
 
 /** Six hours. Astronomical predictions do not change; the window only rolls forward. */
 export const PREDICTIONS_REVALIDATE_SECONDS = 21600;
@@ -117,4 +123,101 @@ export async function fetchTideExtremes(
     }
     return unavailable(cause instanceof Error ? cause.message : String(cause));
   }
+}
+
+/* ===========================================================================
+ * NDBC waves and water temperature
+ * ========================================================================= */
+
+/**
+ * Fifteen minutes. These buoys publish about every thirty, so a quarter-hour
+ * never serves a reading more than one cycle stale, and asking more often would
+ * cost NDBC requests that cannot return anything new.
+ */
+export const WAVES_REVALIDATE_SECONDS = 900;
+
+/**
+ * Beyond this, a "current" reading is not current. These buoys publish about
+ * every thirty minutes, so three hours means at least five missed cycles: the
+ * buoy is answering and not reporting. Reported as unknown rather than as a
+ * stale number wearing no warning.
+ */
+export const MAX_WAVE_AGE_MINUTES = 180;
+
+const NDBC_BASE = "https://www.ndbc.noaa.gov/data/realtime2";
+
+export type WaveResult =
+  | {
+      kind: "ok";
+      observation: WaveObservation;
+      ageMinutes: number;
+      url: string;
+    }
+  | { kind: "unavailable"; reason: string; drift: boolean; url: string };
+
+/**
+ * Fetch one buoy's newest wave observation.
+ *
+ * Never throws. `nowMs` is passed in rather than read here, so the freshness
+ * limit is testable against a fixed instant and no clock is read during a
+ * render.
+ */
+export async function fetchLatestWave(
+  buoyId: string,
+  nowMs: number,
+): Promise<WaveResult> {
+  const url = `${NDBC_BASE}/${buoyId}.txt`;
+
+  const unavailable = (reason: string, drift = false): WaveResult => ({
+    kind: "unavailable",
+    reason,
+    drift,
+    url,
+  });
+
+  let response: Response;
+  try {
+    response = await fetch(url, {
+      headers: { "User-Agent": USER_AGENT },
+      next: { revalidate: WAVES_REVALIDATE_SECONDS },
+    });
+  } catch (cause) {
+    return unavailable(
+      `The request to NDBC for buoy ${buoyId} did not complete: ` +
+        `${cause instanceof Error ? cause.message : String(cause)}`,
+    );
+  }
+
+  if (response.status === 404) {
+    // What a decommissioned buoy does. Its entry in NDBC's active station list
+    // can outlive it, which is why the inventory records measured delivery.
+    return unavailable(
+      `NDBC ${buoyId} returns 404 for its observations. The buoy is not publishing.`,
+    );
+  }
+  if (!response.ok) {
+    return unavailable(
+      `NDBC returned HTTP ${response.status} for buoy ${buoyId}.`,
+    );
+  }
+
+  let observation: WaveObservation;
+  try {
+    observation = parseNdbcRealtime2(await response.text(), buoyId);
+  } catch (cause) {
+    if (cause instanceof NdbcDriftError)
+      return unavailable(cause.message, true);
+    if (cause instanceof NdbcNoDataError) return unavailable(cause.message);
+    return unavailable(cause instanceof Error ? cause.message : String(cause));
+  }
+
+  const ageMinutes = (nowMs - observation.atMs) / 60_000;
+  if (ageMinutes > MAX_WAVE_AGE_MINUTES) {
+    return unavailable(
+      `NDBC ${buoyId}'s newest observation is ${Math.round(ageMinutes)} minutes old, past the ` +
+        `${MAX_WAVE_AGE_MINUTES} minute limit. Reported as unknown rather than as a current reading.`,
+    );
+  }
+
+  return { kind: "ok", observation, ageMinutes, url };
 }

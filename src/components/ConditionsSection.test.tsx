@@ -4,6 +4,9 @@ import { render, screen } from "@testing-library/react";
 vi.mock("@/components/TidePanel", () => ({
   TidePanel: ({ slug }: { slug: string }) => <p>panel for {slug}</p>,
 }));
+vi.mock("@/components/WavePanel", () => ({
+  WavePanel: ({ slug }: { slug: string }) => <p>waves for {slug}</p>,
+}));
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push: vi.fn() }) }));
 
 const { ConditionsSection } = await import("./ConditionsSection");
@@ -14,6 +17,7 @@ test("the view carries the chooser, the reading and the caveats", () => {
 
   expect(screen.getByLabelText("Choose a beach")).toBeDefined();
   expect(screen.getByText(`panel for ${DEFAULT_BEACH_SLUG}`)).toBeDefined();
+  expect(screen.getByText(`waves for ${DEFAULT_BEACH_SLUG}`)).toBeDefined();
   expect(
     screen.getByText("What we are unsure about in this data"),
   ).toBeDefined();

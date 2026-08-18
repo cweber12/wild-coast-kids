@@ -7,6 +7,7 @@ import {
   defaultBeach,
   inventoryCaveats,
   tideStationFor,
+  waveBuoyFor,
 } from "./beaches";
 
 describe("the inventory", () => {
@@ -151,5 +152,42 @@ describe("caveats", () => {
     // The station file's own caveat about the gap on the open coast must reach a
     // reader, not just the inventory's.
     expect(caveats.some((c) => c.includes("TWC0405"))).toBe(true);
+  });
+});
+
+describe("the wave buoy binding", () => {
+  test("open-coast beaches get a delivering buoy that publishes waves", () => {
+    const bound = allBeaches().filter((beach) => beach.wave_buoy !== null);
+    expect(bound.length).toBeGreaterThan(0);
+
+    for (const beach of bound) {
+      const buoy = waveBuoyFor(beach)!;
+      expect(buoy.delivers).toBe(true);
+      expect(buoy.publishes_waves).toBe(true);
+      expect(beach.upstream.water_body_type).toBe("Open Coast");
+    }
+  });
+
+  test("no bay, lagoon or inlet is bound to a buoy", () => {
+    // Swell does not reach them, so the nearest buoy would describe different
+    // water. The reason travels with the null.
+    for (const beach of allBeaches()) {
+      if (beach.upstream.water_body_type === "Open Coast") continue;
+      expect(beach.wave_buoy).toBeNull();
+      expect(beach.wave_buoy_null_reason).toBeTruthy();
+      expect(waveBuoyFor(beach)).toBeNull();
+    }
+  });
+
+  test("a beach naming an undescribed buoy is a broken data file, and says so", () => {
+    const beach = { ...defaultBeach(), wave_buoy: "99999" };
+    expect(() => waveBuoyFor(beach)).toThrow(/no entry in wave-buoys.json/);
+  });
+
+  test("the dead buoys are kept and marked, not deleted", () => {
+    // 46235 is the only buoy south of Point Loma and it 404s; deleting it would
+    // erase the reason south-county beaches reach so far for a height.
+    const caveats = inventoryCaveats();
+    expect(caveats.some((c) => c.includes("46235"))).toBe(true);
   });
 });

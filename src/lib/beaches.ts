@@ -13,6 +13,7 @@
 
 import inventory from "@/data/beaches.json";
 import stationTable from "@/data/tide-stations.json";
+import buoyTable from "@/data/wave-buoys.json";
 
 export interface Coordinate {
   lat: number;
@@ -51,6 +52,24 @@ export interface Beach {
   tide_station_from_end: string | null;
   /** Present exactly when tide_station is null, and required then. */
   tide_station_null_reason?: string;
+  /** Joined, never typed. null for every bay, lagoon and inlet. */
+  wave_buoy: string | null;
+  wave_buoy_distance_m: number | null;
+  wave_buoy_from_end: string | null;
+  /** Present exactly when wave_buoy is null, and required then. */
+  wave_buoy_null_reason?: string;
+}
+
+export interface WaveBuoy {
+  name: string;
+  cdip: string | null;
+  lat: number;
+  lon: number;
+  /** Measured, not assumed. A buoy that does not deliver is kept and marked. */
+  delivers: boolean;
+  /** One delivering station carries no wave height at all, so this is separate. */
+  publishes_waves: boolean;
+  dead_note?: string | null;
 }
 
 export interface TideStation {
@@ -67,6 +86,7 @@ export interface TideStation {
 
 const BEACHES = inventory.beaches as readonly Beach[];
 const STATIONS = stationTable.stations as Readonly<Record<string, TideStation>>;
+const BUOYS = buoyTable.buoys as Readonly<Record<string, WaveBuoy>>;
 
 /**
  * The beach the conditions view opens on when no other is asked for.
@@ -147,10 +167,31 @@ export function tideStationFor(
   return { id: beach.tide_station, ...station };
 }
 
-/** Caveats carried by both data files. Every one owes the reader a rendering. */
+/**
+ * The wave buoy a beach reads, or null when the join bound none.
+ *
+ * Throws when a beach names a buoy the table does not describe -- a broken pair
+ * of data files, which should stop a build rather than render an unlabelled
+ * number.
+ */
+export function waveBuoyFor(beach: Beach): (WaveBuoy & { id: string }) | null {
+  if (beach.wave_buoy === null) return null;
+
+  const buoy = BUOYS[beach.wave_buoy];
+  if (!buoy) {
+    throw new Error(
+      `beaches.json: ${beach.slug} names wave buoy ${beach.wave_buoy}, ` +
+        `which has no entry in wave-buoys.json.`,
+    );
+  }
+  return { id: beach.wave_buoy, ...buoy };
+}
+
+/** Caveats carried by every data file. Every one owes the reader a rendering. */
 export function inventoryCaveats(): readonly string[] {
   return [
     ...(inventory.unresolved as readonly string[]),
     ...(stationTable.unresolved as readonly string[]),
+    ...(buoyTable.unresolved as readonly string[]),
   ];
 }

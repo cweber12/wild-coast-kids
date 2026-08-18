@@ -7,6 +7,21 @@ import {
   slugify,
 } from "./seed-beaches.mjs";
 
+const BUOYS = {
+  46254: {
+    lat: 32.868,
+    lon: -117.267,
+    delivers: true,
+    publishes_waves: true,
+  },
+  46235: {
+    lat: 32.57,
+    lon: -117.169,
+    delivers: false,
+    publishes_waves: false,
+  },
+};
+
 const STATIONS = {
   9410230: {
     lat: 32.8669,
@@ -105,12 +120,30 @@ describe("regionOf", () => {
 
 describe("build", () => {
   it("binds a beach and records how the join measured it", () => {
-    const [beach] = build([row()], STATIONS);
+    const [beach] = build([row()], STATIONS, BUOYS);
 
     expect(beach.slug).toBe("somewhere-beach");
     expect(beach.tide_station).toBe("9410230");
     expect(beach.tide_station_distance_m).toBeGreaterThan(0);
     expect(["upper", "lower"]).toContain(beach.tide_station_from_end);
+
+    // The wave binding rides along on the same walk, and an open-coast beach
+    // gets one.
+    expect(beach.wave_buoy).toBe("46254");
+    expect(beach.wave_buoy_distance_m).toBeGreaterThan(0);
+  });
+
+  it("gives a bay beach a tide station and no wave buoy", () => {
+    const [beach] = build(
+      [row({ WaterBodyType: "Sound, Bay, or Inlet" })],
+      STATIONS,
+      BUOYS,
+    );
+
+    // Swell does not reach into a bay, and the tide certainly does.
+    expect(beach.tide_station).toBe("9410170");
+    expect(beach.wave_buoy).toBeNull();
+    expect(beach.wave_buoy_null_reason).toMatch(/does not reach into a bay/);
   });
 
   it("refuses a beach whose coordinates cannot be used, and says why", () => {
@@ -125,6 +158,7 @@ describe("build", () => {
         }),
       ],
       STATIONS,
+      BUOYS,
     );
 
     expect(beach.tide_station).toBeNull();
@@ -134,18 +168,20 @@ describe("build", () => {
   it("stops on a duplicate slug rather than disambiguating one", () => {
     // A slug is a primary key. Making one unique automatically would make it
     // unstable, and data accumulates against it.
-    expect(() => build([row(), row()], STATIONS)).toThrow(/is claimed by both/);
+    expect(() => build([row(), row()], STATIONS, BUOYS)).toThrow(
+      /is claimed by both/,
+    );
   });
 
   it("stops when a pinned column is missing", () => {
     const missing = row();
     delete missing["Beach_ UpperLon"];
-    expect(() => build([missing], STATIONS)).toThrow(/has drifted/);
+    expect(() => build([missing], STATIONS, BUOYS)).toThrow(/has drifted/);
   });
 
   it("stops when a coordinate does not parse", () => {
     expect(() =>
-      build([row({ Beach_UpperLat: "north a bit" })], STATIONS),
+      build([row({ Beach_UpperLat: "north a bit" })], STATIONS, BUOYS),
     ).toThrow(/did not parse as numbers/);
   });
 
@@ -164,6 +200,7 @@ describe("build", () => {
         }),
       ],
       STATIONS,
+      BUOYS,
     );
     expect(built.map((b) => b.slug)).toEqual(["north-one", "south-one"]);
   });
@@ -180,6 +217,7 @@ describe("document", () => {
         }),
       ],
       STATIONS,
+      BUOYS,
     );
     const doc = document(built);
 
@@ -192,7 +230,7 @@ describe("document", () => {
     // Carrying entries forward from the file duplicated them on the second run,
     // and made --check report movement immediately after a seed. A check that
     // cannot say "unchanged" says nothing.
-    const built = build([row()], STATIONS);
+    const built = build([row()], STATIONS, BUOYS);
     const first = document(built).unresolved;
     const second = document(built).unresolved;
 

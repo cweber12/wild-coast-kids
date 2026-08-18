@@ -1,9 +1,10 @@
 import { beforeEach, expect, test, vi } from "vitest";
 
 const fetchTideExtremes = vi.fn();
-vi.mock("./upstream", () => ({ fetchTideExtremes }));
+const fetchLatestWave = vi.fn();
+vi.mock("./upstream", () => ({ fetchTideExtremes, fetchLatestWave }));
 
-const { readTodaysLowestLow } = await import("./conditions");
+const { readTodaysLowestLow, readLatestWaves } = await import("./conditions");
 
 const BEACH = "la-jolla-shores-beach";
 
@@ -21,6 +22,7 @@ const JUST_AFTER_MIDNIGHT_20260817 = Date.UTC(2026, 7, 17, 7, 30);
 
 beforeEach(() => {
   fetchTideExtremes.mockReset();
+  fetchLatestWave.mockReset();
 });
 
 function ok(extremes: { atMs: number; feet: number; kind: "low" | "high" }[]) {
@@ -145,4 +147,83 @@ test("a slug outside the inventory is a coding error, and nothing is fetched", a
     readTodaysLowestLow("no-such-beach", NOON_PACIFIC_20260817),
   ).rejects.toThrow(/no beach in the inventory/);
   expect(fetchTideExtremes).not.toHaveBeenCalled();
+});
+
+/* ===========================================================================
+ * Waves
+ * ========================================================================= */
+
+/** A bay beach, which the join deliberately binds to no buoy. */
+const BAY_BEACH = "agua-hedionda-lagoon";
+
+test("a wave reading carries the buoy, its distance and the water temperature", async () => {
+  fetchLatestWave.mockResolvedValue({
+    kind: "ok",
+    observation: {
+      atMs: NOON_PACIFIC_20260817,
+      heightFt: 2.62,
+      periodS: 5,
+      directionDegT: 278,
+      waterTempF: 69.98,
+    },
+    ageMinutes: 12,
+    url: "https://example.invalid",
+  });
+
+  const view = await readLatestWaves(
+    "la-jolla-shores-beach",
+    NOON_PACIFIC_20260817,
+  );
+
+  expect(view.buoy?.name).toBe("Scripps Nearshore");
+  expect(view.buoy?.distanceM).toBeGreaterThan(0);
+  expect(view.state).toMatchObject({
+    kind: "reading",
+    heightFt: 2.62,
+    waterTempF: 69.98,
+  });
+});
+
+test("a bay beach is never asked about, because there is nothing to ask", async () => {
+  const view = await readLatestWaves(BAY_BEACH, NOON_PACIFIC_20260817);
+
+  expect(view.state.kind).toBe("no-buoy");
+  expect(view.buoy).toBeNull();
+  expect(fetchLatestWave).not.toHaveBeenCalled();
+  if (view.state.kind === "no-buoy") {
+    expect(view.state.reason).toMatch(/does not reach into a bay/);
+  }
+});
+
+test("an unavailable buoy carries its reason through", async () => {
+  fetchLatestWave.mockResolvedValue({
+    kind: "unavailable",
+    reason: "NDBC 46254 returns 404 for its observations.",
+    drift: false,
+    url: "https://example.invalid",
+  });
+
+  const view = await readLatestWaves(
+    "la-jolla-shores-beach",
+    NOON_PACIFIC_20260817,
+  );
+
+  expect(view.state).toEqual({
+    kind: "unavailable",
+    detail: "NDBC 46254 returns 404 for its observations.",
+    drift: false,
+  });
+});
+
+test("the clock is passed to the fetch, so freshness is judged not guessed", async () => {
+  fetchLatestWave.mockResolvedValue({
+    kind: "unavailable",
+    reason: "stale",
+    drift: false,
+    url: "https://example.invalid",
+  });
+
+  await readLatestWaves("la-jolla-shores-beach", NOON_PACIFIC_20260817);
+
+  expect(fetchLatestWave).toHaveBeenCalledWith("46254", NOON_PACIFIC_20260817);
 });
