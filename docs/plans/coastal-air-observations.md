@@ -239,3 +239,65 @@ measured candidate set needs no such constant.
 - The four non-delivering fixed stations: SDBC1 publishes no air at all, NPQC1
   and TIQC1 serve no `realtime2`, and KF70 returns HTTP 404 while listed.
 - Re-litigating which beaches are in the inventory.
+
+## Addendum — 2026-08-18: visibility stays, and the probe leaves
+
+Decided with Cole after the plan above was committed. Two changes, and the
+second follows from the first only in scheduling, not in logic.
+
+**Visibility is kept.** The body above removes it and lists "keep visibility,
+sourced separately and disclosed" among the rejected options. That rejection is
+withdrawn. It rested on an assumption that was never checked: that keeping
+visibility meant keeping a second station for it. It does not. Sky and
+visibility are the same capability, measured 2026-08-18 across all nine
+candidates and the three near mesonet stations:
+
+```
+KSAN   textDescription "Clear"          visibility 16093   METAR: both
+KNFG   textDescription "Partly Cloudy"  visibility 16090   METAR: both
+KCRQ   textDescription "Clear"          visibility 16093   METAR: both
+MSDSD  textDescription null             visibility none    mesonet: neither
+DMHSD  textDescription null             visibility none    mesonet: neither
+D3101  textDescription null             visibility none    mesonet: neither
+```
+
+METAR stations publish both; mesonet stations publish neither. The airport
+binding this plan already keeps for sky therefore supplies visibility at no
+additional cost -- no second station, no second fetch, no third provenance. What
+changes in the panel is rank, not membership: temperature takes the primary slot
+and visibility joins wind and sky beneath it.
+
+KNKX read `textDescription: null` on one probe and "Partly Cloudy" twenty
+minutes earlier. That is a per-observation gap, not a capability gap, and it is
+the same class as LJAC1's intermittent `ATMP` -- handled by the per-field
+freshness rule already specified above, not by a separate mechanism.
+
+**The probe leaves this plan.** Slice 4 existed because removing visibility
+removed the filter that made a 13-station table sufficient. With visibility
+kept, the air pool can be the two coastal stations with a fallback to the
+airport already bound, which needs no re-probe and no regenerated table.
+
+This is a real reduction in what the reader gets, and it is recorded rather than
+glossed: only the 25 beaches with a coastal station improve. The other 47 keep
+reading an airport 7-17 km away when mesonet stations sit at 3-6 km publishing
+real temperature and wind -- MSDSD reads 24.3 C where Miramar reads 27.8 C. That
+work is filed as its own issue rather than dropped, and the audit finding it
+answers -- that the station tables are hand-curated and `--check` can re-derive
+nothing about their membership -- stands unfixed until it lands.
+
+**Revised slices.** 1 and 2 are unchanged.
+
+3. Lead with temperature; visibility moves from the primary slot to the
+   secondary line. Reorder only, no removal, no new data.
+4. Air join and the NDBC air parser, with the air pool as the two coastal
+   stations falling back to the bound airport: La Jolla Shores reads the pier.
+
+Former slices 4 and 6 are withdrawn -- the probe to its own issue, and the sky
+join split as unnecessary, since one binding already supplies sky and visibility
+together. Four slices, one PR.
+
+**What this does not change.** The two-provenance decision in ADR 0010 stands:
+temperature and wind come from one station, sky and visibility from another, and
+both are named on the panel with their distances. The ADR's text is amended in
+the same commit as this addendum, because its argument as first written rests on
+visibility being removed.
