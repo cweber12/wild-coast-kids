@@ -12,14 +12,22 @@
  * regardless of its water body type, and the asymmetry is deliberate rather than
  * an oversight in one of the two.
  *
- * WHAT IT FILTERS ON IS `publishes_visibility`, NOT PROXIMITY. Forty-six of the
- * fifty-six candidate stations in the county box answer perfectly and carry no
- * visibility at all, and the two nearest La Jolla Shores -- D3101 and MSDSD --
- * are both of that kind. A nearest-station join would therefore bind this site's
- * visibility promise to a station that has never published one. Requiring the
- * field means the binding is further away and can actually answer, and it means
- * one station supplies all four of the panel's values rather than two stations
- * being blended behind one heading.
+ * WHAT IT FILTERS ON IS `publishes_sky`, NOT PROXIMITY. Of the sixty-two probed
+ * candidates only ten carry a sky description, every one of them an airport
+ * METAR, and the two nearest La Jolla Shores -- D3101 and MSDSD -- carry none.
+ * A nearest-station join would therefore bind this site's sky and visibility to
+ * a station that has never published either.
+ *
+ * THE FIELD WAS RENAMED, NOT THE RULE. It filtered on `publishes_visibility`
+ * until the table was generated, and sky and visibility were then measured to be
+ * one capability: the same ten stations publish both, with sky the scarcer of
+ * the two per observation, so `publishes_sky` is the stricter test and selects
+ * the same set. See docs/adr/0010-two-provenances-in-the-air-panel.md.
+ *
+ * The table this reads now holds every candidate in the county rather than the
+ * thirteen a visibility-shaped probe recorded, so the filter is doing far more
+ * work than it was: 56 of the 62 rows publish temperature and wind, and this
+ * join deliberately ignores all of that. The air join is what reads those.
  */
 
 import { segmentDistance } from "./geo.mjs";
@@ -28,21 +36,21 @@ import { segmentDistance } from "./geo.mjs";
  * Bind one beach to an observation station.
  *
  * @param {{segment: object}} beach
- * @param {Record<string, {lat: number, lon: number, delivers: boolean, publishes_visibility: boolean}>} stations
+ * @param {Record<string, {lat: number, lon: number, delivers: boolean, publishes_sky: boolean}>} stations
  * @returns {{stationId: string, distanceM: number, fromEnd: string}
  *   | {stationId: null, reason: string}}
  */
 export function bindWeatherStation(beach, stations) {
   const candidates = Object.entries(stations).filter(
-    ([, station]) => station.delivers && station.publishes_visibility,
+    ([, station]) => station.delivers && station.publishes_sky,
   );
 
   if (candidates.length === 0) {
     return {
       stationId: null,
       reason:
-        "no observation station in the table both answers and publishes visibility, so " +
-        "there is nothing to bind to",
+        "no observation station in the table both answers and publishes sky, so there " +
+        "is nothing to bind to",
     };
   }
 
