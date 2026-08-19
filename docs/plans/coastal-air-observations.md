@@ -301,3 +301,111 @@ temperature and wind come from one station, sky and visibility from another, and
 both are named on the panel with their distances. The ADR's text is amended in
 the same commit as this addendum, because its argument as first written rests on
 visibility being removed.
+
+## Addendum — 2026-08-18: the probe comes back, and a claim above is wrong
+
+Decided with Cole after measuring all 56 candidates in the county box rather
+than reasoning about them. The addendum above split the probe out to #81 on the
+grounds that it helped only the beaches without a coastal station. That was
+wrong on two counts, and both were assumptions rather than measurements.
+
+**A claim in the body above is false.** It says:
+
+> There are two usable coastal air stations in the county, not a network.
+
+True of NDBC, false of the county. The NWS mesonet has coastal stations at sea
+level, and the body's own framing -- reading a network's listing and concluding
+something about the coast -- is the same error this plan criticises in
+`wave-buoys.json`:
+
+```
+F1327     0.0 m   San Clemente Pier
+SOBSD     1.2 m   Solana Beach
+E9951     3.6 m   San Diego Shelter Island
+E3174     4.9 m   Oceanside
+```
+
+**Probed 2026-08-18, all 56 candidates, six observations each.** 56 deliver, 53
+publish both temperature and wind, 10 publish sky. So the pool the air join
+should rank over is 53 stations and not the 13 a visibility-shaped probe
+recorded.
+
+**The restricted pool produces bindings that are simply wrong.** Ranking only
+over LJAC1 and TIXC1 with a fallback to the bound airport binds Solana Beach
+City Beaches to a pier 12.68 km away while SOBSD sits 0.89 km from it at 1.2 m:
+
+```
+Solana Beach City Beaches   LJAC1 12.68 km  ->  SOBSD  0.89 km
+Seascape Beach Park         LJAC1 12.68 km  ->  SOBSD  2.79 km
+Del Mar City Beach          LJAC1  9.15 km  ->  SOBSD  3.03 km
+```
+
+Ten of the 25 beaches the restricted pool "fixes" are bound better by the full
+set. Shipping it would mean publishing a binding that the next slice overturns.
+
+**#81 is therefore folded back in and closed.** For the 47 beaches no coastal
+NDBC station reaches, the full pool binds a nearer station for 42 of them:
+median distance saved 3.5 km, new distance median 3.6 km against a maximum of
+16.8 km today. Oceanside Harbor goes 4.3 km to 0.3 km.
+
+### Elevation is decided rather than deferred
+
+The body above defers elevation ranking. The measurement makes it live: pure
+distance binds 24 beaches to a station above 50 m, because Mt. Soledad at 102 m
+overlooks half the corridor. The trade splits cleanly in the data, which is why
+this is not a tuned constant:
+
+```
+WindanSea Beach        MSDSD 3.8 km @102 m   vs LJAC1 4.1 km @0 m   (+0.2 km)
+Torrey Pines State     D3101 2.8 km @105 m   vs LJAC1 3.2 km @0 m   (+0.4 km)
+Moonlight Beach        E9978 3.9 km @ 86 m   vs SOBSD 4.3 km @1 m   (+0.4 km)
+Mission Beach          MSDSD 2.7 km @102 m   vs E9951 5.6 km @4 m   (+2.9 km)
+Mission Bay, Fanuel    MSDSD 2.7 km @102 m   vs KSAN  7.9 km @4 m   (+5.3 km)
+```
+
+The cases costing under a kilometre are all open coast; the cases costing two to
+five kilometres are all Mission Bay. A blanket elevation cap gets this wrong in
+both directions -- it collapses the pool from 55 candidates to 8 and pushes the
+median distance up from 3.1 km to 4.3 km.
+
+**The rule is the one the tide join already uses.** `waterClassOf` classifies a
+beach as open-coast or bay; stations carry a hand-written `shore` flag. An
+open-coast beach binds a shore station; a bay or lagoon beach binds the nearest
+station of any kind, because a marine layer is not what a station overlooking
+Mission Bay gets wrong.
+
+`shore` is a join input, not a measurement, and it has precedent in this repo:
+`tide-stations.json` defends its hand-written `water` field on the grounds that
+no authority publishes the classification and a join has to be told which
+stations are candidates for which beaches. Elevation is recorded beside it as
+measured metadata, because it is what the classification is read from.
+
+Measured outcome across all 72 bound beaches:
+
+```
+open coast   46 beaches   distance median 3.5 km  max 8.9 km  all shore stations
+bay/lagoon   26 beaches   distance median 3.9 km  max 6.3 km
+today                     distance median 7.3 km  max 16.8 km  all airports
+```
+
+### Revised slices
+
+1 and 2 unchanged.
+
+3. Lead with temperature; visibility moves to the secondary line. Reorder only.
+4. `probe-observation-stations.mjs` generates the station table across both
+   networks, with a capability flag per field, measured elevation and the
+   hand-written `shore` input.
+5. Air join over the full pool, with the shore preference: temperature and wind
+   to the nearest station that publishes both and suits the beach's water class.
+6. NDBC air parser and the two-network fetch, so an NDBC station can win the
+   join -- La Jolla Shores reads the pier.
+
+Six slices, split into two PRs at the 4/5 boundary.
+
+### What this costs
+
+The work roughly doubles against the addendum above. It buys a binding that is
+correct on the evidence rather than one built from a candidate set assembled to
+answer a different question, and it fixes the audit finding -- station tables
+whose membership no gate can re-derive -- rather than recording it as accepted.
