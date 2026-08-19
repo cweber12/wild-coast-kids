@@ -4,7 +4,8 @@
   "_provenance": "Measured by scripts/probe-observation-stations.mjs; re-runnable and diffable with --check. National Weather Service candidates are the union of https://api.weather.gov/gridpoints/<grid>/stations over every distinct gridpoint the beaches in beaches.json resolve to, filtered to 32.4-33.6N and -117.7 to -116.8E: 56 stations. The state-wide listing at /stations?state=CA is NOT the source; it is capped at 500 results and truncates before reaching either KSAN or KNKX. NDBC candidates are https://www.ndbc.noaa.gov/activestations.xml filtered to the wave corridor box 32.4-33.5N and -118.2 to -117E AND to type \"fixed\": 6 stations. That type filter is the criterion that lost both Scripps Pier stations from wave-buoys.json, so it is stated here rather than applied silently -- NDBC's buoys are that table's subject, eleven of the thirteen in the box publish no air temperature or wind at all, and the one that publishes both, 46086, is twenty-seven nautical miles offshore and out of every beach's reach. Capability was then measured one station at a time against the endpoints this site reads -- /stations/<id>/observations for NWS, https://www.ndbc.noaa.gov/data/realtime2/<id>.txt for NDBC -- rather than inferred from either listing.",
   "_what_was_measured": "6 observations per station; a field counts as published if it appears on at least one of them. Of 62 candidates, 60 deliver, 56 publish air temperature and wind together, and 10 publish sky. So the pool an air join ranks over is 56 stations and not the thirteen a visibility-shaped probe recorded. Sky and visibility are one capability: both were measured, and they select exactly the same stations -- every one an airport METAR -- with sky the scarcer of the two per observation. Only publishes_sky is stored, because two flags for one capability are two things that can drift apart while naming one. Counts of how many of the six observations carried a field are deliberately absent from this file: they move on every probe, and a --check that fails from noise stops being read.",
   "_schema": {
-    "name": "The station name, reproduced as its network serves it. D3101's carries the run of spaces and the trailing 'CA US' that upstream publishes.",
+    "name": "The station name, reproduced as its network serves it, run of spaces and trailing 'CA US' included. A record of what upstream said, and what a later probe compares against. NOT what is shown to a reader -- see display_name.",
+    "display_name": "What the page calls this station. Hand-written, like `shore` and like tide-stations.json's `water`, because the published name is an identifier rather than prose for most of these: the mesonet publishes callsigns, the tide network publishes station numbers, and the reserve network publishes instrument sites. The rule is the shortest name someone looking at a map of this county would recognise, saying nothing the sentence around it already says. See #87.",
     "network": "Which publisher serves this station, and therefore which fetcher reads it: 'nws' for api.weather.gov, 'ndbc' for the realtime2 text product.",
     "lat": "Decimal degrees north, from the network's own listing.",
     "lon": "Decimal degrees east, negative for west.",
@@ -19,6 +20,7 @@
   "stations": {
     "SDFRV": {
       "name": "French Valley",
+      "display_name": "French Valley",
       "network": "nws",
       "lat": 33.597,
       "lon": -117.088,
@@ -31,6 +33,7 @@
     },
     "KF70": {
       "name": "Murrieta/Temecula French Valley",
+      "display_name": "French Valley Airport",
       "network": "nws",
       "lat": 33.5742,
       "lon": -117.1285,
@@ -43,6 +46,7 @@
     },
     "ORTSD": {
       "name": "Ortega",
+      "display_name": "Ortega",
       "network": "nws",
       "lat": 33.56957,
       "lon": -117.51384,
@@ -55,6 +59,7 @@
     },
     "SDMEA": {
       "name": "Murrieta",
+      "display_name": "Murrieta",
       "network": "nws",
       "lat": 33.5681,
       "lon": -117.2522,
@@ -67,6 +72,7 @@
     },
     "E4050": {
       "name": "EW4050 Mountain Center",
+      "display_name": "Mountain Center",
       "network": "nws",
       "lat": 33.561,
       "lon": -117.3165,
@@ -79,6 +85,7 @@
     },
     "CAPC1": {
       "name": "BELL CANYON",
+      "display_name": "Bell Canyon",
       "network": "nws",
       "lat": 33.55183,
       "lon": -117.57294,
@@ -91,6 +98,7 @@
     },
     "SRUC1": {
       "name": "SANTA ROSA PLATEAU",
+      "display_name": "Santa Rosa Plateau",
       "network": "nws",
       "lat": 33.5181,
       "lon": -117.22906,
@@ -103,6 +111,7 @@
     },
     "F1327": {
       "name": "FW1327 San Clemente Pier          CA US",
+      "display_name": "San Clemente Pier",
       "network": "nws",
       "lat": 33.41917,
       "lon": -117.621,
@@ -115,6 +124,7 @@
     },
     "PAUSD": {
       "name": "Pauma Valley",
+      "display_name": "Pauma Valley",
       "network": "nws",
       "lat": 33.37116,
       "lon": -117.07896,
@@ -127,6 +137,7 @@
     },
     "PZAC1": {
       "name": "PALA",
+      "display_name": "Pala",
       "network": "nws",
       "lat": 33.36111,
       "lon": -117.10583,
@@ -139,6 +150,7 @@
     },
     "KL18": {
       "name": "Fallbrook Community Airpark",
+      "display_name": "Fallbrook",
       "network": "nws",
       "lat": 33.3542,
       "lon": -117.2509,
@@ -151,6 +163,7 @@
     },
     "PAMC1": {
       "name": "PALOMAR",
+      "display_name": "Palomar Mountain",
       "network": "nws",
       "lat": 33.35207,
       "lon": -116.86273,
@@ -163,6 +176,7 @@
     },
     "KNFG": {
       "name": "Oceanside, Camp Pendleton, Marine Corps Air Station",
+      "display_name": "Camp Pendleton",
       "network": "nws",
       "lat": 33.30472,
       "lon": -117.35389,
@@ -175,6 +189,7 @@
     },
     "RINSD": {
       "name": "Rincon",
+      "display_name": "Rincon",
       "network": "nws",
       "lat": 33.28783,
       "lon": -116.95643,
@@ -187,6 +202,7 @@
     },
     "VLCC1": {
       "name": "VALLEY CENTER",
+      "display_name": "Valley Center",
       "network": "nws",
       "lat": 33.23701,
       "lon": -117.00859,
@@ -199,6 +215,7 @@
     },
     "E3055": {
       "name": "EW3055 Vista",
+      "display_name": "Vista",
       "network": "nws",
       "lat": 33.23533,
       "lon": -117.23233,
@@ -211,6 +228,7 @@
     },
     "AU709": {
       "name": "AU709 Escondido",
+      "display_name": "Escondido East",
       "network": "nws",
       "lat": 33.225,
       "lon": -117.11467,
@@ -223,6 +241,7 @@
     },
     "KOKB": {
       "name": "Oceanside, Oceanside Municipal Airport",
+      "display_name": "Oceanside Airport",
       "network": "nws",
       "lat": 33.21806,
       "lon": -117.35139,
@@ -235,6 +254,7 @@
     },
     "E3174": {
       "name": "EW3174 Oceanside",
+      "display_name": "Oceanside",
       "network": "nws",
       "lat": 33.20983,
       "lon": -117.39433,
@@ -247,6 +267,7 @@
     },
     "CBDSD": {
       "name": "Carlsbad",
+      "display_name": "Carlsbad",
       "network": "nws",
       "lat": 33.13742,
       "lon": -117.32712,
@@ -259,6 +280,7 @@
     },
     "KCRQ": {
       "name": "Carlsbad, McClellan-Palomar Airport",
+      "display_name": "Palomar Airport",
       "network": "nws",
       "lat": 33.13,
       "lon": -117.27583,
@@ -271,6 +293,7 @@
     },
     "E3236": {
       "name": "EW3236 Escondido",
+      "display_name": "Escondido",
       "network": "nws",
       "lat": 33.12117,
       "lon": -117.08983,
@@ -283,6 +306,7 @@
     },
     "PSQC1": {
       "name": "SAN PASQUAL",
+      "display_name": "San Pasqual",
       "network": "nws",
       "lat": 33.09139,
       "lon": -117.01222,
@@ -295,6 +319,7 @@
     },
     "GOSC1": {
       "name": "BUD HILL",
+      "display_name": "Bud Hill",
       "network": "nws",
       "lat": 33.08432,
       "lon": -116.8769,
@@ -307,6 +332,7 @@
     },
     "E9978": {
       "name": "EW9978 Encinitas",
+      "display_name": "Encinitas",
       "network": "nws",
       "lat": 33.058,
       "lon": -117.25367,
@@ -319,6 +345,7 @@
     },
     "KRNM": {
       "name": "Ramona, Ramona Airport",
+      "display_name": "Ramona Airport",
       "network": "nws",
       "lat": 33.0375,
       "lon": -116.91583,
@@ -331,6 +358,7 @@
     },
     "WRBSD": {
       "name": "West Rancho Bernardo",
+      "display_name": "West Rancho Bernardo",
       "network": "nws",
       "lat": 33.0312,
       "lon": -117.12233,
@@ -343,6 +371,7 @@
     },
     "E2652": {
       "name": "EW2652 San Diego",
+      "display_name": "San Diego East",
       "network": "nws",
       "lat": 33.022,
       "lon": -117.08267,
@@ -355,6 +384,7 @@
     },
     "SOBSD": {
       "name": "Solana Beach",
+      "display_name": "Solana Beach",
       "network": "nws",
       "lat": 33.00733,
       "lon": -117.27623,
@@ -367,6 +397,7 @@
     },
     "DMHSD": {
       "name": "Del Mar Heights",
+      "display_name": "Del Mar Heights",
       "network": "nws",
       "lat": 32.96404,
       "lon": -117.22284,
@@ -379,6 +410,7 @@
     },
     "E3241": {
       "name": "EW3241 Poway",
+      "display_name": "Poway",
       "network": "nws",
       "lat": 32.9605,
       "lon": -117.01917,
@@ -391,6 +423,7 @@
     },
     "BNASD": {
       "name": "Barona",
+      "display_name": "Barona",
       "network": "nws",
       "lat": 32.93442,
       "lon": -116.87602,
@@ -403,6 +436,7 @@
     },
     "C8688": {
       "name": "CW8688 Mira Mesa",
+      "display_name": "Mira Mesa",
       "network": "nws",
       "lat": 32.92933,
       "lon": -117.131,
@@ -415,6 +449,7 @@
     },
     "D3101": {
       "name": "DW3101 Torrey Pines Reserve       CA US",
+      "display_name": "Torrey Pines Reserve",
       "network": "nws",
       "lat": 32.92083,
       "lon": -117.25283,
@@ -427,6 +462,7 @@
     },
     "SVCSD": {
       "name": "San Vicente",
+      "display_name": "San Vicente",
       "network": "nws",
       "lat": 32.91248,
       "lon": -116.95211,
@@ -439,6 +475,7 @@
     },
     "MSXC1": {
       "name": "MIRAMAR EAST",
+      "display_name": "Miramar East",
       "network": "nws",
       "lat": 32.87547,
       "lon": -117.05956,
@@ -451,6 +488,7 @@
     },
     "KNKX": {
       "name": "San Diego, Miramar MCAS/Mitscher Field Airport",
+      "display_name": "Miramar",
       "network": "nws",
       "lat": 32.86833,
       "lon": -117.1425,
@@ -463,6 +501,7 @@
     },
     "BVYSD": {
       "name": "Blossom Valley",
+      "display_name": "Blossom Valley",
       "network": "nws",
       "lat": 32.8678,
       "lon": -116.84305,
@@ -475,6 +514,7 @@
     },
     "LJAC1": {
       "name": "9410230 - La Jolla, CA",
+      "display_name": "Scripps Pier",
       "network": "ndbc",
       "lat": 32.867,
       "lon": -117.257,
@@ -487,6 +527,7 @@
     },
     "LJPC1": {
       "name": "La Jolla, CA (073)",
+      "display_name": "Scripps Pier",
       "network": "ndbc",
       "lat": 32.867,
       "lon": -117.257,
@@ -499,6 +540,7 @@
     },
     "E3309": {
       "name": "EW3309 Santee",
+      "display_name": "Santee East",
       "network": "nws",
       "lat": 32.8625,
       "lon": -117.002,
@@ -511,6 +553,7 @@
     },
     "E3619": {
       "name": "EW3619 Santee",
+      "display_name": "Santee",
       "network": "nws",
       "lat": 32.85417,
       "lon": -117,
@@ -523,6 +566,7 @@
     },
     "E9965": {
       "name": "EW9965 Lakeside",
+      "display_name": "Lakeside",
       "network": "nws",
       "lat": 32.84133,
       "lon": -116.89283,
@@ -535,6 +579,7 @@
     },
     "C2462": {
       "name": "CW2462 Alpine",
+      "display_name": "Alpine",
       "network": "nws",
       "lat": 32.8155,
       "lon": -116.81383,
@@ -547,6 +592,7 @@
     },
     "KMYF": {
       "name": "San Diego, Montgomery Field",
+      "display_name": "Montgomery Field",
       "network": "nws",
       "lat": 32.81444,
       "lon": -117.13639,
@@ -559,6 +605,7 @@
     },
     "MSDSD": {
       "name": "Mt. Soledad",
+      "display_name": "Mt. Soledad",
       "network": "nws",
       "lat": 32.81418,
       "lon": -117.24088,
@@ -571,6 +618,7 @@
     },
     "CSTSD": {
       "name": "Crest",
+      "display_name": "Crest",
       "network": "nws",
       "lat": 32.8115,
       "lon": -116.85432,
@@ -583,6 +631,7 @@
     },
     "E4858": {
       "name": "EW4858 El Cajon",
+      "display_name": "El Cajon",
       "network": "nws",
       "lat": 32.8005,
       "lon": -116.92867,
@@ -595,6 +644,7 @@
     },
     "MVNSD": {
       "name": "Mission Valley North",
+      "display_name": "Mission Valley North",
       "network": "nws",
       "lat": 32.78137,
       "lon": -117.13758,
@@ -607,6 +657,7 @@
     },
     "D5256": {
       "name": "DW5256 La Mesa",
+      "display_name": "La Mesa",
       "network": "nws",
       "lat": 32.76633,
       "lon": -117.01333,
@@ -619,6 +670,7 @@
     },
     "E9873": {
       "name": "EW9873 San Diego University HeightsCA US",
+      "display_name": "University Heights",
       "network": "nws",
       "lat": 32.76033,
       "lon": -117.15417,
@@ -631,6 +683,7 @@
     },
     "E3070": {
       "name": "EW3070 Rancho San Diego",
+      "display_name": "Rancho San Diego",
       "network": "nws",
       "lat": 32.74217,
       "lon": -116.93667,
@@ -643,6 +696,7 @@
     },
     "E3680": {
       "name": "EW3680 Lemon Grove",
+      "display_name": "Lemon Grove",
       "network": "nws",
       "lat": 32.73867,
       "lon": -117.02983,
@@ -655,6 +709,7 @@
     },
     "KSAN": {
       "name": "San Diego International Airport",
+      "display_name": "San Diego Airport",
       "network": "nws",
       "lat": 32.73361,
       "lon": -117.18306,
@@ -667,6 +722,7 @@
     },
     "E9951": {
       "name": "EW9951 San Diego Shelter Island   CA US",
+      "display_name": "Shelter Island",
       "network": "nws",
       "lat": 32.71497,
       "lon": -117.22566,
@@ -679,6 +735,7 @@
     },
     "SDBC1": {
       "name": "9410170 - San Diego, CA",
+      "display_name": "San Diego Bay",
       "network": "ndbc",
       "lat": 32.714,
       "lon": -117.174,
@@ -691,6 +748,7 @@
     },
     "E3219": {
       "name": "EW3219 National City",
+      "display_name": "National City",
       "network": "nws",
       "lat": 32.6705,
       "lon": -117.10083,
@@ -703,6 +761,7 @@
     },
     "NPQC1": {
       "name": "South Bay, Tijuana River Reserve, CA",
+      "display_name": "South San Diego Bay",
       "network": "ndbc",
       "lat": 32.601,
       "lon": -117.116,
@@ -716,6 +775,7 @@
     },
     "OTYC1": {
       "name": "OTAY MOUNTAIN",
+      "display_name": "Otay Mountain",
       "network": "nws",
       "lat": 32.60092,
       "lon": -116.84103,
@@ -728,6 +788,7 @@
     },
     "KSDM": {
       "name": "San Diego, Brown Field Municipal Airport",
+      "display_name": "Brown Field",
       "network": "nws",
       "lat": 32.57528,
       "lon": -116.99306,
@@ -740,6 +801,7 @@
     },
     "TIXC1": {
       "name": "Tidal Linkage, Tijuana River Reserve, CA",
+      "display_name": "Tijuana River Estuary",
       "network": "ndbc",
       "lat": 32.575,
       "lon": -117.127,
@@ -752,6 +814,7 @@
     },
     "TIQC1": {
       "name": "Oneonta Slough, Tijuana River Reserve, CA",
+      "display_name": "Oneonta Slough",
       "network": "ndbc",
       "lat": 32.568,
       "lon": -117.131,
