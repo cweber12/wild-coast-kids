@@ -211,6 +211,114 @@ export const SHORE = {
 };
 
 /**
+ * WHAT TO CALL EACH STATION ON THE PAGE.
+ *
+ * Hand-written, on the same precedent as `SHORE` above and `water` in
+ * `tide-stations.json`: something no authority publishes, written by a person
+ * and recorded where it can be read and argued with.
+ *
+ * The `name` field beside this stays exactly as each network serves it, because
+ * that is the record of what upstream said and the thing a later probe compares
+ * against. It is not prose. The mesonet publishes callsigns
+ * ("EW9951 San Diego Shelter Island   CA US"), the tide network publishes
+ * station numbers ("9410230 - La Jolla, CA"), and the reserve network publishes
+ * instrument sites ("Tidal Linkage, Tijuana River Reserve, CA"). Until the air
+ * panel bound a second station only airports reached a reader, and airports are
+ * named readably; now every panel names two stations.
+ *
+ * A MECHANICAL RULE WAS TRIED FIRST AND CANNOT REACH. Stripping callsigns,
+ * trailing country codes and padding gets both piers right and gets the other
+ * two wrong in a way no further rule fixes: nothing turns "Tidal Linkage" into
+ * something a parent recognises, and "9410230" is the pier's *tide station
+ * number* — the place is Scripps Pier, which no part of the published string
+ * says. See #87.
+ *
+ * THE RULE FOR WRITING ONE: the shortest name a parent looking at a map of this
+ * county would recognise, and nothing that repeats what the sentence around it
+ * already says. The panel writes "Sky and visibility at Miramar, 10 km away.
+ * That is an airport reading", so "Miramar" and not "Miramar MCAS/Mitscher
+ * Field Airport". Where upstream's name is already that, it is reused unchanged
+ * rather than improved for the sake of it.
+ *
+ * A station absent from this map stops the probe, exactly as one absent from
+ * `SHORE` does, so a station that appears in a later listing is named by a
+ * person or the table is not written.
+ */
+export const DISPLAY_NAMES = {
+  // On the shore, and the reason this map exists: every one of these renders as
+  // the source of a temperature a reader is being asked to trust.
+  LJAC1: "Scripps Pier",
+  LJPC1: "Scripps Pier",
+  F1327: "San Clemente Pier",
+  E9951: "Shelter Island",
+  TIXC1: "Tijuana River Estuary",
+  TIQC1: "Oneonta Slough",
+  NPQC1: "South San Diego Bay",
+  SDBC1: "San Diego Bay",
+  SOBSD: "Solana Beach",
+  E3174: "Oceanside",
+  CBDSD: "Carlsbad",
+  E3219: "National City",
+
+  // Airports. The panel's own sentence says "that is an airport reading", so
+  // these do not repeat it.
+  KSAN: "San Diego Airport",
+  KNKX: "Miramar",
+  KNFG: "Camp Pendleton",
+  KOKB: "Oceanside Airport",
+  KCRQ: "Palomar Airport",
+  KMYF: "Montgomery Field",
+  KSDM: "Brown Field",
+  KRNM: "Ramona Airport",
+  KL18: "Fallbrook",
+  KF70: "French Valley Airport",
+
+  // Everywhere else. None of these is bound by any beach today, and each is one
+  // measurement away from being bound, so each is named rather than left to a
+  // future probe to guess at.
+  MSDSD: "Mt. Soledad",
+  DMHSD: "Del Mar Heights",
+  D3101: "Torrey Pines Reserve",
+  E9978: "Encinitas",
+  E9873: "University Heights",
+  MVNSD: "Mission Valley North",
+  PSQC1: "San Pasqual",
+  PAUSD: "Pauma Valley",
+  PZAC1: "Pala",
+  E3055: "Vista",
+  E3236: "Escondido",
+  AU709: "Escondido East",
+  WRBSD: "West Rancho Bernardo",
+  C8688: "Mira Mesa",
+  E3241: "Poway",
+  MSXC1: "Miramar East",
+  SVCSD: "San Vicente",
+  E3619: "Santee",
+  E3309: "Santee East",
+  E9965: "Lakeside",
+  E4858: "El Cajon",
+  E3070: "Rancho San Diego",
+  E3680: "Lemon Grove",
+  D5256: "La Mesa",
+  E2652: "San Diego East",
+  BNASD: "Barona",
+  BVYSD: "Blossom Valley",
+  CSTSD: "Crest",
+  C2462: "Alpine",
+  RINSD: "Rincon",
+  ORTSD: "Ortega",
+  CAPC1: "Bell Canyon",
+  GOSC1: "Bud Hill",
+  VLCC1: "Valley Center",
+  SDMEA: "Murrieta",
+  SDFRV: "French Valley",
+  SRUC1: "Santa Rosa Plateau",
+  E4050: "Mountain Center",
+  OTYC1: "Otay Mountain",
+  PAMC1: "Palomar Mountain",
+};
+
+/**
  * What a run of NWS observations shows the station publishing.
  *
  * `textDescription` is the sky field the site already reads, and a station that
@@ -312,8 +420,18 @@ export function tableRow(station) {
     );
   }
 
+  const displayName = DISPLAY_NAMES[station.id];
+  if (displayName === undefined) {
+    throw new Error(
+      `${station.id} (${station.name}) has no entry in DISPLAY_NAMES. Falling back to the ` +
+        `published name would render a callsign at a reader, so the table is not written. ` +
+        `Name it and re-run.`,
+    );
+  }
+
   return {
     name: station.name,
+    display_name: displayName,
     network: station.network,
     lat: station.lat,
     lon: station.lon,
@@ -403,7 +521,9 @@ export function document(table, now = new Date()) {
       `observations carried a field are deliberately absent from this file: they move on every ` +
       `probe, and a --check that fails from noise stops being read.`,
     _schema: {
-      name: "The station name, reproduced as its network serves it. D3101's carries the run of spaces and the trailing 'CA US' that upstream publishes.",
+      name: "The station name, reproduced as its network serves it, run of spaces and trailing 'CA US' included. A record of what upstream said, and what a later probe compares against. NOT what is shown to a reader -- see display_name.",
+      display_name:
+        "What the page calls this station. Hand-written, like `shore` and like tide-stations.json's `water`, because the published name is an identifier rather than prose for most of these: the mesonet publishes callsigns, the tide network publishes station numbers, and the reserve network publishes instrument sites. The rule is the shortest name someone looking at a map of this county would recognise, saying nothing the sentence around it already says. See #87.",
       network:
         "Which publisher serves this station, and therefore which fetcher reads it: 'nws' for api.weather.gov, 'ndbc' for the realtime2 text product.",
       lat: "Decimal degrees north, from the network's own listing.",

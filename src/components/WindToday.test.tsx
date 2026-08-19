@@ -3,12 +3,9 @@ import { render, screen } from "@testing-library/react";
 import { WindToday } from "./WindToday";
 
 /** Scripps Pier: what La Jolla Shores now reads for temperature and wind. */
-const PIER = { name: "Scripps Pier, La Jolla", distanceM: 1_381 };
+const PIER = { name: "Scripps Pier", distanceM: 1_381 };
 /** Miramar: what it still reads for sky and visibility, ten kilometres inland. */
-const KNKX = {
-  name: "San Diego, Miramar MCAS/Mitscher Field Airport",
-  distanceM: 10_429,
-};
+const KNKX = { name: "Miramar", distanceM: 10_429 };
 
 const AIR = {
   kind: "reading" as const,
@@ -66,7 +63,7 @@ test("both stations are named, each with its own distance", () => {
   expect(
     screen.getByText(/Temperature and wind measured at Scripps Pier/),
   ).toBeDefined();
-  expect(screen.getByText(/Miramar MCAS.*10 km away/)).toBeDefined();
+  expect(screen.getByText(/Miramar, 10 km away/)).toBeDefined();
 });
 
 test("a near station keeps its distance rather than rounding it away", () => {
@@ -82,48 +79,6 @@ test("the airport says it is an airport, and why that is the only option", () =>
   render(<WindToday {...panel()} />);
 
   expect(screen.getByText(/only published by airports/)).toBeDefined();
-});
-
-test("a station named by its callsign is attributed by its place", () => {
-  // The mesonet publishes "EW9951 San Diego Shelter Island   CA US" and the
-  // tide network publishes "9410230 - La Jolla, CA". Until this panel bound a
-  // second station only airports, which are named in prose, reached a reader.
-  render(
-    <WindToday
-      {...panel({
-        airStation: {
-          name: "EW9951 San Diego Shelter Island   CA US",
-          distanceM: 3_600,
-        },
-      })}
-    />,
-  );
-
-  expect(
-    screen.getByText(/measured at San Diego Shelter Island, 3\.6 km/),
-  ).toBeDefined();
-});
-
-test("a tide-network name loses its station number, not its place", () => {
-  render(
-    <WindToday
-      {...panel({
-        airStation: { name: "9410230 - La Jolla, CA", distanceM: 1_381 },
-      })}
-    />,
-  );
-
-  expect(screen.getByText(/measured at La Jolla, CA/)).toBeDefined();
-});
-
-test("a name that is already prose is left exactly as published", () => {
-  // Nothing is invented here. A station this cannot improve is shown as its
-  // network published it rather than replaced with a name of our own.
-  render(<WindToday {...panel()} />);
-
-  expect(
-    screen.getByText(/San Diego, Miramar MCAS\/Mitscher Field Airport/),
-  ).toBeDefined();
 });
 
 test("the ten-mile ceiling reads as a floor, never as an exact measurement", () => {

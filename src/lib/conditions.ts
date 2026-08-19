@@ -267,6 +267,7 @@ export type SkyState =
   | { kind: "unavailable"; detail: string; drift: boolean };
 
 export interface StationBinding {
+  /** The station's display name: what the page calls it, never its callsign. */
   name: string;
   distanceM: number | null;
 }
@@ -325,14 +326,14 @@ export async function readLatestAir(
       airStation === null
         ? null
         : {
-            name: airStation.name,
+            name: airStation.display_name,
             distanceM: beach.air_station_distance_m,
           },
     skyStation:
       skyStation === null
         ? null
         : {
-            name: skyStation.name,
+            name: skyStation.display_name,
             distanceM: beach.weather_station_distance_m,
           },
     air,

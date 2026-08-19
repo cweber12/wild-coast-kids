@@ -282,7 +282,9 @@ test("temperature and wind come from the pier, sky and visibility from the airpo
 
   const view = await readLatestAir(BEACH, NOON_PACIFIC_20260817);
 
-  expect(view.airStation?.name).toMatch(/La Jolla/);
+  // The display name, not the "9410230 - La Jolla, CA" the tide network
+  // publishes: what reaches the view is what the page prints.
+  expect(view.airStation?.name).toBe("Scripps Pier");
   expect(view.airStation?.distanceM).toBe(1381);
   expect(view.skyStation?.name).toMatch(/Miramar/);
   expect(view.skyStation?.distanceM).toBe(10429);

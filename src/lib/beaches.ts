@@ -101,7 +101,17 @@ export interface WaveBuoy {
 }
 
 export interface WeatherStation {
+  /**
+   * As the station's network publishes it, callsign and padding included. The
+   * record of what upstream said, and never what is rendered -- see
+   * `display_name`.
+   */
   name: string;
+  /**
+   * What the page calls this station. Hand-written in the probe, because the
+   * published name is an identifier rather than prose for most of these.
+   */
+  display_name: string;
   lat: number;
   lon: number;
   /** Measured, not assumed. A station that does not deliver is kept and marked. */

@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
+  DISPLAY_NAMES,
   NDBC_BOX,
   NWS_BOX,
   SHORE,
@@ -196,6 +197,59 @@ describe("the table", () => {
     expect(() => tableRow(probed({ id: "XXXXX" }))).toThrow(
       /not classified in SHORE/,
     );
+  });
+
+  it("refuses to write a station nobody has named", () => {
+    // Falling back to the published name would put "EW9951 San Diego Shelter
+    // Island   CA US" in front of a reader, which is what #87 removed. A
+    // station added by a later probe has to be named by a person.
+    //
+    // The guard is unreachable while the two maps agree -- which the assertion
+    // further down requires -- so a classified station is un-named for the
+    // length of this test and put back afterwards.
+    const named = DISPLAY_NAMES.LJAC1;
+    delete DISPLAY_NAMES.LJAC1;
+    try {
+      expect(() => tableRow(probed())).toThrow(/no entry in DISPLAY_NAMES/);
+      expect(() => tableRow(probed())).toThrow(/render a callsign at a reader/);
+    } finally {
+      DISPLAY_NAMES.LJAC1 = named;
+    }
+
+    expect(tableRow(probed()).display_name).toBe("Scripps Pier");
+  });
+
+  it("carries the published name and the display name separately", () => {
+    // The published name is the record of what upstream said and the thing the
+    // next probe diffs against; the display name is what a reader sees. Losing
+    // either one loses something the other cannot do.
+    const row = tableRow(probed());
+
+    expect(row.name).toBe("9410230 - La Jolla, CA");
+    expect(row.display_name).toBe("Scripps Pier");
+  });
+
+  it("names every station it classifies, and classifies every one it names", () => {
+    // Two hand-written maps over the same station set. One growing without the
+    // other is how a station ends up rendering as a callsign, or refusing to
+    // write at all, on a probe nobody is watching.
+    expect(Object.keys(DISPLAY_NAMES).sort()).toEqual(
+      Object.keys(SHORE).sort(),
+    );
+  });
+
+  it("gives no station a display name that is still an identifier", () => {
+    // The whole point. A callsign, a tide station number or a trailing country
+    // code in this map means someone pasted the published name in.
+    for (const [id, name] of Object.entries(DISPLAY_NAMES)) {
+      expect(name, `${id} is named by callsign`).not.toMatch(
+        /^[A-Z]{1,2}\d{4,7}\b/,
+      );
+      expect(name, `${id} is named by station number`).not.toMatch(/^\d{5,7}/);
+      expect(name, `${id} carries a country code`).not.toMatch(/\bCA US\b/);
+      expect(name.trim(), `${id} is padded or empty`).toBe(name);
+      expect(name.length, `${id} is empty`).toBeGreaterThan(0);
+    }
   });
 
   it("carries the hand-written shore flag onto the row", () => {

@@ -35,6 +35,13 @@
  * **Ten miles is a ceiling, not a measurement.** METAR stops there, so the top
  * of the range is rendered "10 miles or more". Reading it as exactly ten would
  * be a precision upstream never claimed.
+ *
+ * **The station names arrive ready to print.** `display_name` is hand-written in
+ * the station table, so nothing here tries to turn a callsign into prose. This
+ * component briefly did, by stripping identifiers and country codes, and it
+ * could not reach the two stations that most needed it — "Tidal Linkage" is not
+ * something a mechanical rule turns into a place, and "9410230" is a tide
+ * station number rather than any part of "Scripps Pier". See #87.
  */
 
 import type { AirView } from "@/lib/conditions";
@@ -78,31 +85,6 @@ function visibilityWords(miles: number, atCeiling: boolean): string {
 function distanceWords(metres: number): string {
   const km = metres / 1000;
   return `${km < 10 ? km.toFixed(1) : km.toFixed(0)} km`;
-}
-
-/**
- * The station's name with the parts that are not a name taken off.
- *
- * The table stores what each network publishes, unedited, because it is a
- * record of what upstream said. Airports are named in prose there and the rest
- * are not: the mesonet publishes "EW9951 San Diego Shelter Island   CA US" and
- * the tide network publishes "9410230 - La Jolla, CA". Until this panel bound a
- * second station only airports ever reached a reader, so this is new work rather
- * than a tidy-up.
- *
- * Three removals, each of something that is an identifier or a country rather
- * than a place: a leading callsign-style token, a trailing "CA US", and the runs
- * of padding whitespace. Nothing is added — a name that is already prose comes
- * through untouched, and a name this cannot improve is shown as published rather
- * than replaced with something invented.
- */
-function stationWords(name: string): string {
-  return name
-    .replace(/^[A-Z]{1,2}\d{4,7}\s+/, "")
-    .replace(/^\d{7}\s*-\s*/, "")
-    .replace(/\s+CA\s+US$/, "")
-    .replace(/\s+/g, " ")
-    .trim();
 }
 
 /** The wind, as a sentence, or the reason there is not one. */
@@ -210,7 +192,7 @@ export function WindToday({
       <div className="text-2xs leading-relaxed text-fog">
         {airStation !== null && (
           <p>
-            Temperature and wind measured at {stationWords(airStation.name)}
+            Temperature and wind measured at {airStation.name}
             {airStation.distanceM !== null
               ? `, ${distanceWords(airStation.distanceM)} from this beach`
               : ""}
@@ -219,7 +201,7 @@ export function WindToday({
         )}
         {skyStation !== null && (
           <p>
-            Sky and visibility at {stationWords(skyStation.name)}
+            Sky and visibility at {skyStation.name}
             {skyStation.distanceM !== null
               ? `, ${distanceWords(skyStation.distanceM)} away`
               : ""}
