@@ -45,15 +45,60 @@ export function waterClassOf(waterBodyType) {
 }
 
 /**
+ * Beaches the state types as the wrong kind of water, and what they are.
+ *
+ * Hand-written, like `tide-stations.json`'s `water` and
+ * `weather-stations.json`'s `shore`, and for the same reason: the join has to be
+ * told, and no authority publishes a correction. Each entry carries what was
+ * measured rather than what it looks like, so the next person can check it
+ * instead of trusting it.
+ *
+ * Keyed by slug, which `seed-beaches.mjs` guarantees is a stable primary key.
+ */
+const WATER_CLASS_OVERRIDES = {
+  "fiesta-island": {
+    waterClass: "bay",
+    why:
+      "typed Open Coast upstream; 32.7694, -117.2111 is inside Mission Bay. As open " +
+      "coast it bound a tide station 11.66 km away and a wave buoy at 12.14 km, " +
+      "publishing a surf height for water that has none. As bay: 2.10 km and no buoy.",
+  },
+  "childrens-pool": {
+    waterClass: "open-coast",
+    why:
+      "typed Sound, Bay, or Inlet upstream; it is an ocean cove in La Jolla and its " +
+      "water level is the ocean's. As bay it bound Mission Bay Campland at 7.84 km; " +
+      "as open coast it binds Scripps at 2.93 km. It is also `sheltered` in " +
+      "wave-join.mjs, which is the half of its old classification that was right.",
+  },
+};
+
+/**
+ * The water class this join should use for a beach.
+ *
+ * Takes the whole beach rather than the published type, so that a call site
+ * cannot apply the classification and forget the override. Every join reads
+ * this; nothing reads `waterClassOf` directly except its own test.
+ *
+ * @param {{slug?: string, waterBodyType: string}} beach
+ * @returns {"open-coast" | "bay" | null}
+ */
+export function waterClassFor(beach) {
+  const override = WATER_CLASS_OVERRIDES[beach.slug];
+  if (override) return override.waterClass;
+  return waterClassOf(beach.waterBodyType);
+}
+
+/**
  * Bind one beach to a station.
  *
- * @param {{segment: object, waterBodyType: string}} beach
+ * @param {{slug?: string, segment: object, waterBodyType: string}} beach
  * @param {Record<string, {lat: number, lon: number, water: string, delivers: boolean}>} stations
  * @returns {{stationId: string, distanceM: number, fromEnd: string, waterClass: string}
  *   | {stationId: null, reason: string}}
  */
 export function bindTideStation(beach, stations) {
-  const waterClass = waterClassOf(beach.waterBodyType);
+  const waterClass = waterClassFor(beach);
   if (waterClass === null) {
     return {
       stationId: null,

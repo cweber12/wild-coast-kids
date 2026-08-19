@@ -311,14 +311,23 @@ the beach and the open ocean.** Not "the waves feel smaller here", which is
 unfalsifiable and would spread. Children's Pool has one. Natural coves do not,
 however sheltered they feel.
 
-`TODO(verify)`: the criterion has been established for `childrens-pool` only.
-Fifteen other open-coast beaches survive the predicate and each must be checked
-against it before slice 3 lands — `bird-rock-nr`, `del-mar-city-beach`,
-`la-jolla-community-beach`, `la-jolla-cove`, `la-jolla-shores-beach`,
-`marine-street-beach`, `mission-beach`, `pacific-beach`, `shell-beach`,
-`south-casa-beach-s-d`, `torrey-pines-city-beach`, `torrey-pines-state-beach`,
-`tourmaline-surfing-park`, `whispering-sands-nicholson-pt`, `windansea-beach`.
-The other 25 survivors are bays and bind no buoy by construction.
+Applied to the whole surviving open-coast set on 2026-08-19, and only
+`childrens-pool` qualifies. The other fifteen — `bird-rock-nr`,
+`del-mar-city-beach`, `la-jolla-community-beach`, `la-jolla-cove`,
+`la-jolla-shores-beach`, `marine-street-beach`, `mission-beach`,
+`pacific-beach`, `shell-beach`, `south-casa-beach-s-d`,
+`torrey-pines-city-beach`, `torrey-pines-state-beach`, `tourmaline-surfing-park`,
+`whispering-sands-nicholson-pt`, `windansea-beach` — are natural coves and open
+strand with no structure between them and the ocean; La Jolla Cove in particular
+sits on the same open water as La Jolla Shores. Cole's judgement, recorded here
+because `sheltered` is a hand-written join input and the provenance of a
+hand-written input is part of it. The other 25 survivors are bays and bind no
+buoy by construction.
+
+So `sheltered` ships with exactly one entry. That is the right size for it: the
+criterion is narrow enough to be checkable, and a flag that turned out to apply
+to a third of the coast would have been evidence the criterion was really a
+taste.
 
 **The predicate's wave clause is reformulated.** As written above it reads "tide
 within 10 km, and unless the beach is a bay, a buoy within 10 km" — which would

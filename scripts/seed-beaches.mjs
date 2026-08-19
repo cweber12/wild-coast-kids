@@ -230,12 +230,15 @@ export function build(rows, stations, buoys, weatherStations) {
     const bound = fault
       ? { stationId: null, reason: fault }
       : bindTideStation(
-          { segment, waterBodyType: row.WaterBodyType },
+          { slug, segment, waterBodyType: row.WaterBodyType },
           stations,
         );
     const wave = fault
       ? { buoyId: null, reason: fault }
-      : bindWaveBuoy({ segment, waterBodyType: row.WaterBodyType }, buoys);
+      : bindWaveBuoy(
+          { slug, segment, waterBodyType: row.WaterBodyType },
+          buoys,
+        );
     // No water-class rule here, unlike the wave join: air reaches a lagoon.
     // This binds sky and visibility only -- the airport. Temperature and wind
     // come from the air join below, which does have a water-class rule.
@@ -245,7 +248,7 @@ export function build(rows, stations, buoys, weatherStations) {
     const air = fault
       ? { stationId: null, reason: fault }
       : bindAirStation(
-          { segment, waterBodyType: row.WaterBodyType },
+          { slug, segment, waterBodyType: row.WaterBodyType },
           weatherStations,
         );
 

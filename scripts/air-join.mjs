@@ -39,18 +39,18 @@
  */
 
 import { segmentDistance } from "./geo.mjs";
-import { waterClassOf } from "./tide-join.mjs";
+import { waterClassFor } from "./tide-join.mjs";
 
 /**
  * Bind one beach to the station that measures its air.
  *
- * @param {{segment: object, waterBodyType: string}} beach
+ * @param {{slug?: string, segment: object, waterBodyType: string}} beach
  * @param {Record<string, {lat: number, lon: number, delivers: boolean, publishes_air_temp: boolean, publishes_wind: boolean, shore: boolean}>} stations
  * @returns {{stationId: string, distanceM: number, fromEnd: string, waterClass: string}
  *   | {stationId: null, reason: string}}
  */
 export function bindAirStation(beach, stations) {
-  const waterClass = waterClassOf(beach.waterBodyType);
+  const waterClass = waterClassFor(beach);
   if (waterClass === null) {
     return {
       stationId: null,

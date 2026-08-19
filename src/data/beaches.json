@@ -955,7 +955,7 @@
     {
       "slug": "childrens-pool",
       "name": "Childrens Pool",
-      "region": "Bays, lagoons and inlets",
+      "region": "La Jolla and Pacific Beach",
       "segment": {
         "upper": {
           "lat": 32.8478,
@@ -976,13 +976,13 @@
         "status": "Active",
         "nearest_city": "La Jolla"
       },
-      "tide_station": "9410196",
-      "tide_station_distance_m": 7842,
-      "tide_station_from_end": "lower",
+      "tide_station": "9410230",
+      "tide_station_distance_m": 2929,
+      "tide_station_from_end": "upper",
       "wave_buoy": null,
       "wave_buoy_distance_m": null,
       "wave_buoy_from_end": null,
-      "wave_buoy_null_reason": "every wave buoy sits on the open coast, and ocean swell does not reach into a bay or lagoon, so no buoy describes the water here",
+      "wave_buoy_null_reason": "no buoy describes the water here: a curved breakwater encloses the cove, which is what it was built for. The nearest buoy is 2.50 km away on the open coast and describes swell the breakwater stops, at the beach in this inventory most likely to be read by someone deciding whether to put children in the water.",
       "weather_station": "KNKX",
       "weather_station_distance_m": 12887,
       "weather_station_from_end": "lower",
@@ -1896,7 +1896,7 @@
     {
       "slug": "fiesta-island",
       "name": "Fiesta Island",
-      "region": "Point Loma and Ocean Beach",
+      "region": "Bays, lagoons and inlets",
       "segment": {
         "upper": {
           "lat": 32.7694,
@@ -1917,12 +1917,13 @@
         "status": "Active",
         "nearest_city": "San Diego"
       },
-      "tide_station": "9410230",
-      "tide_station_distance_m": 11663,
+      "tide_station": "TWC0413",
+      "tide_station_distance_m": 2097,
       "tide_station_from_end": "upper",
-      "wave_buoy": "46254",
-      "wave_buoy_distance_m": 12145,
-      "wave_buoy_from_end": "upper",
+      "wave_buoy": null,
+      "wave_buoy_distance_m": null,
+      "wave_buoy_from_end": null,
+      "wave_buoy_null_reason": "every wave buoy sits on the open coast, and ocean swell does not reach into a bay or lagoon, so no buoy describes the water here",
       "weather_station": "KSAN",
       "weather_station_distance_m": 4718,
       "weather_station_from_end": "lower",
@@ -2761,7 +2762,7 @@
   "unresolved": [
     "beach_type is UNKNOWN upstream for most of these beaches. That is a gap in the resource, not a shorthand for sand, and nothing may render it as a description of what the shore is made of.",
     "The join binds by nearest station of matching water class, and the distances are large where NOAA publishes no nearby station: the farthest is San Onofre State Beach at 56.6 km. See tide-stations.json, whose own unresolved list records that the one open-coast station between La Jolla and Imperial Beach does not deliver predictions.",
-    "27 of these beaches get no wave height at all. Every NDBC wave buoy sits on the open coast, and ocean swell does not reach into a bay or lagoon, so binding one to the nearest buoy would put an open-ocean number on enclosed water. Their water temperature is missing for the same reason and is not yet filled from another source.",
+    "28 of these beaches get no wave height at all. Every NDBC wave buoy sits on the open coast, and ocean swell does not reach into a bay or lagoon, so binding one to the nearest buoy would put an open-ocean number on enclosed water. Their water temperature is missing for the same reason and is not yet filled from another source.",
     "A tide prediction is for the station, not for the beach. It is the best published figure for that stretch of shore and it is not a measurement taken there.",
     "Sky and visibility are read at an airport, because the ten stations in this county that publish them are all airport METARs, and airports sit inland. The median beach reads its sky station 7.3 km away and the farthest reads one 16.8 km away, at San Dieguito River Beach. Coastal fog is precisely what changes over that distance, so those two figures describe the airport and not the shoreline.",
     "Air temperature and wind come from a different station than sky and visibility, and the page names both. The median beach reads its air station 3.5 km away against 7.3 km for its sky station. Two provenances behind one panel is a deliberate trade: requiring one station to supply all four values meant the scarcest of them, sky, decided where the temperature was measured, which put an inland reading on a coastal beach. See docs/adr/0010-two-provenances-in-the-air-panel.md.",
