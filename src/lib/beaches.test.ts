@@ -208,4 +208,24 @@ describe("the wave buoy binding", () => {
     expect(caveat).toMatch(/27 of the 48/);
     expect(caveat).toMatch(/distance/i);
   });
+
+  test("no caveat calls the offshore buoy the only station in the box with wind", () => {
+    // It is not. activestations.xml lists nineteen stations in wave-buoys.json's
+    // own box and the table holds the thirteen of type `buoy`; three of the
+    // omitted `fixed` stations publish WSPD on 99-100% of their rows -- LJAC1
+    // and LJPC1 at Scripps Pier and TIXC1 at the Tijuana River. See #73 and #80.
+    //
+    // The clause is not idle wording. It reaches a reader through the caveats
+    // gate, and it is the premise conditions-tool.md's slice 6 addendum used to
+    // conclude that this site's wind can only come from the weather service --
+    // which is why the air panel binds an airport 10.43 km inland at a beach
+    // with a pier station 1.38 km away.
+    //
+    // Same limit as the assertion above: this holds the sentence still, not the
+    // ocean. A gate must not fetch realtime2.
+    const caveat = inventoryCaveats().find((c) => c.includes("46086"));
+
+    expect(caveat, "no caveat mentions 46086 at all").toBeTruthy();
+    expect(caveat).not.toMatch(/only station in the box/i);
+  });
 });

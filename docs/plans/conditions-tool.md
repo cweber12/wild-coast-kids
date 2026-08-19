@@ -463,6 +463,12 @@ ever come from the National Weather Service gridpoint forecast.
 > from an observation station rather than the gridpoint; and 46086 does publish
 > waves, on 27 of 48 rows — see #70. Neither changes what slice 6 shipped.
 
+> Corrected again 2026-08-18 by the #73 addendum below, on the count 7a left
+> standing. The scope is wrong for wind: 46086 is not the only station in the
+> box with wind, and three of the six stations this table's buoy-only filter
+> dropped publish it on 82–100% of their rows. Right for visibility, which no
+> station in the box publishes at all.
+
 **Two more listed-but-dead stations.** 46273 Torrey Pines Inner and 46235 Imperial
 Beach both 404 while listed active — 46235 independently confirming what
 `socal-coastal-data` recorded. That is the third time the pattern has appeared,
@@ -640,3 +646,55 @@ through `inventoryCaveats()`, the seam the caveats gate already walks — the cl
 cannot silently revert. It does not assert the ocean: a gate must not fetch NDBC,
 so nothing in CI notices if NOAA changes what 46086 publishes. The measurement
 above is the evidence for the sentence; the test only holds the sentence still.
+
+### 2026-08-18 — #73, and the wind that never had to come from a forecast
+
+**The sentence 7a corrected was false a second way, and this is the count that
+mattered.** Slice 6's addendum concluded:
+
+> two of the four words in the site's own "Surf · Tide · Wind · Visibility" can
+> only ever come from the National Weather Service gridpoint forecast
+
+7a corrected the _source_ — an observation station, not the gridpoint — and left
+the _scope_ standing. The scope is right for visibility and wrong for wind.
+
+**The premise was a claim about ten buoys, read as a claim about the box.**
+`wave-buoys.json` said "NOT ONE publishes WDIR, WSPD or VIS" and named 46086 as
+the only station in the box with wind. `activestations.xml` lists **nineteen**
+stations in that box; the table holds the **thirteen** of type `buoy`. The six
+omitted are of type `fixed`, two of them at Scripps Pier, and the criterion that
+dropped them is recorded in no code — nothing generates the station tables, so
+`--check` re-runs the join and can re-derive nothing about their membership.
+
+Measured 2026-08-18 against `realtime2`, the endpoint the table's own provenance
+names:
+
+```
+LJAC1  Scripps Pier   10739 rows   WSPD 10673 (99%)   WDIR 10089 (94%)   VIS 0
+LJPC1  Scripps Pier    1088 rows   WSPD  1088 (100%)  WDIR  1008 (93%)   VIS 0
+TIXC1  Tijuana River   4401 rows   WSPD  4401 (100%)  WDIR  3610 (82%)   VIS 0
+```
+
+Wind is therefore available from this network, at the shore. Visibility is not,
+anywhere in it: 0 of 15,228 rows across the three and 0 of 6,482 on 46086. That
+is the half of the original clause that has survived every re-measurement.
+
+**What the false half cost.** It is why the air panel reads an airport.
+`weather-stations.json` filters on `publishes_visibility` before distance because
+one station was required to supply all four values, and "wind can only come from
+the weather service" is what made that requirement look free rather than
+expensive. At La Jolla Shores it binds KNKX Miramar at 10.43 km while LJAC1 sits
+1.38 km from the sand; on 2026-08-18 the two read 81 °F and 72 °F nine minutes
+apart.
+
+**This slice changes no behaviour.** It corrects `wave-buoys.json`'s
+`_what_was_measured`, the caveat in its `unresolved` list that a reader actually
+sees, and this document. The binding itself is #80, whose plan is
+`docs/plans/coastal-air-observations.md` and whose ADR 0010 records the
+two-provenance decision the measurement above makes possible.
+
+The regression test asserts the corrected caveat through `inventoryCaveats()`,
+the seam the caveats gate already walks. As with #70 it holds the sentence still
+and not the ocean: a gate must not fetch `realtime2`, so nothing in CI notices if
+NDBC changes what these stations publish. The measurement above is the evidence;
+the test only stops the claim reverting silently.
