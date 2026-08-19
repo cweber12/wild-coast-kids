@@ -369,3 +369,29 @@ own slice, not an addendum.
 3. The predicate in its reformulated shape, the `_excluded` block, the
    regenerated `beaches.json`, routes and selector. 73 beaches become 41.
 4. Unchanged: the exclusion is disclosed to readers by `Caveats`.
+
+## Addendum — 2026-08-19: the `no-station` states survive their last beach
+
+Found while implementing slice 3. The predicate requires a tide station within
+10 km, so no beach that reaches the inventory can have a null binding — and
+`imperial-beach-pier-area`, the one beach the joins refused outright, is
+excluded by the same rule. Every beach that survives also binds an air station
+and a sky station, because only that one row lacked them.
+
+So the `no-station` state of the tide, air and sky panels is no longer
+reachable through `beaches.json`. The plan says above that nothing is built to
+suppress a panel because every panel already has that state; what it did not
+anticipate is that the removal empties the state of occupants.
+
+**They stay, and they stay tested.** The state is not dead: `beaches.json` is
+written by joins that can fail, `Beach.tide_station` is `string | null` by
+contract with the seeding script, and the distinction the state exists for —
+a permanent fact about a place against a feed having a bad day — is what a
+reader would lose if the two collapsed. `conditions.test.ts` now reaches them
+through one synthetic beach added to the real inventory, so the rest of that
+file still runs against the shipped data.
+
+Collapsing them, or narrowing the `Beach` type so the compiler knows a served
+beach has a station, is a separate slice with its own argument. It is not this
+one: it would touch three joins, the type and four components, and it would be
+reversed the moment the per-variable-suppression decision above is revisited.

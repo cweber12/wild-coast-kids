@@ -4,6 +4,9 @@ import {
   document,
   regionOf,
   segmentFault,
+  SERVICE_TOLERANCE_M,
+  serviceFault,
+  servesBeach,
   slugify,
 } from "./seed-beaches.mjs";
 
@@ -105,6 +108,16 @@ function row(overrides = {}) {
     ...overrides,
   };
 }
+
+/** Inside the county, and further from every station in the tables above than
+ * the service predicate will publish a reading from. */
+const FAR_ROW = row({
+  Beach_Name: "Far From Any Station",
+  Beach_UpperLat: "33.21",
+  "Beach_ UpperLon": "-117.40",
+  Beach_LowerLat: "33.20",
+  Beach_LowerLon: "-117.40",
+});
 
 describe("segmentFault", () => {
   it("passes a real beach", () => {
@@ -349,25 +362,198 @@ describe("build", () => {
   });
 });
 
-describe("document", () => {
-  it("names an unbound beach in the caveats a reader is owed", () => {
-    const built = build(
-      [
-        row(),
-        row({
-          Beach_Name: "Broken coordinates",
-          Beach_LowerLat: "32.1327",
+/**
+ * A built beach reduced to what the service predicate reads. Written out rather
+ * than produced by `build` so the boundary cases are stated in metres instead
+ * of hidden inside a pair of coordinates.
+ */
+function bound(overrides = {}) {
+  return {
+    slug: "somewhere-beach",
+    name: "Somewhere Beach",
+    tide_station: "9410230",
+    tide_station_distance_m: 1_000,
+    wave_buoy: "46254",
+    wave_buoy_distance_m: 1_000,
+    ...overrides,
+  };
+}
+
+describe("servesBeach", () => {
+  it("is a ten-kilometre rule by default, and says so in one place", () => {
+    // The figure is a judgement rather than a citation, so changing it has to
+    // be a one-line edit to a named constant and not a hunt through the file.
+    expect(SERVICE_TOLERANCE_M).toBe(10_000);
+    expect(servesBeach(bound({ tide_station_distance_m: 10_001 }))).toBe(false);
+  });
+
+  it("keeps a beach whose bindings sit exactly on the tolerance", () => {
+    expect(
+      servesBeach(
+        bound({
+          tide_station_distance_m: 10_000,
+          wave_buoy_distance_m: 10_000,
         }),
-      ],
-      STATIONS,
-      BUOYS,
-      WEATHER,
+      ),
+    ).toBe(true);
+  });
+
+  it("cuts a beach one metre past it", () => {
+    expect(servesBeach(bound({ tide_station_distance_m: 10_001 }))).toBe(false);
+  });
+
+  it("reads the tolerance it is given, not the constant", () => {
+    const beach = bound({ tide_station_distance_m: 5_000 });
+    expect(servesBeach(beach, 4_000)).toBe(false);
+    expect(servesBeach(beach, 6_000)).toBe(true);
+  });
+
+  it("cuts a beach whose buoy is too far even when its tide station is near", () => {
+    // Ocean Beach: Scripps at 12.3 km and Scripps Nearshore at 12.5 km. Either
+    // clause alone is enough to refuse it.
+    expect(
+      servesBeach(
+        bound({ tide_station_distance_m: 4_000, wave_buoy_distance_m: 12_476 }),
+      ),
+    ).toBe(false);
+  });
+
+  it("keeps a beach that binds no buoy at all, whatever declined it", () => {
+    // The clause is "if a buoy is bound, it is within range", not "a buoy is
+    // within range". A bay binds none because swell does not reach it, and
+    // Children's Pool binds none because a breakwater stops the swell. Both are
+    // the join answering correctly, and neither is a reason to drop a beach.
+    expect(
+      servesBeach(bound({ wave_buoy: null, wave_buoy_distance_m: null })),
+    ).toBe(true);
+  });
+
+  it("cuts a beach the join could not bind a tide station to", () => {
+    expect(
+      servesBeach(
+        bound({
+          tide_station: null,
+          tide_station_distance_m: null,
+          wave_buoy: null,
+          wave_buoy_distance_m: null,
+          tide_station_null_reason: "the upper endpoint is outside the county",
+        }),
+      ),
+    ).toBe(false);
+  });
+});
+
+describe("serviceFault", () => {
+  it("is silent about a beach the stations reach", () => {
+    expect(serviceFault(bound())).toBeNull();
+  });
+
+  it("names the distance that disqualified the beach", () => {
+    const why = serviceFault(bound({ tide_station_distance_m: 56_557 }));
+    expect(why).toContain("9410230");
+    expect(why).toContain("56.6 km");
+    expect(why).toContain("10.0 km");
+  });
+
+  it("names every binding that is too far, not merely the first", () => {
+    // Sunset Cliffs is past the tolerance on both, and a reason that mentioned
+    // only the tide would read as though moving one station would rescue it.
+    const why = serviceFault(
+      bound({ tide_station_distance_m: 14_646, wave_buoy_distance_m: 14_805 }),
     );
+    expect(why).toContain("14.6 km");
+    expect(why).toContain("14.8 km");
+  });
+
+  it("repeats the join's own reason when nothing was bound", () => {
+    const why = serviceFault(
+      bound({
+        tide_station: null,
+        tide_station_distance_m: null,
+        wave_buoy: null,
+        wave_buoy_distance_m: null,
+        tide_station_null_reason:
+          "the lower endpoint published upstream is outside San Diego County",
+      }),
+    );
+    expect(why).toContain("outside San Diego County");
+  });
+});
+
+describe("document", () => {
+  it("lists only the beaches whose stations reach them", () => {
+    const doc = document(build([row(), FAR_ROW], STATIONS, BUOYS, WEATHER));
+
+    expect(doc.beaches.map((b) => b.slug)).toEqual(["somewhere-beach"]);
+  });
+
+  it("records every beach it does not list, with the distance that cut it", () => {
+    const doc = document(build([row(), FAR_ROW], STATIONS, BUOYS, WEATHER));
+
+    expect(doc._excluded).toEqual([
+      {
+        slug: "far-from-any-station",
+        name: "Far From Any Station",
+        why: expect.stringContaining("km away"),
+      },
+    ]);
+  });
+
+  it("accounts for every beach the county lists, in one block or the other", () => {
+    // The failure mode this exists to stop: a beach leaving the inventory with
+    // nothing anywhere saying it did.
+    const built = build([row(), FAR_ROW], STATIONS, BUOYS, WEATHER);
     const doc = document(built);
 
-    expect(doc.unresolved.some((c) => c.includes("Broken coordinates"))).toBe(
-      true,
+    const listed = [
+      ...doc.beaches.map((b) => b.slug),
+      ...doc._excluded.map((b) => b.slug),
+    ];
+    expect(listed.sort()).toEqual(built.map((b) => b.slug).sort());
+  });
+
+  it("records a beach nothing could be bound to, and repeats the join's reason", () => {
+    const doc = document(
+      build(
+        [
+          row(),
+          row({
+            Beach_Name: "Broken coordinates",
+            Beach_LowerLat: "32.1327",
+          }),
+        ],
+        STATIONS,
+        BUOYS,
+        WEATHER,
+      ),
     );
+
+    const broken = doc._excluded.find((b) => b.name === "Broken coordinates");
+    expect(broken).toBeDefined();
+    expect(broken.why).toMatch(/outside San Diego County/);
+  });
+
+  it("refuses to write an inventory with nothing in it", () => {
+    // Every beach failing the predicate is a broken join or a moved station
+    // table, not a county with no reachable coastline. Writing the empty file
+    // would replace the whole inventory with a silence.
+    expect(() => document(build([FAR_ROW], STATIONS, BUOYS, WEATHER))).toThrow(
+      /excluded all 1/,
+    );
+  });
+
+  it("tells a reader that a beach out of range is not listed at all", () => {
+    const doc = document(build([row()], STATIONS, BUOYS, WEATHER));
+    const bound = doc.unresolved.find((entry) =>
+      entry.includes("nearest station of matching water class"),
+    );
+
+    // The old wording said the distances were large where NOAA publishes no
+    // nearby station. They are not large any more -- the beaches that had them
+    // are gone -- and a caveat that describes the previous inventory is worse
+    // than none.
+    expect(bound).toContain("10.0 km");
+    expect(bound).not.toMatch(/distances are large/);
   });
 
   it("tells a reader the weather figures are read at an airport", () => {
@@ -387,19 +573,22 @@ describe("document", () => {
     // Two beaches, so the reduce and the sort actually run. With one, the
     // callbacks never fire and "farthest" is whatever happened to be there --
     // which is how a single-row fixture can leave a real rule unasserted.
+    // Both are inside the service tolerance of the tide station and the buoy,
+    // and differ only in how far the airport is: a fixture the predicate cuts
+    // never reaches the reduce this test is about.
     const near = row({
       Beach_Name: "Near The Airport",
-      Beach_UpperLat: "32.87",
-      "Beach_ UpperLon": "-117.15",
-      Beach_LowerLat: "32.86",
-      Beach_LowerLon: "-117.16",
+      Beach_UpperLat: "32.88",
+      "Beach_ UpperLon": "-117.20",
+      Beach_LowerLat: "32.87",
+      Beach_LowerLon: "-117.20",
     });
     const far = row({
       Beach_Name: "Far From The Airport",
-      Beach_UpperLat: "33.05",
-      "Beach_ UpperLon": "-117.30",
-      Beach_LowerLat: "33.04",
-      Beach_LowerLon: "-117.31",
+      Beach_UpperLat: "32.88",
+      "Beach_ UpperLon": "-117.34",
+      Beach_LowerLat: "32.87",
+      Beach_LowerLon: "-117.34",
     });
 
     const built = document(build([near, far], STATIONS, BUOYS, WEATHER));

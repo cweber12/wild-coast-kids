@@ -165,11 +165,13 @@ const WEATHER = weatherTable.stations as Readonly<
 /**
  * The beach the conditions view opens on when no other is asked for.
  *
- * Named rather than derived. "First in the inventory" would be San Onofre, at
- * the county's northern edge and 57 km from the nearest station that publishes
- * predictions, which is the worst-supported reading on the site. This one is
- * central, sits 1.4 km from its station, and is the beach the National Weather
- * Service means when its surf zone forecast says "La Jolla".
+ * Named rather than derived. "First in the inventory" meant San Onofre until
+ * the service predicate removed it, 57 km from the nearest station that
+ * publishes predictions; it now means Del Mar City Beach, which is served but
+ * sits at the northern edge of what survives and would move again the next time
+ * upstream adds a row. This one is central, sits 1.4 km from its station, and is
+ * the beach the National Weather Service means when its surf zone forecast says
+ * "La Jolla".
  */
 export const DEFAULT_BEACH_SLUG = "la-jolla-shores-beach";
 

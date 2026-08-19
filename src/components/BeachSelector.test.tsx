@@ -8,50 +8,53 @@ vi.mock("next/navigation", () => ({ useRouter: () => ({ push }) }));
 
 const GROUPS = [
   {
-    region: "North County coast",
+    region: "La Jolla and Pacific Beach",
     beaches: [
-      { slug: "san-onofre-state-beach", name: "San Onofre State Beach" },
-      { slug: "harbor-beach", name: "Harbor Beach" },
+      { slug: "del-mar-city-beach", name: "Del Mar City Beach" },
+      { slug: "la-jolla-shores-beach", name: "La Jolla Shores Beach" },
     ],
   },
   {
     region: "Bays, lagoons and inlets",
-    beaches: [{ slug: "agua-hedionda-lagoon", name: "Agua Hedionda Lagoon" }],
+    beaches: [{ slug: "mission-bay", name: "Mission Bay" }],
   },
 ];
 
 test("the chooser is labelled, so it is reachable without sight of it", () => {
-  render(<BeachSelector groups={GROUPS} current="harbor-beach" />);
+  render(<BeachSelector groups={GROUPS} current="la-jolla-shores-beach" />);
 
   const select = screen.getByLabelText("Choose a beach");
   expect(select).toBeDefined();
-  expect((select as HTMLSelectElement).value).toBe("harbor-beach");
+  expect((select as HTMLSelectElement).value).toBe("la-jolla-shores-beach");
 });
 
 test("beaches are grouped by region rather than listed flat", () => {
   const { container } = render(
-    <BeachSelector groups={GROUPS} current="harbor-beach" />,
+    <BeachSelector groups={GROUPS} current="la-jolla-shores-beach" />,
   );
 
   const labels = [...container.querySelectorAll("optgroup")].map((group) =>
     group.getAttribute("label"),
   );
-  // Seventy-three entries is too many to scan as one list.
-  expect(labels).toEqual(["North County coast", "Bays, lagoons and inlets"]);
+  // Forty-odd entries is still too many to scan as one list.
+  expect(labels).toEqual([
+    "La Jolla and Pacific Beach",
+    "Bays, lagoons and inlets",
+  ]);
 });
 
 test("every beach given is offered exactly once", () => {
   const { container } = render(
-    <BeachSelector groups={GROUPS} current="harbor-beach" />,
+    <BeachSelector groups={GROUPS} current="la-jolla-shores-beach" />,
   );
 
   const values = [...container.querySelectorAll("option")].map(
     (option) => (option as HTMLOptionElement).value,
   );
   expect(values).toEqual([
-    "san-onofre-state-beach",
-    "harbor-beach",
-    "agua-hedionda-lagoon",
+    "del-mar-city-beach",
+    "la-jolla-shores-beach",
+    "mission-bay",
   ]);
 });
 
@@ -60,14 +63,14 @@ test("a beach without scripting is still reachable, as a link", () => {
   // does its job: the client renderer never parses its contents, and a family on
   // a phone with a blocked script only ever sees the HTML the server sent.
   const markup = renderToStaticMarkup(
-    <BeachSelector groups={GROUPS} current="harbor-beach" />,
+    <BeachSelector groups={GROUPS} current="la-jolla-shores-beach" />,
   );
 
   expect(markup).toContain("<noscript>");
-  expect(markup).toContain("San Onofre State Beach");
-  expect(markup).toContain("/conditions/agua-hedionda-lagoon");
+  expect(markup).toContain("Del Mar City Beach");
+  expect(markup).toContain("/conditions/mission-bay");
   // Two-sided: markup containing every beach twice would pass the lines above
   // whether or not the fallback exists, so the links must be inside it.
   const fallback = markup.slice(markup.indexOf("<noscript>"));
-  expect(fallback).toContain("/conditions/san-onofre-state-beach");
+  expect(fallback).toContain("/conditions/del-mar-city-beach");
 });

@@ -11,13 +11,59 @@ vi.mock("./upstream", () => ({
   fetchLatestNdbcAir,
 }));
 
-const { readTodaysLowestLow, readLatestWaves, readLatestAir } =
-  await import("./conditions");
-
 const BEACH = "la-jolla-shores-beach";
 
-/** The one beach the join refuses, because upstream's coordinates are transposed. */
-const UNBOUND_BEACH = "imperial-beach-pier-area";
+/**
+ * A beach with nothing bound to it, which the inventory no longer contains.
+ *
+ * It used to be Imperial Beach pier area, whose upstream coordinates are
+ * transposed. The service predicate removes every beach a join could not bind,
+ * so no slug in `beaches.json` reaches the `no-station` states any
+ * more -- and those states stay, because that file is written by joins that can
+ * fail and the four-state model exists to keep a permanent fact about a place
+ * apart from a feed having a bad day.
+ *
+ * So one synthetic beach, added to the real inventory rather than replacing it:
+ * every other test in this file still runs against the shipped file, which is
+ * what makes them evidence rather than assertions about a fixture.
+ */
+const UNBOUND_BEACH = "nothing-is-bound-here";
+
+vi.mock("./beaches", async (importOriginal) => {
+  const real = await importOriginal<typeof import("./beaches")>();
+  const reason =
+    "the lower endpoint published upstream (32.1327, -117.1332) is outside San Diego " +
+    "County, so no station can be joined to it";
+  const unbound: import("./beaches").Beach = {
+    ...real.beachBySlug("la-jolla-shores-beach")!,
+    slug: UNBOUND_BEACH,
+    name: "Nothing Is Bound Here",
+    tide_station: null,
+    tide_station_distance_m: null,
+    tide_station_from_end: null,
+    tide_station_null_reason: reason,
+    wave_buoy: null,
+    wave_buoy_distance_m: null,
+    wave_buoy_from_end: null,
+    wave_buoy_null_reason: reason,
+    weather_station: null,
+    weather_station_distance_m: null,
+    weather_station_from_end: null,
+    weather_station_null_reason: reason,
+    air_station: null,
+    air_station_distance_m: null,
+    air_station_from_end: null,
+    air_station_null_reason: reason,
+  };
+  return {
+    ...real,
+    beachBySlug: (slug: string) =>
+      slug === UNBOUND_BEACH ? unbound : real.beachBySlug(slug),
+  };
+});
+
+const { readTodaysLowestLow, readLatestWaves, readLatestAir } =
+  await import("./conditions");
 
 /**
  * Noon Pacific on 2026-08-17. The clock is injected rather than faked, which is
@@ -163,8 +209,12 @@ test("a slug outside the inventory is a coding error, and nothing is fetched", a
  * Waves
  * ========================================================================= */
 
-/** A bay beach, which the join deliberately binds to no buoy. */
-const BAY_BEACH = "agua-hedionda-lagoon";
+/**
+ * A bay beach, which the join deliberately binds to no buoy. Agua Hedionda
+ * Lagoon used to stand here and left the inventory with the rest of North
+ * County: its nearest bay tide station is 39.7 km away.
+ */
+const BAY_BEACH = "mission-bay";
 
 test("a wave reading carries the buoy, its distance and the water temperature", async () => {
   fetchLatestWave.mockResolvedValue({
@@ -324,15 +374,12 @@ test("the air station is asked on its own network, not the weather service's", a
 });
 
 test("an air station on the weather service's own network is read there", async () => {
-  // Most beaches bind an NWS mesonet station for air. Only the pier and the
-  // Tijuana estuary are NDBC, so the common path must not go through the NDBC
+  // Most beaches bind an NWS mesonet station for air. The La Jolla run and the
+  // two southern bays are NDBC, so the common path must not go through the NDBC
   // fetcher at all.
   fetchLatestObservation.mockResolvedValue(skyOk());
 
-  const view = await readLatestAir(
-    "agua-hedionda-lagoon",
-    NOON_PACIFIC_20260817,
-  );
+  const view = await readLatestAir(BAY_BEACH, NOON_PACIFIC_20260817);
 
   expect(fetchLatestNdbcAir).not.toHaveBeenCalled();
   expect(view.air.kind).toBe("reading");
@@ -341,12 +388,9 @@ test("an air station on the weather service's own network is read there", async 
 test("a bay beach still gets an air reading, unlike its waves", async () => {
   fetchLatestObservation.mockResolvedValue(skyOk());
 
-  // A lagoon: no wave buoy by design, and an air station all the same, because
+  // A bay: no wave buoy by design, and an air station all the same, because
   // air reaches enclosed water and swell does not.
-  const view = await readLatestAir(
-    "agua-hedionda-lagoon",
-    NOON_PACIFIC_20260817,
-  );
+  const view = await readLatestAir(BAY_BEACH, NOON_PACIFIC_20260817);
 
   expect(view.airStation).not.toBeNull();
   expect(view.skyStation).not.toBeNull();

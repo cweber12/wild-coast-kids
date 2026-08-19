@@ -5,8 +5,8 @@ import { useRouter } from "next/navigation";
 /**
  * Choosing which beach the conditions view is about.
  *
- * Seventy-three entries is too many to scan flat, so they are grouped by region
- * — a display grouping the inventory derives from water class and latitude, and
+ * The inventory is too long to scan flat, so it is grouped by region — a
+ * display grouping the inventory derives from water class and latitude, and
  * never a join input. Bays, lagoons and inlets group together regardless of
  * where they are, because that is how someone looks for them.
  *

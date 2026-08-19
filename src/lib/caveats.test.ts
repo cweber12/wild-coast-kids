@@ -32,6 +32,65 @@ function unresolvedIn(file: string): string[] {
   return entries;
 }
 
+/**
+ * A beach a data file records that it does not serve. The same failure mode as
+ * an unread caveat and a worse one: a reader cannot notice what they were never
+ * shown, so a beach leaving the inventory has to leave a record behind it.
+ */
+function excludedIn(file: string): {
+  slug?: string;
+  name?: string;
+  why?: string;
+}[] {
+  const parsed = JSON.parse(readFileSync(join(DATA_DIRECTORY, file), "utf8"));
+  const entries = parsed._excluded;
+  if (entries === undefined) return [];
+  expect(Array.isArray(entries), `${file}: _excluded must be an array`).toBe(
+    true,
+  );
+  return entries;
+}
+
+describe("every excluded beach", () => {
+  test("the walk finds exclusions to check, so a green run is not an empty one", () => {
+    // Two-sided, like the caveat walk below: a discovery that found nothing
+    // would satisfy every assertion here and assert nothing at all.
+    expect(dataFiles().flatMap(excludedIn).length).toBeGreaterThan(0);
+  });
+
+  test("names which beach it was, and why it is not served", () => {
+    for (const file of dataFiles()) {
+      for (const entry of excludedIn(file)) {
+        expect(typeof entry.slug).toBe("string");
+        expect(entry.slug?.trim().length ?? 0).toBeGreaterThan(0);
+        expect(typeof entry.name).toBe("string");
+        expect(entry.name?.trim().length ?? 0).toBeGreaterThan(0);
+        expect(
+          entry.why?.trim().length ?? 0,
+          `${file}: ${entry.slug} was excluded with no reason recorded`,
+        ).toBeGreaterThan(0);
+      }
+    }
+  });
+
+  test("is not also served by the same file, which would be a contradiction", () => {
+    for (const file of dataFiles()) {
+      const parsed = JSON.parse(
+        readFileSync(join(DATA_DIRECTORY, file), "utf8"),
+      );
+      const served = new Set(
+        (parsed.beaches ?? []).map((beach: { slug: string }) => beach.slug),
+      );
+      for (const entry of excludedIn(file)) {
+        expect(
+          served.has(entry.slug),
+          `${file}: ${entry.slug} is both listed and excluded`,
+        ).toBe(false);
+      }
+    }
+  });
+});
+
 describe("every data file's caveats", () => {
   test("the walk finds files to check, so a green run is not an empty one", () => {
     // Two-sided: a discovery that found nothing would satisfy every assertion

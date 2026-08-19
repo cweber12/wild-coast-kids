@@ -11,8 +11,30 @@ import {
 } from "./beaches";
 
 describe("the inventory", () => {
-  test("holds every public, active San Diego beach the state publishes", () => {
-    expect(allBeaches()).toHaveLength(73);
+  test("holds only the beaches the station networks reach", () => {
+    // The county lists 73. The other 32 are in beaches.json's `_excluded`
+    // block, each with the binding distance that removed it; see
+    // docs/adr/0011-inventory-bounded-by-station-networks.md.
+    expect(allBeaches()).toHaveLength(41);
+  });
+
+  test("a beach the county lists but no station reaches is not in it", () => {
+    // San Onofre reads Scripps 56.6 km away, which is most of the way to Los
+    // Angeles. It is absent rather than answered for.
+    expect(beachBySlug("san-onofre-state-beach")).toBeNull();
+  });
+
+  test("every binding it does have is inside the ten-kilometre tolerance", () => {
+    // The predicate, asserted against the file that ships rather than against
+    // the fixtures the seeding script was tested with. A buoy the join
+    // deliberately withheld is not a binding, and disqualifies nobody.
+    for (const beach of allBeaches()) {
+      expect(beach.tide_station).not.toBeNull();
+      expect(beach.tide_station_distance_m).toBeLessThanOrEqual(10_000);
+      if (beach.wave_buoy !== null) {
+        expect(beach.wave_buoy_distance_m).toBeLessThanOrEqual(10_000);
+      }
+    }
   });
 
   test("is ordered north to south", () => {
@@ -106,18 +128,23 @@ describe("the tide station binding", () => {
     }
   });
 
-  test("a beach the join could not bind is null with a stated reason", () => {
-    const unbound = allBeaches().filter((beach) => beach.tide_station === null);
+  test("no beach in the inventory is missing one", () => {
+    // Upstream publishes one row whose coordinates are transposed, so the join
+    // binds it nothing. It used to ship as a page carrying a stated reason; the
+    // service predicate keeps it out of the inventory entirely now, and
+    // beaches.json's `_excluded` block carries the reason instead.
+    expect(allBeaches().filter((beach) => beach.tide_station === null)).toEqual(
+      [],
+    );
+    expect(beachBySlug("imperial-beach-pier-area")).toBeNull();
+  });
 
-    // Upstream publishes one row whose coordinates are transposed; it is refused
-    // rather than corrected here, because correcting it would be inventing a
-    // location. If this count changes, upstream changed.
-    expect(unbound).toHaveLength(1);
-    for (const beach of unbound) {
-      expect(beach.tide_station_null_reason).toBeTruthy();
-      expect(tideStationFor(beach)).toBeNull();
-      expect(beach.tide_station_distance_m).toBeNull();
-    }
+  test("resolves to null for a beach with none, which the type still allows", () => {
+    // No beach in the inventory has one. The field is still written by a join
+    // that can fail, so the reader of the data file validates rather than
+    // trusts, and conditions.ts still has a state to render if one ever does.
+    const beach = { ...defaultBeach(), tide_station: null };
+    expect(tideStationFor(beach)).toBeNull();
   });
 
   test("a beach naming an undescribed station is a broken data file, and says so", () => {
