@@ -1,13 +1,22 @@
 /**
- * Wind, visibility, air temperature and sky at the bound observation station.
+ * Air temperature, wind, sky and visibility at the bound observation station.
  *
  * Presentational and pure, like the two panels beside it.
  *
+ * **Temperature leads.** Visibility held the primary slot and was the worst of
+ * the four figures for it: METAR stops at ten statute miles and San Diego sits
+ * at that ceiling most of the time, so the largest text on the panel usually
+ * rendered a constant. The temperature is what a parent deciding what to bring
+ * actually reads. Visibility keeps its place on the line beneath — what cost
+ * this panel its binding was the requirement that visibility come from the
+ * *same* station as everything else, not the field itself. See
+ * docs/adr/0010-two-provenances-in-the-air-panel.md.
+ *
  * **Four values, one station.** The join binds a station that publishes
  * visibility, and that same station supplies the wind, the temperature and the
- * sky. Several stations sit nearer each beach and publish wind without
- * visibility; binding those separately would put two provenances behind one
- * heading, which is the thing this site does not do.
+ * sky. Several stations sit nearer each beach and publish wind and temperature
+ * without visibility; ADR 0010 decides to bind those separately, and until that
+ * lands all four values here still share one provenance.
  *
  * **Ten miles is a ceiling, not a measurement.** METAR stops there, so the top
  * of the range is rendered "10 miles or more". Reading it as exactly ten would
@@ -15,8 +24,10 @@
  *
  * **The station is an airport, and says so.** Every station in the county that
  * publishes visibility is an airport, inland of the beach it is bound to — a
- * median of 7.3 km and up to 16.8 km. Coastal fog is exactly what changes across
- * that distance, so the distance is given for the same reason the buoy's is.
+ * median of 7.3 km and up to 16.8 km. That distance is what the marine layer
+ * crosses, so the temperature now leading this panel is the figure it distorts
+ * most, and the attribution names that rather than letting fog stand for all
+ * of it.
  */
 
 import type { AirView } from "@/lib/conditions";
@@ -66,15 +77,15 @@ export function WindToday({ beachName, station, state }: AirView) {
         id="wind-today-heading"
         className="text-2xs mb-3 font-extrabold tracking-widest text-ocean uppercase"
       >
-        Wind and visibility · {beachName}
+        Air · {beachName}
       </h2>
 
       {state.kind === "reading" && (
         <>
           <p className="leading-tight mb-2 text-4xl font-black italic">
-            {state.visibilityMi === null
-              ? "No visibility reading"
-              : visibilityWords(state.visibilityMi, state.visibilityAtCeiling)}
+            {state.airTempF === null
+              ? "No temperature reading"
+              : `${Math.round(state.airTempF)}°F`}
           </p>
           <p className="leading-relaxed mb-4 text-base text-fog">
             {state.windMph === null
@@ -89,10 +100,13 @@ export function WindToday({ beachName, station, state }: AirView) {
                     ? `, gusting ${Math.round(state.gustMph)}`
                     : "") +
                   "."}
-            {state.airTempF !== null
-              ? ` The air is ${Math.round(state.airTempF)}°F.`
-              : ""}
             {state.sky !== null ? ` Sky: ${state.sky.toLowerCase()}.` : ""}
+            {state.visibilityMi === null
+              ? " The station reported no visibility."
+              : ` Visibility ${visibilityWords(
+                  state.visibilityMi,
+                  state.visibilityAtCeiling,
+                )}.`}
           </p>
         </>
       )}
@@ -133,8 +147,9 @@ export function WindToday({ beachName, station, state }: AirView) {
         <p className="text-2xs leading-relaxed text-fog">
           Measured at {station.name}
           {distantKm !== null ? `, about ${distantKm} km from this beach` : ""}.
-          That is an airport reading, not a reading taken at the shore, and
-          coastal fog can differ across that distance.
+          That is an airport reading, not a reading taken at the shore: inland
+          of the marine layer the air can be several degrees warmer, and coastal
+          fog differs across that distance too.
         </p>
       )}
     </section>

@@ -1,6 +1,6 @@
 /**
- * The seam between the network and the wind-and-visibility markup, kept as thin
- * as the two panels beside it: read, render.
+ * The seam between the network and the air markup, kept as thin as the two
+ * panels beside it: read, render.
  */
 
 import { readLatestAir } from "@/lib/conditions";

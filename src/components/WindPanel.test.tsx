@@ -29,7 +29,7 @@ test("asks for the slug it was given and renders the reading", async () => {
   render(await WindPanel({ slug: "la-jolla-shores-beach" }));
 
   expect(readLatestAir).toHaveBeenCalledWith("la-jolla-shores-beach");
-  expect(screen.getByText("10 miles or more")).toBeDefined();
+  expect(screen.getByText("70°F")).toBeDefined();
 });
 
 test("the beach with no station renders its own state, not an outage", async () => {

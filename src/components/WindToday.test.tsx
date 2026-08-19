@@ -30,7 +30,7 @@ test("the ten-mile ceiling reads as a floor, never as an exact measurement", () 
 
   // METAR stops at ten miles. "10 miles" would claim a precision upstream
   // never offered.
-  expect(screen.getByText("10 miles or more")).toBeDefined();
+  expect(screen.getByText(/Visibility 10 miles or more/)).toBeDefined();
 });
 
 test("a visibility below the ceiling is given as the measurement it is", () => {
@@ -42,7 +42,7 @@ test("a visibility below the ceiling is given as the measurement it is", () => {
     />,
   );
 
-  expect(screen.getByText("8 miles")).toBeDefined();
+  expect(screen.getByText(/Visibility 8 miles\./)).toBeDefined();
 });
 
 test("wind is given in plain words, from the direction it blows from", () => {
@@ -68,8 +68,45 @@ test("air temperature and sky come from the same reading", () => {
     />,
   );
 
-  expect(screen.getByText(/The air is 70°F/)).toBeDefined();
+  expect(screen.getByText("70°F")).toBeDefined();
   expect(screen.getByText(/Sky: clear/)).toBeDefined();
+});
+
+test("the temperature is the panel's largest figure and visibility is not", () => {
+  // The reorder is the whole of this slice, so it is asserted rather than
+  // left to a screenshot. Visibility held this slot and sits at METAR's
+  // ten-mile ceiling most of the time, which made the largest text on the
+  // panel a near-constant describing an airport. See ADR 0010.
+  render(
+    <WindToday
+      beachName="La Jolla Shores Beach"
+      station={KNKX}
+      state={READING}
+    />,
+  );
+
+  expect(screen.getByText("70°F").className).toContain("text-4xl");
+  expect(
+    screen.getByText(/Visibility 10 miles or more/).className,
+  ).not.toContain("text-4xl");
+});
+
+test("the four values are still read in one sentence beneath the temperature", () => {
+  render(
+    <WindToday
+      beachName="La Jolla Shores Beach"
+      station={KNKX}
+      state={READING}
+    />,
+  );
+
+  // Wind, then sky, then visibility -- least useful last. One node, so the
+  // order is asserted rather than three independent presence checks.
+  expect(
+    screen.getByText(
+      /Wind 6 mph from the north-west\. Sky: clear\. Visibility 10 miles or more\./,
+    ),
+  ).toBeDefined();
 });
 
 test("a gust is shown when the station published one", () => {
@@ -118,7 +155,7 @@ test("a station publishing no visibility says so rather than rendering blank", (
     />,
   );
 
-  expect(screen.getByText("No visibility reading")).toBeDefined();
+  expect(screen.getByText(/reported no visibility/)).toBeDefined();
 });
 
 test("the airport and its distance are attributed, because fog differs across it", () => {
@@ -213,7 +250,7 @@ test("a visibility under a mile keeps its decimal, being the reading that matter
 
   // Rounded to whole miles this would render "0 miles", which reads as an
   // instrument fault rather than as thick fog.
-  expect(screen.getByText("0.3 miles")).toBeDefined();
+  expect(screen.getByText(/Visibility 0\.3 miles\./)).toBeDefined();
 });
 
 test("one mile is singular", () => {
@@ -225,7 +262,7 @@ test("one mile is singular", () => {
     />,
   );
 
-  expect(screen.getByText("1 mile")).toBeDefined();
+  expect(screen.getByText(/Visibility 1 mile\./)).toBeDefined();
 });
 
 test("wind with no direction is still given as a speed", () => {
@@ -240,15 +277,29 @@ test("wind with no direction is still given as a speed", () => {
   expect(screen.getByText(/Wind 6 mph\./)).toBeDefined();
 });
 
-test("no air temperature and no sky simply go unsaid", () => {
+test("no sky simply goes unsaid", () => {
   render(
     <WindToday
       beachName="La Jolla Shores Beach"
       station={KNKX}
-      state={{ ...READING, airTempF: null, sky: null }}
+      state={{ ...READING, sky: null }}
     />,
   );
 
-  expect(screen.queryByText(/The air is/)).toBeNull();
   expect(screen.queryByText(/Sky:/)).toBeNull();
+});
+
+test("a missing temperature says so rather than leaving the panel headed by nothing", () => {
+  render(
+    <WindToday
+      beachName="La Jolla Shores Beach"
+      station={KNKX}
+      state={{ ...READING, airTempF: null }}
+    />,
+  );
+
+  // Sky and wind may go unsaid on the line beneath. The primary slot cannot:
+  // an empty one would read as a rendering fault, and it is the figure the
+  // reader came for.
+  expect(screen.getByText("No temperature reading")).toBeDefined();
 });
