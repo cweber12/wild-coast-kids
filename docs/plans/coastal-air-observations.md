@@ -500,3 +500,45 @@ panel, and slice 6 is what demonstrates both.
 
 **Nothing else moves.** Same six slices, same content, same two PRs. Only the
 order inside the second one changes.
+
+## Addendum — 2026-08-19: what shipped, measured
+
+All six slices are merged or in review. This records the outcome against the
+numbers above, because several of those were simulated from a proxy this plan
+then rejected, and they should not be read as what the site does.
+
+**The binding, across all 72 bound beaches.**
+
+```
+                        median    max     stations above 50 m
+today, before this      7.3 km   16.8 km  every one an airport
+predicted, elev<=20m    3.5 km    8.9 km  0
+SHIPPED                 3.5 km    7.4 km  0
+```
+
+The shipped shore rule is exposure rather than elevation, and it beat the proxy
+on the maximum because the proxy excluded CBDSD and KNFG at 22 m -- both on the
+coastal plain with nothing between them and the sea -- while including nothing
+the exposure rule does not. Twenty-one beaches read an NDBC station, fifty-one
+an NWS one, and not one sky binding moved.
+
+**La Jolla Shores reads LJAC1 at 1.38 km** for temperature and wind, and KNKX at
+10.43 km for sky and visibility. Both are named on the panel with their
+distances, which is ADR 0010's cost paid in the open.
+
+**Three claims in the body above are superseded**, all of them by measurement
+rather than by argument, and all already corrected in the addenda: there are
+more than two usable coastal air stations; the air pool is 56 stations rather
+than 13; and the NWS-only intermediate the slice order implied is worse than
+what ships today rather than a step toward it.
+
+**What is not done, and is filed rather than forgotten.**
+
+- `weather-stations.json` is named for the sky station while holding both
+  networks and serving two joins. Its `unresolved` list says so. The rename
+  waits for `beaches.json`'s `weather_station` field to be renamed with it.
+- `seed-beaches.mjs` stamps `generated` in UTC, so an evening run records
+  tomorrow. `probe-observation-stations.mjs` does not; the fix for the older
+  script is its own slice.
+- LJAC1's water temperature, published on 98% of rows, still does not reach the
+  wave panel. Out of scope from the start and still out of it.
