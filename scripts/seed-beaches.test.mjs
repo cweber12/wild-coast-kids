@@ -37,21 +37,21 @@ const WEATHER = {
     lat: 32.86833,
     lon: -117.1425,
     delivers: true,
-    publishes_visibility: true,
+    publishes_sky: true,
   },
   KSAN: {
     lat: 32.73361,
     lon: -117.18306,
     delivers: true,
-    publishes_visibility: true,
+    publishes_sky: true,
   },
-  // Answers, publishes no visibility. Nearer most of these beaches than either
-  // of the above, and refused by the join for exactly that reason.
+  // Answers, publishes no sky. Nearer most of these beaches than either of the
+  // above, and refused by the join for exactly that reason.
   D3101: {
     lat: 32.92083,
     lon: -117.25283,
     delivers: true,
-    publishes_visibility: false,
+    publishes_sky: false,
   },
 };
 

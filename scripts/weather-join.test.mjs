@@ -2,8 +2,8 @@ import { describe, expect, it } from "vitest";
 import { bindWeatherStation } from "./weather-join.mjs";
 
 /**
- * A cut-down table with the shapes that matter: two stations that publish
- * visibility, one that answers without it, and one that does not answer.
+ * A cut-down table with the shapes that matter: two stations that publish sky,
+ * one that answers without it, and one that does not answer.
  *
  * The coordinates are the real ones, because the whole point of the join is
  * which station is nearest.
@@ -13,27 +13,27 @@ const STATIONS = {
     lat: 32.86833,
     lon: -117.1425,
     delivers: true,
-    publishes_visibility: true,
+    publishes_sky: true,
   },
   KSAN: {
     lat: 32.73361,
     lon: -117.18306,
     delivers: true,
-    publishes_visibility: true,
+    publishes_sky: true,
   },
-  // Nearer La Jolla Shores than either of the above, and publishes no
-  // visibility at all. This is the station the join has to refuse.
+  // Nearer La Jolla Shores than either of the above, and publishes no sky at
+  // all. This is the station the join has to refuse.
   D3101: {
     lat: 32.92083,
     lon: -117.25283,
     delivers: true,
-    publishes_visibility: false,
+    publishes_sky: false,
   },
   KF70: {
     lat: 33.5742,
     lon: -117.1285,
     delivers: false,
-    publishes_visibility: false,
+    publishes_sky: false,
   },
 };
 
@@ -46,7 +46,7 @@ const LA_JOLLA_SHORES = {
 };
 
 describe("bindWeatherStation", () => {
-  it("binds the nearest station that publishes visibility", () => {
+  it("binds the nearest station that publishes sky", () => {
     const bound = bindWeatherStation(LA_JOLLA_SHORES, STATIONS);
 
     expect(bound.stationId).toBe("KNKX");
@@ -54,11 +54,12 @@ describe("bindWeatherStation", () => {
     expect(Math.round(bound.distanceM)).toBe(10429);
   });
 
-  it("refuses a nearer station that publishes no visibility", () => {
+  it("refuses a nearer station that publishes no sky", () => {
     // D3101 sits about 3.5 km from this beach and KNKX about 10.4 km, so
-    // proximity alone would pick D3101 -- which has never published a
-    // visibility value. Requiring the field is what makes the binding able to
-    // answer the question the site promises.
+    // proximity alone would pick D3101 -- which has never published a sky
+    // description. Requiring the field is what makes the binding able to answer
+    // the question the site promises. It is also why the air join has to be a
+    // separate join: D3101 does publish temperature and wind.
     const bound = bindWeatherStation(LA_JOLLA_SHORES, STATIONS);
     expect(bound.stationId).not.toBe("D3101");
   });
@@ -91,7 +92,7 @@ describe("bindWeatherStation", () => {
     const bound = bindWeatherStation(LA_JOLLA_SHORES, none);
 
     expect(bound.stationId).toBeNull();
-    expect(bound.reason).toMatch(/publishes visibility/);
+    expect(bound.reason).toMatch(/publishes sky/);
   });
 
   it("breaks a tie on the id, so two runs agree", () => {
@@ -103,13 +104,13 @@ describe("bindWeatherStation", () => {
         lat: 32.9,
         lon: -117.3,
         delivers: true,
-        publishes_visibility: true,
+        publishes_sky: true,
       },
       KAAA: {
         lat: 32.9,
         lon: -117.3,
         delivers: true,
-        publishes_visibility: true,
+        publishes_sky: true,
       },
     };
     expect(bindWeatherStation(LA_JOLLA_SHORES, tied).stationId).toBe("KAAA");

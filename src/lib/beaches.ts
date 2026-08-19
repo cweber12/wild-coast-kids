@@ -92,11 +92,29 @@ export interface WeatherStation {
   /** Measured, not assumed. A station that does not deliver is kept and marked. */
   delivers: boolean;
   /**
-   * Measured separately from `delivers`, and the join's filter. Forty-six of the
-   * fifty-six candidates in this county answer perfectly and publish no
-   * visibility, including the two nearest the default beach.
+   * Metres above sea level as the network publishes it, or null where it
+   * publishes none. Measured metadata rather than a join input: it is most of
+   * what the hand-written `shore` flag beside it is read from.
    */
-  publishes_visibility: boolean;
+  elevation_m: number | null;
+  /**
+   * Whether the station stands in the marine layer at the shoreline. An input to
+   * the air join, hand-written like `TideStation.water` and for the same reason:
+   * no authority publishes the classification.
+   */
+  shore: boolean;
+  /** Which publisher serves this station, and so which fetcher reads it. */
+  network: "nws" | "ndbc";
+  /** Whether the station published an air temperature when probed. */
+  publishes_air_temp: boolean;
+  /** Whether it published a wind speed. */
+  publishes_wind: boolean;
+  /**
+   * Measured separately from `delivers`, and the sky join's filter. Only ten of
+   * the sixty-two candidates in this county carry a sky description, every one
+   * an airport, and the two nearest the default beach carry none.
+   */
+  publishes_sky: boolean;
   dead_note?: string;
 }
 
