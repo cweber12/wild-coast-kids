@@ -258,3 +258,105 @@ that is true regardless.
   `docs/plans/coastal-air-observations.md` and still deferred.
 - **Re-litigating the upstream inclusion predicate.** County, Active, PUBLIC,
   CountAsBeach stays exactly as it is.
+
+## Addendum — 2026-08-19: the water class answers two questions, and they diverge
+
+Found while measuring slice 2 against the real joins, before writing any of it.
+The slice as specified above cannot be implemented correctly, and the reason
+generalises past the two beaches it names.
+
+**One of the two overrides is clean.** `fiesta-island` improves on every variable
+at once, which is what a single wrong classification looks like when corrected:
+
+```
+fiesta-island   as open-coast   tide 9410230 11.66 km   wave 46254 12.14 km   air KSAN 4.72 km
+                as bay          tide TWC0413  2.10 km   wave none             air KSAN 4.72 km
+```
+
+**The other has no correct value.** Neither class is right for
+`childrens-pool`, and each is wrong about a different panel:
+
+```
+childrens-pool  as open-coast   tide 9410230  2.93 km   wave 46254  2.50 km   air LJAC1 2.94 km
+                as bay          tide 9410196  7.84 km   wave none             air LJAC1 2.94 km
+```
+
+As open coast it gets the tide right — Scripps at 2.93 km is the ocean level
+that actually applies inside the pool — and then publishes an open-coast swell
+height at a walled wading cove. That is the failure `wave-join.mjs` was written
+to prevent, in its own words: "a parent reading three feet before a paddle with
+children would be told something false about the place they are going." At the
+beach named Children's Pool. As bay it withholds the buoy correctly and reads
+Mission Bay's tide curve, 7.84 km away, for a cove in La Jolla.
+
+**The cause is that one field answers two questions.** `waterClassOf` is read by
+the tide join as _which water body's level applies here_ and by the wave join as
+_does ocean swell reach this water_. Those coincide at 71 of 73 beaches, which is
+why the conflation survived three joins. Children's Pool is where a breakwater
+separates them. `docs/reference/sensor-representativeness.md` §5.5 and §12 name
+this directly: validity is per variable, and validating a source wholesale is an
+anti-pattern.
+
+### Revision
+
+**A `sheltered` input joins `water` and `shore`.** Hand-written, keyed by slug,
+with a reason per entry, and read only by the wave join: a sheltered beach binds
+no buoy whatever its water class. `childrens-pool` becomes open coast **and**
+sheltered — Scripps tide at 2.93 km, no wave height, air unchanged.
+`fiesta-island` needs only the class override.
+
+The criterion is written down so the flag is checkable rather than a taste:
+**a fixed constructed structure — breakwater, seawall, jetty — stands between
+the beach and the open ocean.** Not "the waves feel smaller here", which is
+unfalsifiable and would spread. Children's Pool has one. Natural coves do not,
+however sheltered they feel.
+
+`TODO(verify)`: the criterion has been established for `childrens-pool` only.
+Fifteen other open-coast beaches survive the predicate and each must be checked
+against it before slice 3 lands — `bird-rock-nr`, `del-mar-city-beach`,
+`la-jolla-community-beach`, `la-jolla-cove`, `la-jolla-shores-beach`,
+`marine-street-beach`, `mission-beach`, `pacific-beach`, `shell-beach`,
+`south-casa-beach-s-d`, `torrey-pines-city-beach`, `torrey-pines-state-beach`,
+`tourmaline-surfing-park`, `whispering-sands-nicholson-pt`, `windansea-beach`.
+The other 25 survivors are bays and bind no buoy by construction.
+
+**The predicate's wave clause is reformulated.** As written above it reads "tide
+within 10 km, and unless the beach is a bay, a buoy within 10 km" — which would
+cut a sheltered beach for lacking the buoy the join was right to withhold. It
+becomes:
+
+- its tide station is within 10 km, **and**
+- **if** a wave buoy is bound at all, it is within 10 km.
+
+This subsumes the bay exemption rather than special-casing beside it, and states
+the actual rule: a beach fails when a binding it _has_ is too far, never when a
+join correctly declined to make one. Measured effect: **41 kept, 32 cut**, up one
+from 40. Children's Pool survives; no other beach moves.
+
+ADR 0011's decision paragraph is amended in the same commit, because it states
+the superseded form of the predicate and its count.
+
+### Considered and rejected
+
+**Drop `childrens-pool` from the inventory.** One beach, keeps the count at 40,
+and introduces no third join input. Rejected because the beach is well served —
+tide 2.93 km, air 2.94 km, both among the best on the site — and would be removed
+only to avoid naming a distinction that is real and already load-bearing
+elsewhere. Removing a beach the networks _do_ reach is the opposite of what this
+plan is for.
+
+**Split the class into two fields**, `tide_water` and `swell_reaches`, and retire
+the conflation. Conceptually the honest fix, and what the divergence argues for.
+Rejected as premature: the two would hold identical values at 72 of 73 beaches,
+and a three-join refactor to express one exception buys nothing today. This is
+the thing to do if a second divergent beach appears — at which point it is its
+own slice, not an addendum.
+
+### Revised slices
+
+1. Unchanged: this plan, ADR 0011, the reference doc.
+2. The class override **and** the `sheltered` input, with the criterion recorded
+   beside the table. Two beaches change binding.
+3. The predicate in its reformulated shape, the `_excluded` block, the
+   regenerated `beaches.json`, routes and selector. 73 beaches become 41.
+4. Unchanged: the exclusion is disclosed to readers by `Caveats`.

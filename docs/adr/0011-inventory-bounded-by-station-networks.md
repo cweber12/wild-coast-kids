@@ -1,6 +1,7 @@
 # 0011 — The inventory is bounded by the station networks
 
-Date: 2026-08-19. Status: accepted.
+Date: 2026-08-19. Status: accepted. Decision amended 2026-08-19; see the
+amendment at the foot of this file.
 
 ## Context
 
@@ -47,10 +48,12 @@ listing the beach.
 ## Decision
 
 **A beach is in the inventory only if the stations it needs reach it within
-10 km.** Tide within 10 km, and — unless the beach is a bay or lagoon, where
-binding no buoy is already the correct answer — a wave buoy within 10 km. Air is
-not in the predicate; every bound beach already reads air within 7.4 km, so the
-clause would exclude nobody and imply a filter doing work it is not doing.
+10 km.** Its tide station is within 10 km, and if a wave buoy is bound at all,
+that buoy is within 10 km. A beach fails when a binding it _has_ is too far,
+never when a join correctly declined to make one — which is what a bay, or a
+cove closed off by a breakwater, does with a buoy. Air is not in the predicate;
+every bound beach already reads air within 7.4 km, so the clause would exclude
+nobody and imply a filter doing work it is not doing.
 
 Ten kilometres is WMO §1.1.2's stated scale for small-scale and local
 applications. It is a benchmark and not a rule, and it is recorded here as a
@@ -73,11 +76,14 @@ The plan is `docs/plans/inventory-bounded-by-stations.md`.
 
 ## Consequences
 
-**The site answers for 40 beaches instead of 73.** That is the cost and it is
-the point: the 33 it drops are the ones whose numbers it could not defend. What
-remains is La Jolla and Pacific Beach, the Mission Bay and San Diego Bay group,
-Point Loma and Ocean Beach, and the Del Mar run — every one with a tide station
-within 10 km and, on the open coast, a buoy within 10 km.
+**The site answers for 41 beaches instead of 73.** That is the cost and it is
+the point: the 32 it drops are the ones whose numbers it could not defend. What
+remains, by the region labels the seeding script already assigns: 25 bays,
+lagoons and inlets, 13 in La Jolla and Pacific Beach — which by that rule
+includes Del Mar City Beach and both Torrey Pines — and 3 in Point Loma and
+Ocean Beach. No beach survives north of Del Mar or south of Ocean Beach. Every
+one has a tide station within 10 km, and none is bound to a buoy further away
+than that.
 
 **The whole North County coast goes, and its air and wave bindings were the best
 on the site** — 0.3–5.1 km and 1.0–4.7 km. Only tide fails there, and it fails
@@ -100,12 +106,14 @@ segment endpoints are 65.5 km apart and which binds nothing at all, and
 `tide-beach-park`, recorded 34 km from the city it names. Their coordinates are
 not corrected here — this repo is not an authority on where beaches are.
 
-**Two beaches are reclassified rather than excluded.** `fiesta-island` is typed
-open coast inside Mission Bay and `childrens-pool` is typed bay on the open
-ocean. A slug-keyed override joins `tide-stations.json`'s `water` and
-`weather-stations.json`'s `shore` as a hand-written join input with a written
-reason — three now, which is the point at which the pattern should be named
-rather than repeated a fourth time.
+**Two beaches are reclassified rather than excluded**, and one of them needs a
+second input to say what its class cannot. `fiesta-island` is typed open coast
+inside Mission Bay. `childrens-pool` is typed bay on the open ocean, and is
+both open coast for its tide and closed to swell by a breakwater — so a
+`sheltered` flag sits beside the class override, read by the wave join alone.
+That makes three hand-written join inputs alongside `tide-stations.json`'s
+`water` and `weather-stations.json`'s `shore`, which is the point at which the
+pattern should be named rather than repeated a fourth time.
 
 **What this does not decide.** Sky and visibility come from an airport METAR at
 1.6–16.8 km at every beach, including the best-bound ones, and the reference
@@ -113,3 +121,19 @@ above holds that aerodrome observations should not be transferred off-field at
 any distance. No tightening of this predicate fixes that, because the problem is
 the network rather than the reach. It is left open deliberately and named in the
 plan's out-of-scope list.
+
+## Amendment — 2026-08-19
+
+The decision above originally stated the wave clause as "unless the beach is a
+bay or lagoon ... a wave buoy within 10 km", and its consequence as 40 beaches
+kept against 33 dropped. Measuring the two reclassifications against the real
+joins showed that form cuts a beach for lacking a buoy the join was right to
+withhold, so the clause is restated above in the form that separates a binding
+that is too far from a binding correctly not made. The counts are 41 and 32.
+
+The argument is unchanged. What changed is that the water class turned out to
+answer two questions — which water body's level applies here, and whether ocean
+swell reaches this water. They coincide at 71 of 73 beaches and diverge at
+Children's Pool, where a breakwater stands between the two answers. The addendum
+of the same date in `docs/plans/inventory-bounded-by-stations.md` records the
+measurement that found it.
