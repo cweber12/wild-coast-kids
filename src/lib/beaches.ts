@@ -60,11 +60,26 @@ export interface Beach {
   /** Present exactly when wave_buoy is null, and required then. */
   wave_buoy_null_reason?: string;
   /** Joined, never typed. Unlike the buoy, every beach binds one: air reaches a lagoon. */
+  /**
+   * Joined, never typed. Supplies sky and visibility only: it is the nearest
+   * station that publishes them, which in this county is always an airport.
+   * Temperature and wind come from `air_station`.
+   */
   weather_station: string | null;
   weather_station_distance_m: number | null;
   weather_station_from_end: string | null;
   /** Present exactly when weather_station is null, and required then. */
   weather_station_null_reason?: string;
+  /**
+   * Joined, never typed. Supplies air temperature and wind: the nearest station
+   * that publishes both and suits this beach's water class. Usually a different
+   * station from `weather_station`, and much nearer.
+   */
+  air_station: string | null;
+  air_station_distance_m: number | null;
+  air_station_from_end: string | null;
+  /** Present exactly when air_station is null, and required then. */
+  air_station_null_reason?: string;
 }
 
 export interface WaveBuoy {
@@ -237,7 +252,9 @@ export function waveBuoyFor(beach: Beach): (WaveBuoy & { id: string }) | null {
 }
 
 /**
- * The observation station a beach reads, or null when the join bound none.
+ * The station a beach reads for sky and visibility, or null when the join bound
+ * none. Not the station it reads for temperature and wind -- see
+ * `airStationFor` -- and the difference is the whole of ADR 0010.
  *
  * Throws when a beach names a station the table does not describe -- a broken
  * pair of data files, which should stop a build rather than render an
@@ -256,6 +273,25 @@ export function weatherStationFor(
     );
   }
   return { id: beach.weather_station, ...station };
+}
+
+/**
+ * The station a beach reads for air temperature and wind, or null when the join
+ * bound none. Same table as `weatherStationFor`, different filter.
+ */
+export function airStationFor(
+  beach: Beach,
+): (WeatherStation & { id: string }) | null {
+  if (beach.air_station === null) return null;
+
+  const station = WEATHER[beach.air_station];
+  if (!station) {
+    throw new Error(
+      `beaches.json: ${beach.slug} names air station ${beach.air_station}, ` +
+        `which has no entry in weather-stations.json.`,
+    );
+  }
+  return { id: beach.air_station, ...station };
 }
 
 /** Caveats carried by every data file. Every one owes the reader a rendering. */

@@ -449,3 +449,96 @@ move; the diff is read and reported rather than assumed to be empty.
 
 What slice 4 still does not do is change the _rule_. The air pool, the shore
 preference and the second network all arrive in slices 5 and 6, as before.
+
+## Addendum — 2026-08-19: slices 5 and 6 swap, because neither order was free
+
+Measured while starting slice 5, and it changes the order rather than the work.
+
+**The problem.** Slice 6 is described as making it so "an NDBC station can win the
+join", which implies slice 5 binds over the National Weather Service alone and
+slice 6 widens the pool. Simulated over all 72 bound beaches against the table
+slice 4 committed, an NWS-only pool is not a smaller version of the answer. It is
+a worse one than what ships today:
+
+```
+                     median   max      farther than today
+today                7.3 km  16.8 km   --
+NWS-only  (slice 5)  4.4 km  22.9 km   15 beaches
+both      (slice 6)  3.5 km   7.4 km    3 beaches
+```
+
+Tijuana River binds KSAN 22.9 km away and Border Field E9951 at 20.2 km, because
+south county's nearest shore station is TIXC1 and the pool cannot see it. La
+Jolla Shores goes from KNKX at 10.43 km to SOBSD at 13.9 km -- a better exposure
+at a worse distance, and still not the pier 1.38 km away.
+
+That is the case the addendum above already refused once, in the same words: a
+decision that publishes a binding the next slice overturns is not a smaller
+version of this one. Fifteen beaches would move twice, the second time to undo
+the first.
+
+**The alternative was worse.** Binding over the full pool in slice 5, before
+anything can fetch an NDBC station, leaves the 21 beaches that bind LJAC1 or
+TIXC1 rendering "we could not get a weather reading just now" until slice 6 lands.
+A slice is supposed to leave the repo working.
+
+**So the two swap.** The parser and the second fetcher land first, and the join
+lands second:
+
+5. `parseNdbcAirObservation`, its committed fixture, and the NDBC air fetch in
+   `upstream.ts`. Nothing binds an NDBC station yet, so no behaviour changes at
+   all; the slice is verified by its own tests against a real committed payload,
+   which is the seam this plan already named for it.
+6. The air join over the full pool with the shore preference, the re-seed, and
+   the panel's second provenance. Every beach reaches its final binding in one
+   commit, La Jolla Shores included.
+
+This makes slice 5 a capability slice with no reader-facing half, which the
+repo's own rule warns about. The warning is accepted here with its eyes open:
+the alternative orders either ship a binding to be retracted or ship a broken
+panel, and slice 6 is what demonstrates both.
+
+**Nothing else moves.** Same six slices, same content, same two PRs. Only the
+order inside the second one changes.
+
+## Addendum — 2026-08-19: what shipped, measured
+
+All six slices are merged or in review. This records the outcome against the
+numbers above, because several of those were simulated from a proxy this plan
+then rejected, and they should not be read as what the site does.
+
+**The binding, across all 72 bound beaches.**
+
+```
+                        median    max     stations above 50 m
+today, before this      7.3 km   16.8 km  every one an airport
+predicted, elev<=20m    3.5 km    8.9 km  0
+SHIPPED                 3.5 km    7.4 km  0
+```
+
+The shipped shore rule is exposure rather than elevation, and it beat the proxy
+on the maximum because the proxy excluded CBDSD and KNFG at 22 m -- both on the
+coastal plain with nothing between them and the sea -- while including nothing
+the exposure rule does not. Twenty-one beaches read an NDBC station, fifty-one
+an NWS one, and not one sky binding moved.
+
+**La Jolla Shores reads LJAC1 at 1.38 km** for temperature and wind, and KNKX at
+10.43 km for sky and visibility. Both are named on the panel with their
+distances, which is ADR 0010's cost paid in the open.
+
+**Three claims in the body above are superseded**, all of them by measurement
+rather than by argument, and all already corrected in the addenda: there are
+more than two usable coastal air stations; the air pool is 56 stations rather
+than 13; and the NWS-only intermediate the slice order implied is worse than
+what ships today rather than a step toward it.
+
+**What is not done, and is filed rather than forgotten.**
+
+- `weather-stations.json` is named for the sky station while holding both
+  networks and serving two joins. Its `unresolved` list says so. The rename
+  waits for `beaches.json`'s `weather_station` field to be renamed with it.
+- `seed-beaches.mjs` stamps `generated` in UTC, so an evening run records
+  tomorrow. `probe-observation-stations.mjs` does not; the fix for the older
+  script is its own slice.
+- LJAC1's water temperature, published on 98% of rows, still does not reach the
+  wave panel. Out of scope from the start and still out of it.

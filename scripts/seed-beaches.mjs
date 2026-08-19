@@ -26,6 +26,7 @@
 import { readFileSync, writeFileSync } from "node:fs";
 import { pathToFileURL } from "node:url";
 import { distanceMetres } from "./geo.mjs";
+import { bindAirStation } from "./air-join.mjs";
 import { bindTideStation } from "./tide-join.mjs";
 import { bindWaveBuoy } from "./wave-join.mjs";
 import { bindWeatherStation } from "./weather-join.mjs";
@@ -236,9 +237,17 @@ export function build(rows, stations, buoys, weatherStations) {
       ? { buoyId: null, reason: fault }
       : bindWaveBuoy({ segment, waterBodyType: row.WaterBodyType }, buoys);
     // No water-class rule here, unlike the wave join: air reaches a lagoon.
+    // This binds sky and visibility only -- the airport. Temperature and wind
+    // come from the air join below, which does have a water-class rule.
     const weather = fault
       ? { stationId: null, reason: fault }
       : bindWeatherStation({ segment }, weatherStations);
+    const air = fault
+      ? { stationId: null, reason: fault }
+      : bindAirStation(
+          { segment, waterBodyType: row.WaterBodyType },
+          weatherStations,
+        );
 
     const meanLat = (segment.upper.lat + segment.lower.lat) / 2;
 
@@ -275,6 +284,10 @@ export function build(rows, stations, buoys, weatherStations) {
       weather_station_null_reason: weather.stationId
         ? undefined
         : weather.reason,
+      air_station: air.stationId,
+      air_station_distance_m: air.stationId ? Math.round(air.distanceM) : null,
+      air_station_from_end: air.stationId ? air.fromEnd : null,
+      air_station_null_reason: air.stationId ? undefined : air.reason,
     };
   });
 
@@ -299,6 +312,11 @@ export function document(beaches) {
     .map((b) => b.weather_station_distance_m / 1000)
     .sort((a, b) => a - b);
   const medianWeatherKm = weatherKm[Math.floor(weatherKm.length / 2)];
+  const airKm = beaches
+    .filter((b) => b.air_station !== null)
+    .map((b) => b.air_station_distance_m / 1000)
+    .sort((a, b) => a - b);
+  const medianAirKm = airKm[Math.floor(airKm.length / 2)];
   const farthest = beaches
     .filter((b) => b.tide_station !== null)
     .reduce((a, b) =>
@@ -348,13 +366,26 @@ export function document(beaches) {
       tide_station_from_end:
         "Which end of the segment supplied the distance, upper or lower.",
       weather_station:
-        "Joined, never typed: the nearest station that both answers and publishes visibility. " +
+        "Joined, never typed: the nearest station that both answers and publishes sky. Supplies " +
+        "the panel's sky and visibility ONLY -- temperature and wind come from air_station. " +
         "Unlike the wave buoy, every beach binds one -- air reaches a lagoon. null means the " +
         "join could not bind one, and weather_station_null_reason says why.",
       weather_station_distance_m:
         "Great-circle metres from the nearer segment end to the station. Larger than the tide " +
-        "and buoy distances by nature: the stations that publish visibility are airports.",
+        "and buoy distances by nature: the ten stations that publish sky are all airports.",
       weather_station_from_end:
+        "Which end of the segment supplied the distance, upper or lower.",
+      air_station:
+        "Joined, never typed: the nearest station that answers, publishes air temperature AND " +
+        "wind, and suits the beach's water class -- an open-coast beach binds a shore station, " +
+        "a bay or lagoon binds the nearest of any kind. Usually not the same station as " +
+        "weather_station, and may be on either network; see the `network` field in " +
+        "weather-stations.json. null means the join could not bind one, and " +
+        "air_station_null_reason says why.",
+      air_station_distance_m:
+        "Great-circle metres from the nearer segment end to the station. Much smaller than " +
+        "weather_station_distance_m, which is the point of the second binding.",
+      air_station_from_end:
         "Which end of the segment supplied the distance, upper or lower.",
     },
     beaches,
@@ -377,12 +408,24 @@ export function document(beaches) {
         `Their water temperature is missing for the same reason and is not yet filled from another source.`,
       "A tide prediction is for the station, not for the beach. It is the best published figure " +
         "for that stretch of shore and it is not a measurement taken there.",
-      `Visibility, wind, air temperature and sky are read at an airport, because the airports are ` +
-        `the only stations in this county that publish visibility at all. The median beach here ` +
-        `reads a station ${Math.round(medianWeatherKm * 10) / 10} km away and the farthest reads ` +
-        `one ${(farthestWeather.weather_station_distance_m / 1000).toFixed(1)} km away, at ` +
-        `${farthestWeather.name}. Coastal fog is precisely what changes over that distance, so ` +
-        `those four figures describe the airport and not the shoreline.`,
+      `Sky and visibility are read at an airport, because the ten stations in this county that ` +
+        `publish them are all airport METARs, and airports sit inland. The median beach reads ` +
+        `its sky station ${Math.round(medianWeatherKm * 10) / 10} km away and the farthest ` +
+        `reads one ${(farthestWeather.weather_station_distance_m / 1000).toFixed(1)} km away, ` +
+        `at ${farthestWeather.name}. Coastal fog is precisely what changes over that distance, ` +
+        `so those two figures describe the airport and not the shoreline.`,
+      `Air temperature and wind come from a different station than sky and visibility, and the ` +
+        `page names both. The median beach reads its air station ` +
+        `${Math.round(medianAirKm * 10) / 10} km away against ` +
+        `${Math.round(medianWeatherKm * 10) / 10} km for its sky station. Two provenances behind ` +
+        `one panel is a deliberate trade: requiring one station to supply all four values meant ` +
+        `the scarcest of them, sky, decided where the temperature was measured, which put an ` +
+        `inland reading on a coastal beach. See docs/adr/0010-two-provenances-in-the-air-panel.md.`,
+      `An air station is still not the beach. It is the nearest measurement of the air the ` +
+        `beach is in, chosen for exposure as well as distance -- an open-coast beach binds a ` +
+        `station standing in the marine layer at the shoreline, a bay or lagoon binds the ` +
+        `nearest of any kind. The shore classification is an author judgement; ` +
+        `weather-stations.json records it and says so.`,
       ...(unbound.length > 0
         ? [
             `${unbound.length} beach(es) could not be bound to a station: ` +

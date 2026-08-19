@@ -32,26 +32,52 @@ const STATIONS = {
   9410170: { lat: 32.7156, lon: -117.1767, water: "bay", delivers: true },
 };
 
+/**
+ * One table, two joins. `publishes_sky` decides the sky binding and is scarce;
+ * `publishes_air_temp`, `publishes_wind` and `shore` decide the air binding and
+ * are not. Every station here carries all four, because the seed passes the same
+ * table to both joins.
+ */
 const WEATHER = {
   KNKX: {
     lat: 32.86833,
     lon: -117.1425,
     delivers: true,
     publishes_sky: true,
+    publishes_air_temp: true,
+    publishes_wind: true,
+    shore: false,
   },
   KSAN: {
     lat: 32.73361,
     lon: -117.18306,
     delivers: true,
     publishes_sky: true,
+    publishes_air_temp: true,
+    publishes_wind: true,
+    shore: true,
   },
   // Answers, publishes no sky. Nearer most of these beaches than either of the
-  // above, and refused by the join for exactly that reason.
+  // above, and refused by the sky join for exactly that reason -- while the air
+  // join takes it, which is the whole point of two joins over one table.
   D3101: {
     lat: 32.92083,
     lon: -117.25283,
     delivers: true,
     publishes_sky: false,
+    publishes_air_temp: true,
+    publishes_wind: true,
+    shore: false,
+  },
+  // On the water and publishes both, so an open-coast beach may bind it.
+  LJAC1: {
+    lat: 32.867,
+    lon: -117.257,
+    delivers: true,
+    publishes_sky: false,
+    publishes_air_temp: true,
+    publishes_wind: true,
+    shore: true,
   },
 };
 
@@ -156,11 +182,34 @@ describe("build", () => {
     expect(beach.wave_buoy_distance_m).toBeGreaterThan(0);
 
     // So does the observation station, and it is the nearest one that
-    // publishes visibility rather than the nearest one full stop: D3101 is
-    // closer to this row than KNKX and publishes none.
+    // publishes sky rather than the nearest one full stop: D3101 is closer to
+    // this row than KNKX and publishes none.
     expect(beach.weather_station).toBe("KNKX");
     expect(beach.weather_station_distance_m).toBeGreaterThan(0);
     expect(["upper", "lower"]).toContain(beach.weather_station_from_end);
+  });
+
+  it("binds the air separately from the sky, and nearer", () => {
+    // The two provenances, produced by two joins over one table. The sky
+    // station is the nearest airport; the air station is the nearest station
+    // standing in the marine layer, and it is a different station and a much
+    // shorter distance. See docs/adr/0010-two-provenances-in-the-air-panel.md.
+    const [beach] = build([row()], STATIONS, BUOYS, WEATHER);
+
+    expect(beach.air_station).toBe("LJAC1");
+    expect(beach.weather_station).toBe("KNKX");
+    expect(beach.air_station_distance_m).toBeLessThan(
+      beach.weather_station_distance_m,
+    );
+    expect(["upper", "lower"]).toContain(beach.air_station_from_end);
+  });
+
+  it("keeps an open-coast beach off a station above the marine layer", () => {
+    // D3101 is nearer this row than LJAC1 and publishes temperature and wind,
+    // so distance alone would take it. It is not a shore station.
+    const [beach] = build([row()], STATIONS, BUOYS, WEATHER);
+
+    expect(beach.air_station).not.toBe("D3101");
   });
 
   it("gives a bay beach a tide station and no wave buoy", () => {
@@ -180,6 +229,52 @@ describe("build", () => {
     // wave join is. Making the two symmetric would silently strip wind and
     // visibility from twenty-six beaches.
     expect(beach.weather_station).not.toBeNull();
+
+    expect(beach.air_station).not.toBeNull();
+  });
+
+  it("lets a bay beach bind a station above the marine layer", () => {
+    // The air join has a water-class rule where the sky join has none, and a
+    // bay beach is the permissive side of it: nearest of any kind, because a
+    // marine layer is not what a station overlooking a bay gets wrong. These
+    // coordinates put D3101, which is not a shore station, nearest by far.
+    const [beach] = build(
+      [
+        row({
+          WaterBodyType: "Sound, Bay, or Inlet",
+          Beach_UpperLat: "32.925",
+          "Beach_ UpperLon": "-117.253",
+          Beach_LowerLat: "32.918",
+          Beach_LowerLon: "-117.253",
+        }),
+      ],
+      STATIONS,
+      BUOYS,
+      WEATHER,
+    );
+
+    expect(beach.air_station).toBe("D3101");
+  });
+
+  it("refuses that same station for an open-coast beach in the same place", () => {
+    // The two halves of the rule, on one set of coordinates, so the difference
+    // is the water class and nothing else.
+    const [beach] = build(
+      [
+        row({
+          WaterBodyType: "Open Coast",
+          Beach_UpperLat: "32.925",
+          "Beach_ UpperLon": "-117.253",
+          Beach_LowerLat: "32.918",
+          Beach_LowerLon: "-117.253",
+        }),
+      ],
+      STATIONS,
+      BUOYS,
+      WEATHER,
+    );
+
+    expect(beach.air_station).toBe("LJAC1");
   });
 
   it("refuses a beach whose coordinates cannot be used, and says why", () => {
@@ -206,6 +301,8 @@ describe("build", () => {
     expect(beach.weather_station_null_reason).toMatch(
       /outside San Diego County/,
     );
+    expect(beach.air_station).toBeNull();
+    expect(beach.air_station_null_reason).toMatch(/outside San Diego County/);
   });
 
   it("stops on a duplicate slug rather than disambiguating one", () => {

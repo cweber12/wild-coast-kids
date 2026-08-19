@@ -2,198 +2,294 @@ import { expect, test } from "vitest";
 import { render, screen } from "@testing-library/react";
 import { WindToday } from "./WindToday";
 
+/** Scripps Pier: what La Jolla Shores now reads for temperature and wind. */
+const PIER = { name: "Scripps Pier, La Jolla", distanceM: 1_381 };
+/** Miramar: what it still reads for sky and visibility, ten kilometres inland. */
 const KNKX = {
   name: "San Diego, Miramar MCAS/Mitscher Field Airport",
   distanceM: 10_429,
 };
-const NEAR = { name: "San Diego International Airport", distanceM: 1_600 };
 
-const READING = {
+const AIR = {
+  kind: "reading" as const,
+  airTempF: 71.42,
+  windMph: 8.05,
+  gustMph: null,
+  windDirDegT: 320,
+};
+
+const SKY = {
   kind: "reading" as const,
   visibilityMi: 10.0,
   visibilityAtCeiling: true,
-  airTempF: 69.98,
-  windMph: 5.82,
-  gustMph: null,
-  windDirDegT: 320,
   sky: "Clear",
 };
 
-test("the ten-mile ceiling reads as a floor, never as an exact measurement", () => {
+const panel = (overrides = {}) => ({
+  beachName: "La Jolla Shores Beach",
+  airStation: PIER,
+  skyStation: KNKX,
+  air: AIR,
+  sky: SKY,
+  ...overrides,
+});
+
+test("the temperature is the panel's largest figure and visibility is not", () => {
+  // Visibility held this slot and sits at METAR's ten-mile ceiling most of the
+  // time, which made the largest text on the panel a near-constant describing
+  // an airport. See ADR 0010.
+  render(<WindToday {...panel()} />);
+
+  expect(screen.getByText("71°F").className).toContain("text-4xl");
+  expect(
+    screen.getByText(/Visibility 10 miles or more/).className,
+  ).not.toContain("text-4xl");
+});
+
+test("wind, sky and visibility read as one sentence beneath the temperature", () => {
+  render(<WindToday {...panel()} />);
+
+  // One node, so the order is asserted rather than three presence checks.
+  expect(
+    screen.getByText(
+      /Wind 8 mph from the north-west\. Sky: clear\. Visibility 10 miles or more\./,
+    ),
+  ).toBeDefined();
+});
+
+test("both stations are named, each with its own distance", () => {
+  // The cost of the two-provenance decision, and deliberately not hidden: a
+  // reader who cannot tell which station supplied which figure is worse off
+  // than one who has to read two lines.
+  render(<WindToday {...panel()} />);
+
+  expect(
+    screen.getByText(/Temperature and wind measured at Scripps Pier/),
+  ).toBeDefined();
+  expect(screen.getByText(/Miramar MCAS.*10 km away/)).toBeDefined();
+});
+
+test("a near station keeps its distance rather than rounding it away", () => {
+  // The single-station panel hid anything under five kilometres. With two
+  // stations named that makes them incomparable, and comparing them is what
+  // tells a reader why the sky is less local than the temperature.
+  render(<WindToday {...panel()} />);
+
+  expect(screen.getByText(/1\.4 km from this beach/)).toBeDefined();
+});
+
+test("the airport says it is an airport, and why that is the only option", () => {
+  render(<WindToday {...panel()} />);
+
+  expect(screen.getByText(/only published by airports/)).toBeDefined();
+});
+
+test("a station named by its callsign is attributed by its place", () => {
+  // The mesonet publishes "EW9951 San Diego Shelter Island   CA US" and the
+  // tide network publishes "9410230 - La Jolla, CA". Until this panel bound a
+  // second station only airports, which are named in prose, reached a reader.
   render(
     <WindToday
-      beachName="La Jolla Shores Beach"
-      station={KNKX}
-      state={READING}
+      {...panel({
+        airStation: {
+          name: "EW9951 San Diego Shelter Island   CA US",
+          distanceM: 3_600,
+        },
+      })}
     />,
   );
 
-  // METAR stops at ten miles. "10 miles" would claim a precision upstream
-  // never offered.
-  expect(screen.getByText("10 miles or more")).toBeDefined();
+  expect(
+    screen.getByText(/measured at San Diego Shelter Island, 3\.6 km/),
+  ).toBeDefined();
+});
+
+test("a tide-network name loses its station number, not its place", () => {
+  render(
+    <WindToday
+      {...panel({
+        airStation: { name: "9410230 - La Jolla, CA", distanceM: 1_381 },
+      })}
+    />,
+  );
+
+  expect(screen.getByText(/measured at La Jolla, CA/)).toBeDefined();
+});
+
+test("a name that is already prose is left exactly as published", () => {
+  // Nothing is invented here. A station this cannot improve is shown as its
+  // network published it rather than replaced with a name of our own.
+  render(<WindToday {...panel()} />);
+
+  expect(
+    screen.getByText(/San Diego, Miramar MCAS\/Mitscher Field Airport/),
+  ).toBeDefined();
+});
+
+test("the ten-mile ceiling reads as a floor, never as an exact measurement", () => {
+  render(<WindToday {...panel()} />);
+
+  expect(screen.getByText(/Visibility 10 miles or more/)).toBeDefined();
 });
 
 test("a visibility below the ceiling is given as the measurement it is", () => {
   render(
     <WindToday
-      beachName="Oceanside Harbor Beach"
-      station={NEAR}
-      state={{ ...READING, visibilityMi: 8.0, visibilityAtCeiling: false }}
+      {...panel({
+        sky: { ...SKY, visibilityMi: 8.0, visibilityAtCeiling: false },
+      })}
     />,
   );
 
-  expect(screen.getByText("8 miles")).toBeDefined();
+  expect(screen.getByText(/Visibility 8 miles\./)).toBeDefined();
+});
+
+test("a visibility under a mile keeps its decimal, being the reading that matters", () => {
+  // Rounded to whole miles this would render "0 miles", which reads as an
+  // instrument fault rather than as thick fog.
+  render(
+    <WindToday
+      {...panel({
+        sky: { ...SKY, visibilityMi: 0.25, visibilityAtCeiling: false },
+      })}
+    />,
+  );
+
+  expect(screen.getByText(/Visibility 0\.3 miles\./)).toBeDefined();
+});
+
+test("one mile is singular", () => {
+  render(
+    <WindToday
+      {...panel({
+        sky: { ...SKY, visibilityMi: 1.2, visibilityAtCeiling: false },
+      })}
+    />,
+  );
+
+  expect(screen.getByText(/Visibility 1 mile\./)).toBeDefined();
 });
 
 test("wind is given in plain words, from the direction it blows from", () => {
-  render(
-    <WindToday
-      beachName="La Jolla Shores Beach"
-      station={KNKX}
-      state={READING}
-    />,
-  );
-
   // 320 degrees true. Naming it as the direction the wind blows *towards*
   // would reverse every reading on the page.
-  expect(screen.getByText(/Wind 6 mph from the north-west/)).toBeDefined();
-});
+  render(<WindToday {...panel()} />);
 
-test("air temperature and sky come from the same reading", () => {
-  render(
-    <WindToday
-      beachName="La Jolla Shores Beach"
-      station={KNKX}
-      state={READING}
-    />,
-  );
-
-  expect(screen.getByText(/The air is 70°F/)).toBeDefined();
-  expect(screen.getByText(/Sky: clear/)).toBeDefined();
+  expect(screen.getByText(/Wind 8 mph from the north-west/)).toBeDefined();
 });
 
 test("a gust is shown when the station published one", () => {
-  render(
-    <WindToday
-      beachName="La Jolla Shores Beach"
-      station={KNKX}
-      state={{ ...READING, gustMph: 14.2 }}
-    />,
-  );
+  render(<WindToday {...panel({ air: { ...AIR, gustMph: 14.2 } })} />);
 
   expect(screen.getByText(/gusting 14/)).toBeDefined();
 });
 
+test("wind with no direction is still given as a speed", () => {
+  render(<WindToday {...panel({ air: { ...AIR, windDirDegT: null } })} />);
+
+  expect(screen.getByText(/Wind 8 mph\./)).toBeDefined();
+});
+
 test("no wind value says so rather than reading as calm", () => {
+  // A blank here would read as a still day.
   render(
     <WindToday
-      beachName="La Jolla Shores Beach"
-      station={KNKX}
-      state={{ ...READING, windMph: null, windDirDegT: null }}
+      {...panel({ air: { ...AIR, windMph: null, windDirDegT: null } })}
     />,
   );
 
-  // A blank here would read as a still day.
   expect(screen.getByText(/reported no wind speed/)).toBeDefined();
 });
 
 test("a genuine calm is named as calm, not as a missing reading", () => {
   render(
-    <WindToday
-      beachName="La Jolla Shores Beach"
-      station={KNKX}
-      state={{ ...READING, windMph: 0, windDirDegT: 0 }}
-    />,
+    <WindToday {...panel({ air: { ...AIR, windMph: 0, windDirDegT: 0 } })} />,
   );
 
   expect(screen.getByText(/The wind is calm/)).toBeDefined();
 });
 
-test("a station publishing no visibility says so rather than rendering blank", () => {
+test("a missing temperature says so rather than leaving the panel headed by nothing", () => {
+  // Sky and wind may go unsaid on the line beneath. The primary slot cannot: an
+  // empty one reads as a rendering fault, and it is the figure the reader came
+  // for.
+  render(<WindToday {...panel({ air: { ...AIR, airTempF: null } })} />);
+
+  expect(screen.getByText("No temperature reading")).toBeDefined();
+});
+
+test("a station publishing no sky simply goes unsaid", () => {
+  render(<WindToday {...panel({ sky: { ...SKY, sky: null } })} />);
+
+  expect(screen.queryByText(/Sky:/)).toBeNull();
+  // Visibility still renders: it is the other half of the same station.
+  expect(screen.getByText(/Visibility 10 miles or more/)).toBeDefined();
+});
+
+test("an airport publishing no visibility says so rather than rendering blank", () => {
   render(
     <WindToday
-      beachName="La Jolla Shores Beach"
-      station={KNKX}
-      state={{ ...READING, visibilityMi: null, visibilityAtCeiling: false }}
+      {...panel({
+        sky: { ...SKY, visibilityMi: null, visibilityAtCeiling: false },
+      })}
     />,
   );
 
-  expect(screen.getByText("No visibility reading")).toBeDefined();
+  expect(screen.getByText(/reported no visibility/)).toBeDefined();
 });
 
-test("the airport and its distance are attributed, because fog differs across it", () => {
+test("a failing sky never takes the temperature down with it", () => {
+  // The two halves are separate fetches to separate networks. Withholding a
+  // measured shore temperature because an airport missed a minute would trade
+  // the good reading for the irrelevant one.
   render(
     <WindToday
-      beachName="La Jolla Shores Beach"
-      station={KNKX}
-      state={READING}
+      {...panel({
+        sky: {
+          kind: "unavailable",
+          detail: "NWS KNKX returns 404 for its latest observation.",
+          drift: false,
+        },
+      })}
+    />,
+  );
+
+  expect(screen.getByText("71°F")).toBeDefined();
+  expect(screen.getByText(/Wind 8 mph/)).toBeDefined();
+  expect(screen.getByText(/returns 404/)).toBeDefined();
+  expect(screen.queryByText(/Visibility/)).toBeNull();
+});
+
+test("a failing temperature never takes the sky down with it", () => {
+  render(
+    <WindToday
+      {...panel({
+        air: {
+          kind: "unavailable",
+          detail: "NDBC LJAC1 returns 404 for realtime2.",
+          drift: false,
+        },
+      })}
     />,
   );
 
   expect(
-    screen.getByText(/Miramar MCAS.*about 10 km from this beach/),
+    screen.getByText(/Sky: clear\. Visibility 10 miles or more\./),
   ).toBeDefined();
-  expect(screen.getByText(/not a reading taken at the shore/)).toBeDefined();
-});
-
-test("a nearby station is attributed without a distance", () => {
-  render(
-    <WindToday
-      beachName="Spanish Landing Park"
-      station={NEAR}
-      state={READING}
-    />,
-  );
-
-  expect(screen.getByText(/San Diego International Airport\./)).toBeDefined();
-});
-
-test("no station is a permanent fact about the place, with its reason", () => {
-  render(
-    <WindToday
-      beachName="Imperial Beach pier area"
-      station={null}
-      state={{
-        kind: "no-station",
-        reason:
-          "the lower endpoint published upstream (32.1327, -117.1332) is outside San Diego County, so no station can be joined to it",
-      }}
-    />,
-  );
-
-  expect(screen.getByText(/gap in what is published/)).toBeDefined();
-  expect(screen.getByText(/outside San Diego County/)).toBeDefined();
-  // Never invite a reader to retry something that will never work.
-  expect(screen.queryByText(/Try again shortly/)).toBeNull();
-});
-
-test("an unavailable feed is transient, and says so differently", () => {
-  render(
-    <WindToday
-      beachName="La Jolla Shores Beach"
-      station={KNKX}
-      state={{
-        kind: "unavailable",
-        detail: "NWS KNKX returns 404 for its latest observation.",
-        drift: false,
-      }}
-    />,
-  );
-
-  expect(screen.getByText(/Try again shortly/)).toBeDefined();
+  expect(screen.getByText("No temperature just now")).toBeDefined();
   expect(screen.getByText(/returns 404/)).toBeDefined();
 });
 
 test("drift is disclosed as a bug here rather than a problem upstream", () => {
   render(
     <WindToday
-      beachName="La Jolla Shores Beach"
-      station={KNKX}
-      state={{
-        kind: "unavailable",
-        detail: "windSpeed is published in wmoUnit:kn, not wmoUnit:km_h-1.",
-        drift: true,
-      }}
+      {...panel({
+        air: {
+          kind: "unavailable",
+          detail: "ATMP is published in degF, not degC.",
+          drift: true,
+        },
+      })}
     />,
   );
 
@@ -202,53 +298,41 @@ test("drift is disclosed as a bug here rather than a problem upstream", () => {
   ).toBeDefined();
 });
 
-test("a visibility under a mile keeps its decimal, being the reading that matters", () => {
+test("no air station is a permanent fact about the place, with its reason", () => {
   render(
     <WindToday
-      beachName="Torrey Pines State Beach"
-      station={KNKX}
-      state={{ ...READING, visibilityMi: 0.25, visibilityAtCeiling: false }}
+      {...panel({
+        airStation: null,
+        air: {
+          kind: "no-station",
+          reason:
+            "the lower endpoint published upstream (32.1327, -117.1332) is outside San Diego County, so no station can be joined to it",
+        },
+      })}
     />,
   );
 
-  // Rounded to whole miles this would render "0 miles", which reads as an
-  // instrument fault rather than as thick fog.
-  expect(screen.getByText("0.3 miles")).toBeDefined();
+  expect(screen.getByText("No station near enough")).toBeDefined();
+  expect(screen.getByText(/outside San Diego County/)).toBeDefined();
+  // Never invite a reader to retry something that will never work.
+  expect(screen.queryByText(/just now/)).toBeNull();
+  expect(screen.queryByText(/Temperature and wind measured at/)).toBeNull();
 });
 
-test("one mile is singular", () => {
+test("no sky station leaves the temperature standing on its own", () => {
   render(
     <WindToday
-      beachName="Torrey Pines State Beach"
-      station={KNKX}
-      state={{ ...READING, visibilityMi: 1.2, visibilityAtCeiling: false }}
+      {...panel({
+        skyStation: null,
+        sky: {
+          kind: "no-station",
+          reason: "no station near this beach publishes a sky description",
+        },
+      })}
     />,
   );
 
-  expect(screen.getByText("1 mile")).toBeDefined();
-});
-
-test("wind with no direction is still given as a speed", () => {
-  render(
-    <WindToday
-      beachName="La Jolla Shores Beach"
-      station={KNKX}
-      state={{ ...READING, windDirDegT: null }}
-    />,
-  );
-
-  expect(screen.getByText(/Wind 6 mph\./)).toBeDefined();
-});
-
-test("no air temperature and no sky simply go unsaid", () => {
-  render(
-    <WindToday
-      beachName="La Jolla Shores Beach"
-      station={KNKX}
-      state={{ ...READING, airTempF: null, sky: null }}
-    />,
-  );
-
-  expect(screen.queryByText(/The air is/)).toBeNull();
-  expect(screen.queryByText(/Sky:/)).toBeNull();
+  expect(screen.getByText("71°F")).toBeDefined();
+  expect(screen.getByText(/publishes a sky description/)).toBeDefined();
+  expect(screen.queryByText(/Sky and visibility at/)).toBeNull();
 });

@@ -3,10 +3,12 @@ import { beforeEach, expect, test, vi } from "vitest";
 const fetchTideExtremes = vi.fn();
 const fetchLatestWave = vi.fn();
 const fetchLatestObservation = vi.fn();
+const fetchLatestNdbcAir = vi.fn();
 vi.mock("./upstream", () => ({
   fetchTideExtremes,
   fetchLatestWave,
   fetchLatestObservation,
+  fetchLatestNdbcAir,
 }));
 
 const { readTodaysLowestLow, readLatestWaves, readLatestAir } =
@@ -30,6 +32,7 @@ beforeEach(() => {
   fetchTideExtremes.mockReset();
   fetchLatestWave.mockReset();
   fetchLatestObservation.mockReset();
+  fetchLatestNdbcAir.mockReset();
 });
 
 function ok(extremes: { atMs: number; feet: number; kind: "low" | "high" }[]) {
@@ -247,58 +250,112 @@ const KNKX_OBSERVATION = {
   sky: "Clear",
 };
 
-test("the air reading names its station and carries the ceiling flag through", async () => {
-  fetchLatestObservation.mockResolvedValue({
-    kind: "ok",
-    observation: KNKX_OBSERVATION,
-    ageMinutes: 12,
-    url: "https://example.invalid",
-  });
+/**
+ * La Jolla Shores binds two stations: LJAC1 at Scripps Pier for temperature and
+ * wind, on the NDBC network, and KNKX at Miramar for sky and visibility, ten
+ * kilometres inland. That split is the whole of ADR 0010, so most of what
+ * follows is about the two halves staying apart.
+ */
+const ndbcAirOk = (overrides = {}) => ({
+  kind: "ok" as const,
+  airTempF: 71.42,
+  windMph: 8.05,
+  gustMph: null,
+  windDirDegT: 320,
+  url: "https://example.invalid",
+  ...overrides,
+});
+
+const skyOk = () => ({
+  kind: "ok" as const,
+  observation: KNKX_OBSERVATION,
+  ageMinutes: 12,
+  url: "https://example.invalid",
+});
+
+test("temperature and wind come from the pier, sky and visibility from the airport", async () => {
+  // The reading this whole issue was opened for. Both stations are named, each
+  // with its own distance, because a reader who cannot tell which supplied
+  // which figure is worse off than one who reads two lines.
+  fetchLatestNdbcAir.mockResolvedValue(ndbcAirOk());
+  fetchLatestObservation.mockResolvedValue(skyOk());
 
   const view = await readLatestAir(BEACH, NOON_PACIFIC_20260817);
 
-  expect(view.station?.name).toMatch(/Miramar/);
-  expect(view.station?.distanceM).toBe(10429);
-  expect(view.state.kind).toBe("reading");
-  if (view.state.kind === "reading") {
-    // The flag has to survive the trip, or the view re-derives it from a
-    // magic number and the two can disagree.
-    expect(view.state.visibilityAtCeiling).toBe(true);
-    expect(view.state.visibilityMi).toBe(10.0);
-    expect(view.state.sky).toBe("Clear");
+  expect(view.airStation?.name).toMatch(/La Jolla/);
+  expect(view.airStation?.distanceM).toBe(1381);
+  expect(view.skyStation?.name).toMatch(/Miramar/);
+  expect(view.skyStation?.distanceM).toBe(10429);
+
+  expect(view.air.kind).toBe("reading");
+  if (view.air.kind === "reading") {
+    expect(view.air.airTempF).toBeCloseTo(71.42, 2);
+    expect(view.air.windMph).toBeCloseTo(8.05, 2);
+  }
+  expect(view.sky.kind).toBe("reading");
+  if (view.sky.kind === "reading") {
+    // The flag has to survive the trip, or the view re-derives it from a magic
+    // number and the two can disagree.
+    expect(view.sky.visibilityAtCeiling).toBe(true);
+    expect(view.sky.visibilityMi).toBe(10.0);
+    expect(view.sky.sky).toBe("Clear");
   }
 });
 
-test("a bay beach still gets an air reading, unlike its waves", async () => {
-  fetchLatestObservation.mockResolvedValue({
-    kind: "ok",
-    observation: KNKX_OBSERVATION,
-    ageMinutes: 3,
-    url: "https://example.invalid",
-  });
+test("the air station is asked on its own network, not the weather service's", async () => {
+  // The dispatch reads the station table's `network` field. NDBC ids and NWS
+  // ids are both five uppercase characters, so there is nothing in an id to
+  // read this from, and guessing would send LJAC1 to api.weather.gov for a 404.
+  fetchLatestNdbcAir.mockResolvedValue(ndbcAirOk());
+  fetchLatestObservation.mockResolvedValue(skyOk());
 
-  // A lagoon: no wave buoy by design, and an observation station all the same,
-  // because air reaches enclosed water and swell does not.
+  await readLatestAir(BEACH, NOON_PACIFIC_20260817);
+
+  expect(fetchLatestNdbcAir).toHaveBeenCalledWith(
+    "LJAC1",
+    NOON_PACIFIC_20260817,
+  );
+  expect(fetchLatestObservation).toHaveBeenCalledWith(
+    "KNKX",
+    NOON_PACIFIC_20260817,
+  );
+});
+
+test("an air station on the weather service's own network is read there", async () => {
+  // Most beaches bind an NWS mesonet station for air. Only the pier and the
+  // Tijuana estuary are NDBC, so the common path must not go through the NDBC
+  // fetcher at all.
+  fetchLatestObservation.mockResolvedValue(skyOk());
+
   const view = await readLatestAir(
     "agua-hedionda-lagoon",
     NOON_PACIFIC_20260817,
   );
 
-  expect(view.station).not.toBeNull();
-  expect(view.state.kind).toBe("reading");
+  expect(fetchLatestNdbcAir).not.toHaveBeenCalled();
+  expect(view.air.kind).toBe("reading");
 });
 
-test("the beach the join refused asks nobody and says why", async () => {
-  const view = await readLatestAir(UNBOUND_BEACH, NOON_PACIFIC_20260817);
+test("a bay beach still gets an air reading, unlike its waves", async () => {
+  fetchLatestObservation.mockResolvedValue(skyOk());
 
-  expect(view.state.kind).toBe("no-station");
-  expect(view.station).toBeNull();
-  // No station means nothing to ask. A request here would be a wasted call
-  // whose failure would then be reported as a transient one.
-  expect(fetchLatestObservation).not.toHaveBeenCalled();
+  // A lagoon: no wave buoy by design, and an air station all the same, because
+  // air reaches enclosed water and swell does not.
+  const view = await readLatestAir(
+    "agua-hedionda-lagoon",
+    NOON_PACIFIC_20260817,
+  );
+
+  expect(view.airStation).not.toBeNull();
+  expect(view.skyStation).not.toBeNull();
+  expect(view.air.kind).toBe("reading");
 });
 
-test("an unavailable station carries its reason and its drift flag through", async () => {
+test("a failing sky leaves the temperature standing", async () => {
+  // The point of two fetches. Withholding a temperature measured 1.4 km from
+  // the sand because an airport ten kilometres away missed a minute would trade
+  // the good reading for the irrelevant one.
+  fetchLatestNdbcAir.mockResolvedValue(ndbcAirOk());
   fetchLatestObservation.mockResolvedValue({
     kind: "unavailable",
     reason: "NWS KNKX returns 404 for its latest observation.",
@@ -308,14 +365,78 @@ test("an unavailable station carries its reason and its drift flag through", asy
 
   const view = await readLatestAir(BEACH, NOON_PACIFIC_20260817);
 
-  expect(view.state).toEqual({
+  expect(view.air.kind).toBe("reading");
+  expect(view.sky).toEqual({
     kind: "unavailable",
     detail: "NWS KNKX returns 404 for its latest observation.",
     drift: false,
   });
 });
 
-test("the clock is passed to the fetch, so freshness is judged not guessed", async () => {
+test("a failing air reading leaves the sky standing", async () => {
+  fetchLatestNdbcAir.mockResolvedValue({
+    kind: "unavailable",
+    reason: "NDBC LJAC1 returns 404 for realtime2.",
+    drift: false,
+    url: "https://example.invalid",
+  });
+  fetchLatestObservation.mockResolvedValue(skyOk());
+
+  const view = await readLatestAir(BEACH, NOON_PACIFIC_20260817);
+
+  expect(view.sky.kind).toBe("reading");
+  expect(view.air).toEqual({
+    kind: "unavailable",
+    detail: "NDBC LJAC1 returns 404 for realtime2.",
+    drift: false,
+  });
+});
+
+test("a drift flag survives the trip from either network", async () => {
+  fetchLatestNdbcAir.mockResolvedValue({
+    kind: "unavailable",
+    reason: "ATMP is published in degF, not degC.",
+    drift: true,
+    url: "https://example.invalid",
+  });
+  fetchLatestObservation.mockResolvedValue(skyOk());
+
+  const view = await readLatestAir(BEACH, NOON_PACIFIC_20260817);
+
+  expect(view.air.kind).toBe("unavailable");
+  if (view.air.kind === "unavailable") expect(view.air.drift).toBe(true);
+});
+
+test("a per-field null arrives as a null rather than as a missing reading", async () => {
+  // LJPC1 publishes wind on every row and temperature on none. The reading is
+  // still `ok`; it is the field that is absent, and the panel says so.
+  fetchLatestNdbcAir.mockResolvedValue(ndbcAirOk({ airTempF: null }));
+  fetchLatestObservation.mockResolvedValue(skyOk());
+
+  const view = await readLatestAir(BEACH, NOON_PACIFIC_20260817);
+
+  expect(view.air.kind).toBe("reading");
+  if (view.air.kind === "reading") {
+    expect(view.air.airTempF).toBeNull();
+    expect(view.air.windMph).toBeCloseTo(8.05, 2);
+  }
+});
+
+test("the beach the join refused asks nobody and says why", async () => {
+  const view = await readLatestAir(UNBOUND_BEACH, NOON_PACIFIC_20260817);
+
+  expect(view.air.kind).toBe("no-station");
+  expect(view.sky.kind).toBe("no-station");
+  expect(view.airStation).toBeNull();
+  expect(view.skyStation).toBeNull();
+  // No station means nothing to ask. A request here would be a wasted call
+  // whose failure would then be reported as a transient one.
+  expect(fetchLatestObservation).not.toHaveBeenCalled();
+  expect(fetchLatestNdbcAir).not.toHaveBeenCalled();
+});
+
+test("the clock is passed to both fetches, so freshness is judged not guessed", async () => {
+  fetchLatestNdbcAir.mockResolvedValue(ndbcAirOk());
   fetchLatestObservation.mockResolvedValue({
     kind: "unavailable",
     reason: "stale",
@@ -325,6 +446,10 @@ test("the clock is passed to the fetch, so freshness is judged not guessed", asy
 
   await readLatestAir(BEACH, NOON_PACIFIC_20260817);
 
+  expect(fetchLatestNdbcAir).toHaveBeenCalledWith(
+    "LJAC1",
+    NOON_PACIFIC_20260817,
+  );
   expect(fetchLatestObservation).toHaveBeenCalledWith(
     "KNKX",
     NOON_PACIFIC_20260817,

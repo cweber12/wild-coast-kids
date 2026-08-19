@@ -50,6 +50,8 @@ import {
 import {
   NdbcDriftError,
   NdbcNoDataError,
+  type NdbcAirObservation,
+  parseNdbcAirObservation,
   parseNdbcRealtime2,
   type WaveObservation,
 } from "./ndbc-realtime2";
@@ -341,4 +343,133 @@ export async function fetchLatestObservation(
   }
 
   return { kind: "ok", observation, ageMinutes, url };
+}
+
+/* =========================================================================
+ * NDBC station air: temperature and wind, from the second network
+ * ========================================================================= */
+
+/**
+ * What a coastal NDBC station's air reading comes back as.
+ *
+ * The same three fields the NWS reading offers for air, converted the same way,
+ * so `conditions.ts` can hold one shape whichever network answered. What it does
+ * NOT carry is sky or visibility: `realtime2` has no column for either, which is
+ * the whole reason the sky binding is a second station. See ADR 0010.
+ *
+ * Each field is aged independently, so a station reporting wind every six
+ * minutes and temperature every hour yields a current wind rather than nothing.
+ */
+export type AirReadingResult =
+  | {
+      kind: "ok";
+      airTempF: number | null;
+      windMph: number | null;
+      gustMph: number | null;
+      windDirDegT: number | null;
+      url: string;
+    }
+  | { kind: "unavailable"; reason: string; drift: boolean; url: string };
+
+/**
+ * Fetch one NDBC station's newest air temperature and wind.
+ *
+ * Never throws. Reuses `MAX_OBSERVATION_AGE_MINUTES` rather than introducing a
+ * limit of its own: what counts as a current air reading is a property of air,
+ * not of who published it. Applied per field, because that is what the parser
+ * hands back and it is the point of the parser.
+ */
+export async function fetchLatestNdbcAir(
+  stationId: string,
+  nowMs: number,
+): Promise<AirReadingResult> {
+  const url = `${NDBC_BASE}/${stationId}.txt`;
+
+  const unavailable = (reason: string, drift = false): AirReadingResult => ({
+    kind: "unavailable",
+    reason,
+    drift,
+    url,
+  });
+
+  let response: Response;
+  try {
+    response = await fetch(url, {
+      headers: { "User-Agent": USER_AGENT },
+      next: { revalidate: OBSERVATIONS_REVALIDATE_SECONDS },
+    });
+  } catch (cause) {
+    return unavailable(
+      `The request to NDBC for station ${stationId} did not complete: ` +
+        `${cause instanceof Error ? cause.message : String(cause)}`,
+    );
+  }
+
+  if (response.status === 404) {
+    // What a listed-but-retired station does. NPQC1 and TIQC1 do exactly this,
+    // which is why the station table records measured delivery.
+    return unavailable(
+      `NDBC ${stationId} returns 404 for realtime2. The station is not publishing.`,
+    );
+  }
+  if (!response.ok) {
+    return unavailable(
+      `NDBC returned HTTP ${response.status} for station ${stationId}.`,
+    );
+  }
+
+  let observation: NdbcAirObservation;
+  try {
+    observation = parseNdbcAirObservation(await response.text(), stationId);
+  } catch (cause) {
+    if (cause instanceof NdbcDriftError)
+      return unavailable(cause.message, true);
+    if (cause instanceof NdbcNoDataError) return unavailable(cause.message);
+    return unavailable(cause instanceof Error ? cause.message : String(cause));
+  }
+
+  /** Null once a field's own row is older than the limit. */
+  const fresh = <T>(reading: { atMs: number } | null, value: T): T | null =>
+    reading !== null &&
+    (nowMs - reading.atMs) / 60_000 <= MAX_OBSERVATION_AGE_MINUTES
+      ? value
+      : null;
+
+  const airTempF = fresh(
+    observation.airTemp,
+    observation.airTemp === null
+      ? null
+      : observation.airTemp.celsius * 1.8 + 32,
+  );
+  const windMph = fresh(
+    observation.wind,
+    observation.wind === null ? null : observation.wind.speedMps * 2.236936,
+  );
+
+  if (airTempF === null && windMph === null) {
+    // Both fields aged out, so the station is answering with nothing current.
+    // Distinct from a station that publishes no temperature: that one still
+    // gives a wind, and this one gives nothing.
+    return unavailable(
+      `NDBC ${stationId} has published no air temperature or wind inside the last ` +
+        `${MAX_OBSERVATION_AGE_MINUTES} minutes. Reported as unknown rather than as a ` +
+        `current reading.`,
+    );
+  }
+
+  return {
+    kind: "ok",
+    airTempF,
+    windMph,
+    // Gust and direction ride on the wind's own freshness: they came off that
+    // row, and without a current speed they describe nothing.
+    gustMph: fresh(
+      observation.wind,
+      observation.wind?.gustMps == null
+        ? null
+        : observation.wind.gustMps * 2.236936,
+    ),
+    windDirDegT: fresh(observation.wind, observation.wind?.dirDegT ?? null),
+    url,
+  };
 }
