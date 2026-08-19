@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import {
+  fetchLatestNdbcAir,
   fetchLatestObservation,
   fetchLatestWave,
   fetchTideExtremes,
@@ -346,5 +347,218 @@ describe("fetchLatestObservation", () => {
     expect(result.kind).toBe("unavailable");
     if (result.kind !== "unavailable") return;
     expect(result.reason).toContain("not JSON");
+  });
+});
+
+describe("fetchLatestNdbcAir", () => {
+  const PIER = readFileSync(
+    join(
+      process.cwd(),
+      "src/lib/__fixtures__/ndbc-ljac1-realtime2-20260818.txt",
+    ),
+    "utf8",
+  );
+
+  /** The instant the captured pier payload's newest row was observed. */
+  const AT_PIER = Date.UTC(2026, 7, 19, 2, 30);
+
+  const HEADER = PIER.split("\n").slice(0, 2).join("\n");
+  const row = (
+    time: string,
+    { wdir = "MM", wspd = "MM", gst = "MM", atmp = "MM" },
+  ) =>
+    `${time} ${wdir}  ${wspd}  ${gst}    MM    MM    MM  MM 1012.3  ${atmp}  18.2    MM   MM   MM    MM`;
+
+  test("asks realtime2 and opts into the observation cache window", async () => {
+    fetchMock.mockResolvedValue(textResponse(PIER));
+
+    await fetchLatestNdbcAir("LJAC1", AT_PIER);
+
+    const [url, options] = fetchMock.mock.calls[0];
+    expect(url).toBe("https://www.ndbc.noaa.gov/data/realtime2/LJAC1.txt");
+    // The same window the NWS observations use: this is the same panel, and a
+    // second cache policy for one of its two provenances would be a difference
+    // nobody chose.
+    expect(options.next.revalidate).toBe(OBSERVATIONS_REVALIDATE_SECONDS);
+  });
+
+  test("converts to the units the panel renders", async () => {
+    fetchMock.mockResolvedValue(textResponse(PIER));
+
+    const result = await fetchLatestNdbcAir("LJAC1", AT_PIER);
+
+    expect(result.kind).toBe("ok");
+    if (result.kind !== "ok") return;
+    // 21.9 degC and 3.6 m/s, the newest row of the captured payload. This is
+    // the reading the whole issue is about: 71.4 F at the pier against Miramar's
+    // 81 F ten kilometres inland.
+    expect(result.airTempF).toBeCloseTo(71.42, 2);
+    expect(result.windMph).toBeCloseTo(8.05, 2);
+    expect(result.windDirDegT).toBe(320);
+    expect(result.gustMph).toBeCloseTo(10.29, 2);
+  });
+
+  test("ages each field on its own row, not on the newest row", async () => {
+    // The reason the parser returns per-field timestamps. Wind is current and
+    // the temperature is four hours stale, so the wind is reported and the
+    // temperature is not -- rather than losing both or, worse, publishing a
+    // four-hour-old temperature under the wind's clock.
+    const text = [
+      HEADER,
+      row("2026 08 19 02 30", { wdir: "320", wspd: "3.6", gst: "4.6" }),
+      row("2026 08 18 22 00", { atmp: "23.4" }),
+      "",
+    ].join("\n");
+    fetchMock.mockResolvedValue(textResponse(text));
+
+    const result = await fetchLatestNdbcAir("LJAC1", AT_PIER);
+
+    expect(result.kind).toBe("ok");
+    if (result.kind !== "ok") return;
+    expect(result.windMph).toBeCloseTo(8.05, 2);
+    expect(result.airTempF).toBeNull();
+  });
+
+  test("keeps a temperature exactly at the limit", async () => {
+    // A boundary that decides whether a reading shows at all, so it is asserted
+    // rather than left to the comparison operator.
+    const text = [
+      HEADER,
+      row("2026 08 19 02 30", { wdir: "320", wspd: "3.6" }),
+      row("2026 08 18 23 30", { atmp: "23.4" }),
+      "",
+    ].join("\n");
+    fetchMock.mockResolvedValue(textResponse(text));
+
+    const atLimit = Date.UTC(2026, 7, 18, 23, 30) + 180 * 60_000;
+    const result = await fetchLatestNdbcAir("LJAC1", atLimit);
+
+    expect(result.kind).toBe("ok");
+    if (result.kind !== "ok") return;
+    expect(result.airTempF).toBeCloseTo(74.12, 2);
+  });
+
+  test("reuses the observation limit rather than inventing one", async () => {
+    expect(MAX_OBSERVATION_AGE_MINUTES).toBe(180);
+  });
+
+  test("a station publishing wind and no temperature still gives a wind", async () => {
+    // LJPC1 exactly: 100% of rows carry WSPD and none carries ATMP. Refusing
+    // the whole reading would drop a wind measured at the pier in favour of one
+    // measured at an airport.
+    const text = [
+      HEADER,
+      row("2026 08 19 02 30", { wdir: "320", wspd: "3.6" }),
+      "",
+    ].join("\n");
+    fetchMock.mockResolvedValue(textResponse(text));
+
+    const result = await fetchLatestNdbcAir("LJPC1", AT_PIER);
+
+    expect(result.kind).toBe("ok");
+    if (result.kind !== "ok") return;
+    expect(result.airTempF).toBeNull();
+    expect(result.windMph).toBeCloseTo(8.05, 2);
+  });
+
+  test("both fields aged out is unavailable, not a null reading", async () => {
+    // A panel handed two nulls would render an empty air section with no
+    // explanation. The state has to say the station is not answering currently.
+    const text = [
+      HEADER,
+      row("2026 08 18 20 00", { wdir: "320", wspd: "3.6", atmp: "23.4" }),
+      "",
+    ].join("\n");
+    fetchMock.mockResolvedValue(textResponse(text));
+
+    const result = await fetchLatestNdbcAir("LJAC1", AT_PIER);
+
+    expect(result.kind).toBe("unavailable");
+    if (result.kind !== "unavailable") return;
+    expect(result.reason).toContain("inside the last 180 minutes");
+    expect(result.drift).toBe(false);
+  });
+
+  test("a 404 is a station that is not publishing", async () => {
+    // NPQC1 and TIQC1 do exactly this while listed active.
+    fetchMock.mockResolvedValue(textResponse("Not Found", 404));
+
+    const result = await fetchLatestNdbcAir("NPQC1", AT_PIER);
+
+    expect(result.kind).toBe("unavailable");
+    if (result.kind !== "unavailable") return;
+    expect(result.reason).toContain("not publishing");
+    expect(result.drift).toBe(false);
+  });
+
+  test("a station with no air columns at all is unavailable, not a still day", async () => {
+    // SDBC1: ten thousand rows of water temperature and no air.
+    const text = [HEADER, row("2026 08 19 02 30", {}), ""].join("\n");
+    fetchMock.mockResolvedValue(textResponse(text));
+
+    const result = await fetchLatestNdbcAir("SDBC1", AT_PIER);
+
+    expect(result.kind).toBe("unavailable");
+    if (result.kind !== "unavailable") return;
+    expect(result.reason).toContain("not observing the air");
+  });
+
+  test("a changed unit is drift, which is a bug here rather than a quiet feed", async () => {
+    const [names, units] = HEADER.split("\n");
+    const fields = units.slice(1).trim().split(/\s+/);
+    fields[13] = "degF";
+    const drifted = [
+      names,
+      `#${fields.join(" ")}`,
+      row("2026 08 19 02 30", { wspd: "3.6", atmp: "71.4" }),
+      "",
+    ].join("\n");
+    fetchMock.mockResolvedValue(textResponse(drifted));
+
+    const result = await fetchLatestNdbcAir("LJAC1", AT_PIER);
+
+    expect(result.kind).toBe("unavailable");
+    if (result.kind !== "unavailable") return;
+    expect(result.drift).toBe(true);
+  });
+
+  test("a request that does not complete is reported, never thrown", async () => {
+    fetchMock.mockRejectedValue(new Error("socket hang up"));
+
+    const result = await fetchLatestNdbcAir("LJAC1", AT_PIER);
+
+    expect(result.kind).toBe("unavailable");
+    if (result.kind !== "unavailable") return;
+    expect(result.reason).toContain("socket hang up");
+  });
+
+  test("a non-404 error status is reported with its code", async () => {
+    fetchMock.mockResolvedValue(textResponse("upstream is down", 503));
+
+    const result = await fetchLatestNdbcAir("LJAC1", AT_PIER);
+
+    expect(result.kind).toBe("unavailable");
+    if (result.kind !== "unavailable") return;
+    expect(result.reason).toContain("503");
+  });
+
+  test("a body that answers 200 and then fails to read is not drift", async () => {
+    // A truncated response is the network having a bad moment, not NDBC
+    // changing its format. Calling it drift would send someone hunting a bug
+    // that is not in this repo.
+    fetchMock.mockResolvedValue({
+      ok: true,
+      status: 200,
+      text: async () => {
+        throw new Error("terminated");
+      },
+    });
+
+    const result = await fetchLatestNdbcAir("LJAC1", AT_PIER);
+
+    expect(result.kind).toBe("unavailable");
+    if (result.kind !== "unavailable") return;
+    expect(result.reason).toContain("terminated");
+    expect(result.drift).toBe(false);
   });
 });
