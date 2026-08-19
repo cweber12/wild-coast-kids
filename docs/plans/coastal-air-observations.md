@@ -409,3 +409,43 @@ The work roughly doubles against the addendum above. It buys a binding that is
 correct on the evidence rather than one built from a candidate set assembled to
 answer a different question, and it fixes the audit finding -- station tables
 whose membership no gate can re-derive -- rather than recording it as accepted.
+
+## Addendum — 2026-08-18: the PR boundary moves, and slice 4 owns the rename
+
+Decided with Cole while implementing. The slice list and its order are
+unchanged; what moves is which PR each slice ships in, and one consequence of
+"replace the table" that the addendum above left implicit.
+
+**Slice 3 moves to the second PR.** The addendum above re-split six slices into
+two PRs at the 4/5 boundary and left slice 3 in the first one, where the
+addendum before it had slice 3 shipping alongside the join. That is not a
+neutral rearrangement. Slice 3 promotes the temperature to the panel's primary
+slot while the bound station is still the airport, so between the two merges the
+largest text on the panel would read 81 °F at a beach reading 72 °F.
+
+The demotion it performs is an improvement and the promotion is not, yet, and
+the two cannot be separated: something has to hold the primary slot. Leading
+with a near-constant that describes an airport is useless; leading with a
+temperature that describes an airport is wrong, and this plan exists because
+that number is wrong. So slice 3 waits for slice 5 and the two land together.
+
+PR one is slices 2 and 4. PR two is slices 3, 5 and 6.
+
+**Slice 4 replaces `weather-stations.json`, and that forces the sky join's
+filter to move with it.** The implementation decisions above say "replace it
+with one measured table" carrying `publishes_sky`. The live join filters on
+`publishes_visibility`, so the moment the file is replaced that filter names a
+field the table no longer has. Writing a second table beside the old one was
+considered and rejected: it would leave two station tables, two sets of caveats
+to load and a second retirement to remember, in exchange for deferring a rename
+by one PR.
+
+So slice 4 carries the rename. `bindWeatherStation` filters on `delivers &&
+publishes_sky` — the same rule under a measured name, since sky and visibility
+are one capability by the measurement recorded in the first addendum — and
+`beaches.json` is re-seeded against the new table. Ten stations publish sky
+against the nine that were recorded as publishing visibility, so a binding may
+move; the diff is read and reported rather than assumed to be empty.
+
+What slice 4 still does not do is change the _rule_. The air pool, the shore
+preference and the second network all arrive in slices 5 and 6, as before.
