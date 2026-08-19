@@ -143,6 +143,35 @@ export interface WeatherStation {
   dead_note?: string;
 }
 
+/**
+ * A beach San Diego County lists that this site does not answer for.
+ *
+ * Written into `beaches.json`'s `_excluded` block by the same predicate in
+ * `scripts/seed-beaches.mjs` that decides which beaches are in `beaches`, so
+ * the two cannot disagree about one. Nothing here is hand-maintained.
+ */
+export interface ExcludedBeach {
+  /** Stable, and not a route: `/conditions/<slug>` 404s for every one of these. */
+  slug: string;
+  name: string;
+  /**
+   * The binding distance that disqualified it, or the fault that stopped a
+   * binding being made at all. A beach that disappeared without one would be
+   * the silent failure this repo's `unresolved` blocks exist to prevent, and a
+   * worse one: a reader cannot notice what they were never shown.
+   */
+  why: string;
+}
+
+/** How far this site's answer reaches, counted in beaches. */
+export interface InventoryReach {
+  /** What the county's list holds: the beaches served plus the beaches excluded. */
+  listed: number;
+  /** What this site answers for. */
+  served: number;
+  excluded: readonly ExcludedBeach[];
+}
+
 export interface TideStation {
   name: string;
   lat: number;
@@ -156,6 +185,7 @@ export interface TideStation {
 }
 
 const BEACHES = inventory.beaches as readonly Beach[];
+const EXCLUDED = inventory._excluded as readonly ExcludedBeach[];
 const STATIONS = stationTable.stations as Readonly<Record<string, TideStation>>;
 const BUOYS = buoyTable.buoys as Readonly<Record<string, WaveBuoy>>;
 const WEATHER = weatherTable.stations as Readonly<
@@ -304,6 +334,22 @@ export function airStationFor(
     );
   }
   return { id: beach.air_station, ...station };
+}
+
+/**
+ * What this site covers, and what it leaves out.
+ *
+ * `listed` is derived from the two halves rather than written down, because a
+ * count of somebody else's list that this repo maintains by hand goes stale the
+ * first time that list moves -- and the number a reader is owed is the one that
+ * makes the site's own reach checkable.
+ */
+export function inventoryReach(): InventoryReach {
+  return {
+    listed: BEACHES.length + EXCLUDED.length,
+    served: BEACHES.length,
+    excluded: EXCLUDED,
+  };
 }
 
 /** Caveats carried by every data file. Every one owes the reader a rendering. */

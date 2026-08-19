@@ -28,6 +28,11 @@ test("the view carries the chooser, the reading and the caveats", () => {
   expect(
     screen.getByText("What we are unsure about in this data"),
   ).toBeDefined();
+  // The reach is part of what this view owes a reader: the chooser offers 41
+  // beaches and the county lists 73, and nothing else on the page says so.
+  expect(
+    screen.getByText(/answers for \d+ of the \d+ beaches San Diego County/),
+  ).toBeDefined();
 });
 
 test("every caveat the data files carry reaches this page", () => {

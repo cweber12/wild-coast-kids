@@ -6,6 +6,7 @@ import {
   DEFAULT_BEACH_SLUG,
   defaultBeach,
   inventoryCaveats,
+  inventoryReach,
   tideStationFor,
   waveBuoyFor,
 } from "./beaches";
@@ -55,6 +56,35 @@ describe("the inventory", () => {
 
   test("an unknown slug is null rather than a throw", () => {
     expect(beachBySlug("no-such-beach")).toBeNull();
+  });
+});
+
+describe("the inventory's reach", () => {
+  test("counts what the county lists as what it serves plus what it does not", () => {
+    // Derived rather than written down, so the two halves cannot disagree and
+    // the figure cannot go stale the next time upstream adds a row.
+    const reach = inventoryReach();
+
+    expect(reach.served).toBe(allBeaches().length);
+    expect(reach.listed).toBe(reach.served + reach.excluded.length);
+    expect(reach.listed).toBe(73);
+  });
+
+  test("names each beach it does not serve, and why", () => {
+    const onofre = inventoryReach().excluded.find(
+      (beach) => beach.slug === "san-onofre-state-beach",
+    );
+
+    expect(onofre?.name).toBe("San Onofre State Beach");
+    expect(onofre?.why).toContain("56.6 km");
+  });
+
+  test("serves none of the beaches it says it does not", () => {
+    // The contradiction a reader would catch first: a beach listed as absent
+    // that the chooser still offers.
+    for (const beach of inventoryReach().excluded) {
+      expect(beachBySlug(beach.slug)).toBeNull();
+    }
   });
 });
 
