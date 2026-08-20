@@ -28,8 +28,7 @@ export function Hero() {
         </h1>
         {/* white/90, up from the template's /70: 4.79:1 vs a failing 3.60:1 */}
         <p className="leading-relaxed mb-6 max-w-80 text-base text-white/90">
-          Art classes and outdoor co-op rooted in the California coast. Charter
-          fund eligible.
+          Art classes and outdoor co-op rooted in the California coast.
         </p>
         <div className="flex flex-wrap gap-3">
           {/* Routes, not anchors: both program cards now share one snap

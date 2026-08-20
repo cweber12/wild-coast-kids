@@ -5,7 +5,7 @@ import { Marquee } from "./Marquee";
 test("every phrase appears twice in the DOM for the seamless loop", () => {
   render(<Marquee />);
 
-  expect(screen.getAllByText("Charter Eligible")).toHaveLength(2);
+  expect(screen.getAllByText("Art Classes")).toHaveLength(2);
   expect(screen.getAllByText("K–8")).toHaveLength(2);
 });
 

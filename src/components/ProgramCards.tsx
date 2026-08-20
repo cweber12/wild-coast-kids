@@ -52,9 +52,6 @@ export function ProgramCards() {
               whatever sparks curiosity. Every session is different.
             </p>
             <div className="mb-5.5 flex flex-wrap gap-2">
-              <span className="rounded-pill bg-yellow px-[13px] py-[5px] text-2xs font-extrabold tracking-wide text-ink">
-                Charter eligible
-              </span>
               <span className="rounded-pill bg-white/15 px-[13px] py-[5px] text-2xs font-extrabold tracking-wide text-white">
                 All levels
               </span>

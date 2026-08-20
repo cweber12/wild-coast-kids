@@ -4,8 +4,7 @@
 
 A homeschool parent in San Diego hears about Wild Coast Kids and wants to answer
 three questions fast: what is this (art classes and an outdoor co-op), is it for
-my kid (K–8, charter-fund eligible), and how do I get in (book a class, join the
-interest list). Today there is nothing to point them at — the co-op exists in
+my kid (K–8), and how do I get in (book a class, join the interest list). Today there is nothing to point them at — the co-op exists in
 conversations and a style template, not on the web.
 
 ## Solution
@@ -89,7 +88,7 @@ tree rather than believed.
 | Conditions         | `Conditions.tsx`         | Ocean-blue section with a reserved slot for the tool                                     |
 | InterestListTeaser | `InterestListTeaser.tsx` | The landing page's interest-list section, wrapping the form                              |
 | InterestListForm   | `InterestListForm.tsx`   | Interest-list form; client-side success state only                                       |
-| QuoteStats         | `QuoteStats.tsx`         | Parent quotes + K–8 / Charter stat tiles; closes the page                                |
+| QuoteStats         | `QuoteStats.tsx`         | Parent quotes + the K–8 stat tile; closes the page                                       |
 | SnapSection        | `SnapSection.tsx`        | One stop: owns its height and surface, and the padding its content drops                 |
 | Footer             | `Footer.tsx`             | Dark bar, logo, program summary. Rendered by `layout.tsx`, so it is on every route       |
 | PillLink           | `PillLink.tsx`           | The site's CTA shape, in five closed tones                                               |
@@ -285,6 +284,24 @@ since changed things it still stated as current.
   overflow survived review; the `md`–`lg` band it described has had no stops
   since 2026-08-15, and the two-up step it called a regression was a deliberate
   choice recorded in the plan before the code was written.
+
+### 2026-08-20 (the charter claim is withdrawn)
+
+The brief opened by naming "charter-fund eligible" as half of the answer to
+"is it for my kid", and the Component Inventory described `QuoteStats` as
+carrying "K–8 / Charter stat tiles". Both are corrected above.
+
+The site asserted charter-fund eligibility in seven places and explained it
+nowhere — the copy that would have explained it was never written, and the
+facts to write it from are not in the repository. Rather than invent a claim
+about public money, the claim was withdrawn until the copy exists. `QuoteStats`
+now carries one tile, not two.
+
+This is expected to reverse. The route back, and the reason a replacement
+statistic was not invented to fill the space, are in
+`docs/plans/charter-claim-withdrawn.md` (issue #104). Three tests assert the
+claim stays absent in the meantime, so restoring it means deleting a test that
+says why it went.
 
 ## Out of Scope
 

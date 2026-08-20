@@ -33,20 +33,19 @@ export function QuoteStats() {
           </figure>
         ))}
       </div>
+      {/* One tile, not two. The charter tile was the second, and it went with
+          the rest of the claim (#104, docs/plans/charter-claim-withdrawn.md).
+          The grid keeps md:grid-cols-2 so the survivor stays the width it has
+          always been: dropping the column instead stretches "K–8" across the
+          full section, which reads as a deletion rather than as one stat. No
+          replacement statistic — inventing a claim to fill the space is the
+          same mistake that emptied it. */}
       <div className="mt-10 grid gap-3 md:grid-cols-2 md:gap-4">
         <div className="rounded-thumb bg-yellow px-6 py-5">
           <p className="text-stat leading-none mb-1 font-black text-ink italic">
             K–8
           </p>
           <p className="text-xs font-bold text-black/50">All ages welcome</p>
-        </div>
-        <div className="rounded-thumb bg-purple px-6 py-5">
-          <p className="text-stat leading-none mb-1 font-black text-yellow italic">
-            Charter ✓
-          </p>
-          <p className="text-xs font-bold text-white/60">
-            Fund eligible programs
-          </p>
         </div>
       </div>
     </section>

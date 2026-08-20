@@ -6,7 +6,6 @@ const PHRASES = [
   "Nature Journal",
   "Hikes",
   "Science",
-  "Charter Eligible",
   "San Diego",
   "K–8",
 ];
