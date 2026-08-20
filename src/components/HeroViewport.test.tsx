@@ -26,14 +26,18 @@ test("both hero CTAs go to a page, not down the page", () => {
   ).toBe("/coop");
 });
 
-test("the hero photo slot shows its label while it is a placeholder", () => {
+test("the hero photo is the photograph, reachable by its own name", () => {
   render(<HeroViewport />);
 
-  // Without the visible label the slot is invisible over the purple and the
-  // poster's right half reads as empty (design review, finding 2).
-  expect(
-    screen.getByText("Hero photo of kids exploring the coast"),
-  ).toBeDefined();
+  // getByRole, so this asserts the frame a screen reader reaches rather than
+  // that an <img> was constructed. The src is matched loosely because
+  // next/image rewrites it through the optimizer: what has to hold is that it
+  // resolves to the file in public/, not the exact query it is fetched with.
+  const photo = screen.getByRole("img", {
+    name: /kids drawing at easels on the bluff above the beach/i,
+  });
+
+  expect(photo.getAttribute("src")).toContain("hero-art-class.jpg");
 });
 
 test("the marquee rides inside the viewport block", () => {

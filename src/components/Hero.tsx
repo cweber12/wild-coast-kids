@@ -1,5 +1,6 @@
+import Image from "next/image";
+
 import { PillLink } from "./PillLink";
-import { Placeholder } from "./Placeholder";
 
 export function Hero() {
   return (
@@ -44,14 +45,30 @@ export function Hero() {
         </div>
       </div>
       <div className="relative col-start-2 row-start-1 hidden md:block">
-        {/* showLabel: without it this slot is invisible over the purple and
-            the poster's right half reads as empty (design review, finding 2). */}
-        <Placeholder
-          background
-          showLabel
-          label="Hero photo of kids exploring the coast"
-          className="absolute inset-0 bg-white/5"
-          labelClassName="text-white/40"
+        {/* The photograph the Placeholder here stood in for. Its accessible
+            name describes this frame rather than inheriting the slot's old
+            label — the slot said "kids exploring the coast", and what arrived
+            is a class in progress.
+
+            fill + object-cover because the column is a full-height half-width
+            box and the frame is 3:2: it takes a centre vertical slice, which
+            leaves the instructor and whiteboard under the gradient's fade and
+            the easels and water clear of it. priority because this is the
+            poster, and so the page's LCP element.
+
+            The second half of sizes is the width this image occupies below
+            `md`, where the column above is `hidden`: none of it. priority
+            preloads from the head, which no stylesheet reaches — say `100vw`
+            there and a phone downloads 31.5kB of a photograph it never
+            displays. 1px, not 0: a source size has to be positive, and it is
+            small enough that the browser picks the narrowest candidate. */}
+        <Image
+          src="/hero-art-class.jpg"
+          alt="Kids drawing at easels on the bluff above the beach, the instructor holding up a dragon sketch"
+          fill
+          priority
+          sizes="(min-width: 768px) 50vw, 1px"
+          className="object-cover"
         />
         {/* Blends the photo edge into the purple text column, as in the
             template's hero-photo::after gradient. */}

@@ -44,9 +44,12 @@ dashed frame with an emoji and a "coming soon" line naming what lands there.
 _Avoid_: coming-soon box, empty state, placeholder (that word is taken, below)
 
 **Placeholder**:
-A labeled stand-in for a future _image_ — logo, hero photo, card background,
-gallery frame. Carries the accessible name the real image will inherit, so
-swapping in the photograph changes nothing for assistive tech.
+A labeled stand-in for a future _image_ — the logo, card backgrounds and
+gallery frames are what is left; the hero photo was one until the photograph
+arrived. The label is what the slot is _for_, so the page reads the same shape
+either way. It is not the accessible name the photograph then keeps: a label
+written before the picture exists is a guess, and the hero's was wrong by the
+time it was filled — the real image names its own frame.
 _Avoid_: stub, dummy image, reserved slot (that is for content, not images)
 
 **Strip**:
