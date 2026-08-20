@@ -36,9 +36,9 @@ export default defineConfig({
       // than quietly.
       thresholds: {
         statements: 89.61,
-        branches: 89.61,
+        branches: 89.63,
         functions: 94.42,
-        lines: 89.45,
+        lines: 89.46,
       },
     },
   },
