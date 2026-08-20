@@ -120,6 +120,10 @@ approved vendor, and what a parent actually does — because that is the file
 for supplied knowledge that is not derivable from the code. Copy is written
 from it, and the guards come out in the same slice that adds the copy.
 
+That question is now recorded there, as open question 6. A plan under
+`docs/plans/` is where a task is worked out; the reference doc is where someone
+asking what is still unknown about the program actually looks.
+
 ## Out of scope
 
 - Writing any charter-fund copy. That is the whole reason #104 is `needs-human`
@@ -131,8 +135,9 @@ from it, and the guards come out in the same slice that adds the copy.
 
 ## Slices
 
-| #   | Slice                          | Delivers                                                                  |
-| --- | ------------------------------ | ------------------------------------------------------------------------- |
-| 0   | Write this plan down           | This file                                                                 |
-| 1   | Withdraw the claim from the UI | Seven surfaces, four updated assertions, three absence guards             |
-| 2   | Correct the design docs        | `DESIGN_BRIEF.md` body + addendum, `INFORMATION_ARCHITECTURE.md` in place |
+| #   | Slice                           | Delivers                                                                  |
+| --- | ------------------------------- | ------------------------------------------------------------------------- |
+| 0   | Write this plan down            | This file                                                                 |
+| 1   | Withdraw the claim from the UI  | Seven surfaces, four updated assertions, three absence guards             |
+| 2   | Correct the design docs         | `DESIGN_BRIEF.md` body + addendum, `INFORMATION_ARCHITECTURE.md` in place |
+| 3   | Record what would bring it back | `docs/reference/art-program.md` open question 6                           |
