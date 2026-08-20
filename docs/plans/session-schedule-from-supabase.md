@@ -345,3 +345,53 @@ Taken before slice 2 because it was cheapest there: no application code read the
 variables yet, only `check-db.mjs` named them.
 
 The slice order is therefore 0, 1, **runtime config**, 2, 3, 4.
+
+### 2026-08-20 — three of the six test seams name code that does not exist
+
+The Test seams table above (lines 190–197) was agreed before slice 1 and never
+revisited. Three of its six rows name things that were never written under
+those names. The table is left standing, because it is the record of what was
+agreed; this says what shipped instead. The same correction applies to the two
+other places the body names `getSessions`, at lines 78 and 207.
+
+**`getSessions(program, deps)` is `fetchSessions(program, now)`.** There is no
+`deps` parameter. The function reads `SUPABASE_URL` and `SUPABASE_ANON_KEY`
+from the environment itself, and takes an optional `now` for the
+upcoming-sessions filter. `getSessions` appears nowhere in `src/` or
+`scripts/` — only in this file.
+
+**The `fetch` stub is the global one, not an injection.**
+`src/lib/sessions.test.ts` does `vi.stubGlobal("fetch", fetchMock)`. This was a
+deliberate reversal rather than drift: the 2026-08-18 amendment to ADR-0013
+records that Next instruments `fetch` itself — caching, revalidation, and the
+`no-store` that `force-dynamic` applies — so a module holding an injected
+function has no guarantee it was handed the instrumented one. That makes the
+injected seam one that can lie. The ADR was amended; this table was not.
+`scripts/db-check.mjs` still injects its `fetch`, for the reason the amendment
+gives: it is a command-line script with no Next instrumentation to preserve.
+
+**`formatSessionWhen(session)` was never written.** The composition lives in an
+unexported `when()` inside `SessionSchedule.tsx`, so it is not a seam. The
+helper that module does export is `formatPrice(cents)`, which this table never
+mentioned.
+
+**What was actually lost is less than the list suggests.** The
+`America/Los_Angeles` rendering that `formatSessionWhen` was meant to isolate
+_is_ tested as a pure function against fixed instants — just not where the
+table looked. `when()` delegates to `localDayOf` and `localTimeOf` in
+`src/lib/pacific-time.ts`, and `src/lib/pacific-time.test.ts` asserts both,
+including the exact `"Tue, Sep 8"` this feature renders and the evening instant
+that is already the next day in UTC. That is a better seam than the one
+proposed: it is shared with the conditions tool and the tide day, so one set of
+assertions holds for all three rather than one per feature.
+
+What is reachable only by rendering is the single line that joins them,
+`day · start – end`, and `SessionSchedule.test.tsx:40` covers it by asserting
+`"Tue, Sep 8 · 10:00 AM – 1:00 PM"` from a fixed UTC input. There is no
+coverage hole, and extracting a `formatSessionWhen` today would isolate a
+template literal. No code changes for this; the record was the thing that was
+wrong.
+
+One row is understated rather than wrong: `SessionSchedule({ result })` also
+takes `program`, `emoji`, `headline` and `detail`, and the reserved-slot branch
+is driven by all of them.
