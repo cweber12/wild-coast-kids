@@ -20,7 +20,7 @@
  *   presence of the key proves nothing and only the value counts. Forty-six of
  *   the fifty-six candidate stations in this county answer exactly that way,
  *   which is why the join filters on measured delivery -- see
- *   `weather-stations.json`.
+ *   `observation-stations.json`.
  *
  * WHAT IS NOT PINNED, deliberately: `qualityControl`. Its values are upstream's
  * own vocabulary and this site does not gate on them, because a reading marked

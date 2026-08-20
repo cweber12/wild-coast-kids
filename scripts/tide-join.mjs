@@ -48,9 +48,9 @@ export function waterClassOf(waterBodyType) {
  * Beaches the state types as the wrong kind of water, and what they are.
  *
  * Hand-written, like `tide-stations.json`'s `water` and
- * `weather-stations.json`'s `shore`, and for the same reason: the join has to be
- * told, and no authority publishes a correction. Each entry carries what was
- * measured rather than what it looks like, so the next person can check it
+ * `observation-stations.json`'s `shore`, and for the same reason: the join has
+ * to be told, and no authority publishes a correction. Each entry carries what
+ * was measured rather than what it looks like, so the next person can check it
  * instead of trusting it.
  *
  * Keyed by slug, which `seed-beaches.mjs` guarantees is a stable primary key.
