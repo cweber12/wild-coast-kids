@@ -45,6 +45,7 @@
 
 import { readFileSync, writeFileSync } from "node:fs";
 import { pathToFileURL } from "node:url";
+import { generatedDate } from "./generated-date.mjs";
 
 const NWS_POINTS = "https://api.weather.gov/points";
 const NWS_OBSERVATIONS = "https://api.weather.gov/stations";
@@ -461,24 +462,6 @@ export function buildTable(stations) {
   return table;
 }
 
-/**
- * Today's date where the beaches are, not where the clock is.
- *
- * `new Date().toISOString().slice(0, 10)` -- which is what `seed-beaches.mjs`
- * uses -- stamps the UTC date, so any run after 5pm Pacific records tomorrow.
- * The file would claim to have been generated on a day that had not started in
- * the county it describes, and would read a day newer than the sibling tables
- * probed beside it. The zone is the one `beaches.json` already declares.
- */
-export function probeDate(now) {
-  return new Intl.DateTimeFormat("en-CA", {
-    timeZone: "America/Los_Angeles",
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  }).format(now);
-}
-
 export function document(table, now = new Date()) {
   const rows = Object.values(table);
   const count = (predicate) => rows.filter(predicate).length;
@@ -490,7 +473,7 @@ export function document(table, now = new Date()) {
 
   return {
     version: "0.2.0",
-    generated: probeDate(now),
+    generated: generatedDate(now),
     _provenance:
       `Measured by scripts/probe-observation-stations.mjs; re-runnable and diffable with ` +
       `--check. National Weather Service candidates are the union of ` +

@@ -11,7 +11,6 @@ import {
   nwsCapabilities,
   nwsStationListUrls,
   parseActiveStations,
-  probeDate,
   probeNdbc,
   probeNws,
   tableRow,
@@ -371,18 +370,10 @@ describe("the boxes", () => {
 });
 
 describe("the generated date", () => {
-  it("is the date where the beaches are, not where the clock is", () => {
-    // 01:59 UTC on the 19th is 18:59 on the 18th in San Diego. Stamping the UTC
-    // date -- which seed-beaches.mjs still does -- makes any evening run claim a
-    // day that has not started in the county the file describes, and makes this
-    // table read a day newer than the sibling tables probed beside it.
-    expect(probeDate(new Date("2026-08-19T01:59:22Z"))).toBe("2026-08-18");
-  });
-
-  it("agrees with UTC when the two are the same day", () => {
-    expect(probeDate(new Date("2026-08-18T16:00:00Z"))).toBe("2026-08-18");
-  });
-
+  // The date itself is generated-date.mjs's, and asserted in its own suite next
+  // door -- including the daylight-saving case neither caller can see. What is
+  // this table's business is that the document stamps that date and not the
+  // machine's: 01:59 UTC on the 19th is 18:59 on the 18th in San Diego.
   it("is what the document records", () => {
     const table = buildTable([
       {

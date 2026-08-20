@@ -30,6 +30,7 @@
 import { readFileSync, writeFileSync } from "node:fs";
 import { pathToFileURL } from "node:url";
 import { distanceMetres } from "./geo.mjs";
+import { generatedDate } from "./generated-date.mjs";
 import { bindAirStation } from "./air-join.mjs";
 import { bindTideStation } from "./tide-join.mjs";
 import { bindWaveBuoy } from "./wave-join.mjs";
@@ -392,7 +393,7 @@ export function servesBeach(beach, toleranceM = SERVICE_TOLERANCE_M) {
   return serviceFault(beach, toleranceM) === null;
 }
 
-export function document(built) {
+export function document(built, now = new Date()) {
   const beaches = built.filter((beach) => servesBeach(beach));
   const excluded = built
     .filter((beach) => !servesBeach(beach))
@@ -431,7 +432,7 @@ export function document(built) {
 
   return {
     version: "0.2.0",
-    generated: new Date().toISOString().slice(0, 10),
+    generated: generatedDate(now),
     time_zone: "America/Los_Angeles",
     _provenance:
       `Seeded from the Beach Detail Information resource of "Beach Advisories (Postings and ` +

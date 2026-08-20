@@ -611,4 +611,17 @@ describe("document", () => {
     expect(second).toEqual(first);
     expect(new Set(first).size).toBe(first.length);
   });
+
+  it("stamps the date where the beaches are, not where the clock is", () => {
+    // 01:59 UTC on the 19th is 18:59 on the 18th in San Diego. Stamping the UTC
+    // date made any run after 5pm Pacific claim a day that had not started in
+    // the county this file describes, and read a day ahead of the station
+    // tables probed beside it. The zone is the one the document itself
+    // declares two lines below the stamp.
+    const built = build([row()], STATIONS, BUOYS, WEATHER);
+
+    expect(document(built, new Date("2026-08-19T01:59:22Z")).generated).toBe(
+      "2026-08-18",
+    );
+  });
 });
