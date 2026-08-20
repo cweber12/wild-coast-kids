@@ -116,8 +116,9 @@ sensitive data the site would hold as far from any ledger as possible.
 
 ## 6. Open questions
 
-None of these blocks the first term. All of them change the schema, so they want
-answers before a pack system is built rather than after.
+None of these blocks the first term. The first four change the schema and want
+answers before a pack system is built rather than after; the last two block
+page copy instead, and cost nothing but the answer.
 
 1. **Do credits expire?** If so, on what clock — purchase date, or term end?
    Easy to add up front, awkward to add to balances already sold.
@@ -127,6 +128,12 @@ answers before a pack system is built rather than after.
 4. **Does a drop-in purchase create an account?** If not, a parent who drops in
    twice and then buys a pack has two identities and a split history.
 5. **What does the monthly themed class cost?** Blocks putting it on the site.
+6. **How does charter funding actually work here?** Which charters or vendor
+   systems, whether Wild Coast Kids is an approved vendor yet, and what a parent
+   has to do. The site claimed charter-fund eligibility in seven places and
+   explained it nowhere, so the claim was withdrawn on 2026-08-20 rather than
+   invented around — issue #104, `docs/plans/charter-claim-withdrawn.md`. These
+   answers are what brings it back.
 
 ## 7. The wider PRD set
 
