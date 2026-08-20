@@ -13,8 +13,42 @@ export const metadata: Metadata = {
 /** Per request, and for the reasons given in full on `/coop`. */
 export const dynamic = "force-dynamic";
 
-/** Ties the approach list to its heading; the two cannot drift apart. */
+/** Tie each list to its heading; the two cannot drift apart. */
 const APPROACH_HEADING_ID = "art-approach-heading";
+const PRICING_HEADING_ID = "art-pricing-heading";
+
+/**
+ * What the weekly small-group class costs.
+ *
+ * Copy, not `price_cents`. A pack spans sessions, so a column holding one
+ * integer per session cannot express one; and these three numbers are the same
+ * for every weekly session, which makes them a fact about the program rather
+ * than about any date. A session that is priced differently still says so on
+ * its own row — see `docs/plans/art-program-page-copy.md`.
+ *
+ * Written as the strings a reader sees rather than as cents run through
+ * `formatPrice`. There is no arithmetic here to get wrong, and a test that
+ * imported the number it asserts could not fail when the number is wrong.
+ *
+ * The monthly themed class is deliberately absent until it has a price.
+ */
+const TIERS = [
+  {
+    name: "Drop-in",
+    price: "$20",
+    detail: "One class, whenever it suits. No commitment.",
+  },
+  {
+    name: "6-pack",
+    price: "$100",
+    detail: "Six classes, one of them free.",
+  },
+  {
+    name: "12-pack",
+    price: "$200",
+    detail: "Twelve classes, two of them free. The best value per class.",
+  },
+];
 
 /**
  * What a parent is actually choosing between, in the program's own terms.
@@ -102,6 +136,37 @@ export default async function Art() {
                 <h3 className="leading-display mb-1.5 text-base font-black italic">
                   {title}
                 </h3>
+                <p className="leading-relaxed text-sm text-fog">{detail}</p>
+              </li>
+            ))}
+          </ul>
+        </section>
+        {/* Pricing sits between the pitch and the dates: a parent who wants in
+            asks the cost before they ask which Tuesday. */}
+        <section aria-labelledby={PRICING_HEADING_ID} className="mb-12">
+          <h2
+            id={PRICING_HEADING_ID}
+            className="text-2xs mb-3 font-extrabold tracking-widest text-purple uppercase"
+          >
+            Packages &amp; pricing
+          </h2>
+          <p className="leading-relaxed mb-4 max-w-130 text-base text-fog">
+            A weekly small-group class, capped at ten kids, starting fall 2026.
+            Come once, or save with a pack — packs are shared, so siblings can
+            draw from the same one.
+          </p>
+          <ul className="grid gap-3 md:grid-cols-3">
+            {TIERS.map(({ name, price, detail }) => (
+              <li
+                key={name}
+                className="rounded-tile border-[1.5px] border-lavender bg-white/60 p-5"
+              >
+                <h3 className="text-2xs mb-2 font-extrabold tracking-widest text-purple uppercase">
+                  {name}
+                </h3>
+                <p className="leading-display mb-1.5 text-stat font-black italic">
+                  {price}
+                </p>
                 <p className="leading-relaxed text-sm text-fog">{detail}</p>
               </li>
             ))}

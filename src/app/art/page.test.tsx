@@ -76,6 +76,50 @@ test("the approach list is named by its own heading", async () => {
   expect(region.getAttribute("aria-labelledby")).toBe(heading.id);
 });
 
+// The prices are asserted as the strings a reader sees. Importing TIERS and
+// asserting against it would pass whatever the numbers were.
+test("the art page states all three pricing tiers", async () => {
+  render(await Art());
+
+  expect(
+    screen.getByRole("heading", { level: 2, name: "Packages & pricing" }),
+  ).toBeDefined();
+
+  expect(
+    screen.getByRole("heading", { level: 3, name: "Drop-in" }),
+  ).toBeDefined();
+  expect(screen.getByText("$20")).toBeDefined();
+
+  expect(
+    screen.getByRole("heading", { level: 3, name: "6-pack" }),
+  ).toBeDefined();
+  expect(screen.getByText("$100")).toBeDefined();
+
+  expect(
+    screen.getByRole("heading", { level: 3, name: "12-pack" }),
+  ).toBeDefined();
+  expect(screen.getByText("$200")).toBeDefined();
+});
+
+// Class size and the shared-pack rule are the two facts a parent asks about
+// that no session row carries.
+test("the art page states the class cap and that packs are shared", async () => {
+  render(await Art());
+
+  expect(screen.getByText(/capped at ten kids/i)).toBeDefined();
+  expect(
+    screen.getByText(/siblings can draw from the same one/i),
+  ).toBeDefined();
+});
+
+// The monthly themed class has no price yet, and a named package without a
+// number generates email rather than signups.
+test("the art page does not advertise the monthly class yet", async () => {
+  render(await Art());
+
+  expect(screen.queryByText(/monthly/i)).toBeNull();
+});
+
 test("an unreachable schedule is reported to the server log", async () => {
   const error = vi.spyOn(console, "error").mockImplementation(() => {});
 
