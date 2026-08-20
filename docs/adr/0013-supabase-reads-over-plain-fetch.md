@@ -1,6 +1,7 @@
-# 0008 — Supabase is read over plain fetch, and a failed read degrades
+# 0013 — Supabase is read over plain fetch, and a failed read degrades
 
-Date: 2026-08-18. Status: accepted.
+Date: 2026-08-18. Status: accepted. Filed as 0008 and renumbered on
+2026-08-20: 0008 already named the gallery decision (#102).
 
 ## Context
 
@@ -100,7 +101,7 @@ rebuilt — which is exactly the state this project's Preview environment was in
 That directly contradicts the reason these routes render dynamically at all: a
 change should be live on the next request. Unprefixed, both the data and the
 configuration behave that way. The cost is that a future client component
-wanting Supabase directly would need the names changed back, and ADR-0008's
+wanting Supabase directly would need the names changed back, and ADR-0013's
 own advice is that such a component is the moment to adopt the SDK anyway.
 
 Validating at the boundary is cheap insurance bought after the fact rather than

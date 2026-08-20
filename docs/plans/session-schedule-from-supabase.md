@@ -93,7 +93,7 @@ Three defects in the source document are corrected here rather than copied:
   auth, storage, realtime and functions to use none of them. An injected `fetch`
   is a cleaner seam than a mocked module, and Next's own fetch handling applies
   to it. If auth or RSVP ever lands, adopting the SDK is contained behind this
-  one module. Recorded as ADR-0008.
+  one module. Recorded as ADR-0013.
 
 - **The routes render dynamically.** `.github/workflows/gate.yml` passes no
   `env` and no `secrets`, and the gate table runs `npm run build`. A page that
@@ -225,7 +225,7 @@ Each leaves the repo working and the gates green.
 
 | #   | Slice                                                          | Delivers                                                                                    |
 | --- | -------------------------------------------------------------- | ------------------------------------------------------------------------------------------- |
-| 0   | Write this plan down                                           | This file, plus ADR-0008 on reading Supabase over plain fetch                               |
+| 0   | Write this plan down                                           | This file, plus ADR-0013 on reading Supabase over plain fetch                               |
 | 1   | The sessions table, and a command that proves it               | `supabase/migrations/0001_sessions.sql`, `npm run check:db`, `CONTEXT.md` gains **Session** |
 | 2   | `/coop` lists its published sessions                           | `src/lib/sessions.ts`, `SessionSchedule`, `/coop` async, coverage floor re-derived          |
 | 3   | `/art` lists its sessions, with price                          | `/art` async, price rendering, coverage floor re-derived                                    |
@@ -335,7 +335,7 @@ after a question about how the Supabase variables were labelled in Vercel:
 (`SUPABASE_URL` / `SUPABASE_ANON_KEY`, no `NEXT_PUBLIC_` prefix).
 
 It is not a tidying pass. A `NEXT_PUBLIC_` value is substituted into the build
-output rather than read at run time — measured, not assumed; see ADR-0008 —
+output rather than read at run time — measured, not assumed; see ADR-0013 —
 which would have made two of this project's existing problems unfixable without
 a redeploy: the malformed Production URL, and a Preview environment that had no
 Supabase variables at all and would have inlined `undefined` into every build.

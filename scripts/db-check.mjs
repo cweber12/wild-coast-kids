@@ -14,7 +14,7 @@
 /**
  * Every column the site expects, and no others. Checked as a set: a renamed
  * column fails here rather than surfacing later as an empty schedule, which is
- * the job a generated type would otherwise do (ADR-0008).
+ * the job a generated type would otherwise do (ADR-0013).
  */
 export const EXPECTED_COLUMNS = [
   "id",
@@ -227,7 +227,7 @@ const INVALID = {
  * does that — so the two can be tested apart.
  *
  * `fetch` arrives as a dependency rather than an import, so the tests drive
- * this with a stub instead of intercepting a module (ADR-0008).
+ * this with a stub instead of intercepting a module (ADR-0013).
  *
  * It writes. Two probe rows go in under the service role, get read back through
  * the anon key to prove RLS, and are deleted in a `finally`. Leftovers from a
