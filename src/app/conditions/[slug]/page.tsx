@@ -14,10 +14,10 @@ export const revalidate = 900;
 /**
  * Nothing prerendered at build, and every beach reachable.
  *
- * Seventy-three beaches times a NOAA request each, on every build, would ask the
- * publisher for a great deal that nobody has looked at. Returning none means a
- * beach is fetched the first time somebody actually chooses it and is served
- * from the cache after that, so upstream load follows real readers.
+ * A NOAA request per beach on every build would ask the publisher for a great
+ * deal that nobody has looked at. Returning none means a beach is fetched the
+ * first time somebody actually chooses it and is served from the cache after
+ * that, so upstream load follows real readers.
  */
 export function generateStaticParams() {
   return [];

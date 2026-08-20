@@ -79,11 +79,15 @@ The plan is `docs/plans/inventory-bounded-by-stations.md`.
 **The site answers for 41 beaches instead of 73.** That is the cost and it is
 the point: the 32 it drops are the ones whose numbers it could not defend. What
 remains, by the region labels the seeding script already assigns: 25 bays,
-lagoons and inlets, 13 in La Jolla and Pacific Beach — which by that rule
-includes Del Mar City Beach and both Torrey Pines — and 3 in Point Loma and
-Ocean Beach. No beach survives north of Del Mar or south of Ocean Beach. Every
-one has a tide station within 10 km, and none is bound to a buoy further away
-than that.
+lagoons and inlets, 14 in La Jolla and Pacific Beach — which by that rule
+includes Del Mar City Beach and both Torrey Pines — and 2 in Point Loma and
+Ocean Beach, which by the same rule are Pacific Beach and Mission Beach. No
+beach survives north of Del Mar, and on the open coast none survives south of
+Mission Beach: Ocean Beach, Sunset Cliffs and the whole Coronado and Imperial
+Beach run are cut. The bays reach further south than that, to Coronado Cays and
+the Tijuana Slough, because they are bound to bay stations that are nearby.
+Every surviving beach has a tide station within 10 km, and none is bound to a
+buoy further away than that.
 
 **The whole North County coast goes, and its air and wave bindings were the best
 on the site** — 0.3–5.1 km and 1.0–4.7 km. Only tide fails there, and it fails
@@ -97,7 +101,7 @@ here" worse than no page at all.
 
 **Coverage becomes a measurement rather than an ambition.** "73 beaches" was
 never a claim about what the site could measure; it was a claim about what the
-county lists. Forty is the first number this repo has published about its own
+county lists. Forty-one is the first number this repo has published about its own
 reach that is true.
 
 **Two upstream rows are excluded for being wrong rather than far**, and the
@@ -130,6 +134,16 @@ kept against 33 dropped. Measuring the two reclassifications against the real
 joins showed that form cuts a beach for lacking a buoy the join was right to
 withhold, so the clause is restated above in the form that separates a binding
 that is too far from a binding correctly not made. The counts are 41 and 32.
+
+The consequences above originally split the 41 as 13 in La Jolla and Pacific
+Beach and 3 in Point Loma and Ocean Beach, and called the total forty in one
+sentence and forty-one in another. Measured over the re-joined inventory the
+split is 14 and 2: Children's Pool moved out of the bay group when it was
+reclassified, and it moved into La Jolla rather than into the band below.
+Pacific Beach and Mission Beach are the only two the latitude bands put in
+Point Loma and Ocean Beach, and the beach actually named Ocean Beach is cut, so
+the claim that nothing survives south of it was misleading as well as
+miscounted. Both are restated above.
 
 The argument is unchanged. What changed is that the water class turned out to
 answer two questions — which water body's level applies here, and whether ocean

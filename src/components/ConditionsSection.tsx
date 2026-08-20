@@ -9,7 +9,11 @@
  */
 
 import { Suspense } from "react";
-import { beachesByRegion, inventoryCaveats } from "@/lib/beaches";
+import {
+  beachesByRegion,
+  inventoryCaveats,
+  inventoryReach,
+} from "@/lib/beaches";
 import { BeachSelector } from "./BeachSelector";
 import { Caveats } from "./Caveats";
 import { TidePanel } from "./TidePanel";
@@ -76,7 +80,7 @@ export function ConditionsSection({ slug }: { slug: string }) {
         <WindPanel slug={slug} />
       </Suspense>
 
-      <Caveats entries={inventoryCaveats()} />
+      <Caveats entries={inventoryCaveats()} reach={inventoryReach()} />
     </section>
   );
 }

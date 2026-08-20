@@ -19,8 +19,12 @@
  *   - that the datastore serialises numerics as JSON strings, so coordinates are
  *     converted once, here, and never by a reader.
  *
- * The inclusion predicate is data rather than judgement: County San Diego,
- * Status Active, BeachAccess PUBLIC, CountAsBeach 1.
+ * TWO PREDICATES DECIDE WHAT IS IN THE FILE, and they differ in kind. The
+ * inclusion predicate is data rather than judgement: County San Diego, Status
+ * Active, BeachAccess PUBLIC, CountAsBeach 1. The service predicate --
+ * `servesBeach` below -- is judgement and says so, because it decides how far a
+ * measurement may be taken from the place it is shown for. Every beach the
+ * second refuses is written to `_excluded` with the distance that refused it.
  */
 
 import { readFileSync, writeFileSync } from "node:fs";
@@ -186,7 +190,7 @@ export function slugify(name) {
 
 /**
  * Display grouping only. Never an input to any join — it exists so a reader can
- * find their beach in a list of seventy-odd, and the bands are latitudes rather
+ * find their beach in a long list, and the bands are latitudes rather
  * than anyone's idea of where a neighbourhood ends. Bay and inlet sites group
  * together regardless of latitude, because that is how someone looks for them.
  */
@@ -305,8 +309,107 @@ export function build(rows, stations, buoys, weatherStations) {
   return beaches;
 }
 
-export function document(beaches) {
-  const unbound = beaches.filter((b) => b.tide_station === null);
+/**
+ * How far a reading may travel before this site stops publishing it, in metres.
+ *
+ * A named constant because it is the one number in this file that is a
+ * judgement, and changing it must be a one-line reviewable edit rather than a
+ * hunt. Ten kilometres is WMO-No. 8 §1.1.2's stated scale for small-scale and
+ * local applications, which is the nearest thing to an anchor that exists: no
+ * standard reporting radius does, and docs/reference/sensor-representativeness.md
+ * records why. A benchmark rather than a rule, so the figure is ours to defend
+ * and not to cite. At 15 km the site would list 49 beaches instead of 41; the
+ * whole trade curve is in docs/plans/inventory-bounded-by-stations.md.
+ */
+export const SERVICE_TOLERANCE_M = 10_000;
+
+const kilometres = (metres) => `${(metres / 1000).toFixed(1)} km`;
+
+/**
+ * Why the station networks cannot serve this beach, or null when they can.
+ *
+ * The second predicate over the inventory, and the one that is judgement. The
+ * first -- County, Active, PUBLIC, CountAsBeach, up in `query` -- is a filter
+ * over published fields and decides nothing about what is worth listing. This
+ * one decides how far a measurement may be taken from the place it is shown
+ * for. What keeps it honest is that its inputs are measured: every distance
+ * here came out of a join, and every beach it refuses is written to
+ * `_excluded` with the distance that refused it.
+ *
+ * THE RULE: a tide station within the tolerance, and if a wave buoy is bound at
+ * all, that buoy within the tolerance. A beach fails when a binding it *has* is
+ * too far, never when a join correctly declined to make one -- which is what
+ * the wave join does at a bay, where swell does not reach, and at a cove closed
+ * off by a breakwater. Stating it that way subsumes the bay exemption rather
+ * than special-casing beside it.
+ *
+ * Air is deliberately not a clause. Every bound beach already reads air within
+ * 7.4 km, so adding it would exclude nobody while implying a filter doing work
+ * it is not doing. See docs/adr/0011-inventory-bounded-by-station-networks.md.
+ *
+ * @param {object} beach A built beach, with its bindings and their distances.
+ * @param {number} [toleranceM]
+ * @returns {string | null}
+ */
+export function serviceFault(beach, toleranceM = SERVICE_TOLERANCE_M) {
+  if (beach.tide_station === null) {
+    return `no tide station was bound to it at all: ${beach.tide_station_null_reason}`;
+  }
+
+  const tooFar = [];
+  if (beach.tide_station_distance_m > toleranceM) {
+    tooFar.push(
+      `its tide station ${beach.tide_station} is ` +
+        `${kilometres(beach.tide_station_distance_m)} away`,
+    );
+  }
+  if (beach.wave_buoy !== null && beach.wave_buoy_distance_m > toleranceM) {
+    tooFar.push(
+      `its wave buoy ${beach.wave_buoy} is ` +
+        `${kilometres(beach.wave_buoy_distance_m)} away`,
+    );
+  }
+  if (tooFar.length === 0) return null;
+
+  return (
+    `${tooFar.join(" and ")}, and this site does not publish a reading taken more than ` +
+    `${kilometres(toleranceM)} from the beach it is shown for`
+  );
+}
+
+/**
+ * Whether the stations this beach needs reach it.
+ *
+ * Defined in terms of `serviceFault` so the verdict and the reason recorded
+ * beside it cannot drift apart: there is one rule, and the boolean is a reading
+ * of it rather than a second copy.
+ *
+ * @param {object} beach
+ * @param {number} [toleranceM]
+ * @returns {boolean}
+ */
+export function servesBeach(beach, toleranceM = SERVICE_TOLERANCE_M) {
+  return serviceFault(beach, toleranceM) === null;
+}
+
+export function document(built) {
+  const beaches = built.filter((beach) => servesBeach(beach));
+  const excluded = built
+    .filter((beach) => !servesBeach(beach))
+    .map((beach) => ({
+      slug: beach.slug,
+      name: beach.name,
+      why: serviceFault(beach),
+    }));
+
+  if (beaches.length === 0) {
+    throw new Error(
+      `the service predicate excluded all ${built.length} beaches. That is a broken join or a ` +
+        `moved station table, not a county whose coastline no station reaches; refusing to ` +
+        `overwrite the inventory with an empty one.`,
+    );
+  }
+
   const withWeather = beaches.filter((b) => b.weather_station !== null);
   const farthestWeather = withWeather.reduce((a, b) =>
     b.weather_station_distance_m > a.weather_station_distance_m ? b : a,
@@ -340,6 +443,17 @@ export function document(beaches) {
     _inclusion:
       "County San Diego, Status Active, BeachAccess PUBLIC, CountAsBeach 1. A predicate over " +
       "published fields rather than a judgement about which beaches are worth listing.",
+    _served:
+      `And then, of those: a tide station within ${kilometres(SERVICE_TOLERANCE_M)}, and if a ` +
+      `wave buoy is bound at all, that buoy within ${kilometres(SERVICE_TOLERANCE_M)}. Unlike ` +
+      `_inclusion this one IS a judgement -- it decides how far a measurement may be taken ` +
+      `from the place it is shown for -- and it is stated here rather than left implicit in ` +
+      `how far a join happened to reach. Ten kilometres is WMO-No. 8 §1.1.2's scale for ` +
+      `small-scale and local applications; no standard reporting radius exists, so the figure ` +
+      `is defended rather than cited. What keeps it honest is that its inputs are measured: ` +
+      `every distance came out of a join. Every beach it refuses is in _excluded below, with ` +
+      `the binding distance that refused it, so nothing leaves this inventory silently. See ` +
+      `docs/adr/0011-inventory-bounded-by-station-networks.md.`,
     _pinned: {
       field_name_with_a_space:
         "Upstream names one field 'Beach_ UpperLon', with an embedded space. That is the " +
@@ -392,6 +506,11 @@ export function document(beaches) {
         "Which end of the segment supplied the distance, upper or lower.",
     },
     beaches,
+    // The other half of the same predicate. A beach that vanished with no
+    // record of why would be the silent failure the unresolved blocks exist to
+    // prevent, and this one is worse than most: the reader cannot miss what
+    // they were never shown.
+    _excluded: excluded,
     // Written out in full every run, never merged with what is already on disk:
     // carrying entries forward duplicated them on the second run and made
     // --check report movement immediately after a seed. A check that cannot say
@@ -400,11 +519,12 @@ export function document(beaches) {
       "beach_type is UNKNOWN upstream for most of these beaches. That is a gap in the resource, " +
         "not a shorthand for sand, and nothing may render it as a description of what the shore " +
         "is made of.",
-      `The join binds by nearest station of matching water class, and the distances are large ` +
-        `where NOAA publishes no nearby station: the farthest is ${farthest.name} at ` +
-        `${(farthest.tide_station_distance_m / 1000).toFixed(1)} km. See tide-stations.json, ` +
-        `whose own unresolved list records that the one open-coast station between La Jolla and ` +
-        `Imperial Beach does not deliver predictions.`,
+      `The join binds by nearest station of matching water class, and a beach whose nearest is ` +
+        `further than ${kilometres(SERVICE_TOLERANCE_M)} away is not listed here at all rather ` +
+        `than listed with a reading from out of range. The farthest any listed beach reads is ` +
+        `${farthest.name}'s, at ${kilometres(farthest.tide_station_distance_m)}. See ` +
+        `tide-stations.json, whose own unresolved list records that the one open-coast station ` +
+        `between La Jolla and Imperial Beach does not deliver predictions.`,
       `${beaches.filter((b) => b.wave_buoy === null).length} of these beaches get no wave height at all. ` +
         `Every NDBC wave buoy sits on the open coast, and ocean swell does not reach into a bay or ` +
         `lagoon, so binding one to the nearest buoy would put an open-ocean number on enclosed water. ` +
@@ -429,15 +549,6 @@ export function document(beaches) {
         `station standing in the marine layer at the shoreline, a bay or lagoon binds the ` +
         `nearest of any kind. The shore classification is an author judgement; ` +
         `weather-stations.json records it and says so.`,
-      ...(unbound.length > 0
-        ? [
-            `${unbound.length} beach(es) could not be bound to a station: ` +
-              unbound
-                .map((b) => `${b.name} (${b.tide_station_null_reason})`)
-                .join("; ") +
-              ". A null station must never render as a reading.",
-          ]
-        : []),
       "The network module carries no build-time guard against being imported by a browser " +
         "bundle. The `server-only` package is the intended enforcement and is not installed: " +
         "importing it breaks the tests under jsdom until vitest is configured with the " +
