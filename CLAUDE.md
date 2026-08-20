@@ -24,12 +24,18 @@ process over a two-line copy fix produces a plan file, a slice table and a PR
 body longer than the diff. That is the process working as written, which is the
 problem it is worth having a second lane for.
 
-**Take the small lane when all three hold:**
+**Take the small lane when both hold:**
 
-- it changes no behaviour a test could assert — copy, comments, docs — **or**
-  it is one file and roughly twenty lines or fewer;
-- it introduces no dependency, abstraction, data format or contract;
+- the change is confined to prose — page copy, comments, documentation — and
+  touches no logic, no data shape and no contract;
 - it contradicts nothing recorded in `docs/adr/` or `CONTEXT.md`.
+
+Not a line count. Five lines inside `src/lib/sessions.ts` are riskier than
+sixty lines of page copy, and a rule counting lines would route both wrongly.
+The question is what kind of thing changed, not how much of it.
+
+Page copy is prose and takes this lane, but it is still behaviour a reader
+sees: it ships with a test like anything else.
 
 **The small lane is:** branch, do it, run the gate, one commit, short PR that
 says what changed and why. **No plan file. No slice table. No confirmation
@@ -92,9 +98,11 @@ exists only in a transcript gets rebuilt slightly differently every time
 someone returns to it.
 
 **A plan file is for work that is hard to hold in your head, not for every
-change that reaches this lane.** Write one when the work runs to more than two
-or three slices, when it turns on a decision someone will re-litigate, or when
-it will be picked up across sessions. Otherwise the issue and the PR body are
+change that reaches this lane.** Write one when the work will not finish in one
+sitting, or when it turns on a choice between approaches someone will question
+later. Both are knowable before you start; "how many slices is it" is not, and
+by the time you can count them you have already done the thinking the file was
+meant to hold. Otherwise the issue and the PR body are
 the durable record, and a plan file is a third copy of them that can go stale
 on its own — which is what `docs/plans/` currently costs: it is the largest
 body of prose in this repository and it describes code that has since moved.
