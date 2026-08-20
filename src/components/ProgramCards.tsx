@@ -47,16 +47,31 @@ export function ProgramCards() {
             <p className="mb-3.5 text-xs font-extrabold tracking-wider text-yellow uppercase">
               In-person · Group & Private · K–8
             </p>
+            {/* Both sentences are `/art`'s lead paragraph, word for word. The
+                card is the teaser for that page, so when the page's emphasis
+                moves the card follows — it said "Every session is different"
+                until #105, which reads as the weaker half of what the page
+                actually claims: the technique is shared and only the results
+                differ. Keep the two in step; they are duplicated literals, and
+                nothing enforces it (#113). */}
             <p className="leading-normal mb-4.5 max-w-[340px] text-sm text-white/90">
               Watercolors, ink, collage, printmaking — inspired by the coast and
-              whatever sparks curiosity. Every session is different.
+              whatever sparks curiosity. Every class teaches a real technique,
+              and nobody goes home with the same picture.
             </p>
+            {/* "Outdoors" was here until #105. The co-op is the outdoor
+                program; this one is studio work "inspired by the coast", which
+                is not the same claim. The entry price replaces it rather than
+                joining it, because the card is the one surface that linked to
+                `/book` while saying nothing about what a class costs.
+                `$20` is `TIERS[0].price` in `src/app/art/page.tsx` — the
+                source of truth, and the other half of #113. */}
             <div className="mb-5.5 flex flex-wrap gap-2">
               <span className="rounded-pill bg-white/15 px-[13px] py-[5px] text-2xs font-extrabold tracking-wide text-white">
                 All levels
               </span>
               <span className="rounded-pill bg-white/15 px-[13px] py-[5px] text-2xs font-extrabold tracking-wide text-white">
-                Outdoors
+                $20 drop-in
               </span>
             </div>
             <div className="flex flex-wrap gap-3">
