@@ -19,6 +19,23 @@ export default defineConfig({
     // vitest's defaults wholesale, and dropping node_modules while fixing this
     // would trade one kind of foreign test file for another.
     exclude: [...configDefaults.exclude, "**/.claude/**"],
+    // Vitest sizes its fork pool from the CPU count. On a 24-core machine that
+    // is ~23 jsdom environments competing for one disk, and per-test work then
+    // misses the 5s default timeout — tests fail for being starved rather than
+    // wrong. Four consecutive runs of one unchanged commit gave 3, 9 and 22
+    // timeouts and then a pass, with a different set of files each time and not
+    // one assertion among them (issue #114).
+    //
+    // Capping at 4 is not a throttle. It is *faster*: the whole suite in 26s
+    // against 114s, setup 11s against 525s, because the extra workers bought
+    // contention rather than parallelism. `ubuntu-latest` gives 4 vCPU, so CI
+    // is unchanged and a local run is now the same shape as the CI run — which
+    // is what CLAUDE.md asks for when the two disagree.
+    //
+    // Raise it only with numbers. The failure mode is silent until it is loud:
+    // more workers look faster and are not, then start failing tests that are
+    // not wrong.
+    maxWorkers: 4,
     coverage: {
       provider: "v8",
       include: ["src/**/*.{ts,tsx}", "scripts/**/*.mjs"],
