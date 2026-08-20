@@ -22,6 +22,10 @@ export const GATES = [
   { name: "format", command: "npm run format:check" },
   { name: "lint", command: "npm run lint" },
   { name: "typecheck", command: "npm run typecheck" },
+  // Reads only the working tree, so it sits above the expensive rows and fails
+  // in milliseconds. Two decisions shared ADR-0008 for two days while every
+  // gate stayed green (#102). See docs/plans/adr-number-gate.md.
+  { name: "adr-numbers", command: "node scripts/check-adr-numbers.mjs" },
   // Runs with coverage so the floor in vitest.config.mts is enforced here:
   // Vitest exits non-zero when a threshold is missed, which is the third way
   // CLAUDE.md says this command must fail.
