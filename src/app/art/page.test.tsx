@@ -37,6 +37,45 @@ test("the page CTA routes to the booking page", async () => {
   ).toBe("/book");
 });
 
+// The page has to answer "what is this?" before a parent has any use for
+// "when is it?". These assert the answer is on the page at all — the wording
+// will be revised, but a page that silently loses it should fail.
+test("the art page says what makes the program different", async () => {
+  render(await Art());
+
+  const approach = screen.getByRole("heading", {
+    level: 2,
+    name: "What makes it different",
+  });
+  expect(approach).toBeDefined();
+
+  expect(
+    screen.getByRole("heading", { level: 3, name: "Skills, not copies" }),
+  ).toBeDefined();
+  expect(
+    screen.getByRole("heading", { level: 3, name: "Art history every class" }),
+  ).toBeDefined();
+  expect(
+    screen.getByText(/creative freedom needs something to stand on/i),
+  ).toBeDefined();
+});
+
+// The list is a labelled region rather than a bare `ul`, so a screen reader
+// reaches it from the landmark menu instead of having to scroll into it.
+test("the approach list is named by its own heading", async () => {
+  render(await Art());
+
+  const heading = screen.getByRole("heading", {
+    level: 2,
+    name: "What makes it different",
+  });
+  const region = screen.getByRole("region", {
+    name: "What makes it different",
+  });
+
+  expect(region.getAttribute("aria-labelledby")).toBe(heading.id);
+});
+
 test("an unreachable schedule is reported to the server log", async () => {
   const error = vi.spyOn(console, "error").mockImplementation(() => {});
 
