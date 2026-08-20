@@ -48,10 +48,11 @@ page. See _URL Strategy_ for the anchors that were retired.
    the conversion core; everything above earns attention for it.
 4. **Conditions** — differentiator teaser; placeholder until the tool exists.
 5. **Community form** — the catch-all conversion for anyone not ready to book.
-6. **Quote + stats** — social proof and the two facts parents filter on
-   (K–8, charter eligible). It closes the page by decision, not by leftover
-   ordering: it was fourth until the sections became snap stops
-   (`docs/plans/section-snapping.md`).
+6. **Quote + stats** — social proof and the one fact parents filter on (K–8).
+   It was two facts until the charter claim was withdrawn on 2026-08-20 (issue
+   #104, `docs/plans/charter-claim-withdrawn.md`). It closes the page by
+   decision, not by leftover ordering: it was fourth until the sections became
+   snap stops (`docs/plans/section-snapping.md`).
 
 Six items, and they are the six `SnapSection`s of `src/app/page.tsx` in order.
 
@@ -69,8 +70,10 @@ wordmark banner. Decided in the brief; not deferred.
 `/art`, `/coop`, `/conditions`, `/community` and `/book` share one shape: an
 eyebrow line, an italic title, a lead paragraph, at most one CTA, then
 reserved slots where real content lands. They were structural shells
-throughout, by decision in `docs/plans/nav-pages-scaffolding.md`; photos, the
-booking scheduler and charter-fund details still are.
+throughout, by decision in `docs/plans/nav-pages-scaffolding.md`; photos and
+the booking scheduler still are. Charter-fund details are not among them: the
+claim they would have explained was withdrawn rather than reserved, so there is
+no slot standing in for it (issue #104).
 
 **The schedule is no longer among them.** `/art` and `/coop` render their own
 program's upcoming sessions in the slot that was reserved for one, read from
@@ -116,14 +119,14 @@ lands on `/art` first; that page's CTA is "Book a class →" → `/book`.
 
 ## Naming Conventions
 
-| Concept             | Label in UI      | Notes                                         |
-| ------------------- | ---------------- | --------------------------------------------- |
-| The art program     | Art Classes      | Never "art program" or "lessons"              |
-| The outdoor program | Tuesday Co-op    | Day is part of the name                       |
-| The signup form     | Community        | Nav label; form heading is "Stay in the loop" |
-| The surf/tide tool  | Conditions       | Singular section, plural word                 |
-| Funding note        | Charter eligible | Exact phrase, used in tags and stats          |
-| Age range           | K–8              | En dash, no spaces                            |
+| Concept             | Label in UI      | Notes                                                 |
+| ------------------- | ---------------- | ----------------------------------------------------- |
+| The art program     | Art Classes      | Never "art program" or "lessons"                      |
+| The outdoor program | Tuesday Co-op    | Day is part of the name                               |
+| The signup form     | Community        | Nav label; form heading is "Stay in the loop"         |
+| The surf/tide tool  | Conditions       | Singular section, plural word                         |
+| Funding note        | Charter eligible | Withdrawn 2026-08-20 (#104); the phrase if it returns |
+| Age range           | K–8              | En dash, no spaces                                    |
 
 ## Component Reuse Map
 
