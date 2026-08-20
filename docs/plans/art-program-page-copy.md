@@ -190,3 +190,28 @@ second thing in one slice. Filed as a follow-up rather than folded in.
 - **What does the monthly themed class cost?** Blocks including it.
 - **Where do classes meet?** Undecided. Carried per-session on the row, so it
   does not block this page.
+
+## Addendum — 2026-08-20: the card was looked at, and the budget did not bind
+
+_Out of scope_ above defers `ProgramCards.tsx` with two reasons: that touching
+it would be a second thing in one slice, and that the landing card has "a 520px
+height budget set by issue #37". The first reason was right and is why the work
+became #105. The second does not hold, and is corrected here rather than left
+for the next person to inherit.
+
+`min-h-[520px]` is a floor, not a ceiling, and the two cards sit in a
+`md:grid-cols-2` grid that equalises their heights. The co-op card is the taller
+of the two — it carries a four-tile activities grid — so it sets the height and
+the art card renders with slack. Measured at 1536px on 2026-08-20: both cards
+531px, co-op content 475px, art content 354px. **121px of that card was empty**,
+visible as bare purple below the CTAs.
+
+So the premise that "anything added has to come out of something else" was not
+true of this card. #105 spent 20px of the 121px — one line of paragraph — and
+both cards stayed at 531px with the section unchanged at 611px.
+
+This does not generalise. The slack exists because the co-op card is taller, so
+it would vanish if the co-op card lost its activities grid, and it never existed
+for the co-op card at all. The lesson is narrower than "there is room": it is
+that the budget has to be measured against the sibling card rather than assumed
+from the `min-h`.
