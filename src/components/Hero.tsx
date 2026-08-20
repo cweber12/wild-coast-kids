@@ -51,10 +51,16 @@ export function Hero() {
             is a class in progress.
 
             fill + object-cover because the column is a full-height half-width
-            box and the frame is 3:2: it takes a centre vertical slice, which
-            leaves the instructor and whiteboard under the gradient's fade and
-            the easels and water clear of it. priority because this is the
-            poster, and so the page's LCP element.
+            box and the frame is 3:2: it takes a centre vertical slice, so the
+            instructor and her whiteboard stay in shot at every window height
+            and the crop eats the easels at the two edges instead. priority
+            because this is the poster, and so the page's LCP element.
+
+            Nothing overlays it. A purple gradient used to blend its left edge
+            into the text column, as the reference template's hero did; the
+            photograph meets the purple at the column line instead. The text
+            column is a grid neighbour rather than an overlay, so no copy
+            depends on that wash for contrast.
 
             The second half of sizes is the width this image occupies below
             `md`, where the column above is `hidden`: none of it. priority
@@ -70,9 +76,6 @@ export function Hero() {
           sizes="(min-width: 768px) 50vw, 1px"
           className="object-cover"
         />
-        {/* Blends the photo edge into the purple text column, as in the
-            template's hero-photo::after gradient. */}
-        <div className="absolute inset-0 bg-linear-to-r from-purple from-28% via-purple/15 via-60% to-transparent" />
       </div>
       <p className="absolute bottom-9 left-6 z-10 text-2xs font-bold tracking-[0.12em] text-white/35 uppercase md:left-12">
         San Diego, CA · K–8

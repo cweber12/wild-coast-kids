@@ -40,6 +40,20 @@ test("the hero photo is the photograph, reachable by its own name", () => {
   expect(photo.getAttribute("src")).toContain("hero-art-class.jpg");
 });
 
+test("nothing is stacked over the hero photograph", () => {
+  render(<HeroViewport />);
+
+  // A purple gradient used to wash the photo's left edge into the text
+  // column. Removing it is the point of the picture reading at full strength,
+  // and an absolutely positioned sibling is how it would come back — the one
+  // part of "no overlay" that survives into jsdom, which has no layout to ask.
+  const photo = screen.getByRole("img", {
+    name: /kids drawing at easels on the bluff above the beach/i,
+  });
+
+  expect(photo.parentElement?.children).toHaveLength(1);
+});
+
 test("the marquee rides inside the viewport block", () => {
   render(<HeroViewport />);
 
