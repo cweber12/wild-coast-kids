@@ -76,6 +76,27 @@ const LA_JOLLA_SHORES = {
 };
 
 describe("bindAirStation", () => {
+  it("reads the same override the other two joins read", () => {
+    // The class override lives in tide-join.mjs and all three joins resolve it
+    // through waterClassFor. A join that classified a beach on its own would
+    // put one page's panels in two different water bodies, so this asserts the
+    // third join agrees rather than that this beach's air is interesting.
+    const bound = bindAirStation(
+      {
+        slug: "fiesta-island",
+        segment: {
+          upper: { lat: 32.7694, lon: -117.2111 },
+          lower: { lat: 32.769, lon: -117.2109 },
+        },
+        waterBodyType: "Open Coast",
+      },
+      STATIONS,
+    );
+    // Typed open coast upstream, which would restrict the pool to shore
+    // stations. Inside Mission Bay it is a bay, and everything ranks.
+    expect(bound.waterClass).toBe("bay");
+  });
+
   it("binds the pier at La Jolla Shores instead of the airport", () => {
     // The reading this issue was opened for. On 2026-08-18 the pier read 72 F
     // and Miramar 81 F, nine minutes apart.

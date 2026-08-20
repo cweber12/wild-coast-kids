@@ -32,6 +32,36 @@ describe("bindWaveBuoy", () => {
     expect(bound.reason).toMatch(/does not reach into a bay/);
   });
 
+  it("gives a sheltered open-coast beach no buoy, and says why", () => {
+    // Children's Pool is open coast for its tide -- the water level inside is
+    // the ocean's -- and closed to swell by the breakwater that makes it a
+    // pool. The nearest buoy describes water the breakwater stops.
+    const bound = bindWaveBuoy(
+      {
+        slug: "childrens-pool",
+        segment: at(32.8476, -117.2784),
+        waterBodyType: "Sound, Bay, or Inlet",
+      },
+      BUOYS,
+    );
+    expect(bound.buoyId).toBeNull();
+    expect(bound.reason).toMatch(/breakwater/);
+  });
+
+  it("binds the neighbouring cove, which has no structure", () => {
+    // The shelter rule must not spread along a coast made largely of coves:
+    // Shell Beach is 396 m from Children's Pool and open to the same swell.
+    const bound = bindWaveBuoy(
+      {
+        slug: "shell-beach",
+        segment: at(32.8498, -117.2751),
+        waterBodyType: "Open Coast",
+      },
+      BUOYS,
+    );
+    expect(bound.buoyId).toBe("46254");
+  });
+
   it("never chooses a buoy that does not deliver", () => {
     // 46235 is the closest thing to the south county and answers 404.
     const bound = bindWaveBuoy(

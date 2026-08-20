@@ -71,12 +71,32 @@ describe("the tide station binding", () => {
   });
 
   test("never binds an open-coast beach to a bay station, or the reverse", () => {
+    // Two beaches are typed as the wrong kind of water upstream and carry a
+    // written override in scripts/tide-join.mjs: Fiesta Island is typed open
+    // coast inside Mission Bay, Children's Pool is typed a bay on the open
+    // ocean. Everywhere else the published type decides. The exceptions are
+    // listed here rather than skipped by a rule, so that a third override
+    // cannot appear without this test naming it.
+    const OVERRIDDEN = new Set(["childrens-pool", "fiesta-island"]);
+
     for (const beach of allBeaches()) {
       const station = tideStationFor(beach);
-      if (station === null) continue;
+      if (station === null || OVERRIDDEN.has(beach.slug)) continue;
       const expected =
         beach.upstream.water_body_type === "Open Coast" ? "open-coast" : "bay";
       expect(station.water).toBe(expected);
+    }
+  });
+
+  test("applies the water class to the region label and the join alike", () => {
+    // The class is resolved in one place and read by three joins and the region
+    // label. A beach bound to a bay station but filed under a coastal region
+    // would mean an override reached one reader and not the others -- which is
+    // the failure mode a slug-keyed override invites.
+    for (const beach of allBeaches()) {
+      const station = tideStationFor(beach);
+      if (station === null) continue;
+      expect(station.water === "bay").toBe(beach.region.startsWith("Bays"));
     }
   });
 
@@ -127,8 +147,13 @@ describe("grouping for a chooser", () => {
 
   test("puts bays and inlets in one group regardless of latitude", () => {
     const bays = beachesByRegion().find((g) => g.region.startsWith("Bays"))!;
+
+    expect(bays.beaches.length).toBeGreaterThan(0);
     for (const beach of bays.beaches) {
-      expect(beach.upstream.water_body_type).toBe("Sound, Bay, or Inlet");
+      // Read from the binding rather than from `upstream.water_body_type`:
+      // that field is what the override in scripts/tide-join.mjs corrects, so
+      // asserting it here would assert the bug instead of the behaviour.
+      expect(tideStationFor(beach)?.water).toBe("bay");
     }
   });
 });

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { bindTideStation, waterClassOf } from "./tide-join.mjs";
+import { bindTideStation, waterClassFor, waterClassOf } from "./tide-join.mjs";
 
 /** A cut-down station table with the properties the rule turns on. */
 const STATIONS = {
@@ -35,7 +35,48 @@ describe("waterClassOf", () => {
   });
 });
 
+describe("waterClassFor", () => {
+  it("reads the published type when no override names the beach", () => {
+    expect(
+      waterClassFor({ slug: "windansea-beach", waterBodyType: "Open Coast" }),
+    ).toBe("open-coast");
+  });
+
+  it("overrides a beach the state types as the wrong kind of water", () => {
+    // Both are wrong upstream, and in opposite directions.
+    expect(
+      waterClassFor({ slug: "fiesta-island", waterBodyType: "Open Coast" }),
+    ).toBe("bay");
+    expect(
+      waterClassFor({
+        slug: "childrens-pool",
+        waterBodyType: "Sound, Bay, or Inlet",
+      }),
+    ).toBe("open-coast");
+  });
+
+  it("still classifies a beach with no slug at all", () => {
+    expect(waterClassFor({ waterBodyType: "Open Coast" })).toBe("open-coast");
+    expect(waterClassFor({ waterBodyType: "Great Lakes" })).toBeNull();
+  });
+});
+
 describe("bindTideStation", () => {
+  it("binds an overridden beach by its real water class", () => {
+    // Children's Pool is typed a bay upstream. Its water level is the ocean's,
+    // and binding it as a bay put it on a station in Mission Bay.
+    const bound = bindTideStation(
+      {
+        slug: "childrens-pool",
+        segment: near(32.8476, -117.2784),
+        waterBodyType: "Sound, Bay, or Inlet",
+      },
+      STATIONS,
+    );
+    expect(bound.waterClass).toBe("open-coast");
+    expect(bound.stationId).toBe("9410230");
+  });
+
   it("binds an open-coast beach to the nearest open-coast station", () => {
     const bound = bindTideStation(
       { segment: near(32.85, -117.27), waterBodyType: "Open Coast" },
