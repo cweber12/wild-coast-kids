@@ -118,3 +118,27 @@ something to put in its place. It shows readings and forecasts relayed from
 public sources, attributed and timestamped — never a judgement this site makes
 about whether conditions are safe.
 _Avoid_: weather, forecast, surf report
+
+**Observation station**:
+One of the stations in `src/data/observation-stations.json` — 62 of them, across
+the National Weather Service's network and NDBC's. The table is read by two
+joins with different filters, so it is named for neither of them. Until it was
+renamed it was `weather-stations.json`, and the sky join beside it was
+`weather-join.mjs`; ADRs and plan files written before the rename still name
+those paths, and are left as the dated records they are.
+_Avoid_: weather station, met station
+
+**Sky station**:
+The observation station a beach reads for sky and visibility. Always an airport
+METAR, because in this county only airports publish those two values — so it is
+the furthest-away reading on the page, and the panel says so rather than
+letting it pass as a measurement at the shore.
+_Avoid_: weather station, the beach's weather
+
+**Air station**:
+The observation station a beach reads for air temperature and wind. Usually not
+the same station as its sky station, and much nearer: requiring one station to
+supply all four values let the scarcest of them, sky, decide where the
+temperature was measured, which put an inland reading on a coastal beach
+(ADR-0010).
+_Avoid_: weather station, wind station
