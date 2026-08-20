@@ -66,11 +66,16 @@ Seven shipped surfaces assert it. #104 named three; these are all of them.
 | `src/components/QuoteStats.tsx:45`   | purple stat tile                    | tile dropped; see below             |
 
 **The QuoteStats tile is the only one that leaves a hole.** It is one of two
-tiles in a `md:grid-cols-2`, so removing it leaves a half-width tile beside
-nothing. The grid drops to a single full-width tile rather than gaining a
-replacement statistic: inventing a new claim to fill the space would be the
-same mistake in a different colour. If the pair is wanted back, that is a copy
-decision and a one-line change.
+tiles in a `md:grid-cols-2`. No replacement statistic is invented to fill the
+space — that would be the same mistake in a different colour — so the question
+is only what the survivor does with the room.
+
+The grid keeps `md:grid-cols-2` and the remaining tile keeps the width it has
+always had, sitting under the left-hand quote. Dropping the column was tried
+first and rejected on the rendered page: it stretches the tile to the full
+1425px section width with "K–8" in the leftmost eighth, which reads as
+something deleted rather than as one stat. Half-width, the tile is unchanged
+from what shipped and the empty column lines up with the quote above it.
 
 The stale comment at `src/app/art/page.tsx:178` — "Charter-fund copy is
 genuinely unwritten and is a separate slice" — is corrected in the same slice,
