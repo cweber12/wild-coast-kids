@@ -216,3 +216,13 @@ test("the art schedule carries the art accent", async () => {
       .className,
   ).toContain("text-purple");
 });
+
+// /art is where the charter copy would have lived, and PR #99 left the page
+// with none while the rest of the site still claimed eligibility. The claim
+// went (#104); this asserts the page does not start asserting it again without
+// the copy. See docs/plans/charter-claim-withdrawn.md.
+test("the art page makes no funding claim it cannot explain", async () => {
+  const { container } = render(await Art());
+
+  expect(container.textContent).not.toMatch(/charter|fund eligible/i);
+});

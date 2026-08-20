@@ -13,13 +13,20 @@ test("both parent quotes are reachable, each with its attribution", () => {
   expect(screen.getAllByText(/— Parent, Wild Coast Kids/i)).toHaveLength(2);
 });
 
-test("both stat tiles state the facts parents filter on", () => {
+test("the stat tile states the fact parents filter on", () => {
   render(<QuoteStats />);
 
   expect(screen.getByText("K–8")).toBeDefined();
   expect(screen.getByText("All ages welcome")).toBeDefined();
-  expect(screen.getByText("Charter ✓")).toBeDefined();
-  expect(screen.getByText("Fund eligible programs")).toBeDefined();
+});
+
+// The second tile claimed charter-fund eligibility the site could not explain
+// anywhere, and went with the rest of that claim (#104). It comes back with
+// the copy, not before — see docs/plans/charter-claim-withdrawn.md.
+test("the closing section makes no funding claim", () => {
+  const { container } = render(<QuoteStats />);
+
+  expect(container.textContent).not.toMatch(/charter|fund/i);
 });
 
 test("the closing section carries no divider at all", () => {

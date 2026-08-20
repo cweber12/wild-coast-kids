@@ -20,7 +20,7 @@ export const metadata: Metadata = {
     template: "%s — Wild Coast Kids",
   },
   description:
-    "Art classes and a Tuesday outdoor co-op for K–8 kids, rooted in the San Diego coast. Charter fund eligible.",
+    "Art classes and a Tuesday outdoor co-op for K–8 kids, rooted in the San Diego coast.",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

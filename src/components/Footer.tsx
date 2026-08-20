@@ -12,7 +12,7 @@ export function Footer() {
       <p className="text-2xs leading-loose font-extrabold tracking-wider text-white/25 uppercase md:text-right">
         Art Classes · Tuesday Co-op
         <br />
-        Charter Eligible · K–8
+        K–8
       </p>
     </footer>
   );

@@ -43,3 +43,15 @@ test("the parent quotes close the page, below the interest list", () => {
     form.compareDocumentPosition(quote) & Node.DOCUMENT_POSITION_FOLLOWING,
   ).toBeTruthy();
 });
+
+// Hero, Marquee, ProgramCards and QuoteStats all asserted charter-fund
+// eligibility, and the site explained it nowhere. The claim was withdrawn
+// until copy exists (#104, docs/plans/charter-claim-withdrawn.md). This is one
+// assertion rather than four because the landing page renders all four; the
+// footer, which carried it too, sits in layout.tsx and is guarded in
+// Footer.test.tsx.
+test("the landing page makes no funding claim", () => {
+  const { container } = render(<Home />);
+
+  expect(container.textContent).not.toMatch(/charter|fund eligible/i);
+});

@@ -7,7 +7,7 @@ import { fetchSessions } from "@/lib/sessions";
 export const metadata: Metadata = {
   title: "Art Classes",
   description:
-    "Watercolors, ink, collage and printmaking for K–8 kids, inspired by the San Diego coast. Group and private sessions, charter fund eligible.",
+    "Watercolors, ink, collage and printmaking for K–8 kids, inspired by the San Diego coast. Group and private sessions.",
 };
 
 /** Per request, and for the reasons given in full on `/coop`. */
@@ -175,8 +175,10 @@ export default async function Art() {
         {/* The slot promises only what is still missing. Pricing moved onto the
             page above, so a slot still naming it would be promising what has
             already arrived — the drift ReservedSlot was extracted to stop.
-            Charter-fund copy is genuinely unwritten and is a separate slice; it
-            is not the schedule's to promise either way. */}
+            Charter-fund copy is still unwritten, and the claim it would have
+            explained has been withdrawn from the site until it exists (#104,
+            docs/plans/charter-claim-withdrawn.md). Not the schedule's to
+            promise either way. */}
         <div className="grid gap-4 md:grid-cols-2">
           <SessionSchedule
             result={schedule}
