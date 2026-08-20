@@ -14,7 +14,7 @@
 import inventory from "@/data/beaches.json";
 import stationTable from "@/data/tide-stations.json";
 import buoyTable from "@/data/wave-buoys.json";
-import weatherTable from "@/data/weather-stations.json";
+import observationTable from "@/data/observation-stations.json";
 
 export interface Coordinate {
   lat: number;
@@ -65,15 +65,15 @@ export interface Beach {
    * station that publishes them, which in this county is always an airport.
    * Temperature and wind come from `air_station`.
    */
-  weather_station: string | null;
-  weather_station_distance_m: number | null;
-  weather_station_from_end: string | null;
-  /** Present exactly when weather_station is null, and required then. */
-  weather_station_null_reason?: string;
+  sky_station: string | null;
+  sky_station_distance_m: number | null;
+  sky_station_from_end: string | null;
+  /** Present exactly when sky_station is null, and required then. */
+  sky_station_null_reason?: string;
   /**
    * Joined, never typed. Supplies air temperature and wind: the nearest station
    * that publishes both and suits this beach's water class. Usually a different
-   * station from `weather_station`, and much nearer.
+   * station from `sky_station`, and much nearer.
    */
   air_station: string | null;
   air_station_distance_m: number | null;
@@ -100,7 +100,7 @@ export interface WaveBuoy {
   dead_note?: string | null;
 }
 
-export interface WeatherStation {
+export interface ObservationStation {
   /**
    * As the station's network publishes it, callsign and padding included. The
    * record of what upstream said, and never what is rendered -- see
@@ -188,8 +188,8 @@ const BEACHES = inventory.beaches as readonly Beach[];
 const EXCLUDED = inventory._excluded as readonly ExcludedBeach[];
 const STATIONS = stationTable.stations as Readonly<Record<string, TideStation>>;
 const BUOYS = buoyTable.buoys as Readonly<Record<string, WaveBuoy>>;
-const WEATHER = weatherTable.stations as Readonly<
-  Record<string, WeatherStation>
+const OBSERVATION_STATIONS = observationTable.stations as Readonly<
+  Record<string, ObservationStation>
 >;
 
 /**
@@ -302,35 +302,35 @@ export function waveBuoyFor(beach: Beach): (WaveBuoy & { id: string }) | null {
  * pair of data files, which should stop a build rather than render an
  * unlabelled number.
  */
-export function weatherStationFor(
+export function skyStationFor(
   beach: Beach,
-): (WeatherStation & { id: string }) | null {
-  if (beach.weather_station === null) return null;
+): (ObservationStation & { id: string }) | null {
+  if (beach.sky_station === null) return null;
 
-  const station = WEATHER[beach.weather_station];
+  const station = OBSERVATION_STATIONS[beach.sky_station];
   if (!station) {
     throw new Error(
-      `beaches.json: ${beach.slug} names weather station ${beach.weather_station}, ` +
-        `which has no entry in weather-stations.json.`,
+      `beaches.json: ${beach.slug} names sky station ${beach.sky_station}, ` +
+        `which has no entry in observation-stations.json.`,
     );
   }
-  return { id: beach.weather_station, ...station };
+  return { id: beach.sky_station, ...station };
 }
 
 /**
  * The station a beach reads for air temperature and wind, or null when the join
- * bound none. Same table as `weatherStationFor`, different filter.
+ * bound none. Same table as `skyStationFor`, different filter.
  */
 export function airStationFor(
   beach: Beach,
-): (WeatherStation & { id: string }) | null {
+): (ObservationStation & { id: string }) | null {
   if (beach.air_station === null) return null;
 
-  const station = WEATHER[beach.air_station];
+  const station = OBSERVATION_STATIONS[beach.air_station];
   if (!station) {
     throw new Error(
       `beaches.json: ${beach.slug} names air station ${beach.air_station}, ` +
-        `which has no entry in weather-stations.json.`,
+        `which has no entry in observation-stations.json.`,
     );
   }
   return { id: beach.air_station, ...station };
@@ -358,6 +358,6 @@ export function inventoryCaveats(): readonly string[] {
     ...(inventory.unresolved as readonly string[]),
     ...(stationTable.unresolved as readonly string[]),
     ...(buoyTable.unresolved as readonly string[]),
-    ...(weatherTable.unresolved as readonly string[]),
+    ...(observationTable.unresolved as readonly string[]),
   ];
 }

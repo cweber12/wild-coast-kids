@@ -17,8 +17,8 @@ import {
   beachBySlug,
   tideStationFor,
   waveBuoyFor,
-  type WeatherStation,
-  weatherStationFor,
+  type ObservationStation,
+  skyStationFor,
 } from "./beaches";
 import { localDateOf, localTimeOf } from "./pacific-time";
 import { lowestLowOn } from "./tide-day";
@@ -313,7 +313,7 @@ export async function readLatestAir(
   }
 
   const airStation = airStationFor(beach);
-  const skyStation = weatherStationFor(beach);
+  const skyStation = skyStationFor(beach);
 
   const [air, sky] = await Promise.all([
     readAirHalf(beach, airStation, nowMs),
@@ -334,7 +334,7 @@ export async function readLatestAir(
         ? null
         : {
             name: skyStation.display_name,
-            distanceM: beach.weather_station_distance_m,
+            distanceM: beach.sky_station_distance_m,
           },
     air,
     sky,
@@ -350,7 +350,7 @@ export async function readLatestAir(
  */
 async function readAirHalf(
   beach: Beach,
-  station: (WeatherStation & { id: string }) | null,
+  station: (ObservationStation & { id: string }) | null,
   nowMs: number,
 ): Promise<AirState> {
   if (station === null) {
@@ -397,14 +397,14 @@ async function readAirHalf(
 /** Sky and visibility, always from an NWS airport: no other station has them. */
 async function readSkyHalf(
   beach: Beach,
-  station: (WeatherStation & { id: string }) | null,
+  station: (ObservationStation & { id: string }) | null,
   nowMs: number,
 ): Promise<SkyState> {
   if (station === null) {
     return {
       kind: "no-station",
       reason:
-        beach.weather_station_null_reason ??
+        beach.sky_station_null_reason ??
         "the join bound no observation station to this beach, and recorded no reason",
     };
   }

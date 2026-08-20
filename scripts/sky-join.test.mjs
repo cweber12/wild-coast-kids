@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { bindWeatherStation } from "./weather-join.mjs";
+import { bindSkyStation } from "./sky-join.mjs";
 
 /**
  * A cut-down table with the shapes that matter: two stations that publish sky,
@@ -45,9 +45,9 @@ const LA_JOLLA_SHORES = {
   },
 };
 
-describe("bindWeatherStation", () => {
+describe("bindSkyStation", () => {
   it("binds the nearest station that publishes sky", () => {
-    const bound = bindWeatherStation(LA_JOLLA_SHORES, STATIONS);
+    const bound = bindSkyStation(LA_JOLLA_SHORES, STATIONS);
 
     expect(bound.stationId).toBe("KNKX");
     expect(bound.fromEnd).toBe("upper");
@@ -60,7 +60,7 @@ describe("bindWeatherStation", () => {
     // description. Requiring the field is what makes the binding able to answer
     // the question the site promises. It is also why the air join has to be a
     // separate join: D3101 does publish temperature and wind.
-    const bound = bindWeatherStation(LA_JOLLA_SHORES, STATIONS);
+    const bound = bindSkyStation(LA_JOLLA_SHORES, STATIONS);
     expect(bound.stationId).not.toBe("D3101");
   });
 
@@ -69,9 +69,7 @@ describe("bindWeatherStation", () => {
       KF70: STATIONS.KF70,
       KSAN: STATIONS.KSAN,
     };
-    expect(bindWeatherStation(LA_JOLLA_SHORES, onlyDead).stationId).toBe(
-      "KSAN",
-    );
+    expect(bindSkyStation(LA_JOLLA_SHORES, onlyDead).stationId).toBe("KSAN");
   });
 
   it("binds a bay beach too, unlike the wave join", () => {
@@ -84,12 +82,12 @@ describe("bindWeatherStation", () => {
         lower: { lat: 32.7837, lon: -117.2238 },
       },
     };
-    expect(bindWeatherStation(missionBay, STATIONS).stationId).not.toBeNull();
+    expect(bindSkyStation(missionBay, STATIONS).stationId).not.toBeNull();
   });
 
   it("says why when nothing in the table can be bound", () => {
     const none = { D3101: STATIONS.D3101, KF70: STATIONS.KF70 };
-    const bound = bindWeatherStation(LA_JOLLA_SHORES, none);
+    const bound = bindSkyStation(LA_JOLLA_SHORES, none);
 
     expect(bound.stationId).toBeNull();
     expect(bound.reason).toMatch(/publishes sky/);
@@ -113,6 +111,6 @@ describe("bindWeatherStation", () => {
         publishes_sky: true,
       },
     };
-    expect(bindWeatherStation(LA_JOLLA_SHORES, tied).stationId).toBe("KAAA");
+    expect(bindSkyStation(LA_JOLLA_SHORES, tied).stationId).toBe("KAAA");
   });
 });

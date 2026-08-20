@@ -1,7 +1,7 @@
 /**
  * Measure the observation stations this county publishes, and write the table.
  *
- *   node scripts/probe-observation-stations.mjs           rewrite src/data/weather-stations.json
+ *   node scripts/probe-observation-stations.mjs           rewrite src/data/observation-stations.json
  *   node scripts/probe-observation-stations.mjs --check   exit 1 if the committed file has moved
  *
  * WHY THIS SCRIPT EXISTS. Every station table in this repo carried a measured
@@ -56,7 +56,7 @@ const USER_AGENT =
   "wild-coast-kids/0.1 (+https://github.com/cweber12/wild-coast-kids) station-probe";
 
 const TABLE_PATH = new URL(
-  "../src/data/weather-stations.json",
+  "../src/data/observation-stations.json",
   import.meta.url,
 );
 const BEACHES_PATH = new URL("../src/data/beaches.json", import.meta.url);
@@ -65,9 +65,9 @@ const BEACHES_PATH = new URL("../src/data/beaches.json", import.meta.url);
 export const OBSERVATIONS_PER_STATION = 6;
 
 /**
- * The county box, as `weather-stations.json` has always used it. Wider than the
- * NDBC box below because the NWS list reaches inland, and the eastern stations
- * are candidates even though no beach will ever bind one.
+ * The county box, as `observation-stations.json` has always used it. Wider than
+ * the NDBC box below because the NWS list reaches inland, and the eastern
+ * stations are candidates even though no beach will ever bind one.
  */
 export const NWS_BOX = {
   minLat: 32.4,
@@ -545,9 +545,6 @@ export function document(table, now = new Date()) {
         `authority publishes one. It has not been checked against a marine-layer study, and ` +
         `the case it most affects is San Diego Bay, where a station at sea level sits behind a ` +
         `130 m peninsula from the ocean beaches it serves.`,
-      `This file is still named for the weather station the panel binds, while the table now ` +
-        `holds observation stations from two networks and is read by two joins. The name is ` +
-        `narrower than its contents until the field it is named for is renamed too.`,
     ],
   };
 }
@@ -785,19 +782,19 @@ async function main() {
   if (checkOnly) {
     if (existing === null) {
       console.error(
-        "weather-stations.json is missing. Run without --check to write it.",
+        "observation-stations.json is missing. Run without --check to write it.",
       );
       process.exit(1);
     }
     if (comparable(existing) === comparable(built)) {
       console.log(
-        `weather-stations.json is current: ${Object.keys(built.stations).length} stations, ` +
+        `observation-stations.json is current: ${Object.keys(built.stations).length} stations, ` +
           `capabilities unchanged.`,
       );
       process.exit(0);
     }
     console.error(
-      "weather-stations.json has moved. Re-run without --check, read the diff, and say in " +
+      "observation-stations.json has moved. Re-run without --check, read the diff, and say in " +
         "the commit what moved upstream and why.",
     );
     process.exit(1);
@@ -805,7 +802,7 @@ async function main() {
 
   writeFileSync(TABLE_PATH, `${JSON.stringify(built, null, 2)}\n`, "utf8");
   console.log(
-    `Wrote ${Object.keys(built.stations).length} stations to src/data/weather-stations.json.`,
+    `Wrote ${Object.keys(built.stations).length} stations to src/data/observation-stations.json.`,
   );
 }
 

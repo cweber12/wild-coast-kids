@@ -1,5 +1,5 @@
 /**
- * Binding a beach to a National Weather Service observation station.
+ * Binding a beach to the station that publishes its sky.
  *
  * Pure, like the two joins beside it, and the same shape: nearest **delivering**
  * candidate, measured from whichever end of the beach's segment is closer, ties
@@ -33,14 +33,14 @@
 import { segmentDistance } from "./geo.mjs";
 
 /**
- * Bind one beach to an observation station.
+ * Bind one beach to the station that publishes its sky.
  *
  * @param {{segment: object}} beach
  * @param {Record<string, {lat: number, lon: number, delivers: boolean, publishes_sky: boolean}>} stations
  * @returns {{stationId: string, distanceM: number, fromEnd: string}
  *   | {stationId: null, reason: string}}
  */
-export function bindWeatherStation(beach, stations) {
+export function bindSkyStation(beach, stations) {
   const candidates = Object.entries(stations).filter(
     ([, station]) => station.delivers && station.publishes_sky,
   );

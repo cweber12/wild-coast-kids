@@ -5,7 +5,7 @@
  * candidate, measured from whichever end of the beach's segment is closer, ties
  * broken on the id so two runs over the same inputs produce the same file.
  *
- * THIS IS THE SECOND JOIN OVER ONE TABLE. `weather-join.mjs` binds the station
+ * THIS IS THE SECOND JOIN OVER ONE TABLE. `sky-join.mjs` binds the station
  * that supplies sky and visibility, filtering on `publishes_sky` -- ten stations
  * county-wide, every one an airport. This one binds the station that supplies
  * temperature and wind, filtering on what those two actually need. The same
