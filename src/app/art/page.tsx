@@ -172,16 +172,18 @@ export default async function Art() {
             ))}
           </ul>
         </section>
-        {/* The schedule fills the slot that promised session times and pricing.
-            Charter-fund details are page copy still to be written, not data, so
-            the slot's wording keeps naming them while it stands in. */}
+        {/* The slot promises only what is still missing. Pricing moved onto the
+            page above, so a slot still naming it would be promising what has
+            already arrived — the drift ReservedSlot was extracted to stop.
+            Charter-fund copy is genuinely unwritten and is a separate slice; it
+            is not the schedule's to promise either way. */}
         <div className="grid gap-4 md:grid-cols-2">
           <SessionSchedule
             result={schedule}
             program="art"
             emoji="🎨"
-            headline="Schedule & pricing coming soon."
-            detail="Session times, group and private options, and charter-fund details land here."
+            headline="Fall dates coming soon."
+            detail="Class times and where we meet land here as the fall schedule is set."
           />
           <Placeholder
             label="Student artwork gallery"

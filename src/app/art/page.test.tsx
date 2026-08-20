@@ -23,10 +23,24 @@ test("the art page exposes its landmark, heading and reserved slots", async () =
   const heading = screen.getByRole("heading", { level: 1 });
   expect(heading.textContent).toContain("Art");
 
-  expect(screen.getByText(/schedule & pricing coming soon/i)).toBeDefined();
+  expect(screen.getByText(/fall dates coming soon/i)).toBeDefined();
   expect(
     screen.getByRole("img", { name: "Student artwork gallery" }),
   ).toBeDefined();
+});
+
+// The slot stands in for the schedule and nothing else. It promised pricing
+// while pricing had nowhere to live; pricing now has a section of its own, and
+// a reserved slot that promises what has already arrived is the exact drift the
+// component was extracted to stop.
+test("the reserved slot no longer promises pricing", async () => {
+  render(await Art());
+
+  expect(screen.getByText(/fall dates coming soon/i)).toBeDefined();
+  expect(screen.queryByText(/pricing coming soon/i)).toBeNull();
+
+  // ...while the page still states the prices themselves.
+  expect(screen.getByText("$20")).toBeDefined();
 });
 
 test("the page CTA routes to the booking page", async () => {
@@ -130,9 +144,10 @@ test("an unreachable schedule is reported to the server log", async () => {
   );
 });
 
-// The half of the reserved slot's promise this slice can keep. Prices vary from
-// one class to the next, which is why they live on the row rather than in page
-// copy, and why the schedule is where a parent finds them.
+// A session that carries its own price still shows it. The standing weekly
+// tiers are page copy — a pack spans sessions and cannot live on a row — but
+// that did not remove `price_cents`, and a one-off priced differently from the
+// tiers says so here. Both readings are live at once, deliberately.
 test("published art sessions show their times and their prices", async () => {
   vi.stubEnv("SUPABASE_URL", "https://abcdefghijklmnopqrst.supabase.co");
   vi.stubEnv("SUPABASE_ANON_KEY", "sb_publishable_test");
@@ -164,7 +179,7 @@ test("published art sessions show their times and their prices", async () => {
   ).toBeDefined();
   expect(screen.getByText("$45")).toBeDefined();
   expect(screen.getByText("Studio — North Park")).toBeDefined();
-  expect(screen.queryByText(/schedule & pricing coming soon/i)).toBeNull();
+  expect(screen.queryByText(/fall dates coming soon/i)).toBeNull();
 });
 
 // Art's accent is purple where the co-op's is ocean, and the component derives
