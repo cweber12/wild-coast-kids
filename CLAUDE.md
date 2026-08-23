@@ -17,9 +17,43 @@ this file itself.
 
 ---
 
+## Pick the lane first
+
+Two lanes. Most work is the full one below; some is not, and running the full
+process over a two-line copy fix produces a plan file, a slice table and a PR
+body longer than the diff. That is the process working as written, which is the
+problem it is worth having a second lane for.
+
+**Take the small lane when both hold:**
+
+- the change is confined to prose — page copy, comments, documentation — and
+  touches no logic, no data shape and no contract;
+- it contradicts nothing recorded in `docs/adr/` or `CONTEXT.md`.
+
+Not a line count. Five lines inside `src/lib/sessions.ts` are riskier than
+sixty lines of page copy, and a rule counting lines would route both wrongly.
+The question is what kind of thing changed, not how much of it.
+
+Page copy is prose and takes this lane, but it is still behaviour a reader
+sees: it ships with a test like anything else.
+
+**The small lane is:** branch, do it, run the gate, one commit, short PR that
+says what changed and why. **No plan file. No slice table. No confirmation
+step.** Behaviour changes still ship with a test; the gates still all run and
+still have to be green. Nothing about verification relaxes — only the
+paperwork.
+
+If you are partway in and any of the three stops holding, stop and switch
+lanes. Discovering a change was bigger than it looked is normal; finishing it
+in the wrong lane is not.
+
+**Anything else takes the full lane below**, and the guide is size on the way
+in, not confidence. Two files that must change together is the full lane even
+if each is small.
+
 ## How to work: confirm, plan, branch, slice, PR
 
-Follow this for any task beyond a one-line fix.
+The full lane. Follow this for any task the small lane above does not take.
 
 ### 1. Confirm understanding before doing anything
 
@@ -62,6 +96,19 @@ The conversation that produced the plan is not durable. Write the plan to
 `docs/plans/<slug>.md` and commit it as its own first commit. A plan that
 exists only in a transcript gets rebuilt slightly differently every time
 someone returns to it.
+
+**A plan file is for work that is hard to hold in your head, not for every
+change that reaches this lane.** Write one when the work will not finish in one
+sitting, or when it turns on a choice between approaches someone will question
+later. Both are knowable before you start; "how many slices is it" is not, and
+by the time you can count them you have already done the thinking the file was
+meant to hold. Otherwise the issue and the PR body are
+the durable record, and a plan file is a third copy of them that can go stale
+on its own — which is what `docs/plans/` currently costs: it is the largest
+body of prose in this repository and it describes code that has since moved.
+
+When you skip it, say so in the PR body and say why, so the omission is a
+decision rather than a lapse.
 
 The write-up states the problem and the solution _from the user's point of
 view_, the implementation decisions, the **test seams**, and what is out of
@@ -113,8 +160,12 @@ commit directly to it.
 
 - Name the branch after the issue: `issue-<number>-<short-slug>`.
 - One issue per branch. Work that "was right there" belongs to a different
-  branch and a different issue, even when it is two lines. If you notice it,
-  file an issue for it and move on.
+  branch, even when it is two lines. Do not do it here.
+- **Noticing something is not the same as filing an issue for it.** Say it in
+  the PR body and move on. Open a tracker entry only when it is a real defect
+  someone would want to find later, or when it needs a decision before it can
+  be worked. A backlog that grows a row every time anyone looks at anything
+  stops being a list of what to do next.
 - Do not start an issue whose blocker has not merged. The blocker's code is the
   ground the slices stand on, and rebasing half-finished work onto a moved
   blocker is how a verified slice quietly stops being verified.
