@@ -102,10 +102,10 @@ change that reaches this lane.** Write one when the work will not finish in one
 sitting, or when it turns on a choice between approaches someone will question
 later. Both are knowable before you start; "how many slices is it" is not, and
 by the time you can count them you have already done the thinking the file was
-meant to hold. Otherwise the issue and the PR body are
-the durable record, and a plan file is a third copy of them that can go stale
-on its own — which is what `docs/plans/` currently costs: it is the largest
-body of prose in this repository and it describes code that has since moved.
+meant to hold. Otherwise the issue and the PR body are the durable record, and
+a plan file is a third copy of them that can go stale on its own — which is
+what `docs/plans/` currently costs: it is the largest body of prose in this
+repository and it describes code that has since moved.
 
 When you skip it, say so in the PR body and say why, so the omission is a
 decision rather than a lapse.
