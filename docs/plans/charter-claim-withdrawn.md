@@ -1,5 +1,9 @@
 # The site stops claiming charter-fund eligibility (issue #104)
 
+> **Historical.** Planned 2026-08-20, shipped in PR #112 on 2026-08-20.
+> It records what was intended then, not what the code does now, and is not
+> maintained. See [`README.md`](README.md).
+
 Date: 2026-08-20.
 
 ## Problem, from the parent's point of view

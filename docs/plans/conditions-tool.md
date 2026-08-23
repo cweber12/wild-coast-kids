@@ -1,5 +1,9 @@
 # The conditions tool, built in this repo (issue #48)
 
+> **Historical.** Planned 2026-08-17, shipped in PR #49 on 2026-08-17.
+> It records what was intended then, not what the code does now, and is not
+> maintained. See [`README.md`](README.md).
+
 Date: 2026-08-17.
 
 ## Problem, from the reader's point of view

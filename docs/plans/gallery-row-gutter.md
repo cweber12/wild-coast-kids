@@ -1,5 +1,9 @@
 # The gallery row's gutter, and where its controls belong
 
+> **Historical.** Planned 2026-08-17, shipped in PR #46 on 2026-08-17.
+> It records what was intended then, not what the code does now, and is not
+> maintained. See [`README.md`](README.md).
+
 Issue #45. Branch `issue-45-gallery-row-gutter`.
 
 Confirms and widens the code reading filed as #45: the row does rest past its

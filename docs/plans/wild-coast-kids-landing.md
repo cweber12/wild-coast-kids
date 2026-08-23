@@ -1,5 +1,9 @@
 # Wild Coast Kids landing page
 
+> **Historical.** Planned 2026-08-11, shipped in PR #3 on 2026-08-12.
+> It records what was intended then, not what the code does now, and is not
+> maintained. See [`README.md`](README.md).
+
 ## Problem, from the user's point of view
 
 A homeschool parent who hears about Wild Coast Kids has nowhere to look it up.

@@ -1,5 +1,9 @@
 # IA doc describes the routed structure
 
+> **Historical.** Planned 2026-08-14, shipped in PR #28 on 2026-08-14.
+> It records what was intended then, not what the code does now, and is not
+> maintained. See [`README.md`](README.md).
+
 Issue: [#25](https://github.com/cweber12/wild-coast-kids/issues/25).
 
 ## Problem, from the reader's point of view

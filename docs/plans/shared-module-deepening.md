@@ -1,5 +1,9 @@
 # Shared module deepening
 
+> **Historical.** Planned 2026-08-12, shipped in PR #12 on 2026-08-13.
+> It records what was intended then, not what the code does now, and is not
+> maintained. See [`README.md`](README.md).
+
 ## Problem, from the user's point of view
 
 Two things a visitor meets today are wrong, and both come from one cause:

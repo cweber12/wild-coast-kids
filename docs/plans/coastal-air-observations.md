@@ -1,5 +1,9 @@
 # Air at the shore, not at the airport
 
+> **Historical.** Planned 2026-08-18, shipped in PR #82 on 2026-08-18.
+> It records what was intended then, not what the code does now, and is not
+> maintained. See [`README.md`](README.md).
+
 Issue #80. ADR `docs/adr/0010-two-provenances-in-the-air-panel.md` records the
 decision this plan reverses.
 

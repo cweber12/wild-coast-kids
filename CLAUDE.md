@@ -102,10 +102,10 @@ change that reaches this lane.** Write one when the work will not finish in one
 sitting, or when it turns on a choice between approaches someone will question
 later. Both are knowable before you start; "how many slices is it" is not, and
 by the time you can count them you have already done the thinking the file was
-meant to hold. Otherwise the issue and the PR body are
-the durable record, and a plan file is a third copy of them that can go stale
-on its own — which is what `docs/plans/` currently costs: it is the largest
-body of prose in this repository and it describes code that has since moved.
+meant to hold. Otherwise the issue and the PR body are the durable record, and
+a plan file is a third copy of them that can go stale on its own — which is
+what `docs/plans/` currently costs: it is the largest body of prose in this
+repository and it describes code that has since moved.
 
 When you skip it, say so in the PR body and say why, so the omission is a
 decision rather than a lapse.
@@ -125,8 +125,16 @@ A decision that will outlive this task (a dependency choice, a data format, a
 threading contract) also gets a short ADR in `docs/adr/`: context, decision,
 consequences. One page maximum.
 
-The plan file is the record of what was decided. Amend it with dated addenda
-when the plan changes; never rewrite history in it.
+The plan file is the record of what was decided. **While the work is in
+flight**, amend it with dated addenda when the plan changes; never rewrite
+history in it.
+
+**When the work merges, the plan stops being maintained.** Mark it historical
+in the same PR — see [`docs/plans/README.md`](docs/plans/README.md) for the
+note and the reasoning. After that it is a dated record, not a description of
+the code: it is not amended again, and it drifting from the code is expected
+rather than a defect to file. If a decision inside it is still binding, that
+decision belongs in an ADR, which is the thing that is kept current.
 
 ### 5. Split it into issues, when that earns its keep
 

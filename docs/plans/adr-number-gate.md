@@ -1,5 +1,9 @@
 # A gate that each ADR number names one decision (issue #109)
 
+> **Historical.** Planned 2026-08-20, shipped in PR #110 on 2026-08-20.
+> It records what was intended then, not what the code does now, and is not
+> maintained. See [`README.md`](README.md).
+
 Date: 2026-08-20.
 
 ## Problem, from the user's point of view

@@ -1,5 +1,9 @@
 # Nav pages and scaffolding
 
+> **Historical.** Planned 2026-08-12, shipped in PR #10 on 2026-08-12.
+> It records what was intended then, not what the code does now, and is not
+> maintained. See [`README.md`](README.md).
+
 ## Problem, from the user's point of view
 
 Everything a visitor can reach lives on the single landing page. The nav's

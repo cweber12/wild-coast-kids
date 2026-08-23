@@ -1,5 +1,9 @@
 # Landing page section snapping
 
+> **Historical.** Planned 2026-08-13, shipped in PR #14 on 2026-08-13.
+> It records what was intended then, not what the code does now, and is not
+> maintained. See [`README.md`](README.md).
+
 ## Problem, from the user's point of view
 
 The landing page is six self-contained pieces of content read as one long

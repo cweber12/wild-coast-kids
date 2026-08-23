@@ -1,5 +1,9 @@
 # Plan: keep the gates inside this checkout
 
+> **Historical.** Planned 2026-08-14, shipped in PR #34 on 2026-08-14.
+> It records what was intended then, not what the code does now, and is not
+> maintained. See [`README.md`](README.md).
+
 Status: agreed 2026-08-14. Issues #31 and #29 (the same defect, filed twice).
 
 ## The problem, from the point of view of someone working here

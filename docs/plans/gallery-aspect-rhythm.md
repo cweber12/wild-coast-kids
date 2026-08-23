@@ -1,5 +1,9 @@
 # Gallery aspect rhythm and the two-stop grid
 
+> **Historical.** Planned 2026-08-14, shipped in PR #39 on 2026-08-14.
+> It records what was intended then, not what the code does now, and is not
+> maintained. See [`README.md`](README.md).
+
 Issue #19. The design decisions in this file were taken with the repo owner in
 an interview on 2026-08-14; where a decision was theirs rather than derived,
 this file says so.
