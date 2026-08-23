@@ -83,3 +83,9 @@ preference is the part most likely to be re-litigated.
 about 41px, across eleven call sites (issue #30). The standard is adopted
 knowing one shared component already violates it, rather than being narrowed
 until everything passes.
+
+_2026-08-23: that exception is closed. `PillLink` composes the shared floor
+with `md:min-h-0`, under the visible-shape clause above, and `TONES` is
+unchanged (issue #30). The paragraph stands as written because it records the
+trade that was made on adoption, not the state of the code today. The decision
+is unamended._
