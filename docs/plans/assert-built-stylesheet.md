@@ -1,5 +1,9 @@
 # Plan: a gate row that asserts the built stylesheet
 
+> **Historical.** Planned 2026-08-14, shipped in PR #32 on 2026-08-14.
+> It records what was intended then, not what the code does now, and is not
+> maintained. See [`README.md`](README.md).
+
 Status: agreed 2026-08-14. Issue #23. Follow-up from PR #22 (issue #15).
 
 ## The problem, from the point of view of someone working here

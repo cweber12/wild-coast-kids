@@ -78,8 +78,16 @@ A decision that will outlive this task (a dependency choice, a data format, a
 threading contract) also gets a short ADR in `docs/adr/`: context, decision,
 consequences. One page maximum.
 
-The plan file is the record of what was decided. Amend it with dated addenda
-when the plan changes; never rewrite history in it.
+The plan file is the record of what was decided. **While the work is in
+flight**, amend it with dated addenda when the plan changes; never rewrite
+history in it.
+
+**When the work merges, the plan stops being maintained.** Mark it historical
+in the same PR — see [`docs/plans/README.md`](docs/plans/README.md) for the
+note and the reasoning. After that it is a dated record, not a description of
+the code: it is not amended again, and it drifting from the code is expected
+rather than a defect to file. If a decision inside it is still binding, that
+decision belongs in an ADR, which is the thing that is kept current.
 
 ### 5. Split it into issues, when that earns its keep
 

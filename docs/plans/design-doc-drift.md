@@ -1,5 +1,9 @@
 # The design docs describe a site that no longer exists
 
+> **Historical.** Planned 2026-08-15, shipped in PR #43 on 2026-08-15.
+> It records what was intended then, not what the code does now, and is not
+> maintained. See [`README.md`](README.md).
+
 Covers issues #26 (`DESIGN_BRIEF.md`) and #27 (`INFORMATION_ARCHITECTURE.md`).
 One decision applied to two documents; a shared plan is what stops them being
 resolved differently.

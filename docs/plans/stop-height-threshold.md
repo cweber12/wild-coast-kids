@@ -1,5 +1,9 @@
 # Landing page stops: a height threshold
 
+> **Historical.** Planned 2026-08-15, shipped in PR #41 on 2026-08-15.
+> It records what was intended then, not what the code does now, and is not
+> maintained. See [`README.md`](README.md).
+
 Status: agreed 2026-08-15. Issue #37. Follow-up from `section-snapping.md`,
 which designed the stops against a window nobody re-measured.
 

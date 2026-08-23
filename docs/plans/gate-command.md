@@ -1,5 +1,9 @@
 # Plan: one command that runs every gate
 
+> **Historical.** Planned 2026-08-11, shipped in PR #1 on 2026-08-11.
+> It records what was intended then, not what the code does now, and is not
+> maintained. See [`README.md`](README.md).
+
 Status: agreed 2026-08-11.
 
 ## The problem, from the point of view of someone working here

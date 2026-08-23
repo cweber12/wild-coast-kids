@@ -1,5 +1,9 @@
 # Nav touch targets
 
+> **Historical.** Planned 2026-08-14, shipped in PR #33 on 2026-08-14.
+> It records what was intended then, not what the code does now, and is not
+> maintained. See [`README.md`](README.md).
+
 Issue: #18. Supersedes nothing; builds on `docs/adr/0003-nav-in-document-flow.md`.
 
 ## Problem, from the user's point of view

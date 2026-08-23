@@ -1,5 +1,9 @@
 # The inventory is bounded by the stations that can serve it
 
+> **Historical.** Planned 2026-08-19, shipped in PR #89 on 2026-08-19.
+> It records what was intended then, not what the code does now, and is not
+> maintained. See [`README.md`](README.md).
+
 ADR `docs/adr/0011-inventory-bounded-by-station-networks.md` records the decision
 this plan implements. Relates to #86, which this plan's measurement closed as a
 no.

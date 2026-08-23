@@ -1,5 +1,9 @@
 # The art page says what the classes are and what they cost
 
+> **Historical.** Planned 2026-08-19, shipped in PR #99 on 2026-08-19.
+> It records what was intended then, not what the code does now, and is not
+> maintained. See [`README.md`](README.md).
+
 ## Problem, from the reader's point of view
 
 A parent lands on `/art` in the weeks before the fall term. The page tells them

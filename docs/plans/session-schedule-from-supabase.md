@@ -1,5 +1,9 @@
 # The session schedule comes from Supabase
 
+> **Historical.** Planned 2026-08-18, shipped in PR #79 on 2026-08-18.
+> It records what was intended then, not what the code does now, and is not
+> maintained. See [`README.md`](README.md).
+
 Issue: [#74](https://github.com/cweber12/wild-coast-kids/issues/74).
 
 ## Problem, from the reader's point of view

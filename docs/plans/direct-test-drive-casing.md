@@ -1,5 +1,9 @@
 # Direct test scripts: normalize the cwd drive-letter casing (issue #5)
 
+> **Historical.** Planned 2026-08-12, shipped in PR #8 on 2026-08-12.
+> It records what was intended then, not what the code does now, and is not
+> maintained. See [`README.md`](README.md).
+
 Date: 2026-08-12.
 
 ## Problem, from the user's point of view
