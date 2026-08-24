@@ -2,7 +2,8 @@ import { beforeEach, expect, test, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 
 const readWeekOfLowestLows = vi.fn();
-vi.mock("@/lib/conditions", () => ({ readWeekOfLowestLows }));
+const readDaylightWeek = vi.fn();
+vi.mock("@/lib/conditions", () => ({ readWeekOfLowestLows, readDaylightWeek }));
 
 const { WeekPanel } = await import("./WeekPanel");
 
@@ -15,53 +16,60 @@ const BINDING = {
   },
 };
 
-function day(
-  localDate: string,
-  dayLabel: string,
-  timeLabel: string,
-  feet: number,
-  isToday = false,
-) {
+const DATES = [
+  { localDate: "2026-08-17", dayLabel: "Mon, Aug 17", isToday: true },
+  { localDate: "2026-08-18", dayLabel: "Tue, Aug 18", isToday: false },
+] as const;
+
+function tideDay(index: number, timeLabel: string, feet: number) {
   return {
-    localDate,
-    dayLabel,
-    isToday,
+    ...DATES[index],
     state: { kind: "reading", timeLabel, feet },
+  };
+}
+
+/** Daylight always answers, which is what the panel leans on for its columns. */
+function daylightWeek() {
+  return {
+    beachName: BINDING.beachName,
+    days: [
+      { ...DATES[0], sunriseLabel: "6:14 AM", sunsetLabel: "7:32 PM" },
+      { ...DATES[1], sunriseLabel: "6:15 AM", sunsetLabel: "7:31 PM" },
+    ],
   };
 }
 
 beforeEach(() => {
   readWeekOfLowestLows.mockReset();
+  readDaylightWeek.mockReset();
+  readDaylightWeek.mockReturnValue(daylightWeek());
 });
 
-test("asks for the slug it was given and renders the week", async () => {
+test("asks for the slug it was given and renders both live rows", async () => {
   readWeekOfLowestLows.mockResolvedValue({
     ...BINDING,
     state: {
       kind: "week",
-      days: [
-        day("2026-08-17", "Mon, Aug 17", "6:41 PM", 0.9, true),
-        day("2026-08-18", "Tue, Aug 18", "7:10 AM", -0.42),
-      ],
+      days: [tideDay(0, "6:41 PM", 0.9), tideDay(1, "7:10 AM", -0.42)],
     },
   });
 
   render(await WeekPanel({ slug: "la-jolla-shores-beach" }));
 
   expect(readWeekOfLowestLows).toHaveBeenCalledWith("la-jolla-shores-beach");
+  expect(readDaylightWeek).toHaveBeenCalledWith("la-jolla-shores-beach");
   expect(screen.getByText("7:10 AM")).toBeDefined();
   expect(screen.getByText("-0.4 ft")).toBeDefined();
-  // The row's own label, which is what stops the glyph carrying the meaning.
+  expect(screen.getByText("to 7:32 PM")).toBeDefined();
+  // Each row's own label, which is what stops a glyph carrying the meaning.
   expect(screen.getAllByText("Lowest tide")).toHaveLength(2);
+  expect(screen.getAllByText("Daylight")).toHaveLength(2);
 });
 
 test("the forecasts that are not built yet are named, waves among them", async () => {
   readWeekOfLowestLows.mockResolvedValue({
     ...BINDING,
-    state: {
-      kind: "week",
-      days: [day("2026-08-17", "Mon, Aug 17", "6:41 PM", 0.9, true)],
-    },
+    state: { kind: "week", days: [tideDay(0, "6:41 PM", 0.9)] },
   });
 
   render(await WeekPanel({ slug: "la-jolla-shores-beach" }));
@@ -74,7 +82,7 @@ test("the forecasts that are not built yet are named, waves among them", async (
   expect(screen.getByText(/gridded forecast/i)).toBeDefined();
 });
 
-test("an unavailable week reaches the reader as a sentence, not an empty grid", async () => {
+test("a NOAA outage costs the tide row, not the whole grid", async () => {
   readWeekOfLowestLows.mockResolvedValue({
     ...BINDING,
     state: {
@@ -87,12 +95,14 @@ test("an unavailable week reaches the reader as a sentence, not an empty grid", 
   render(await WeekPanel({ slug: "la-jolla-shores-beach" }));
 
   expect(screen.getByText(/could not get this week/i)).toBeDefined();
-  // The reserved rows are facts about products rather than about this station,
-  // so a NOAA outage must not take them off the page with it.
-  expect(screen.getByText(/wave forecast/i)).toBeDefined();
+  // The reason the columns come from the daylight read: it is computed here and
+  // cannot fail, so the week still stands and still answers a question.
+  expect(screen.getByText("Tue, Aug 18")).toBeDefined();
+  expect(screen.getAllByText("Daylight")).toHaveLength(2);
+  expect(screen.queryByText("Lowest tide")).toBeNull();
 });
 
-test("a beach with no station says so, and does not read as an outage", async () => {
+test("a beach with no station keeps its daylight, and does not read as an outage", async () => {
   readWeekOfLowestLows.mockResolvedValue({
     beachName: "Nothing Is Bound Here",
     station: null,
@@ -103,6 +113,9 @@ test("a beach with no station says so, and does not read as an outage", async ()
 
   expect(screen.getByText(/no tide station/i)).toBeDefined();
   expect(screen.queryByText(/try again/i)).toBeNull();
+  // A permanent fact about the place takes the tide row and nothing else: the
+  // sun still rises there.
+  expect(screen.getAllByText("Daylight")).toHaveLength(2);
 });
 
 test("a failure to resolve the beach is not swallowed into a rendered nothing", async () => {

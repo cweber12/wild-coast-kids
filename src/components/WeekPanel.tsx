@@ -1,14 +1,22 @@
 /**
- * The seam between the network and the week grid: read, compose, render.
+ * The seam between the reads and the week grid: read, compose, render.
  *
  * The same thin shape `TidePanel` established, with one addition it earns —
- * turning a view model into grid rows. That mapping is here rather than in
+ * turning view models into grid rows. That mapping is here rather than in
  * `WeekGrid` because the grid must not know what a tide is, and it is here
- * rather than in `lib/conditions.ts` because which glyph marks a row and what
- * a row is called are presentation.
+ * rather than in `lib/conditions.ts` because which glyph marks a row and what a
+ * row is called are presentation.
+ *
+ * **Two reads, and only one of them can fail.** The tide comes from NOAA;
+ * daylight is computed in this repo from the beach's own coordinates. So the
+ * columns are taken from the daylight read: an outage then costs a row rather
+ * than the whole grid, and the week still answers a question a parent came with.
+ * Both reads build their days from one helper in `lib/conditions.ts`, which is
+ * what stops the two rows disagreeing about which day is Tuesday.
  */
 
-import { readWeekOfLowestLows } from "@/lib/conditions";
+import { readDaylightWeek, readWeekOfLowestLows } from "@/lib/conditions";
+import { DaylightWeek, DAYLIGHT_WEEK_ROW } from "./DaylightWeek";
 import { TideWeek, TIDE_WEEK_ROW } from "./TideWeek";
 import { WeekGrid, type ReservedRow, type WeekRow } from "./WeekGrid";
 
@@ -54,23 +62,41 @@ const RESERVED: readonly ReservedRow[] = [
 
 export async function WeekPanel({ slug }: { slug: string }) {
   const view = await readWeekOfLowestLows(slug);
+  const daylight = readDaylightWeek(slug);
 
-  const days = view.state.kind === "week" ? view.state.days : [];
+  /*
+    The columns come from the daylight read rather than the tide read, and that
+    is deliberate: daylight is computed here and cannot fail, so a NOAA outage
+    takes a row off the grid instead of taking the grid off the page. Both reads
+    build their days from the same helper, so the two rows cannot disagree about
+    which day is Tuesday.
+  */
+  const days = daylight.days;
 
-  const rows: WeekRow[] =
-    days.length === 0
-      ? []
-      : [
-          {
-            ...TIDE_WEEK_ROW,
-            cells: Object.fromEntries(
-              days.map((day) => [
-                day.localDate,
-                <TideWeek key={day.localDate} state={day.state} />,
-              ]),
-            ),
-          },
-        ];
+  const rows: WeekRow[] = [];
+
+  if (view.state.kind === "week") {
+    const tideDays = view.state.days;
+    rows.push({
+      ...TIDE_WEEK_ROW,
+      cells: Object.fromEntries(
+        tideDays.map((day) => [
+          day.localDate,
+          <TideWeek key={day.localDate} state={day.state} />,
+        ]),
+      ),
+    });
+  }
+
+  rows.push({
+    ...DAYLIGHT_WEEK_ROW,
+    cells: Object.fromEntries(
+      daylight.days.map((day) => [
+        day.localDate,
+        <DaylightWeek key={day.localDate} day={day} />,
+      ]),
+    ),
+  });
 
   /*
     One sentence, not seven. The upstream detail stays behind the disclosure on

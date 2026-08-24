@@ -135,7 +135,7 @@ of it.
 
 ## PR C — the week
 
-- [ ] **8. A week of lowest lows, from one widened request.**
+- [x] **8. A week of lowest lows, from one widened request.**
       `lib/conditions.ts` gains a read returning one lowest low per day for seven
       days. **This widens the CO-OPS request rather than re-reading data already
       in hand** — the existing call asks for `nowMs − 1 day` to `nowMs + 1 day`,
@@ -152,7 +152,7 @@ of it.
       exactly one predictions request per beach. No new upstream product, no new
       dependency. _Modifies: `lib/conditions.ts`._
 
-- [ ] **9. The week grid.** New `WeekGrid` and `TideWeek`. **Day-major DOM**,
+- [x] **9. The week grid.** New `WeekGrid` and `TideWeek`. **Day-major DOM**,
       identical at every width: seven day-columns at `lg`, seven day-rows
       below, switched by `grid-template-columns` alone — so ADR-0005's
       render-twice rule is not invoked. The tide row is live; rows for the
@@ -172,7 +172,7 @@ of it.
       phone without horizontal scrolling, and the screen-reader order reads
       day-then-values. _New: `WeekGrid`, `TideWeek`._ _Depends on: 8._
 
-- [ ] **10. Daylight, the second live row.** New `lib/daylight.ts` computing
+- [x] **10. Daylight, the second live row.** New `lib/daylight.ts` computing
       sunrise and sunset from the beach's own latitude and longitude, and a
       `DaylightWeek` row rendering them beneath the tide. Computed in-repo
       with no API and no dependency, which is what `docs/plans/conditions-tool.md`

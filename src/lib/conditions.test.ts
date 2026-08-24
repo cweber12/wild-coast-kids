@@ -66,6 +66,7 @@ vi.mock("./beaches", async (importOriginal) => {
 const {
   readTodaysLowestLow,
   readWeekOfLowestLows,
+  readDaylightWeek,
   readLatestWaves,
   readLatestAir,
 } = await import("./conditions");
@@ -364,6 +365,73 @@ test("a slug outside the inventory is a coding error here too", async () => {
     readWeekOfLowestLows("no-such-beach", NOON_PACIFIC_20260817),
   ).rejects.toThrow(/no beach in the inventory/);
   expect(fetchTideExtremes).not.toHaveBeenCalled();
+});
+
+/* ===========================================================================
+ * Daylight
+ * ========================================================================= */
+
+/**
+ * The reference times below are published by the United States Naval
+ * Observatory for the midpoint of La Jolla Shores Beach's own segment,
+ * 32.869182, -117.255932, fetched 2026-08-24:
+ *
+ *   https://aa.usno.navy.mil/api/rstt/oneday?date=2026-08-17&coords=32.869182,-117.255932&tz=-7
+ *
+ * The astronomy itself is asserted against seven such references in
+ * `daylight.test.ts`. What these tests are for is everything between it and a
+ * reader: the right coordinates, the right seven days, the rounding, and the
+ * fact that none of it depends on a station.
+ */
+test("sunrise and sunset are this beach's own, as Pacific wall-clock times", () => {
+  const view = readDaylightWeek(BEACH, NOON_PACIFIC_20260817);
+
+  expect(view.days[0].sunriseLabel).toBe("6:14 AM");
+  expect(view.days[0].sunsetLabel).toBe("7:32 PM");
+});
+
+test("the daylight row covers the same seven days the tide row does", async () => {
+  ok([]);
+  const tide = await readWeekOfLowestLows(BEACH, NOON_PACIFIC_20260817);
+  const daylight = readDaylightWeek(BEACH, NOON_PACIFIC_20260817);
+
+  // The grid looks a row's cells up by local date, so two rows that disagreed
+  // about the week would silently render as one ragged row and one full one.
+  const dates = (days: { localDate: string }[]) =>
+    days.map((day) => day.localDate);
+  expect(dates(daylight.days)).toEqual(
+    dates(tide.state.kind === "week" ? tide.state.days : []),
+  );
+});
+
+test("today is marked here too, so the two rows agree about where the reader is", () => {
+  const view = readDaylightWeek(BEACH, NOON_PACIFIC_20260817);
+
+  expect(
+    view.days.filter((day) => day.isToday).map((day) => day.localDate),
+  ).toEqual(["2026-08-17"]);
+});
+
+test("nothing is fetched, because there is no sun API here", () => {
+  readDaylightWeek(BEACH, NOON_PACIFIC_20260817);
+
+  expect(fetchTideExtremes).not.toHaveBeenCalled();
+});
+
+test("a beach with no station still has a full week of daylight", () => {
+  // The row that cannot fail. Every other read in this file has a state for a
+  // beach nothing could be joined to; this one has coordinates, and coordinates
+  // are all it needs.
+  const view = readDaylightWeek(UNBOUND_BEACH, NOON_PACIFIC_20260817);
+
+  expect(view.days).toHaveLength(7);
+  expect(view.days[6].sunriseLabel).toMatch(/^\d+:\d\d AM$/);
+});
+
+test("a slug outside the inventory is a coding error for daylight too", () => {
+  expect(() =>
+    readDaylightWeek("no-such-beach", NOON_PACIFIC_20260817),
+  ).toThrow(/no beach in the inventory/);
 });
 
 /* ===========================================================================

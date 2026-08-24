@@ -20,6 +20,7 @@ import {
   type ObservationStation,
   skyStationFor,
 } from "./beaches";
+import { daylightOn, midpointOf } from "./daylight";
 import type { TideExtreme } from "./coops-predictions";
 import {
   addLocalDays,
@@ -68,7 +69,34 @@ export interface TideTodayView {
 }
 
 /** Days the week grid names, today included. */
-const TIDE_WEEK_DAYS = 7;
+const WEEK_DAYS = 7;
+
+/** One column of the week, before any product has filled it. */
+interface WeekDayFrame {
+  localDate: string;
+  dayLabel: string;
+  isToday: boolean;
+}
+
+/**
+ * The seven days the week grid covers, today first.
+ *
+ * Every row on that grid is built from this, so the rows cannot disagree about
+ * which day is Tuesday. Today is included rather than skipped: the week is a
+ * planning view, and a reader comparing Saturday against the rest of it needs
+ * the day they are standing in to compare from.
+ */
+function weekOfDays(nowMs: number): WeekDayFrame[] {
+  const today = localDateOf(nowMs);
+  return Array.from({ length: WEEK_DAYS }, (_, offset) => {
+    const localDate = addLocalDays(today, offset);
+    return {
+      localDate,
+      dayLabel: localDayLabel(localDate),
+      isToday: localDate === today,
+    };
+  });
+}
 
 /** `YYYY-MM-DD` to the `YYYYMMDD` CO-OPS wants. */
 function compact(localDate: string): string {
@@ -97,7 +125,7 @@ function predictionsWindow(nowMs: number): {
   const today = localDateOf(nowMs);
   return {
     beginDate: compact(addLocalDays(today, -1)),
-    endDate: compact(addLocalDays(today, TIDE_WEEK_DAYS + 1)),
+    endDate: compact(addLocalDays(today, WEEK_DAYS + 1)),
   };
 }
 
@@ -300,15 +328,10 @@ export async function readWeekOfLowestLows(
     };
   }
 
-  const today = localDateOf(nowMs);
-  const days: TideWeekDay[] = [];
-  for (let offset = 0; offset < TIDE_WEEK_DAYS; offset += 1) {
-    const localDate = addLocalDays(today, offset);
-    const lowest = lowestLowOn(read.extremes, localDate);
-    days.push({
-      localDate,
-      dayLabel: localDayLabel(localDate),
-      isToday: localDate === today,
+  const days: TideWeekDay[] = weekOfDays(nowMs).map((frame) => {
+    const lowest = lowestLowOn(read.extremes, frame.localDate);
+    return {
+      ...frame,
       state:
         lowest === null
           ? { kind: "no-low" }
@@ -317,10 +340,84 @@ export async function readWeekOfLowestLows(
               timeLabel: localTimeOf(lowest.atMs),
               feet: lowest.feet,
             },
-    });
-  }
+    };
+  });
 
   return { ...binding, state: { kind: "week", days } };
+}
+
+/**
+ * The nearest minute.
+ *
+ * `localTimeOf` formats the fields of an instant, which drops the seconds
+ * rather than rounding them — so a sunrise computed at 06:18:32 would print as
+ * 6:18 and every time on the daylight row would read up to a minute early. The
+ * solar series behind it is good to about half a minute, so the minute is the
+ * precision worth printing, and this is the one place that decides it.
+ */
+function toNearestMinute(atMs: number): number {
+  return Math.round(atMs / 60_000) * 60_000;
+}
+
+/** One day of the week grid's daylight row. */
+export interface DaylightWeekDay extends WeekDayFrame {
+  /** Pacific wall-clock sunrise, already worded and rounded. */
+  sunriseLabel: string;
+  /** Pacific wall-clock sunset, already worded and rounded. */
+  sunsetLabel: string;
+}
+
+/**
+ * What the week grid's daylight row renders.
+ *
+ * **No failure states, and their absence is the content.** Every other view in
+ * this file carries `no-station` and `unavailable` because every other view
+ * depends on somebody else's instrument. This one is astronomy computed from
+ * coordinates the inventory already holds, so there is no station to be missing
+ * and no feed to be down. It is the row that still answers when NOAA does not,
+ * which is also why the grid takes its columns from here.
+ */
+export interface DaylightWeekView {
+  beachName: string;
+  days: DaylightWeekDay[];
+}
+
+/**
+ * Read a week of sunrise and sunset times for one beach, starting today.
+ *
+ * Synchronous, because nothing is fetched — see `lib/daylight.ts` for why
+ * there is no sun API here and should not be.
+ *
+ * A beach is a shoreline segment everywhere else on this page, and here it is
+ * reduced to its midpoint: sunset differs by one minute across the entire
+ * county, so which end you stand on is below the precision of the answer.
+ *
+ * Throws only when the slug is not in the inventory, which is a coding error.
+ */
+export function readDaylightWeek(
+  slug: string,
+  nowMs: number = Date.now(),
+): DaylightWeekView {
+  const beach = beachBySlug(slug);
+  if (!beach) {
+    throw new Error(
+      `readDaylightWeek: no beach in the inventory with slug "${slug}".`,
+    );
+  }
+
+  const at = midpointOf(beach.segment);
+
+  return {
+    beachName: beach.name,
+    days: weekOfDays(nowMs).map((frame) => {
+      const { sunriseMs, sunsetMs } = daylightOn(frame.localDate, at);
+      return {
+        ...frame,
+        sunriseLabel: localTimeOf(toNearestMinute(sunriseMs)),
+        sunsetLabel: localTimeOf(toNearestMinute(sunsetMs)),
+      };
+    }),
+  };
 }
 
 /**
