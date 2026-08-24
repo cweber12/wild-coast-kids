@@ -101,6 +101,15 @@ seen.
    means something specific on this page, so a 🐙 on a coastline reads as an
    octopus rather than as ornament.
 
+   **The animal vocabulary is reserved for sightings, and the panels take
+   environmental glyphs.** 🌊 tide, 🏄 waves and water, 🌡️ air. The tide card was
+   built with 🐚 and it was the wrong call twice over: it renders pale lavender on
+   a pale lavender surface, and more importantly a shell reads as something a
+   child finds, on a page where finding things is about to be what an animal
+   glyph means. #121's roster commits 🐙 🦀 🪸 🐌 ⭐ 🦭 🦈 🦞 🪼 🐢 to that meaning —
+   including 🪸, which is the nearest thing Unicode has to an anemone and is why
+   an anemone cannot head the tide card. A glyph may mean one thing per page.
+
 ## Aesthetic Direction
 
 - **Philosophy**: **Coastal pop editorial**, inherited unchanged from the landing

@@ -21,8 +21,12 @@ test("a reading leads with the height and puts it in plain words", () => {
   );
 
   expect(screen.getByText("2.6 ft")).toBeDefined();
-  // A height alone tells a surfer what they need and a parent very little.
-  expect(screen.getByText(/about waist high, 5 seconds apart/)).toBeDefined();
+  // A height alone tells a surfer what they need and a parent very little, so
+  // the plain-language companion survives the move to a card. The period left
+  // this sentence and became a figure of its own; what it must not do is stop
+  // being said.
+  expect(screen.getByText(/about waist high/)).toBeDefined();
+  expect(screen.getByText("5 s")).toBeDefined();
 });
 
 test("water temperature comes from the same reading, rounded", () => {
@@ -39,7 +43,9 @@ test("water temperature comes from the same reading, rounded", () => {
       }}
     />,
   );
-  expect(screen.getByText(/The water is 70°F/)).toBeDefined();
+  // Shown as a figure now rather than as the tail of a sentence, and still
+  // rounded: the buoy publishes 69.98 and nobody swims to two decimal places.
+  expect(screen.getByText("70°F")).toBeDefined();
 });
 
 test("a buoy reporting no water temperature says so rather than omitting it", () => {
@@ -56,7 +62,12 @@ test("a buoy reporting no water temperature says so rather than omitting it", ()
       }}
     />,
   );
-  expect(screen.getByText(/reported no water temperature/)).toBeDefined();
+  // A buoy that publishes waves and no water temperature is a measured fact
+  // about that buoy, not a hypothetical. Both figures state their absence
+  // rather than vanishing, because a missing row reads as an oversight and a
+  // blank one reads as a calm sea.
+  expect(screen.getAllByText("Not reported").length).toBe(2);
+  expect(screen.getByText("Water")).toBeDefined();
 });
 
 /**
@@ -79,7 +90,8 @@ test("a nearby buoy is credited without a distance", () => {
       }}
     />,
   );
-  expect(screen.getByText(new RegExp(`NDBC buoy ${NEAR.name}`))).toBeDefined();
+  const line = screen.getByText(/NDBC/).textContent ?? "";
+  expect(line).toContain(NEAR.name);
   expect(screen.queryByText(/km from this beach/)).toBeNull();
 });
 

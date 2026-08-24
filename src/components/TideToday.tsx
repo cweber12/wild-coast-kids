@@ -58,7 +58,7 @@ export function TideToday({ beachName, station, state }: TideTodayProps) {
 
   return (
     <ReadingCard
-      emoji="🐚"
+      emoji="🌊"
       headingId="tide-today-heading"
       title={`Lowest tide today · ${beachName}`}
       figure={state.kind === "reading" ? state.timeLabel : null}

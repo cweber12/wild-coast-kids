@@ -21,6 +21,9 @@
  */
 
 import type { WavesView } from "@/lib/conditions";
+import { ProvenanceLine } from "./ProvenanceLine";
+import { ReadingCard } from "./ReadingCard";
+import { StatGroup } from "./StatGroup";
 
 /** Past this, the buoy is far enough away that the reader is owed the number. */
 const DISTANT_BUOY_M = 10_000;
@@ -46,26 +49,45 @@ export function WavesToday({ beachName, buoy, state }: WavesView) {
       : null;
 
   return (
-    <section aria-labelledby="waves-today-heading" className="mt-9 max-w-130">
-      <h2
-        id="waves-today-heading"
-        className="text-2xs mb-3 font-extrabold tracking-widest text-ocean uppercase"
-      >
-        Waves and water · {beachName}
-      </h2>
-
+    <ReadingCard
+      emoji="🏄"
+      headingId="waves-today-heading"
+      title={`Waves and water · ${beachName}`}
+      figure={
+        state.kind === "reading" ? `${state.heightFt.toFixed(1)} ft` : null
+      }
+    >
       {state.kind === "reading" && (
         <>
-          <p className="leading-tight mb-2 text-4xl font-black italic">
-            {state.heightFt.toFixed(1)} ft
+          <p className="leading-relaxed mb-3 text-base text-fog">
+            {heightWords(state.heightFt)}.
           </p>
-          <p className="leading-relaxed mb-4 text-base text-fog">
-            {heightWords(state.heightFt)}
-            {state.periodS !== null ? `, ${state.periodS} seconds apart` : ""}.
-            {state.waterTempF !== null
-              ? ` The water is ${Math.round(state.waterTempF)}°F.`
-              : " The buoy reported no water temperature."}
-          </p>
+          {/*
+            Period and water temperature were clauses in the sentence above.
+            They are measurements, and a reader scanning for the water
+            temperature should not have to read a sentence to find it. The
+            plain-language line stays, because it is the half of this card
+            written for a parent rather than for a surfer.
+
+            A null is rendered as an absence rather than dropped: a buoy that
+            publishes waves and no water temperature is a measured fact about
+            that buoy, and an omitted row would read as an oversight.
+          */}
+          <StatGroup
+            stats={[
+              {
+                label: "Period",
+                value: state.periodS !== null ? `${state.periodS} s` : null,
+              },
+              {
+                label: "Water",
+                value:
+                  state.waterTempF !== null
+                    ? `${Math.round(state.waterTempF)}°F`
+                    : null,
+              },
+            ]}
+          />
         </>
       )}
 
@@ -102,11 +124,14 @@ export function WavesToday({ beachName, buoy, state }: WavesView) {
       )}
 
       {buoy !== null && (
-        <p className="text-2xs leading-relaxed text-fog">
-          Measured at NDBC buoy {buoy.name}
-          {distantKm !== null ? `, about ${distantKm} km from this beach` : ""}.
-        </p>
+        <ProvenanceLine
+          source={`Buoy ${buoy.name}`}
+          network="NDBC"
+          distance={
+            distantKm !== null ? `about ${distantKm} km from this beach` : null
+          }
+        />
       )}
-    </section>
+    </ReadingCard>
   );
 }
