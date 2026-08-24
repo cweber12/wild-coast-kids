@@ -152,15 +152,24 @@ of it.
       dependency. _Modifies: `lib/conditions.ts`._
 
 - [ ] **9. The week grid.** New `WeekGrid` and `TideWeek`. **Day-major DOM**,
-      identical at every width: seven day-columns at `lg`, seven day-rows below,
-      switched by `grid-template-columns` alone — so ADR-0005's render-twice rule
-      is not invoked. The tide row is live; rows for the gridded NWS forecast
-      (#95) and the surf zone forecast are `ReservedSlot`s naming what lands
-      there. A product with no forecast is **absent, not blank** — wave
-      observations have no forecast and get no empty row. **Done when** a reader
-      can find next Tuesday's low tide on a phone without horizontal scrolling,
-      and the screen-reader order reads day-then-values. _New: `WeekGrid`,
-      `TideWeek`._ _Depends on: 8._
+      identical at every width: seven day-columns at `lg`, seven day-rows
+      below, switched by `grid-template-columns` alone — so ADR-0005's
+      render-twice rule is not invoked. The tide row is live; rows for the
+      gridded NWS forecast (#95) and the surf zone forecast are
+      `ReservedSlot`s naming what lands there. A product with no forecast is
+      **absent, not blank**. **Waves get a reserved row, not no row.** An
+      earlier draft of this file said wave observations have no forecast and
+      should get no row at all. That was wrong, and only NDBC is
+      observation-only: **CDIP's MOP system publishes an hourly wave forecast
+      about ten days ahead, at roughly 100 m alongshore spacing**, driven by
+      real buoy directional spectra rather than modelled winds. Adopting it is
+      its own decision — NetCDF over THREDDS is not a shape this repo parses,
+      `waveFlagPrimary == 1` must be filtered at ingest, and CDIP asks to be
+      contacted and credited — so this slice reserves the row rather than
+      filling it. What it must not do is encode "no wave forecast exists" into
+      the layout. **Done when** a reader can find next Tuesday's low tide on a
+      phone without horizontal scrolling, and the screen-reader order reads
+      day-then-values. _New: `WeekGrid`, `TideWeek`._ _Depends on: 8._
 
 ## Verification
 
