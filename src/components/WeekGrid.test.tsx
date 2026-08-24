@@ -1,0 +1,147 @@
+import { expect, test } from "vitest";
+import { render, screen } from "@testing-library/react";
+import { WeekGrid, type WeekDay, type WeekRow } from "./WeekGrid";
+
+const DAYS: WeekDay[] = [
+  { localDate: "2026-08-17", dayLabel: "Mon, Aug 17", isToday: true },
+  { localDate: "2026-08-18", dayLabel: "Tue, Aug 18", isToday: false },
+  { localDate: "2026-08-19", dayLabel: "Wed, Aug 19", isToday: false },
+];
+
+/** Deliberately ragged: the 19th is missing, which is a row this product cannot fill that far out. */
+const TIDE_ROW: WeekRow = {
+  emoji: "🌊",
+  label: "Lowest tide",
+  cells: {
+    "2026-08-17": "6:41 PM",
+    "2026-08-18": "7:10 AM",
+  },
+};
+
+const RESERVED = [
+  {
+    emoji: "🏄",
+    headline: "A wave forecast is coming.",
+    detail: "CDIP's MOP model publishes an hourly forecast about ten days out.",
+  },
+];
+
+function renderGrid(overrides: Partial<Parameters<typeof WeekGrid>[0]> = {}) {
+  return render(
+    <WeekGrid
+      headingId="week-heading"
+      title="The week ahead"
+      days={DAYS}
+      rows={[TIDE_ROW]}
+      {...overrides}
+    />,
+  );
+}
+
+test("names every day it was given, in the order it was given them", () => {
+  const { container } = renderGrid();
+
+  const headings = [...container.querySelectorAll("h3")].map(
+    (heading) => heading.textContent,
+  );
+  expect(headings).toEqual([
+    "Today · Mon, Aug 17",
+    "Tue, Aug 18",
+    "Wed, Aug 19",
+  ]);
+});
+
+test("a day's values follow that day, so the reading order is day then value", () => {
+  const { container } = renderGrid();
+
+  // The whole reason the DOM is day-major rather than product-major: a
+  // non-visual reader hears "Tuesday, lowest tide, 7:10 AM" rather than every
+  // day's tide followed by every day's waves.
+  // `[\s\S]*` rather than `.*` with the dotAll flag, which this TypeScript
+  // target does not compile.
+  expect(container.textContent).toMatch(
+    /Today · Mon, Aug 17[\s\S]*Lowest tide[\s\S]*6:41 PM[\s\S]*Tue, Aug 18[\s\S]*Lowest tide[\s\S]*7:10 AM/,
+  );
+});
+
+test("a day this row cannot fill gets no pair at all, rather than an empty one", () => {
+  renderGrid();
+
+  // Absent, not blank. Three days, two of them with a tide, so the label is
+  // printed exactly twice — a third "Lowest tide" over a gap would read as a
+  // measurement that failed rather than a forecast that does not reach.
+  expect(screen.getAllByText("Lowest tide")).toHaveLength(2);
+});
+
+test("today is named in words, not carried by a colour alone", () => {
+  renderGrid();
+
+  expect(screen.getByText(/Today · Mon, Aug 17/)).toBeDefined();
+});
+
+test("the glyph is decoration and never the only label a row has", () => {
+  const { container } = renderGrid();
+
+  const glyph = container.querySelector('[aria-hidden="true"]');
+  expect(glyph?.textContent).toBe("🌊");
+  // The text label is what a screen reader hears, per the brief's rule that
+  // emoji mark categories and never carry them.
+  expect(screen.getAllByText("Lowest tide").length).toBeGreaterThan(0);
+});
+
+test("label and value are a description list, so the pairing is structural", () => {
+  const { container } = renderGrid();
+
+  const pair = container.querySelector("dl > div");
+  expect(pair?.querySelector("dt")?.textContent).toContain("Lowest tide");
+  expect(pair?.querySelector("dd")?.textContent).toContain("6:41 PM");
+});
+
+test("each day is rendered once, full stop", () => {
+  renderGrid();
+
+  // ADR-0005 allows a breakpoint-divergent layout to render its content twice.
+  // This one does not need that allowance and must not quietly start using it:
+  // the DOM is identical at every width and only grid-template-columns moves.
+  expect(screen.getAllByText("Tue, Aug 18")).toHaveLength(1);
+});
+
+test("the transpose is one property, so there is no hidden copy to keep in step", () => {
+  const { container } = renderGrid();
+
+  const grid = container.querySelector("ol");
+  expect(grid?.className).toContain("lg:grid-cols-7");
+  expect(container.innerHTML).not.toContain("lg:hidden");
+});
+
+test("a product that could not fill a row says so once, not seven times", () => {
+  renderGrid({
+    rows: [],
+    notes: [
+      "We could not get this week's tide predictions from NOAA just now.",
+    ],
+  });
+
+  expect(
+    screen.getAllByText(
+      "We could not get this week's tide predictions from NOAA just now.",
+    ),
+  ).toHaveLength(1);
+});
+
+test("what is not built yet is named rather than left silent", () => {
+  renderGrid({ reserved: RESERVED });
+
+  expect(screen.getByText(/A wave forecast is coming/)).toBeDefined();
+  expect(
+    screen.getByText(/MOP model publishes an hourly forecast/),
+  ).toBeDefined();
+});
+
+test("the week is a region a reader can navigate to by its heading", () => {
+  const { container } = renderGrid();
+
+  const section = container.querySelector("section");
+  expect(section?.getAttribute("aria-labelledby")).toBe("week-heading");
+  expect(screen.getByText("The week ahead").id).toBe("week-heading");
+});

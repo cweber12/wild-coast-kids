@@ -10,6 +10,9 @@ vi.mock("@/components/WavePanel", () => ({
 vi.mock("@/components/WindPanel", () => ({
   WindPanel: ({ slug }: { slug: string }) => <p>wind for {slug}</p>,
 }));
+vi.mock("@/components/WeekPanel", () => ({
+  WeekPanel: ({ slug }: { slug: string }) => <p>week for {slug}</p>,
+}));
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push: vi.fn() }) }));
 
 const { ConditionsSection } = await import("./ConditionsSection");
@@ -25,6 +28,10 @@ test("the view carries the chooser, the reading and the caveats", () => {
   // agencies and each is mounted on its own Suspense boundary, so a section
   // that dropped one would still render and still pass every other assertion.
   expect(screen.getByText(`wind for ${DEFAULT_BEACH_SLUG}`)).toBeDefined();
+  // The week is the second half of what this page is for — planning rather
+  // than now — and it mounts on its own boundary, so a section that dropped it
+  // would still render every card above it.
+  expect(screen.getByText(`week for ${DEFAULT_BEACH_SLUG}`)).toBeDefined();
   expect(
     screen.getByText("What we are unsure about in this data"),
   ).toBeDefined();
