@@ -9,8 +9,9 @@ slot here.
 
 ## How this list is shaped
 
-**Nine slices, three PRs, cut at dependency boundaries** rather than at layer
-boundaries. Each slice does one nameable thing, leaves the repo working and the
+**Ten slices, three PRs, cut at dependency boundaries** rather than at layer
+boundaries. Nine when this file was written; the tenth arrived mid-flight and
+the addendum at the foot of this file records what changed and why. Each slice does one nameable thing, leaves the repo working and the
 gates passing, and can be reverted or bisected on its own.
 
 **There is no trailing responsive or accessibility phase, on purpose.** Those
@@ -134,7 +135,7 @@ of it.
 
 ## PR C — the week
 
-- [ ] **8. A week of lowest lows, from one widened request.**
+- [x] **8. A week of lowest lows, from one widened request.**
       `lib/conditions.ts` gains a read returning one lowest low per day for seven
       days. **This widens the CO-OPS request rather than re-reading data already
       in hand** — the existing call asks for `nowMs − 1 day` to `nowMs + 1 day`,
@@ -151,7 +152,7 @@ of it.
       exactly one predictions request per beach. No new upstream product, no new
       dependency. _Modifies: `lib/conditions.ts`._
 
-- [ ] **9. The week grid.** New `WeekGrid` and `TideWeek`. **Day-major DOM**,
+- [x] **9. The week grid.** New `WeekGrid` and `TideWeek`. **Day-major DOM**,
       identical at every width: seven day-columns at `lg`, seven day-rows
       below, switched by `grid-template-columns` alone — so ADR-0005's
       render-twice rule is not invoked. The tide row is live; rows for the
@@ -170,6 +171,22 @@ of it.
       the layout. **Done when** a reader can find next Tuesday's low tide on a
       phone without horizontal scrolling, and the screen-reader order reads
       day-then-values. _New: `WeekGrid`, `TideWeek`._ _Depends on: 8._
+
+- [x] **10. Daylight, the second live row.** New `lib/daylight.ts` computing
+      sunrise and sunset from the beach's own latitude and longitude, and a
+      `DaylightWeek` row rendering them beneath the tide. Computed in-repo
+      with no API and no dependency, which is what `docs/plans/conditions-tool.md`
+      already asks for — "there is no sun API here and there should not be" —
+      and `beaches.json` already carries the `lat`/`lon` it needs. The clock
+      is injected as `nowMs` and the seven local dates come from the same
+      helper the tide row uses, so the two rows cannot disagree about which day
+      is Tuesday. Sunrise and sunset are the two instants named and nothing
+      else: civil twilight, solar noon and day length are all computable from
+      the same math and none of them were asked for. **Done when** the grid
+      carries two live rows, the times are asserted against values published by
+      an authority rather than against this repo's own output, and a reader can
+      see whether the week's lowest low falls in daylight. _New:
+      `lib/daylight.ts`, `DaylightWeek`._ _Depends on: 9._
 
 ## Verification
 
@@ -192,6 +209,26 @@ Remove `.next/` before believing anything about the built stylesheet.
 
 - [ ] **Design review**: run `/design-review` against the brief once PR B has
       merged and there is something to look at.
+
+## Addenda
+
+**2026-08-24 — PR C gained a tenth slice, the daylight row.** Slices 8 and 9
+give the week grid one live row and three reserved ones, which is a grid in
+name more than in fact. Daylight was raised as a candidate second live row and
+adopted at the author's decision, so it is recorded here rather than left to
+look like scope that crept. Three things made it cheap enough to say yes to:
+it needs no upstream product and no dependency, `beaches.json` already carries
+the coordinates, and `docs/plans/conditions-tool.md` had already ruled that
+this value is computed in-repo. It is also the row that makes the tide row
+mean more than it did — a 6:42 am lowest low in December is before sunrise,
+and the tide row alone cannot say so.
+
+The cost is stated too. It is new astronomical math in a repo that had none,
+and the honest test for it is published sunrise and sunset times from an
+authority, not this repo's own output fed back to itself. That is the same
+standard `coops-predictions.ts` already holds itself to, where the fixture's
+converted rows are checked against the National Weather Service quoting the
+same station.
 
 ## Deliberately not here
 

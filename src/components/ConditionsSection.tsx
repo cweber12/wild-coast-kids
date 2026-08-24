@@ -19,6 +19,7 @@ import { ConditionsNotes } from "./ConditionsNotes";
 import { ReservedSlot } from "./ReservedSlot";
 import { TidePanel } from "./TidePanel";
 import { WavePanel } from "./WavePanel";
+import { WeekPanel } from "./WeekPanel";
 import { WindPanel } from "./WindPanel";
 
 export function ConditionsSection({ slug }: { slug: string }) {
@@ -103,6 +104,22 @@ export function ConditionsSection({ slug }: { slug: string }) {
           }
         >
           <WindPanel slug={slug} />
+        </Suspense>
+      </div>
+
+      {/*
+        The page turns from now to planning. The week reads from the same NOAA
+        request the tide card above already makes — one URL, one call — so it
+        gets its own suspense boundary for the same reason the three cards do
+        rather than because it costs a second fetch.
+      */}
+      <div className="mb-9">
+        <Suspense
+          fallback={
+            <p className="text-base text-fog">Reading the week from NOAA…</p>
+          }
+        >
+          <WeekPanel slug={slug} />
         </Suspense>
       </div>
 

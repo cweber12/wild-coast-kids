@@ -1,4 +1,5 @@
 import { beforeEach, expect, test, vi } from "vitest";
+import type { TideWeekView } from "./conditions";
 
 const fetchTideExtremes = vi.fn();
 const fetchLatestWave = vi.fn();
@@ -62,8 +63,13 @@ vi.mock("./beaches", async (importOriginal) => {
   };
 });
 
-const { readTodaysLowestLow, readLatestWaves, readLatestAir } =
-  await import("./conditions");
+const {
+  readTodaysLowestLow,
+  readWeekOfLowestLows,
+  readDaylightWeek,
+  readLatestWaves,
+  readLatestAir,
+} = await import("./conditions");
 
 /**
  * Noon Pacific on 2026-08-17. The clock is injected rather than faked, which is
@@ -89,14 +95,18 @@ function ok(extremes: { atMs: number; feet: number; kind: "low" | "high" }[]) {
   });
 }
 
-test("asks for a window either side of today, because a Pacific day spans two GMT dates", async () => {
+test("asks for the week's window even when only today is wanted", async () => {
   ok([]);
   await readTodaysLowestLow(BEACH, NOON_PACIFIC_20260817);
 
+  // The day read used to stop at tomorrow. It now asks for the same range the
+  // week read asks for, and that is the point rather than an accident: two
+  // ranges would be two URLs, which Next does not dedupe, and the page would
+  // reach NOAA twice for one station.
   expect(fetchTideExtremes).toHaveBeenCalledWith({
     stationId: "9410230",
     beginDate: "20260816",
-    endDate: "20260818",
+    endDate: "20260825",
   });
 });
 
@@ -110,7 +120,7 @@ test("the window is anchored to the Pacific date, not the UTC one", async () => 
   expect(fetchTideExtremes).toHaveBeenCalledWith({
     stationId: "9410230",
     beginDate: "20260816",
-    endDate: "20260818",
+    endDate: "20260825",
   });
 });
 
@@ -203,6 +213,225 @@ test("a slug outside the inventory is a coding error, and nothing is fetched", a
     readTodaysLowestLow("no-such-beach", NOON_PACIFIC_20260817),
   ).rejects.toThrow(/no beach in the inventory/);
   expect(fetchTideExtremes).not.toHaveBeenCalled();
+});
+
+/* ===========================================================================
+ * The week
+ * ========================================================================= */
+
+/** The seven days, or a failure naming whatever the view said instead. */
+function daysOf(view: TideWeekView) {
+  if (view.state.kind !== "week") {
+    throw new Error(`expected a week of days and got "${view.state.kind}"`);
+  }
+  return view.state.days;
+}
+
+test("the day and the week come from one request, so NOAA is asked once", async () => {
+  ok([]);
+
+  await readTodaysLowestLow(BEACH, NOON_PACIFIC_20260817);
+  await readWeekOfLowestLows(BEACH, NOON_PACIFIC_20260817);
+
+  // Not "both were called" — both were called with the *same* contract. That
+  // is what makes them one URL, and one URL is what makes them one fetch.
+  const [dayCall, weekCall] = fetchTideExtremes.mock.calls;
+  expect(weekCall).toEqual(dayCall);
+});
+
+test("the window reaches past the last day of the week, not past today", async () => {
+  ok([]);
+  await readWeekOfLowestLows(BEACH, NOON_PACIFIC_20260817);
+
+  // 20260823 is the seventh day; a low late on its evening falls on GMT
+  // 20260824, and the eighth day of slack is the same boundary allowance the
+  // lower bound has always carried.
+  expect(fetchTideExtremes).toHaveBeenCalledWith({
+    stationId: "9410230",
+    beginDate: "20260816",
+    endDate: "20260825",
+  });
+});
+
+test("names seven consecutive days, beginning with today", async () => {
+  ok([]);
+  const view = await readWeekOfLowestLows(BEACH, NOON_PACIFIC_20260817);
+
+  expect(daysOf(view).map((day) => day.localDate)).toEqual([
+    "2026-08-17",
+    "2026-08-18",
+    "2026-08-19",
+    "2026-08-20",
+    "2026-08-21",
+    "2026-08-22",
+    "2026-08-23",
+  ]);
+});
+
+test("the week is anchored to the Pacific date, not the UTC one", async () => {
+  ok([]);
+  // 00:30 Pacific on the 17th is already 07:30 UTC on the 17th. A UTC-anchored
+  // week would start on the 17th here too, and be right by accident; the day
+  // that separates them is the one before local midnight, so this asserts the
+  // rule rather than the coincidence.
+  const view = await readWeekOfLowestLows(BEACH, JUST_AFTER_MIDNIGHT_20260817);
+
+  expect(daysOf(view)[0].localDate).toBe("2026-08-17");
+});
+
+test("each day gets its own deeper low, and never a high", async () => {
+  ok([
+    // 6:24 AM on the 17th.
+    { atMs: Date.UTC(2026, 7, 17, 13, 24), feet: 1.368, kind: "low" },
+    // 6:41 PM on the 17th, and the deeper of that day's two.
+    { atMs: Date.UTC(2026, 7, 18, 1, 41), feet: 0.9, kind: "low" },
+    // 7:10 AM on the 18th.
+    { atMs: Date.UTC(2026, 7, 18, 14, 10), feet: -0.4, kind: "low" },
+    // A high on the 18th, lower in the list and irrelevant to a lowest low.
+    { atMs: Date.UTC(2026, 7, 18, 20, 0), feet: 3.0, kind: "high" },
+  ]);
+
+  const days = daysOf(await readWeekOfLowestLows(BEACH, NOON_PACIFIC_20260817));
+
+  expect(days[0].state).toEqual({
+    kind: "reading",
+    timeLabel: "6:41 PM",
+    feet: 0.9,
+  });
+  expect(days[1].state).toEqual({
+    kind: "reading",
+    timeLabel: "7:10 AM",
+    feet: -0.4,
+  });
+});
+
+test("a day the window did not cover is named, not dropped from the week", async () => {
+  ok([{ atMs: Date.UTC(2026, 7, 18, 14, 10), feet: -0.4, kind: "low" }]);
+
+  const days = daysOf(await readWeekOfLowestLows(BEACH, NOON_PACIFIC_20260817));
+
+  // Seven entries whatever happened. A short array would let a grid render six
+  // columns and say nothing about the seventh, which is the silent failure the
+  // four-state model exists to prevent.
+  expect(days).toHaveLength(7);
+  expect(days[0].state).toEqual({ kind: "no-low" });
+  expect(days[1].state.kind).toBe("reading");
+});
+
+test("today is marked as today, so the grid need not read a clock", async () => {
+  ok([]);
+  const days = daysOf(await readWeekOfLowestLows(BEACH, NOON_PACIFIC_20260817));
+
+  expect(days.filter((day) => day.isToday).map((day) => day.localDate)).toEqual(
+    ["2026-08-17"],
+  );
+});
+
+test("a day carries a label a reader can scan, not just an ISO date", async () => {
+  ok([]);
+  const days = daysOf(await readWeekOfLowestLows(BEACH, NOON_PACIFIC_20260817));
+
+  expect(days[0].dayLabel).toBe("Mon, Aug 17");
+});
+
+test("an unavailable upstream is one failure for the week, not seven", async () => {
+  fetchTideExtremes.mockResolvedValue({
+    kind: "unavailable",
+    reason: "NOAA returned HTTP 503 for station 9410230.",
+    drift: false,
+    url: "https://example.invalid",
+  });
+
+  const view = await readWeekOfLowestLows(BEACH, NOON_PACIFIC_20260817);
+
+  expect(view.state).toEqual({
+    kind: "unavailable",
+    detail: "NOAA returned HTTP 503 for station 9410230.",
+    drift: false,
+  });
+  expect(view.beachName).toBe("La Jolla Shores Beach");
+});
+
+test("a beach with no tide station has no week, and no outage either", async () => {
+  const view = await readWeekOfLowestLows(UNBOUND_BEACH, NOON_PACIFIC_20260817);
+
+  expect(view.state.kind).toBe("no-station");
+  expect(view.station).toBeNull();
+  expect(fetchTideExtremes).not.toHaveBeenCalled();
+});
+
+test("a slug outside the inventory is a coding error here too", async () => {
+  await expect(
+    readWeekOfLowestLows("no-such-beach", NOON_PACIFIC_20260817),
+  ).rejects.toThrow(/no beach in the inventory/);
+  expect(fetchTideExtremes).not.toHaveBeenCalled();
+});
+
+/* ===========================================================================
+ * Daylight
+ * ========================================================================= */
+
+/**
+ * The reference times below are published by the United States Naval
+ * Observatory for the midpoint of La Jolla Shores Beach's own segment,
+ * 32.869182, -117.255932, fetched 2026-08-24:
+ *
+ *   https://aa.usno.navy.mil/api/rstt/oneday?date=2026-08-17&coords=32.869182,-117.255932&tz=-7
+ *
+ * The astronomy itself is asserted against seven such references in
+ * `daylight.test.ts`. What these tests are for is everything between it and a
+ * reader: the right coordinates, the right seven days, the rounding, and the
+ * fact that none of it depends on a station.
+ */
+test("sunrise and sunset are this beach's own, as Pacific wall-clock times", () => {
+  const view = readDaylightWeek(BEACH, NOON_PACIFIC_20260817);
+
+  expect(view.days[0].sunriseLabel).toBe("6:14 AM");
+  expect(view.days[0].sunsetLabel).toBe("7:32 PM");
+});
+
+test("the daylight row covers the same seven days the tide row does", async () => {
+  ok([]);
+  const tide = await readWeekOfLowestLows(BEACH, NOON_PACIFIC_20260817);
+  const daylight = readDaylightWeek(BEACH, NOON_PACIFIC_20260817);
+
+  // The grid looks a row's cells up by local date, so two rows that disagreed
+  // about the week would silently render as one ragged row and one full one.
+  const dates = (days: { localDate: string }[]) =>
+    days.map((day) => day.localDate);
+  expect(dates(daylight.days)).toEqual(
+    dates(tide.state.kind === "week" ? tide.state.days : []),
+  );
+});
+
+test("today is marked here too, so the two rows agree about where the reader is", () => {
+  const view = readDaylightWeek(BEACH, NOON_PACIFIC_20260817);
+
+  expect(
+    view.days.filter((day) => day.isToday).map((day) => day.localDate),
+  ).toEqual(["2026-08-17"]);
+});
+
+test("nothing is fetched, because there is no sun API here", () => {
+  readDaylightWeek(BEACH, NOON_PACIFIC_20260817);
+
+  expect(fetchTideExtremes).not.toHaveBeenCalled();
+});
+
+test("a beach with no station still has a full week of daylight", () => {
+  // The row that cannot fail. Every other read in this file has a state for a
+  // beach nothing could be joined to; this one has coordinates, and coordinates
+  // are all it needs.
+  const view = readDaylightWeek(UNBOUND_BEACH, NOON_PACIFIC_20260817);
+
+  expect(view.days).toHaveLength(7);
+  expect(view.days[6].sunriseLabel).toMatch(/^\d+:\d\d AM$/);
+});
+
+test("a slug outside the inventory is a coding error for daylight too", () => {
+  expect(() =>
+    readDaylightWeek("no-such-beach", NOON_PACIFIC_20260817),
+  ).toThrow(/no beach in the inventory/);
 });
 
 /* ===========================================================================

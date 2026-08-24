@@ -20,7 +20,14 @@ import {
   type ObservationStation,
   skyStationFor,
 } from "./beaches";
-import { localDateOf, localTimeOf } from "./pacific-time";
+import { daylightOn, midpointOf } from "./daylight";
+import type { TideExtreme } from "./coops-predictions";
+import {
+  addLocalDays,
+  localDateOf,
+  localDayLabel,
+  localTimeOf,
+} from "./pacific-time";
 import { lowestLowOn } from "./tide-day";
 import {
   fetchLatestNdbcAir,
@@ -61,7 +68,52 @@ export interface TideTodayView {
   state: TideTodayState;
 }
 
-const ONE_DAY_MS = 86_400_000;
+/** Days the week grid names, today included. */
+const WEEK_DAYS = 7;
+
+/** One column of the week, before any product has filled it. */
+interface WeekDayFrame {
+  localDate: string;
+  dayLabel: string;
+  isToday: boolean;
+}
+
+/**
+ * The seven days the week grid covers, today first.
+ *
+ * Every row on that grid is built from this, so the rows cannot disagree about
+ * which day is Tuesday.
+ *
+ * **Today is included, and its tide cell does repeat the card above it.** That
+ * cost is real — the same time and the same height, twice within one screen,
+ * and the grid's copy is the poorer of the two. It was weighed rather than
+ * missed, and three things pay for it.
+ *
+ * The grid is a comparison task, and "is Tuesday better than today?" wants
+ * today inside the comparison rather than carried across from a differently
+ * formatted component. Marking the first column `Today` removes any chance of
+ * reading `Tue, Aug 25` as the day the reader is standing in. And daylight is
+ * not in the now-band at all: today's sunrise and sunset appear nowhere else on
+ * the page, and they are what say whether today's lowest low falls before the
+ * sun comes up — which is the question the tide time alone cannot answer.
+ *
+ * The alternative that removes the repetition properly is to lift daylight into
+ * the now-band and start the week tomorrow. That changes the three-across
+ * layout PR B settled and runs into `StatGroup`'s one-group-one-provenance
+ * contract, since daylight is computed here and the tide is NOAA's. So it is
+ * its own slice rather than a tweak to this one.
+ */
+function weekOfDays(nowMs: number): WeekDayFrame[] {
+  const today = localDateOf(nowMs);
+  return Array.from({ length: WEEK_DAYS }, (_, offset) => {
+    const localDate = addLocalDays(today, offset);
+    return {
+      localDate,
+      dayLabel: localDayLabel(localDate),
+      isToday: localDate === today,
+    };
+  });
+}
 
 /** `YYYY-MM-DD` to the `YYYYMMDD` CO-OPS wants. */
 function compact(localDate: string): string {
@@ -69,43 +121,85 @@ function compact(localDate: string): string {
 }
 
 /**
- * Read today's lowest low tide for one beach.
+ * The one window this page asks NOAA for, whichever read is asking.
  *
- * The window asked for is yesterday through tomorrow in GMT dates, because the
- * request is made in GMT while the day is a Pacific day: today in California
- * straddles two GMT dates, so a window of exactly one would clip a late-evening
- * low off the end.
+ * Both ends are slack, and each end's day is there for the same reason. The
+ * request is made in GMT dates while the days on the page are Pacific days, so
+ * a Pacific day straddles two GMT dates: a low late on the evening of the
+ * week's last day falls on the GMT date after it, and a window ending on that
+ * last day would clip it off. A day either side covers that in both directions.
+ *
+ * The dates are stepped with `addLocalDays` rather than by adding
+ * milliseconds. Twice a year on this coast a day is twenty-three hours or
+ * twenty-five, and a window assembled from 24-hour blocks near local midnight
+ * lands a date short — which would silently drop the far end of the week on the
+ * two days of the year nobody is testing on.
+ */
+function predictionsWindow(nowMs: number): {
+  beginDate: string;
+  endDate: string;
+} {
+  const today = localDateOf(nowMs);
+  return {
+    beginDate: compact(addLocalDays(today, -1)),
+    endDate: compact(addLocalDays(today, WEEK_DAYS + 1)),
+  };
+}
+
+/** The beach and the station bound to it, carried through a failure. */
+interface TideBinding {
+  beachName: string;
+  station: { name: string; water: string; distanceM: number | null };
+}
+
+/**
+ * What both tide reads get before they diverge.
+ *
+ * `no-station` keeps no binding because there is none — that is the state's
+ * whole content.
+ */
+type TideWindowRead =
+  | { kind: "no-station"; beachName: string; reason: string }
+  | (TideBinding & { kind: "unavailable"; detail: string; drift: boolean })
+  | (TideBinding & { kind: "ok"; extremes: readonly TideExtreme[] });
+
+/**
+ * Bind the beach to its tide station and ask NOAA once for the shared window.
+ *
+ * Shared by the day read and the week read, and the sharing is the point rather
+ * than a saving in lines: two callers computing their own ranges would be two
+ * URLs, Next dedupes on the URL, and the page would reach NOAA twice per beach
+ * where it reaches it once. Keeping the window in one function makes that
+ * structural instead of a convention two call sites have to remember.
  *
  * Throws only when the slug is not in the inventory, which is a coding error
- * rather than a quiet feed. Everything an upstream can do wrong, and every beach
- * the join could not bind, arrives as a state instead.
+ * rather than a quiet feed. `caller` names which read asked, because by the
+ * time this throws the stack is the least useful part of the message.
  */
-export async function readTodaysLowestLow(
+async function readTideWindow(
   slug: string,
-  nowMs: number = Date.now(),
-): Promise<TideTodayView> {
+  nowMs: number,
+  caller: string,
+): Promise<TideWindowRead> {
   const beach = beachBySlug(slug);
   if (!beach) {
     throw new Error(
-      `readTodaysLowestLow: no beach in the inventory with slug "${slug}".`,
+      `${caller}: no beach in the inventory with slug "${slug}".`,
     );
   }
 
   const station = tideStationFor(beach);
   if (station === null) {
     return {
+      kind: "no-station",
       beachName: beach.name,
-      station: null,
-      state: {
-        kind: "no-station",
-        reason:
-          beach.tide_station_null_reason ??
-          "the join bound no tide station to this beach, and recorded no reason",
-      },
+      reason:
+        beach.tide_station_null_reason ??
+        "the join bound no tide station to this beach, and recorded no reason",
     };
   }
 
-  const binding = {
+  const binding: TideBinding = {
     beachName: beach.name,
     station: {
       name: station.name,
@@ -116,22 +210,58 @@ export async function readTodaysLowestLow(
 
   const result = await fetchTideExtremes({
     stationId: station.id,
-    beginDate: compact(localDateOf(nowMs - ONE_DAY_MS)),
-    endDate: compact(localDateOf(nowMs + ONE_DAY_MS)),
+    ...predictionsWindow(nowMs),
   });
 
-  if (result.kind === "unavailable") {
+  return result.kind === "unavailable"
+    ? {
+        ...binding,
+        kind: "unavailable",
+        detail: result.reason,
+        drift: result.drift,
+      }
+    : { ...binding, kind: "ok", extremes: result.extremes };
+}
+
+/**
+ * Read today's lowest low tide for one beach.
+ *
+ * Asks for the whole week's window even though it reads one day out of it. That
+ * looks wasteful and is the opposite: the week read next door wants the same
+ * station and the same six-hour cache, and a narrower range here would be a
+ * second URL and a second call to NOAA. See `predictionsWindow`.
+ *
+ * Throws only when the slug is not in the inventory. Everything an upstream can
+ * do wrong, and every beach the join could not bind, arrives as a state instead.
+ */
+export async function readTodaysLowestLow(
+  slug: string,
+  nowMs: number = Date.now(),
+): Promise<TideTodayView> {
+  const read = await readTideWindow(slug, nowMs, "readTodaysLowestLow");
+
+  if (read.kind === "no-station") {
+    return {
+      beachName: read.beachName,
+      station: null,
+      state: { kind: "no-station", reason: read.reason },
+    };
+  }
+
+  const binding = { beachName: read.beachName, station: read.station };
+
+  if (read.kind === "unavailable") {
     return {
       ...binding,
       state: {
         kind: "unavailable",
-        detail: result.reason,
-        drift: result.drift,
+        detail: read.detail,
+        drift: read.drift,
       },
     };
   }
 
-  const lowest = lowestLowOn(result.extremes, localDateOf(nowMs));
+  const lowest = lowestLowOn(read.extremes, localDateOf(nowMs));
   return {
     ...binding,
     state:
@@ -142,6 +272,168 @@ export async function readTodaysLowestLow(
             timeLabel: localTimeOf(lowest.atMs),
             feet: lowest.feet,
           },
+  };
+}
+
+/**
+ * One day of the week, as the grid renders it.
+ *
+ * `no-low` is a named absence rather than a missing entry, and the week is
+ * always `TIDE_WEEK_DAYS` long for that reason: a short array would let a grid
+ * draw six columns and say nothing at all about the seventh, which is the
+ * silent failure this file's four-state model exists to prevent.
+ */
+export interface TideWeekDay {
+  /** The Pacific calendar date, `YYYY-MM-DD`. */
+  localDate: string;
+  /** That date named for a reader, `Mon, Aug 17`. */
+  dayLabel: string;
+  /** True for the day the reader is standing in, so the grid reads no clock. */
+  isToday: boolean;
+  state:
+    { kind: "reading"; timeLabel: string; feet: number } | { kind: "no-low" };
+}
+
+/**
+ * What the week grid's tide row renders.
+ *
+ * The three failure states are the same three the day view carries and mean the
+ * same things — but they sit on the week rather than on a day, because a station
+ * that cannot be reached is one fact about the feed and not seven facts about
+ * seven days.
+ */
+export interface TideWeekView {
+  beachName: string;
+  /** null exactly when the state is `no-station`. */
+  station: { name: string; water: string; distanceM: number | null } | null;
+  state:
+    | { kind: "week"; days: TideWeekDay[] }
+    | { kind: "no-station"; reason: string }
+    | { kind: "unavailable"; detail: string; drift: boolean };
+}
+
+/**
+ * Read a week of lowest low tides for one beach, starting today.
+ *
+ * Why today is in the week, and what including it costs, is argued once in
+ * `weekOfDays` rather than again here. What this read adds is that today's cell
+ * agrees with the now-band above it by construction rather than by luck: same
+ * station, same request, same day-selection rule.
+ *
+ * Throws only when the slug is not in the inventory.
+ */
+export async function readWeekOfLowestLows(
+  slug: string,
+  nowMs: number = Date.now(),
+): Promise<TideWeekView> {
+  const read = await readTideWindow(slug, nowMs, "readWeekOfLowestLows");
+
+  if (read.kind === "no-station") {
+    return {
+      beachName: read.beachName,
+      station: null,
+      state: { kind: "no-station", reason: read.reason },
+    };
+  }
+
+  const binding = { beachName: read.beachName, station: read.station };
+
+  if (read.kind === "unavailable") {
+    return {
+      ...binding,
+      state: { kind: "unavailable", detail: read.detail, drift: read.drift },
+    };
+  }
+
+  const days: TideWeekDay[] = weekOfDays(nowMs).map((frame) => {
+    const lowest = lowestLowOn(read.extremes, frame.localDate);
+    return {
+      ...frame,
+      state:
+        lowest === null
+          ? { kind: "no-low" }
+          : {
+              kind: "reading",
+              timeLabel: localTimeOf(lowest.atMs),
+              feet: lowest.feet,
+            },
+    };
+  });
+
+  return { ...binding, state: { kind: "week", days } };
+}
+
+/**
+ * The nearest minute.
+ *
+ * `localTimeOf` formats the fields of an instant, which drops the seconds
+ * rather than rounding them — so a sunrise computed at 06:18:32 would print as
+ * 6:18 and every time on the daylight row would read up to a minute early. The
+ * solar series behind it is good to about half a minute, so the minute is the
+ * precision worth printing, and this is the one place that decides it.
+ */
+function toNearestMinute(atMs: number): number {
+  return Math.round(atMs / 60_000) * 60_000;
+}
+
+/** One day of the week grid's daylight row. */
+export interface DaylightWeekDay extends WeekDayFrame {
+  /** Pacific wall-clock sunrise, already worded and rounded. */
+  sunriseLabel: string;
+  /** Pacific wall-clock sunset, already worded and rounded. */
+  sunsetLabel: string;
+}
+
+/**
+ * What the week grid's daylight row renders.
+ *
+ * **No failure states, and their absence is the content.** Every other view in
+ * this file carries `no-station` and `unavailable` because every other view
+ * depends on somebody else's instrument. This one is astronomy computed from
+ * coordinates the inventory already holds, so there is no station to be missing
+ * and no feed to be down. It is the row that still answers when NOAA does not,
+ * which is also why the grid takes its columns from here.
+ */
+export interface DaylightWeekView {
+  beachName: string;
+  days: DaylightWeekDay[];
+}
+
+/**
+ * Read a week of sunrise and sunset times for one beach, starting today.
+ *
+ * Synchronous, because nothing is fetched — see `lib/daylight.ts` for why
+ * there is no sun API here and should not be.
+ *
+ * A beach is a shoreline segment everywhere else on this page, and here it is
+ * reduced to its midpoint: sunset differs by one minute across the entire
+ * county, so which end you stand on is below the precision of the answer.
+ *
+ * Throws only when the slug is not in the inventory, which is a coding error.
+ */
+export function readDaylightWeek(
+  slug: string,
+  nowMs: number = Date.now(),
+): DaylightWeekView {
+  const beach = beachBySlug(slug);
+  if (!beach) {
+    throw new Error(
+      `readDaylightWeek: no beach in the inventory with slug "${slug}".`,
+    );
+  }
+
+  const at = midpointOf(beach.segment);
+
+  return {
+    beachName: beach.name,
+    days: weekOfDays(nowMs).map((frame) => {
+      const { sunriseMs, sunsetMs } = daylightOn(frame.localDate, at);
+      return {
+        ...frame,
+        sunriseLabel: localTimeOf(toNearestMinute(sunriseMs)),
+        sunsetLabel: localTimeOf(toNearestMinute(sunsetMs)),
+      };
+    }),
   };
 }
 
