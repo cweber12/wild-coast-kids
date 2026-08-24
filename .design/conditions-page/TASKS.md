@@ -195,13 +195,26 @@ A claim is not evidence.
 
 Three things the gate cannot assert, checked by a human:
 
-- [ ] **The first screen at 1536×639, 125% scaling** — 555px after the nav. The
-      now-band must land above the fold. Measure on the base branch too before
-      accepting blame for anything.
-- [ ] **Contrast on every new surface**, AA — 4.5:1 body, 3:1 large text.
-      Checked before shipping a surface, not after.
-- [ ] **The aesthetic direction after slice 2**, before three cards are built on
-      top of it.
+- [x] **The first screen at 1536×639, 125% scaling** — 555px after the nav.
+      Measured on the merged page 2026-08-24: the now-band runs 354–648px
+      against a 639px fold, so it starts well clear and finishes nine pixels
+      below. Measured again on `a76c204`, the commit PR C branched from, and the
+      numbers are identical — the overhang came with the now-band in PR B and
+      the week grid did not move it. The brief calls the 555px budget "a target
+      for the composition, not a gate", so whether those nine pixels are worth
+      buying back is a question for the design review rather than a defect.
+- [x] **Contrast on every new surface**, AA — 4.5:1 body, 3:1 large text.
+      Measured rather than assumed: on `mist`, fog is 5.04:1, ocean 7.18:1 and
+      dark 14.58:1. Today's column in the week grid was built on `bg-lavender`
+      and that surface was removed before it shipped, because fog on lavender is
+      4.29:1 — the same failure `globals.css` records fog being darkened to
+      escape — so today is marked by an ocean border and by the word "Today"
+      instead, and no new surface ships below AA.
+- [x] **The aesthetic direction after slice 2**, before three cards were built
+      on top of it. Looked at and acted on: the tide card shipped with 🐚 and the
+      glyph was changed to 🌊 at the checkpoint, for the two reasons slice 2 now
+      records — a shell renders pale on mist, and an animal glyph is about to
+      mean a sighting on this page.
 
 Remove `.next/` before believing anything about the built stylesheet.
 
@@ -209,6 +222,16 @@ Remove `.next/` before believing anything about the built stylesheet.
 
 - [ ] **Design review**: run `/design-review` against the brief once PR B has
       merged and there is something to look at.
+
+**This file carries no historical note yet, and that is deliberate.** All ten
+slices have merged — PRs #123, #124 and #128, all on 2026-08-24 — so everything
+above this heading is now a dated record of what was intended rather than a
+description of what the code does. But `docs/plans/README.md` is explicit that
+"a plan still being worked carries no such note", and the design review above is
+work this file is still carrying. Marking it historical now would freeze an open
+task into a record, which is the exact "neither one nor the other" failure that
+README warns against. The note goes on in the PR that closes the review. The
+landing page's `TASKS.md` sits in the same state, with the same one box open.
 
 ## Addenda
 
