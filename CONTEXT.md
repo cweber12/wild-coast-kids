@@ -44,12 +44,15 @@ dashed frame with an emoji and a "coming soon" line naming what lands there.
 _Avoid_: coming-soon box, empty state, placeholder (that word is taken, below)
 
 **Placeholder**:
-A labeled stand-in for a future _image_ — the logo, card backgrounds and
-gallery frames are what is left; the hero photo was one until the photograph
-arrived. The label is what the slot is _for_, so the page reads the same shape
-either way. It is not the accessible name the photograph then keeps: a label
-written before the picture exists is a guess, and the hero's was wrong by the
-time it was filled — the real image names its own frame.
+A labeled stand-in for a future _image_ — the logo and card backgrounds are
+what is left; the hero photo was one until the photograph arrived, and the
+gallery's nine were until theirs did. The label is what the slot is _for_, so
+the page reads the same shape either way. It is not the accessible name the
+photograph then keeps: a label written before the picture exists is a guess,
+and the hero's was wrong by the time it was filled — the real image names its
+own frame. Both fills bore that out. "Kids with artwork" became two kids
+holding up the self-portraits they had just finished, and "Neon chalk art"
+turned out to be acrylic marker.
 _Avoid_: stub, dummy image, reserved slot (that is for content, not images)
 
 **Strip**:
@@ -65,6 +68,13 @@ moves it (ADR-0007). It keeps the page's gutter on both sides, and its snap
 positions are offset to match — without that it comes to rest one gutter in,
 having eaten its own inset.
 _Avoid_: carousel, slider, gallery strip
+
+**Crop**:
+Where a tile is anchored on the photograph inside it. Every tile is landscape
+and most of the photographs are portrait, so each one names the point its tile
+keeps — the centre is a choice too, and the wrong one for a piece that sits
+low in its frame. Carried per image in `galleryImages.ts`, not per slot.
+_Avoid_: focus (this repo's focus is the keyboard kind), framing, position
 
 **Pager**:
 The row's prev/next pair. It sits above the row rather than on its edges,
