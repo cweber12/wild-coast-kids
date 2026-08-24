@@ -77,15 +77,18 @@ of it.
       Building it now would be a component with no consumer, which is the
       speculative flexibility this file bans elsewhere. It lands in slice 3,
       where waves is its first real user. Emoji header
-      🐚, lead figure at `--text-stat` (replacing the raw `text-4xl`), the
+      🌊, lead figure at `--text-stat` (replacing the raw `text-4xl`), the
       plain-language height sentence kept verbatim, and the station line as
-      `station · network · distance`. `StatGroup` is a `<dl>`. All four tide
-      states keep rendering their own sentence — no blanks, no zeros.
+      `station · network · distance`. All four tide
+      states keep rendering their own sentence — no blanks, no zeros. The glyph
+      shipped as 🐚 and was changed to 🌊 at the checkpoint: a shell renders pale
+      on mist, and reads as an animal on a page where animal glyphs are about to
+      mean sightings (#121).
       **Done when** the tide card matches the brief's anatomy and every existing
-      `TideToday` test still passes unmodified. _New: three components. Modifies:
+      `TideToday` test still passes unmodified. _New: two components. Modifies:
       `TideToday`._ **Aesthetic checkpoint — needs a human look.**
 
-- [ ] **3. Waves adopts the card, and brings `StatGroup` with it.** 🌊 header;
+- [x] **3. Waves adopts the card, and brings `StatGroup` with it.** 🏄 header;
       swell period and water temperature
       become labelled stats instead of clauses in a sentence; `heightWords` keeps
       its plain-language line. The buoy attribution becomes a `ProvenanceLine`,
@@ -93,7 +96,7 @@ of it.
       period and water temp are readable without reading a sentence, and the
       no-buoy and unavailable states are unchanged. _Modifies: `WavesToday`._
 
-- [ ] **4. Air adopts the card, with two provenances made visible.** 🌡️ header;
+- [x] **4. Air adopts the card, with two provenances made visible.** 🌡️ header;
       **two** `StatGroup`s — wind and gust from the air station, sky and
       visibility from the sky station — each followed by **its own**
       `ProvenanceLine`. Grouping by provenance is the point: ADR-0010 requires a
