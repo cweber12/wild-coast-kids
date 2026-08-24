@@ -1,6 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import { TOUCH_TARGET } from "./touchTarget";
 
 /**
  * Choosing which beach the conditions view is about.
@@ -36,14 +37,26 @@ export function BeachSelector({
   const router = useRouter();
 
   return (
-    <div className="mb-9">
-      <label className="leading-relaxed text-base text-fog" htmlFor="beach">
+    // No margin of its own: it sits in the page header's flex row now, and the
+    // row owns the spacing. Carrying one here would be counted twice.
+    <div className="md:shrink-0">
+      <label
+        className="text-2xs mb-2 block font-extrabold tracking-widest text-ocean uppercase"
+        htmlFor="beach"
+      >
         Choose a beach
       </label>
+      {/*
+        `TOUCH_TARGET` rather than the bare py-3 this had: it is the site's
+        44px floor below md (ADR-0004), and this is the one control on the
+        page. It already measured about that, which is exactly the drift the
+        constant exists to stop -- a value that happens to be right is not the
+        same as one that stays right.
+      */}
       <select
         id="beach"
         name="beach"
-        className="rounded-pill mt-2 block w-full max-w-130 border-2 border-lavender bg-white px-5 py-3 text-base"
+        className={`rounded-pill ${TOUCH_TARGET} block w-full border-2 border-lavender bg-white px-5 py-3 text-base font-bold md:w-72`}
         defaultValue={current}
         onChange={(event) => router.push(`/conditions/${event.target.value}`)}
       >

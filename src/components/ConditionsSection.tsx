@@ -16,6 +16,7 @@ import {
 } from "@/lib/beaches";
 import { BeachSelector } from "./BeachSelector";
 import { ConditionsNotes } from "./ConditionsNotes";
+import { ReservedSlot } from "./ReservedSlot";
 import { TidePanel } from "./TidePanel";
 import { WavePanel } from "./WavePanel";
 import { WindPanel } from "./WindPanel";
@@ -31,54 +32,96 @@ export function ConditionsSection({ slug }: { slug: string }) {
 
   return (
     <section className="px-gutter-sm py-section-sm md:px-gutter md:py-section">
-      <p className="mb-7 text-2xs font-extrabold tracking-widest text-ocean uppercase">
-        Surf · Tide · Wind · Visibility
-      </p>
-      <h1 className="text-title leading-display mb-4 font-black italic">
-        Check <span className="text-ocean">conditions</span> first.
-      </h1>
-      <p className="leading-relaxed mb-9 max-w-130 text-base text-fog">
-        Real-time surf, tide, wind and visibility for San Diego&apos;s coast —
-        built by a local, for families planning tidepool visits and hikes. Know
-        before you go.
-      </p>
+      {/*
+        The chooser sits beside the title rather than under the lead paragraph,
+        and the move is worth about 103px of the first screen — enough to decide
+        whether the readings land above the fold on a 639px window or below it.
 
-      <BeachSelector groups={groups} current={slug} />
-
-      <Suspense
-        fallback={
-          <p className="text-base text-fog">
-            Reading today&apos;s tide from NOAA…
+        It is also where the control belongs. It decides what every figure on
+        the page means, and it was the fourth element down, under a paragraph,
+        with a 13px label. Bottom-aligned so the two columns finish on the same
+        line; stacked below `md`, where there is no width to share.
+      */}
+      <div className="mb-9 md:flex md:items-end md:justify-between md:gap-10">
+        <div>
+          <p className="mb-5 text-2xs font-extrabold tracking-widest text-ocean uppercase">
+            Surf · Tide · Wind · Visibility
           </p>
-        }
-      >
-        <TidePanel slug={slug} />
-      </Suspense>
+          <h1 className="text-title leading-display mb-4 font-black italic">
+            Check <span className="text-ocean">conditions</span> first.
+          </h1>
+          <p className="leading-relaxed max-w-130 text-base text-fog">
+            Real-time surf, tide, wind and visibility for San Diego&apos;s coast
+            — built by a local, for families planning tidepool visits and hikes.
+            Know before you go.
+          </p>
+        </div>
+
+        <div className="mt-7 md:mt-0">
+          <BeachSelector groups={groups} current={slug} />
+        </div>
+      </div>
 
       {/*
-        Its own boundary, so a slow buoy cannot hold up the tide time. The two
-        readings come from different agencies and fail independently.
+        The now-band: what the beach is doing at this moment, three readings
+        across. This is what the page was missing rather than a way of filling
+        space — a parent weighing a tide time against a wave height had them
+        three screens apart in reading order, and could not see both at once.
+
+        Each keeps its own suspense boundary inside the grid. Three agencies go
+        quiet independently and none may hold up the other two; making the grid
+        the boundary instead would have traded that away for one line of markup.
+
+        Two columns from `sm` rather than three: below `lg` three cards leave the
+        stat labels wrapping, and a wrapped 10px uppercase label is harder to
+        read than a card further down the page.
       */}
-      <Suspense
-        fallback={<p className="mt-9 text-base text-fog">Reading the buoy…</p>}
-      >
-        <WavePanel slug={slug} />
-      </Suspense>
+      <div className="mb-9 grid items-stretch gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <Suspense
+          fallback={
+            <p className="text-base text-fog">
+              Reading today&apos;s tide from NOAA…
+            </p>
+          }
+        >
+          <TidePanel slug={slug} />
+        </Suspense>
+
+        <Suspense
+          fallback={<p className="text-base text-fog">Reading the buoy…</p>}
+        >
+          <WavePanel slug={slug} />
+        </Suspense>
+
+        {/*
+          The fallback names one station where the panel reads two, which is
+          issue #94 and not this slice's to fix.
+        */}
+        <Suspense
+          fallback={
+            <p className="text-base text-fog">Reading the weather station…</p>
+          }
+        >
+          <WindPanel slug={slug} />
+        </Suspense>
+      </div>
 
       {/*
-        Its own boundary again. Three agencies, three failure modes: NOAA's tide
-        service, NDBC's buoys and the National Weather Service's stations all go
-        quiet independently, and none of them should hold up the other two.
+        The sighting map is specified in #121 and deferred, so the page says
+        what lands here rather than being silent about it — the standing use of
+        a reserved slot in this repo. It comes out in the slice that fills it,
+        because a slot removed early leaves the page promising less than it did.
+
+        Sized into the space the map will occupy, so the layout around it is
+        designed rather than discovered when the map arrives.
       */}
-      <Suspense
-        fallback={
-          <p className="mt-9 text-base text-fog">
-            Reading the weather station…
-          </p>
-        }
-      >
-        <WindPanel slug={slug} />
-      </Suspense>
+      <div className="mb-9">
+        <ReservedSlot
+          emoji="🗺️"
+          headline="A map of what people have found here is coming."
+          detail="Octopus, nudibranchs, sea hares and leopard sharks logged near this beach in the past week — reported by naturalists, not surveyed by us."
+        />
+      </div>
 
       {/*
         One block for everything true of every reading — the datum, what a buoy

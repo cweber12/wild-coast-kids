@@ -76,7 +76,9 @@ export function ConditionsNotes({
   reach: InventoryReach;
 }) {
   return (
-    <section aria-labelledby="conditions-notes-heading" className="mt-9">
+    // No top margin: the now-band above carries the gap. Spacing on both is
+    // counted twice, which is the failure `SnapSection`'s docstring records.
+    <section aria-labelledby="conditions-notes-heading">
       <h2
         id="conditions-notes-heading"
         className="text-2xs mb-3 font-extrabold tracking-widest text-ocean uppercase"

@@ -14,7 +14,7 @@ const FAR_STATION = {
   distanceM: 56_557,
 };
 
-test("a reading leads with the time and names the beach", () => {
+test("a reading leads with the time, and the beach names the region", () => {
   render(
     <TideToday
       beachName="La Jolla Shores Beach"
@@ -25,8 +25,19 @@ test("a reading leads with the time and names the beach", () => {
 
   const heading = screen.getByRole("heading", { level: 2 });
   expect(heading.textContent).toContain("Lowest tide today");
-  expect(heading.textContent).toContain("La Jolla Shores Beach");
   expect(screen.getByText("6:24 AM")).toBeDefined();
+
+  // The beach left the visible heading when three cards went side by side —
+  // the same constant printed three times is noise, and the page header and
+  // the chooser already say which beach this is. It stays in the region's
+  // accessible name, for someone navigating by landmark rather than reading
+  // the header.
+  expect(heading.textContent).not.toContain("La Jolla Shores Beach");
+  expect(
+    screen.getByRole("region", {
+      name: "Lowest tide today · La Jolla Shores Beach",
+    }),
+  ).toBeDefined();
 });
 
 test("a positive height is described against the average low", () => {
@@ -37,7 +48,10 @@ test("a positive height is described against the average low", () => {
       state={{ kind: "reading", timeLabel: "6:24 AM", feet: 1.368 }}
     />,
   );
-  expect(screen.getByText(/1\.4 ft above the average low tide/)).toBeDefined();
+  // The number is a figure now, beside the sentence that explains it — it was
+  // the last measurement on the page still dissolved in prose.
+  expect(screen.getByText("1.4 ft")).toBeDefined();
+  expect(screen.getByText(/Above the average low tide/)).toBeDefined();
 });
 
 test("a negative height explains its own minus sign", () => {
@@ -50,8 +64,9 @@ test("a negative height explains its own minus sign", () => {
   );
   // The sign is the most useful fact on the page for a tidepooler and the most
   // likely to read as an error, so it is explained where it appears.
+  expect(screen.getByText("-0.4 ft")).toBeDefined();
   expect(
-    screen.getByText(/-0\.4 ft — the water drops below the average low/),
+    screen.getByText(/Below the average low tide — more of the sand and reef/),
   ).toBeDefined();
 });
 
@@ -162,8 +177,9 @@ test("an unavailable reading is a sentence, with the upstream reason behind a di
   expect(
     screen.getByText("NOAA returned HTTP 503 for station 9410230."),
   ).toBeDefined();
-  // No blank and no zero: nothing here can be read as a calm sea.
-  expect(screen.queryByText(/ft above the average low/)).toBeNull();
+  // No blank, no zero and no height: nothing here can be read as a calm sea.
+  expect(screen.queryByText(/average low tide/)).toBeNull();
+  expect(screen.queryByText("Height")).toBeNull();
 });
 
 test("drift is called out as a bug here rather than a problem at the station", () => {

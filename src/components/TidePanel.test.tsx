@@ -29,7 +29,8 @@ test("asks for the slug it was given and renders the reading", async () => {
 
   expect(readTodaysLowestLow).toHaveBeenCalledWith("la-jolla-shores-beach");
   expect(screen.getByText("6:24 AM")).toBeDefined();
-  expect(screen.getByText(/1\.4 ft above the average low tide/)).toBeDefined();
+  expect(screen.getByText("1.4 ft")).toBeDefined();
+  expect(screen.getByText(/Above the average low tide/)).toBeDefined();
 });
 
 test("an unavailable reading reaches the reader as words, not a blank", async () => {

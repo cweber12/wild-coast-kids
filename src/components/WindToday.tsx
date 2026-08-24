@@ -171,7 +171,8 @@ export function WindToday({
     <ReadingCard
       emoji="🌡️"
       headingId="wind-today-heading"
-      title={`Air · ${beachName}`}
+      title="Air"
+      context={beachName}
       figure={temperatureWords(air)}
     >
       {/*
