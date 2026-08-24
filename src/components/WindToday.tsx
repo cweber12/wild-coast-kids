@@ -21,7 +21,10 @@
  *
  * The cost of that decision is a second attribution line, and it is deliberately
  * not hidden: a reader who cannot tell which station supplied which figure is
- * worse off than one who has to read two lines.
+ * worse off than one who has to read two lines. Both lines stay here for that
+ * reason. What left is the explanation of *why* the sky is an airport reading,
+ * which is true of every beach on the site and now sits once in
+ * `ConditionsNotes` instead of under one panel out of three.
  *
  * **Both distances are always shown**, which the single-station version did not
  * do — it hid anything under five kilometres. With two stations named, showing
@@ -205,9 +208,7 @@ export function WindToday({
             {skyStation.distanceM !== null
               ? `, ${distanceWords(skyStation.distanceM)} away`
               : ""}
-            . That is an airport reading rather than one taken at the shore:
-            cloud and visibility are only published by airports, and coastal fog
-            is exactly what changes across that distance.
+            .
           </p>
         )}
       </div>

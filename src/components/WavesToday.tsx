@@ -12,10 +12,12 @@
  * given a plain-language companion. The bands are this site's own wording for
  * published measurements, not a judgement about whether anyone should go in.
  *
- * **A buoy is offshore, and says so.** These are open-water measurements taken
- * some distance out, not the height of the wave breaking at the shore, and no
- * shoaling transform is applied. Where the buoy is far away the distance is
- * given, for the same reason the tide panel gives it.
+ * **A buoy is offshore, and says so — once, for the page.** These are open-water
+ * measurements taken some distance out, not the height of the wave breaking at
+ * the shore, and no shoaling transform is applied. That explanation is the same
+ * on every beach, so it lives in `ConditionsNotes` rather than being repeated
+ * under each reading. What stays here is what differs per beach: which buoy, and
+ * how far away it is when that is far enough to matter.
  */
 
 import type { WavesView } from "@/lib/conditions";
@@ -103,8 +105,6 @@ export function WavesToday({ beachName, buoy, state }: WavesView) {
         <p className="text-2xs leading-relaxed text-fog">
           Measured at NDBC buoy {buoy.name}
           {distantKm !== null ? `, about ${distantKm} km from this beach` : ""}.
-          That is the height of the swell in open water, not the height of the
-          wave breaking at the shore, and it is not a safety assessment.
         </p>
       )}
     </section>

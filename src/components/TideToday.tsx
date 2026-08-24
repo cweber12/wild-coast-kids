@@ -13,8 +13,11 @@
  * **The datum is explained once, in words.** A tide of -0.4 ft reads as an error
  * to anyone who has not met mean lower low water, and it is the single most
  * useful figure on the page for a tidepooler. So the sign is explained where it
- * appears and the acronym is named once, at the bottom, rather than beside every
- * figure.
+ * appears — `heightSentence` still says what a negative number means — and the
+ * acronym is named once rather than beside every figure. That naming now lives
+ * in `ConditionsNotes`, one block for the whole page, because this panel was
+ * making the argument and then two panels beside it repeated their own version
+ * of it. What stays here is the attribution: which station, and how far.
  *
  * **An absent reading is a sentence, not a blank.** A missing number renders as
  * an explanation a reader can act on, with the upstream detail behind a
@@ -119,9 +122,7 @@ export function TideToday({ beachName, station, state }: TideTodayProps) {
           {distantKm !== null
             ? ` — the nearest ${station.water === "bay" ? "bay" : "open-coast"} station publishing predictions, about ${distantKm} km away`
             : ""}
-          . Heights are feet above mean lower low water, the average of the
-          lower low tide each day. Predictions are astronomy, not a measurement
-          of the water on the day, and they are not a safety assessment.
+          .
         </p>
       )}
     </section>

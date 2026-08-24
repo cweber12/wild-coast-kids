@@ -75,11 +75,13 @@ test("a near station keeps its distance rather than rounding it away", () => {
   expect(screen.getByText(/1\.4 km from this beach/)).toBeDefined();
 });
 
-test("the airport says it is an airport, and why that is the only option", () => {
-  render(<WindToday {...panel()} />);
-
-  expect(screen.getByText(/only published by airports/)).toBeDefined();
-});
+/**
+ * "Why the sky comes from an airport" moved to `ConditionsNotes`, and is
+ * asserted there. It is true at every beach on the site, so it was collected
+ * with the rest of the shared explanation rather than sitting under this one
+ * panel. What this panel still owes the reader — both stations named, each with
+ * its own distance — is asserted above.
+ */
 
 test("the ten-mile ceiling reads as a floor, never as an exact measurement", () => {
   render(<WindToday {...panel()} />);

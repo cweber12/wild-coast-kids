@@ -59,7 +59,13 @@ test("a buoy reporting no water temperature says so rather than omitting it", ()
   expect(screen.getByText(/reported no water temperature/)).toBeDefined();
 });
 
-test("the reading is attributed as open water, not as the breaking wave", () => {
+/**
+ * That an open-water buoy is not the breaking wave is asserted in
+ * `ConditionsNotes.test.tsx` now — it is true at every beach, so it was
+ * collected rather than repeated under each reading. What stays here is the
+ * buoy, and the distance when there is one worth disclosing.
+ */
+test("a nearby buoy is credited without a distance", () => {
   render(
     <WavesToday
       beachName="La Jolla Shores Beach"
@@ -73,9 +79,7 @@ test("the reading is attributed as open water, not as the breaking wave", () => 
       }}
     />,
   );
-  expect(
-    screen.getByText(/not the height of the wave breaking at the shore/),
-  ).toBeDefined();
+  expect(screen.getByText(new RegExp(`NDBC buoy ${NEAR.name}`))).toBeDefined();
   expect(screen.queryByText(/km from this beach/)).toBeNull();
 });
 

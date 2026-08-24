@@ -55,7 +55,13 @@ test("a negative height explains its own minus sign", () => {
   ).toBeDefined();
 });
 
-test("the datum is named once, and predictions are not offered as a safety call", () => {
+/**
+ * The datum and the safety qualification are asserted in
+ * `ConditionsNotes.test.tsx` now. They were the same sentences under all three
+ * panels, so they were collected into one block; what this panel still owes the
+ * reader is which station answered for this beach.
+ */
+test("the station that supplied the prediction is credited here, not elsewhere", () => {
   render(
     <TideToday
       beachName="La Jolla Shores Beach"
@@ -63,8 +69,12 @@ test("the datum is named once, and predictions are not offered as a safety call"
       state={{ kind: "reading", timeLabel: "6:24 AM", feet: 1.368 }}
     />,
   );
-  expect(screen.getByText(/mean lower low water/)).toBeDefined();
-  expect(screen.getByText(/not a safety assessment/)).toBeDefined();
+  // Read off the rendered paragraph rather than matched as a pattern: the
+  // station's name carries parentheses, and building a regex from it turns
+  // them into a capture group that matches a string the page never renders.
+  const attribution = screen.getByText(/Predicted for/).textContent ?? "";
+  expect(attribution).toContain(NEAR_STATION.name);
+  expect(attribution).toContain("NOAA Tides & Currents");
 });
 
 test("a nearby station is credited without a distance", () => {
