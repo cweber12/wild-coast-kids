@@ -1,11 +1,12 @@
 import { NavLink } from "./NavLink";
 import { Placeholder } from "./Placeholder";
+import { TOUCH_TARGET } from "./touchTarget";
 
-// 44px, per ADR-0004. Named once and composed by every interactive element in
-// the bar, because the failure this repo has is drift -- a link added later
-// without it -- and one name is one place to be wrong. The gate can assert
-// that an element refers to this; it cannot assert the rendered box (ADR-0001).
-const TOUCH_TARGET = "flex min-h-11 items-center";
+// Every interactive element in the bar composes the shared floor, because the
+// failure this repo has is drift -- a link added later without it. The
+// constant carries the number only; `flex items-center` is the nav's own
+// layout, and PillLink needs a different one. See touchTarget.ts.
+const NAV_TARGET = `${TOUCH_TARGET} flex items-center`;
 
 const SECTION_LINKS = [
   { href: "/art", label: "Art Classes" },
@@ -46,7 +47,7 @@ export function Nav() {
           <NavLink
             key={href}
             href={href}
-            className={`${TOUCH_TARGET} group px-1.5 text-[9px] font-extrabold tracking-wider whitespace-nowrap text-dark uppercase md:px-0 md:text-2xs`}
+            className={`${NAV_TARGET} group px-1.5 text-[9px] font-extrabold tracking-wider whitespace-nowrap text-dark uppercase md:px-0 md:text-2xs`}
           >
             <span className="border-b-2 border-transparent pb-0.5 transition-colors duration-fast group-hover:border-yellow group-aria-[current=page]:border-yellow">
               {label}
@@ -60,7 +61,7 @@ export function Nav() {
           floor (ADR-0004). */}
       <NavLink
         href="/book"
-        className={`${TOUCH_TARGET} rounded-pill shrink-0 bg-yellow px-3.5 text-2xs font-black tracking-[0.06em] whitespace-nowrap text-ink md:min-h-0 md:px-5.5 md:py-2.25 md:text-xs`}
+        className={`${NAV_TARGET} rounded-pill shrink-0 bg-yellow px-3.5 text-2xs font-black tracking-[0.06em] whitespace-nowrap text-ink md:min-h-0 md:px-5.5 md:py-2.25 md:text-xs`}
       >
         Book Now →
       </NavLink>

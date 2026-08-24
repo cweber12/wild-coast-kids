@@ -1,6 +1,8 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 
+import { TOUCH_TARGET } from "./touchTarget";
+
 export type PillTone =
   "yellow" | "purple" | "ocean" | "outline-light" | "outline-dark";
 
@@ -41,7 +43,16 @@ export function PillLink({ href, tone, children }: PillLinkProps) {
   return (
     <Link
       href={href}
-      className={`rounded-pill inline-block text-sm ${TONES[tone]}`}
+      // The 44px floor below md (ADR-0004): text-sm carries no paired
+      // line-height, so the capsule measured 43.14px solid and 42.34px
+      // outline in Chrome -- both under the floor. min-h takes both to
+      // exactly 44 there without touching TONES, because the box is
+      // border-box; above md they keep the heights they already had.
+      // md:min-h-0 because the pill is a visible shape, not just a hit area:
+      // growing it above md is a redesign, and it already clears the 24px
+      // pointer floor. inline-flex, not the nav's flex, keeps the pill
+      // inline-level; items-center centres the label in the taller box.
+      className={`rounded-pill ${TOUCH_TARGET} inline-flex items-center text-sm md:min-h-0 ${TONES[tone]}`}
     >
       {children}
     </Link>
