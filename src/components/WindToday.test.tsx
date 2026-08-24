@@ -37,21 +37,44 @@ test("the temperature is the panel's largest figure and visibility is not", () =
   // an airport. See ADR 0010.
   render(<WindToday {...panel()} />);
 
-  expect(screen.getByText("71°F").className).toContain("text-4xl");
-  expect(
-    screen.getByText(/Visibility 10 miles or more/).className,
-  ).not.toContain("text-4xl");
+  expect(screen.getByText("71°F").className).toContain("text-stat");
+  expect(screen.getByText("10 miles or more").className).not.toContain(
+    "text-stat",
+  );
 });
 
-test("wind, sky and visibility read as one sentence beneath the temperature", () => {
+test("wind, sky and visibility are figures beneath the temperature, not a sentence", () => {
+  // They were clauses in one paragraph, which meant learning the wind speed
+  // required reading a sentence. Each is a labelled figure now.
   render(<WindToday {...panel()} />);
 
-  // One node, so the order is asserted rather than three presence checks.
-  expect(
-    screen.getByText(
-      /Wind 8 mph from the north-west\. Sky: clear\. Visibility 10 miles or more\./,
-    ),
-  ).toBeDefined();
+  expect(screen.getByText("Wind")).toBeDefined();
+  expect(screen.getByText("8 mph from the north-west")).toBeDefined();
+  expect(screen.getByText("Sky")).toBeDefined();
+  expect(screen.getByText("Clear")).toBeDefined();
+  expect(screen.getByText("Visibility")).toBeDefined();
+  expect(screen.getByText("10 miles or more")).toBeDefined();
+});
+
+/**
+ * ADR-0010's requirement, asserted structurally rather than by reading prose.
+ * The four figures come from two stations at very different distances, and the
+ * grouping is what lets a reader tell which supplied which. One group must
+ * never span both.
+ */
+test("the figures are grouped by the station that supplied them", () => {
+  const { container } = render(<WindToday {...panel()} />);
+
+  const groups = container.querySelectorAll("dl");
+  expect(groups.length).toBe(2);
+
+  const wind = groups[0].textContent ?? "";
+  expect(wind).toContain("Wind");
+  expect(wind).not.toContain("Visibility");
+
+  const sky = groups[1].textContent ?? "";
+  expect(sky).toContain("Visibility");
+  expect(sky).not.toContain("Wind");
 });
 
 test("both stations are named, each with its own distance", () => {
@@ -60,10 +83,13 @@ test("both stations are named, each with its own distance", () => {
   // than one who has to read two lines.
   render(<WindToday {...panel()} />);
 
-  expect(
-    screen.getByText(/Temperature and wind measured at Scripps Pier/),
-  ).toBeDefined();
-  expect(screen.getByText(/Miramar, 10 km away/)).toBeDefined();
+  const air = screen.getByText(/Scripps Pier/).textContent ?? "";
+  expect(air).toContain("Temperature and wind");
+  expect(air).toContain("1.4 km from this beach");
+
+  const sky = screen.getByText(/Miramar/).textContent ?? "";
+  expect(sky).toContain("Sky and visibility");
+  expect(sky).toContain("10 km away");
 });
 
 test("a near station keeps its distance rather than rounding it away", () => {
@@ -86,7 +112,7 @@ test("a near station keeps its distance rather than rounding it away", () => {
 test("the ten-mile ceiling reads as a floor, never as an exact measurement", () => {
   render(<WindToday {...panel()} />);
 
-  expect(screen.getByText(/Visibility 10 miles or more/)).toBeDefined();
+  expect(screen.getByText("10 miles or more")).toBeDefined();
 });
 
 test("a visibility below the ceiling is given as the measurement it is", () => {
@@ -98,7 +124,7 @@ test("a visibility below the ceiling is given as the measurement it is", () => {
     />,
   );
 
-  expect(screen.getByText(/Visibility 8 miles\./)).toBeDefined();
+  expect(screen.getByText("8 miles")).toBeDefined();
 });
 
 test("a visibility under a mile keeps its decimal, being the reading that matters", () => {
@@ -112,7 +138,7 @@ test("a visibility under a mile keeps its decimal, being the reading that matter
     />,
   );
 
-  expect(screen.getByText(/Visibility 0\.3 miles\./)).toBeDefined();
+  expect(screen.getByText("0.3 miles")).toBeDefined();
 });
 
 test("one mile is singular", () => {
@@ -124,7 +150,7 @@ test("one mile is singular", () => {
     />,
   );
 
-  expect(screen.getByText(/Visibility 1 mile\./)).toBeDefined();
+  expect(screen.getByText("1 mile")).toBeDefined();
 });
 
 test("wind is given in plain words, from the direction it blows from", () => {
@@ -132,19 +158,20 @@ test("wind is given in plain words, from the direction it blows from", () => {
   // would reverse every reading on the page.
   render(<WindToday {...panel()} />);
 
-  expect(screen.getByText(/Wind 8 mph from the north-west/)).toBeDefined();
+  expect(screen.getByText("8 mph from the north-west")).toBeDefined();
 });
 
 test("a gust is shown when the station published one", () => {
   render(<WindToday {...panel({ air: { ...AIR, gustMph: 14.2 } })} />);
 
-  expect(screen.getByText(/gusting 14/)).toBeDefined();
+  expect(screen.getByText("Gusting")).toBeDefined();
+  expect(screen.getByText("14 mph")).toBeDefined();
 });
 
 test("wind with no direction is still given as a speed", () => {
   render(<WindToday {...panel({ air: { ...AIR, windDirDegT: null } })} />);
 
-  expect(screen.getByText(/Wind 8 mph\./)).toBeDefined();
+  expect(screen.getByText("8 mph")).toBeDefined();
 });
 
 test("no wind value says so rather than reading as calm", () => {
@@ -155,7 +182,8 @@ test("no wind value says so rather than reading as calm", () => {
     />,
   );
 
-  expect(screen.getByText(/reported no wind speed/)).toBeDefined();
+  expect(screen.getByText("Wind")).toBeDefined();
+  expect(screen.getByText("Not reported")).toBeDefined();
 });
 
 test("a genuine calm is named as calm, not as a missing reading", () => {
@@ -163,7 +191,42 @@ test("a genuine calm is named as calm, not as a missing reading", () => {
     <WindToday {...panel({ air: { ...AIR, windMph: 0, windDirDegT: 0 } })} />,
   );
 
-  expect(screen.getByText(/The wind is calm/)).toBeDefined();
+  expect(screen.getByText("Calm")).toBeDefined();
+});
+
+/**
+ * Regression. The sentence this replaced returned at "The wind is calm" and
+ * never reached its gust clause; the first stats version appended one anyway,
+ * and the live page rendered "Wind: Calm / Gusting: 2 mph" — a card
+ * contradicting itself. Under a knot of wind a gust is instrument noise rather
+ * than weather anybody feels.
+ */
+test("a calm wind reports no gust, however the instrument twitched", () => {
+  render(
+    <WindToday
+      {...panel({
+        air: { ...AIR, windMph: 0.4, windDirDegT: 0, gustMph: 2.1 },
+      })}
+    />,
+  );
+
+  expect(screen.getByText("Calm")).toBeDefined();
+  expect(screen.queryByText("Gusting")).toBeNull();
+});
+
+test("a gust with no wind speed at all is not reported either", () => {
+  // "Not reported / Gusting 14 mph" would be the same contradiction wearing a
+  // different hat: a gust is a property of a wind we do not have.
+  render(
+    <WindToday
+      {...panel({
+        air: { ...AIR, windMph: null, windDirDegT: null, gustMph: 14.2 },
+      })}
+    />,
+  );
+
+  expect(screen.getByText("Not reported")).toBeDefined();
+  expect(screen.queryByText("Gusting")).toBeNull();
 });
 
 test("a missing temperature says so rather than leaving the panel headed by nothing", () => {
@@ -178,9 +241,9 @@ test("a missing temperature says so rather than leaving the panel headed by noth
 test("a station publishing no sky simply goes unsaid", () => {
   render(<WindToday {...panel({ sky: { ...SKY, sky: null } })} />);
 
-  expect(screen.queryByText(/Sky:/)).toBeNull();
+  expect(screen.queryByText("Sky")).toBeNull();
   // Visibility still renders: it is the other half of the same station.
-  expect(screen.getByText(/Visibility 10 miles or more/)).toBeDefined();
+  expect(screen.getByText("10 miles or more")).toBeDefined();
 });
 
 test("an airport publishing no visibility says so rather than rendering blank", () => {
@@ -192,7 +255,8 @@ test("an airport publishing no visibility says so rather than rendering blank", 
     />,
   );
 
-  expect(screen.getByText(/reported no visibility/)).toBeDefined();
+  expect(screen.getByText("Visibility")).toBeDefined();
+  expect(screen.getByText("Not reported")).toBeDefined();
 });
 
 test("a failing sky never takes the temperature down with it", () => {
@@ -212,7 +276,7 @@ test("a failing sky never takes the temperature down with it", () => {
   );
 
   expect(screen.getByText("71°F")).toBeDefined();
-  expect(screen.getByText(/Wind 8 mph/)).toBeDefined();
+  expect(screen.getByText("8 mph from the north-west")).toBeDefined();
   expect(screen.getByText(/returns 404/)).toBeDefined();
   expect(screen.queryByText(/Visibility/)).toBeNull();
 });
@@ -230,9 +294,8 @@ test("a failing temperature never takes the sky down with it", () => {
     />,
   );
 
-  expect(
-    screen.getByText(/Sky: clear\. Visibility 10 miles or more\./),
-  ).toBeDefined();
+  expect(screen.getByText("Clear")).toBeDefined();
+  expect(screen.getByText("10 miles or more")).toBeDefined();
   expect(screen.getByText("No temperature just now")).toBeDefined();
   expect(screen.getByText(/returns 404/)).toBeDefined();
 });
@@ -273,7 +336,7 @@ test("no air station is a permanent fact about the place, with its reason", () =
   expect(screen.getByText(/outside San Diego County/)).toBeDefined();
   // Never invite a reader to retry something that will never work.
   expect(screen.queryByText(/just now/)).toBeNull();
-  expect(screen.queryByText(/Temperature and wind measured at/)).toBeNull();
+  expect(screen.queryByText(/Temperature and wind/)).toBeNull();
 });
 
 test("no sky station leaves the temperature standing on its own", () => {
@@ -291,5 +354,5 @@ test("no sky station leaves the temperature standing on its own", () => {
 
   expect(screen.getByText("71°F")).toBeDefined();
   expect(screen.getByText(/publishes a sky description/)).toBeDefined();
-  expect(screen.queryByText(/Sky and visibility at/)).toBeNull();
+  expect(screen.queryByText(/Sky and visibility/)).toBeNull();
 });

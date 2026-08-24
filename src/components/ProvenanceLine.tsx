@@ -24,8 +24,17 @@
 type ProvenanceLineProps = {
   /** What the figure names it, ready to print. Never a callsign turned into prose — see #87. */
   source: string;
-  /** Who publishes it, so two readings from two networks are distinguishable. */
-  network: string;
+  /**
+   * Who publishes it, so two readings from two networks are distinguishable.
+   *
+   * Optional because the air panel genuinely does not know. `StationBinding`
+   * carries a name and a distance and no network, and the panel has never named
+   * one — an air station may be on either the NWS or the NDBC network, so there
+   * is no constant to fall back on. Rendering a guess would be worse than
+   * rendering nothing, and threading the field through the view model is a data
+   * change rather than a presentation one.
+   */
+  network?: string | null;
   /** Already worded by the caller, which owns the rounding. `null` withholds it. */
   distance?: string | null;
   /** Why this source and not a nearer one, when there is something to say. */
@@ -36,7 +45,7 @@ type ProvenanceLineProps = {
 
 export function ProvenanceLine({
   source,
-  network,
+  network = null,
   distance = null,
   note = null,
   label = null,
@@ -44,7 +53,8 @@ export function ProvenanceLine({
   return (
     <p className="text-2xs leading-relaxed text-fog">
       {label !== null && <span className="font-extrabold">{label} </span>}
-      {source} · {network}
+      {source}
+      {network !== null ? ` · ${network}` : ""}
       {distance !== null ? ` · ${distance}` : ""}
       {note !== null ? ` — ${note}` : ""}
     </p>

@@ -48,6 +48,9 @@
  */
 
 import type { AirView } from "@/lib/conditions";
+import { ProvenanceLine } from "./ProvenanceLine";
+import { ReadingCard } from "./ReadingCard";
+import { type Stat, StatGroup } from "./StatGroup";
 
 const COMPASS = [
   "north",
@@ -90,30 +93,62 @@ function distanceWords(metres: number): string {
   return `${km < 10 ? km.toFixed(1) : km.toFixed(0)} km`;
 }
 
-/** The wind, as a sentence, or the reason there is not one. */
-function windSentence(air: AirView["air"]): string {
-  if (air.kind !== "reading") return "";
-  if (air.windMph === null) return " The station reported no wind speed.";
-  if (air.windMph < 1) return " The wind is calm.";
-  return (
-    ` Wind ${Math.round(air.windMph)} mph` +
-    (air.windDirDegT !== null
-      ? ` from the ${compassWords(air.windDirDegT)}`
-      : "") +
-    (air.gustMph !== null ? `, gusting ${Math.round(air.gustMph)}` : "") +
-    "."
-  );
+/**
+ * The wind, as figures from the shore station.
+ *
+ * `null` and *absent* mean different things here, and the difference is
+ * deliberate. A null wind speed is a measured absence — the station carries the
+ * field and published nothing — so it renders "Not reported". A gust is omitted
+ * entirely when there is none, because most stations most of the time are not
+ * gusting and a standing "Not reported" would turn ordinary weather into a
+ * column of missing data. That matches what this panel already did: it appended
+ * ", gusting N" only when there was one, and said nothing otherwise.
+ *
+ * **A calm wind reports no gust**, which is the other half of what the sentence
+ * this replaced already did — it returned at "The wind is calm" and never
+ * reached the gust clause. Rendering both produced "Wind: Calm / Gusting: 2 mph"
+ * on the live page, a card contradicting itself. Under a knot of wind, a gust
+ * figure is noise from the instrument rather than weather anybody feels.
+ */
+function windStats(air: Extract<AirView["air"], { kind: "reading" }>): Stat[] {
+  const calm = air.windMph !== null && air.windMph < 1;
+
+  const speed =
+    air.windMph === null
+      ? null
+      : calm
+        ? "Calm"
+        : `${Math.round(air.windMph)} mph` +
+          (air.windDirDegT !== null
+            ? ` from the ${compassWords(air.windDirDegT)}`
+            : "");
+
+  const stats: Stat[] = [{ label: "Wind", value: speed }];
+  if (air.gustMph !== null && !calm && air.windMph !== null) {
+    stats.push({ label: "Gusting", value: `${Math.round(air.gustMph)} mph` });
+  }
+  return stats;
 }
 
-/** Sky then visibility, from the other station, or nothing at all. */
-function skySentence(sky: AirView["sky"]): string {
-  if (sky.kind !== "reading") return "";
-  return (
-    (sky.sky !== null ? ` Sky: ${sky.sky.toLowerCase()}.` : "") +
-    (sky.visibilityMi === null
-      ? " The airport reported no visibility."
-      : ` Visibility ${visibilityWords(sky.visibilityMi, sky.visibilityAtCeiling)}.`)
-  );
+/**
+ * Sky and visibility, as figures from the airport.
+ *
+ * Same distinction, and the same two behaviours this panel already had: a
+ * station publishing no sky simply goes unsaid, while an airport publishing no
+ * visibility says so. The asymmetry is upstream's — a missing sky layer is not
+ * a reading anyone attempted, and a missing visibility is.
+ */
+function skyStats(sky: Extract<AirView["sky"], { kind: "reading" }>): Stat[] {
+  const stats: Stat[] = [];
+  if (sky.sky !== null) stats.push({ label: "Sky", value: sky.sky });
+  stats.push({
+    label: "Visibility",
+    value:
+      sky.visibilityMi === null
+        ? null
+        : visibilityWords(sky.visibilityMi, sky.visibilityAtCeiling),
+  });
+  return stats;
 }
 
 /** The primary slot never renders empty: an empty one reads as a fault. */
@@ -132,23 +167,53 @@ export function WindToday({
   air,
   sky,
 }: AirView) {
-  const secondary = `${windSentence(air)}${skySentence(sky)}`.trim();
-
   return (
-    <section aria-labelledby="wind-today-heading" className="mt-9 max-w-130">
-      <h2
-        id="wind-today-heading"
-        className="text-2xs mb-3 font-extrabold tracking-widest text-ocean uppercase"
-      >
-        Air · {beachName}
-      </h2>
+    <ReadingCard
+      emoji="🌡️"
+      headingId="wind-today-heading"
+      title={`Air · ${beachName}`}
+      figure={temperatureWords(air)}
+    >
+      {/*
+        Two groups, each followed by its own attribution, and that arrangement
+        IS ADR-0010 rather than a layout preference. The four figures come from
+        two stations at very different distances, and a reader who cannot tell
+        which supplied which is worse off than one who reads two lines. As one
+        paragraph of prose the distinction was technically present and
+        practically invisible; grouped, it is the first thing the card shows.
 
-      <p className="leading-tight mb-2 text-4xl font-black italic">
-        {temperatureWords(air)}
-      </p>
+        One StatGroup never spans two sources.
+      */}
+      {air.kind === "reading" && <StatGroup stats={windStats(air)} />}
 
-      {secondary !== "" && (
-        <p className="leading-relaxed mb-4 text-base text-fog">{secondary}</p>
+      {airStation !== null && (
+        <ProvenanceLine
+          label="Temperature and wind"
+          source={airStation.name}
+          distance={
+            airStation.distanceM !== null
+              ? `${distanceWords(airStation.distanceM)} from this beach`
+              : null
+          }
+        />
+      )}
+
+      {sky.kind === "reading" && (
+        <div className="mt-4">
+          <StatGroup stats={skyStats(sky)} />
+        </div>
+      )}
+
+      {skyStation !== null && (
+        <ProvenanceLine
+          label="Sky and visibility"
+          source={skyStation.name}
+          distance={
+            skyStation.distanceM !== null
+              ? `${distanceWords(skyStation.distanceM)} away`
+              : null
+          }
+        />
       )}
 
       {air.kind === "no-station" && (
@@ -191,27 +256,6 @@ export function WindToday({
           <p className="mt-2">{sky.reason}</p>
         </details>
       )}
-
-      <div className="text-2xs leading-relaxed text-fog">
-        {airStation !== null && (
-          <p>
-            Temperature and wind measured at {airStation.name}
-            {airStation.distanceM !== null
-              ? `, ${distanceWords(airStation.distanceM)} from this beach`
-              : ""}
-            .
-          </p>
-        )}
-        {skyStation !== null && (
-          <p>
-            Sky and visibility at {skyStation.name}
-            {skyStation.distanceM !== null
-              ? `, ${distanceWords(skyStation.distanceM)} away`
-              : ""}
-            .
-          </p>
-        )}
-      </div>
-    </section>
+    </ReadingCard>
   );
 }
