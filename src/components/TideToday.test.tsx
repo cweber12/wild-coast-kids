@@ -72,8 +72,11 @@ test("the station that supplied the prediction is credited here, not elsewhere",
   // Read off the rendered paragraph rather than matched as a pattern: the
   // station's name carries parentheses, and building a regex from it turns
   // them into a capture group that matches a string the page never renders.
-  const attribution = screen.getByText(/Predicted for/).textContent ?? "";
+  const attribution =
+    screen.getByText(/NOAA Tides & Currents/).textContent ?? "";
   expect(attribution).toContain(NEAR_STATION.name);
+  // A plain ampersand reaches the reader. Written `&amp;` in the string
+  // attribute it would have rendered as the entity itself.
   expect(attribution).toContain("NOAA Tides & Currents");
 });
 

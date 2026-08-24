@@ -58,7 +58,7 @@ Establishes the visual direction on one card before three are converted. Slice 2
 is the **aesthetic checkpoint**: stop and look before building the rest on top
 of it.
 
-- [ ] **1. Collect the shared explanation into one block.** New `ConditionsNotes`
+- [x] **1. Collect the shared explanation into one block.** New `ConditionsNotes`
       holding what the three panels each repeat — the datum and what a negative
       tide height means, that a buoy measures open-water swell rather than the
       wave at the shore, that visibility is an airport reading and why, and the
@@ -70,8 +70,13 @@ of it.
       `WavesToday`, `WindToday`, `Caveats`, `ConditionsSection`._
       _Must precede slices 2–4: it is where their shed prose lands._
 
-- [ ] **2. The reading card, proven on the tide.** New `ReadingCard`,
-      `StatGroup` and `ProvenanceLine`, adopted by `TideToday` only. Emoji header
+- [x] **2. The reading card, proven on the tide.** New `ReadingCard` and
+      `ProvenanceLine`, adopted by `TideToday` only. **`StatGroup` is not built
+      here** — the tide card's secondary content is the height _sentence_, which
+      this slice keeps verbatim, so there is nothing for a stat list to hold.
+      Building it now would be a component with no consumer, which is the
+      speculative flexibility this file bans elsewhere. It lands in slice 3,
+      where waves is its first real user. Emoji header
       🐚, lead figure at `--text-stat` (replacing the raw `text-4xl`), the
       plain-language height sentence kept verbatim, and the station line as
       `station · network · distance`. `StatGroup` is a `<dl>`. All four tide
@@ -80,7 +85,8 @@ of it.
       `TideToday` test still passes unmodified. _New: three components. Modifies:
       `TideToday`._ **Aesthetic checkpoint — needs a human look.**
 
-- [ ] **3. Waves adopts the card.** 🌊 header; swell period and water temperature
+- [ ] **3. Waves adopts the card, and brings `StatGroup` with it.** 🌊 header;
+      swell period and water temperature
       become labelled stats instead of clauses in a sentence; `heightWords` keeps
       its plain-language line. The buoy attribution becomes a `ProvenanceLine`,
       keeping the distance disclosure past the existing threshold. **Done when**

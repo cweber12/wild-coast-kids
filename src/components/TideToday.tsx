@@ -34,6 +34,8 @@
  */
 
 import type { TideTodayView } from "@/lib/conditions";
+import { ProvenanceLine } from "./ProvenanceLine";
+import { ReadingCard } from "./ReadingCard";
 
 export type TideTodayProps = TideTodayView;
 
@@ -55,23 +57,16 @@ export function TideToday({ beachName, station, state }: TideTodayProps) {
       : null;
 
   return (
-    <section aria-labelledby="tide-today-heading" className="max-w-130">
-      <h2
-        id="tide-today-heading"
-        className="text-2xs mb-3 font-extrabold tracking-widest text-ocean uppercase"
-      >
-        Lowest tide today · {beachName}
-      </h2>
-
+    <ReadingCard
+      emoji="🐚"
+      headingId="tide-today-heading"
+      title={`Lowest tide today · ${beachName}`}
+      figure={state.kind === "reading" ? state.timeLabel : null}
+    >
       {state.kind === "reading" && (
-        <>
-          <p className="leading-tight mb-2 text-4xl font-black italic">
-            {state.timeLabel}
-          </p>
-          <p className="leading-relaxed mb-4 text-base text-fog">
-            {heightSentence(state.feet)}
-          </p>
-        </>
+        <p className="leading-relaxed mb-4 text-base text-fog">
+          {heightSentence(state.feet)}
+        </p>
       )}
 
       {state.kind === "no-low-today" && (
@@ -116,15 +111,23 @@ export function TideToday({ beachName, station, state }: TideTodayProps) {
         </>
       )}
 
+      {/*
+        The network name carries a plain ampersand rather than `&amp;`: it is a
+        string attribute, and JSX decodes entities in text children but not in
+        those. Written as `&amp;` it would reach the reader verbatim.
+      */}
       {station !== null && (
-        <p className="text-2xs leading-relaxed text-fog">
-          Predicted for {station.name}, NOAA Tides &amp; Currents
-          {distantKm !== null
-            ? ` — the nearest ${station.water === "bay" ? "bay" : "open-coast"} station publishing predictions, about ${distantKm} km away`
-            : ""}
-          .
-        </p>
+        <ProvenanceLine
+          source={station.name}
+          network="NOAA Tides & Currents"
+          distance={distantKm !== null ? `about ${distantKm} km away` : null}
+          note={
+            distantKm !== null
+              ? `the nearest ${station.water === "bay" ? "bay" : "open-coast"} station publishing predictions`
+              : null
+          }
+        />
       )}
-    </section>
+    </ReadingCard>
   );
 }
