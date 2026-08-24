@@ -1,6 +1,8 @@
 import { describe, expect, test } from "vitest";
 import {
+  addLocalDays,
   localDateOf,
+  localDayLabel,
   localDayOf,
   localTimeOf,
   SITE_TIME_ZONE,
@@ -49,5 +51,37 @@ describe("localDayOf", () => {
   // the 9th in UTC while it is still the evening of the 8th on the coast.
   test("uses Pacific rather than UTC to decide which day it is", () => {
     expect(localDayOf(Date.UTC(2026, 8, 9, 3, 0))).toBe("Tue, Sep 8");
+  });
+});
+
+describe("addLocalDays", () => {
+  test("moves the calendar by whole days", () => {
+    expect(addLocalDays("2026-08-17", 6)).toBe("2026-08-23");
+  });
+
+  test("a week across the fall-back is still seven days, not six and a half", () => {
+    // California returns to standard time on 2026-11-01, so a week built by
+    // adding 24-hour blocks to an instant near local midnight lands an hour
+    // earlier each side of it and can repeat a date. A date is not an instant,
+    // and this arithmetic is what keeps the difference.
+    expect(addLocalDays("2026-10-29", 7)).toBe("2026-11-05");
+  });
+
+  test("rolls the month and the year rather than overflowing them", () => {
+    expect(addLocalDays("2026-12-31", 1)).toBe("2027-01-01");
+    expect(addLocalDays("2026-01-31", 1)).toBe("2026-02-01");
+  });
+});
+
+describe("localDayLabel", () => {
+  test("names a date a reader can scan", () => {
+    expect(localDayLabel("2026-08-17")).toBe("Mon, Aug 17");
+  });
+
+  test("never renders the day before, whatever zone the host runs in", () => {
+    // The trap this exists to avoid: reading "2026-01-01" as an instant and
+    // formatting it in a zone behind UTC yields New Year's Eve. A local date
+    // carries no zone, so it is named in the only one that cannot shift it.
+    expect(localDayLabel("2026-01-01")).toBe("Thu, Jan 1");
   });
 });
