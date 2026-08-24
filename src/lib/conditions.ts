@@ -82,9 +82,26 @@ interface WeekDayFrame {
  * The seven days the week grid covers, today first.
  *
  * Every row on that grid is built from this, so the rows cannot disagree about
- * which day is Tuesday. Today is included rather than skipped: the week is a
- * planning view, and a reader comparing Saturday against the rest of it needs
- * the day they are standing in to compare from.
+ * which day is Tuesday.
+ *
+ * **Today is included, and its tide cell does repeat the card above it.** That
+ * cost is real — the same time and the same height, twice within one screen,
+ * and the grid's copy is the poorer of the two. It was weighed rather than
+ * missed, and three things pay for it.
+ *
+ * The grid is a comparison task, and "is Tuesday better than today?" wants
+ * today inside the comparison rather than carried across from a differently
+ * formatted component. Marking the first column `Today` removes any chance of
+ * reading `Tue, Aug 25` as the day the reader is standing in. And daylight is
+ * not in the now-band at all: today's sunrise and sunset appear nowhere else on
+ * the page, and they are what say whether today's lowest low falls before the
+ * sun comes up — which is the question the tide time alone cannot answer.
+ *
+ * The alternative that removes the repetition properly is to lift daylight into
+ * the now-band and start the week tomorrow. That changes the three-across
+ * layout PR B settled and runs into `StatGroup`'s one-group-one-provenance
+ * contract, since daylight is computed here and the tide is NOAA's. So it is
+ * its own slice rather than a tweak to this one.
  */
 function weekOfDays(nowMs: number): WeekDayFrame[] {
   const today = localDateOf(nowMs);
@@ -298,10 +315,10 @@ export interface TideWeekView {
 /**
  * Read a week of lowest low tides for one beach, starting today.
  *
- * Today is included rather than skipped: the week is a planning view, and a
- * reader comparing Saturday against the rest of it needs the day they are
- * standing in to compare from. It agrees with the now-band above it by
- * construction — same station, same request, same day-selection rule.
+ * Why today is in the week, and what including it costs, is argued once in
+ * `weekOfDays` rather than again here. What this read adds is that today's cell
+ * agrees with the now-band above it by construction rather than by luck: same
+ * station, same request, same day-selection rule.
  *
  * Throws only when the slug is not in the inventory.
  */
