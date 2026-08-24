@@ -1,6 +1,7 @@
 import { expect, test } from "vitest";
 import { render, screen } from "@testing-library/react";
 import { GallerySection } from "./GallerySection";
+import { GALLERY_IMAGES } from "./galleryImages";
 
 test("the gallery heading is reachable", () => {
   render(<GallerySection />);
@@ -10,18 +11,49 @@ test("the gallery heading is reachable", () => {
   expect(heading.textContent).toContain("make here.");
 });
 
-test("every image slot is exposed to assistive tech exactly once", () => {
+test("every photograph is exposed to assistive tech exactly once", () => {
   render(<GallerySection />);
 
-  // Each placeholder is now rendered once, full stop — the looping strip
-  // rendered every one twice and relied on aria-hidden to keep the copy
-  // quiet. One of them is simply a stronger guarantee than the other.
-  for (const name of [
-    "Art class at the park",
-    "Watercolor houses",
-    "Dinosaur watercolor",
-  ]) {
-    expect(screen.getAllByRole("img", { name })).toHaveLength(1);
+  // Each tile is now rendered once, full stop — the looping strip rendered
+  // every one twice and relied on aria-hidden to keep the copy quiet. One of
+  // them is simply a stronger guarantee than the other. Driven off the list
+  // rather than a sample of it, so a tenth photograph is covered the day it
+  // lands instead of the day someone remembers to add it here.
+  for (const { alt } of GALLERY_IMAGES) {
+    expect(screen.getAllByRole("img", { name: alt })).toHaveLength(1);
+  }
+});
+
+test("every tile resolves to its own file in public/", () => {
+  render(<GallerySection />);
+
+  // getByRole, so this asserts the frame a screen reader reaches rather than
+  // that an <img> was constructed. The src is matched loosely because
+  // next/image rewrites it through the optimizer: what has to hold is that
+  // each tile resolves to the file its entry names, not the exact query it is
+  // fetched with. Without this the whole row could point at one photograph.
+  for (const { src, alt } of GALLERY_IMAGES) {
+    const filename = src.split("/").pop();
+
+    expect(
+      screen.getByRole("img", { name: alt }).getAttribute("src"),
+      `${alt} does not resolve to ${filename}`,
+    ).toContain(filename);
+  }
+});
+
+test("every tile crops around its own anchor", () => {
+  render(<GallerySection />);
+
+  // The seam for the one decision that is per photograph. object-cover throws
+  // away 44% to 58% of a portrait frame's height, and the default keeps the
+  // middle — which loses the stegosaurus, who sits in the bottom third of his
+  // frame. jsdom has no stylesheet, so a class name here would assert only
+  // that a string was spelled; an inline objectPosition it reads back exactly.
+  for (const { alt, crop } of GALLERY_IMAGES) {
+    const tile = screen.getByRole("img", { name: alt });
+
+    expect(tile.style.objectPosition, `${alt} is cropped wrong`).toBe(crop);
   }
 });
 
@@ -31,13 +63,25 @@ test("a wide tile takes the wider share of the row", () => {
   // jsdom applies no stylesheets, so the class contract is the seam. What it
   // guards is the arithmetic: the shares are the aspect ratios normalised, so
   // 0.4 against 0.3 is what makes three tiles one height and a full row.
-  const wide = screen.getByRole("img", { name: "Neon chalk art" });
-  const tall = screen.getByRole("img", { name: "Mixed media art" });
+  const wide = screen.getByRole("img", { name: /stegosaurus/i });
+  const tall = screen.getByRole("img", { name: /neon acrylic marker/i });
 
   expect(wide.className).toContain("aspect-video");
   expect(wide.className).toContain("lg:w-[calc((100%-3rem)*0.4)]");
   expect(tall.className).toContain("aspect-4/3");
   expect(tall.className).toContain("lg:w-[calc((100%-3rem)*0.3)]");
+});
+
+test("a tile fills its frame rather than sitting inside it", () => {
+  render(<GallerySection />);
+
+  // The tile IS the <img> now, so its aspect box is only a crop while
+  // object-cover is on it. Without that the browser uses the replaced
+  // element's own ratio and every portrait photograph squashes into a
+  // landscape box.
+  expect(screen.getByRole("img", { name: /stegosaurus/i }).className).toContain(
+    "object-cover",
+  );
 });
 
 test("tiles are centred rather than stretched", () => {
@@ -46,9 +90,9 @@ test("tiles are centred rather than stretched", () => {
   // A flex child defaults to stretch, which forces a height and leaves
   // aspect-ratio with nothing to decide — every 16:9 tile would be pulled up
   // to a 4:3 tile's height and the variation would vanish silently.
-  expect(
-    screen.getByRole("img", { name: "Neon chalk art" }).className,
-  ).toContain("self-center");
+  expect(screen.getByRole("img", { name: /stegosaurus/i }).className).toContain(
+    "self-center",
+  );
 });
 
 test("the reader drives the row", () => {

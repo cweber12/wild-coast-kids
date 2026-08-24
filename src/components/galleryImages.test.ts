@@ -1,4 +1,6 @@
 import { expect, test } from "vitest";
+import { existsSync } from "node:fs";
+import { join } from "node:path";
 import { GALLERY_IMAGES, type GalleryImage } from "./galleryImages";
 
 const ROW_LENGTH = 3;
@@ -48,4 +50,46 @@ test("the wide tile alternates side down the rows", () => {
 
     expect(row.findIndex((image) => image.aspect === "wide")).toBe(expected);
   });
+});
+
+test("every photograph names a file that is actually in public/", () => {
+  // The one thing about these entries no other gate can see. A typo'd path
+  // type-checks, renders an <img> with a real accessible name, and passes
+  // every class-contract assertion in GallerySection.test.tsx — jsdom never
+  // fetches it. What a reader gets is a broken tile.
+  for (const { src } of GALLERY_IMAGES) {
+    expect(src.startsWith("/")).toBe(true);
+    expect(existsSync(join(process.cwd(), "public", src))).toBe(true);
+  }
+});
+
+test("every photograph says where its crop is anchored", () => {
+  // Every tile is landscape and seven of the nine files are portrait, so
+  // object-cover discards between 44% and 58% of each frame's height. Which
+  // part it discards is a decision per photograph, and an entry that omits it
+  // is not neutral — it silently takes the centre, which is wrong for at
+  // least the stegosaurus and the sumi-e card.
+  for (const { src, crop } of GALLERY_IMAGES) {
+    expect(crop, `${src} has no crop`).toMatch(/^\d+% \d+%$/);
+  }
+});
+
+test("no two slots hold the same photograph", () => {
+  // The list is nine hand-placed entries and the tiles key off src, so a
+  // duplicated path is both a repeated picture and two React children
+  // claiming one key.
+  const paths = GALLERY_IMAGES.map((image) => image.src);
+
+  expect(new Set(paths).size).toBe(paths.length);
+});
+
+test("every photograph describes itself rather than its slot", () => {
+  // CONTEXT.md's rule, asserted: a Placeholder's label says what the slot is
+  // for, and a photograph's alt says what the photograph shows. The hero's
+  // slot label was already wrong by the time its picture arrived, so these
+  // are written against the files rather than inherited from the labels they
+  // replaced. Length is the only part of that a gate can hold on to.
+  for (const { src, alt } of GALLERY_IMAGES) {
+    expect(alt.length, `${src} has a thin alt`).toBeGreaterThan(30);
+  }
 });
