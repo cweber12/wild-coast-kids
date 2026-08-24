@@ -36,17 +36,26 @@
 import type { TideTodayView } from "@/lib/conditions";
 import { ProvenanceLine } from "./ProvenanceLine";
 import { ReadingCard } from "./ReadingCard";
+import { StatGroup } from "./StatGroup";
 
 export type TideTodayProps = TideTodayView;
 
 /** Past this, the station is far enough away that the reader is owed the number. */
 const DISTANT_STATION_M = 5000;
 
+/**
+ * What the height means, without restating the height.
+ *
+ * The number moved to a figure of its own beside this sentence — it is the
+ * measurement a tidepooler reads most closely and it was the last one on the
+ * page still dissolved in prose. What stays here is the part a number cannot
+ * carry: that a minus sign is a lower tide rather than an error, which this
+ * panel has always held to be the single most useful thing it says.
+ */
 function heightSentence(feet: number): string {
-  const magnitude = Math.abs(feet).toFixed(1);
   return feet < 0
-    ? `${feet.toFixed(1)} ft — the water drops below the average low, so more of the sand and reef is uncovered.`
-    : `${magnitude} ft above the average low tide.`;
+    ? "Below the average low tide — more of the sand and reef is uncovered than usual."
+    : "Above the average low tide.";
 }
 
 export function TideToday({ beachName, station, state }: TideTodayProps) {
@@ -60,13 +69,26 @@ export function TideToday({ beachName, station, state }: TideTodayProps) {
     <ReadingCard
       emoji="🌊"
       headingId="tide-today-heading"
-      title={`Lowest tide today · ${beachName}`}
+      title="Lowest tide today"
+      context={beachName}
       figure={state.kind === "reading" ? state.timeLabel : null}
     >
       {state.kind === "reading" && (
-        <p className="leading-relaxed mb-4 text-base text-fog">
-          {heightSentence(state.feet)}
-        </p>
+        <>
+          <p className="leading-relaxed mb-3 text-base text-fog">
+            {heightSentence(state.feet)}
+          </p>
+          {/*
+            The height as a figure. It was the last measurement on the page
+            still dissolved in prose, and beside two cards whose supporting
+            numbers are figures it read as the one that had been forgotten. It
+            is also the number a tidepooler reads most closely: how much reef
+            comes out of the water.
+          */}
+          <StatGroup
+            stats={[{ label: "Height", value: `${state.feet.toFixed(1)} ft` }]}
+          />
+        </>
       )}
 
       {state.kind === "no-low-today" && (

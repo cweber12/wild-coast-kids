@@ -110,7 +110,7 @@ of it.
 
 ## PR B — the page fills its width
 
-- [ ] **5. The chooser moves into the header row.** `BeachSelector` sits beside
+- [x] **5. The chooser moves into the header row.** `BeachSelector` sits beside
       the `<h1>`, right-aligned from `md`, stacked below it under that. Label
       promoted from a whisper to a real one; pill shape kept; `TOUCH_TARGET`
       composed; the `<noscript>` plain-link list preserved exactly, because it is
@@ -119,14 +119,14 @@ of it.
       `noscript` fallback still lists the full inventory. _Modifies:
       `BeachSelector`, `ConditionsSection`._
 
-- [ ] **6. The now-band.** The three cards go three-across at `lg`, two at `sm`,
+- [x] **6. The now-band.** The three cards go three-across at `lg`, two at `sm`,
       one below. Prose blocks — the lead paragraph and the notes — keep
       `max-w-130`; only the figures leave it. **Done when** the page uses its
       width and the now-band clears the 555px first screen at the review
       viewport. _Modifies: `ConditionsSection`._ _Depends on: 2, 3, 4, 5._
       **Needs a human look at 1536×639.**
 
-- [ ] **7. The sighting map slot.** `ReservedSlot` with 🗺️, naming what lands
+- [x] **7. The sighting map slot.** `ReservedSlot` with 🗺️, naming what lands
       there and pointing at #121. Sized into the layout it will eventually
       occupy, so the space is designed rather than discovered. **Done when** the
       page states what is coming instead of being silent about it. _Reuses:

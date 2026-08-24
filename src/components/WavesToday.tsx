@@ -52,7 +52,8 @@ export function WavesToday({ beachName, buoy, state }: WavesView) {
     <ReadingCard
       emoji="🏄"
       headingId="waves-today-heading"
-      title={`Waves and water · ${beachName}`}
+      title="Waves and water"
+      context={beachName}
       figure={
         state.kind === "reading" ? `${state.heightFt.toFixed(1)} ft` : null
       }

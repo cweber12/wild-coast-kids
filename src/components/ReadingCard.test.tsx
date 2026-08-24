@@ -7,7 +7,8 @@ function card(figure?: string | null) {
     <ReadingCard
       emoji="🐚"
       headingId="test-heading"
-      title="Lowest tide today · La Jolla Shores Beach"
+      title="Lowest tide today"
+      context="La Jolla Shores Beach"
       figure={figure}
     >
       <p>the body of the reading</p>
@@ -15,16 +16,14 @@ function card(figure?: string | null) {
   );
 }
 
-test("the heading names the reading and the beach it is for", () => {
+test("the heading names the reading, briefly, because three sit side by side", () => {
   render(card("6:24 AM"));
 
-  const heading = screen.getByRole("heading", {
-    name: "Lowest tide today · La Jolla Shores Beach",
-  });
+  const heading = screen.getByRole("heading", { name: "Lowest tide today" });
   expect(heading.id).toBe("test-heading");
 });
 
-test("the region takes its accessible name from that heading", () => {
+test("the region is named by the reading and the beach together", () => {
   render(card("6:24 AM"));
 
   const region = screen.getByRole("region", {
@@ -89,4 +88,45 @@ test("the figure uses the design system's stat size", () => {
 
   const figure = container.querySelector(".text-stat");
   expect(figure?.textContent).toBe("6:24 AM");
+});
+
+/**
+ * Three cards sit in a row and every one of them is about the same beach, so
+ * printing it three times is a constant repeated as noise — the page header and
+ * the chooser already say which beach this is. But a landmark named only "Air"
+ * strands someone navigating by region, who never read the header. So the beach
+ * stays in the accessible name and leaves the layout.
+ */
+test("the beach reaches the accessible name without being printed three times", () => {
+  render(card("6:24 AM"));
+
+  const region = screen.getByRole("region", {
+    name: "Lowest tide today · La Jolla Shores Beach",
+  });
+  expect(region).toBeDefined();
+
+  // Named once, printed nowhere: the beach is absent from the visible text.
+  expect(region.textContent).not.toContain("La Jolla Shores Beach");
+});
+
+test("a card given no context is named by its title alone", () => {
+  const { container } = render(
+    <ReadingCard emoji="🌊" headingId="h" title="Waves">
+      <p>body</p>
+    </ReadingCard>,
+  );
+
+  expect(screen.getByRole("region", { name: "Waves" })).toBeDefined();
+  expect(container.firstElementChild?.getAttribute("aria-label")).toBe("Waves");
+});
+
+/**
+ * Three cards of unequal content in one row otherwise leave two ragged
+ * surfaces beside the tallest, which reads as three components rather than
+ * one band.
+ */
+test("a card fills the height of the row it sits in", () => {
+  const { container } = render(card("6:24 AM"));
+
+  expect(container.firstElementChild?.className).toContain("h-full");
 });

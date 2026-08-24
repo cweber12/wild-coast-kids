@@ -34,10 +34,30 @@ import type { ReactNode } from "react";
 type ReadingCardProps = {
   /** Sets the subject at a glance; hidden from assistive tech, which reads the heading. */
   emoji: string;
-  /** Ties the heading to the region. Callers own it, because they own the anchor. */
+  /** The heading's own id. Callers own it, because they own the anchor. */
   headingId: string;
-  /** What this reading is, and which beach it is for. */
+  /** What this reading is. Short: three of these sit side by side. */
   title: string;
+  /**
+   * Which beach, for the accessible name only.
+   *
+   * Three cards in a row would each repeat the same beach, and a constant
+   * printed three times is noise — the page header and the chooser already say
+   * which beach this is. But a landmark named only "Air" loses that context for
+   * someone navigating by region, who does not read the page top to bottom. So
+   * it stays in the accessible name and leaves the layout.
+   *
+   * The region takes `aria-label` rather than pointing at the heading and
+   * hiding half of it. A visually-hidden span was tried first and does not
+   * work: the accessible-name algorithm trims each text node and joins inline
+   * ones with no separator, so "Lowest tide today" and " · La Jolla Shores
+   * Beach" concatenate to "Lowest tide today· La Jolla Shores Beach". That is
+   * spec-correct, not a bug to route around, and a non-breaking space is
+   * normalised away too. One string on the region is the arrangement that
+   * simply says what it means — and it needs no `sr-only` utility, which this
+   * repo does not otherwise use.
+   */
+  context?: string | null;
   /**
    * The one figure that leads. `null` renders no slot rather than an empty one.
    */
@@ -55,13 +75,17 @@ export function ReadingCard({
   emoji,
   headingId,
   title,
+  context = null,
   figure = null,
   children,
 }: ReadingCardProps) {
   return (
+    // flex-col so a card fills the height of its row in the now-band. Three
+    // cards of unequal content otherwise leave two ragged surfaces beside the
+    // tallest, which reads as three different components rather than one row.
     <section
-      aria-labelledby={headingId}
-      className="rounded-card bg-mist px-6 py-5"
+      aria-label={context !== null ? `${title} · ${context}` : title}
+      className="rounded-card flex h-full flex-col bg-mist px-6 py-4"
     >
       <span aria-hidden="true" className={EMOJI}>
         {emoji}
