@@ -15,7 +15,7 @@ import {
   inventoryReach,
 } from "@/lib/beaches";
 import { BeachSelector } from "./BeachSelector";
-import { Caveats } from "./Caveats";
+import { ConditionsNotes } from "./ConditionsNotes";
 import { TidePanel } from "./TidePanel";
 import { WavePanel } from "./WavePanel";
 import { WindPanel } from "./WindPanel";
@@ -80,7 +80,12 @@ export function ConditionsSection({ slug }: { slug: string }) {
         <WindPanel slug={slug} />
       </Suspense>
 
-      <Caveats entries={inventoryCaveats()} reach={inventoryReach()} />
+      {/*
+        One block for everything true of every reading — the datum, what a buoy
+        measures, why the sky comes from an airport — plus the caveats, which it
+        renders. The three panels above carry only their own attribution now.
+      */}
+      <ConditionsNotes entries={inventoryCaveats()} reach={inventoryReach()} />
     </section>
   );
 }

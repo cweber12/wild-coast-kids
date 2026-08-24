@@ -21,8 +21,12 @@ test("a reading leads with the height and puts it in plain words", () => {
   );
 
   expect(screen.getByText("2.6 ft")).toBeDefined();
-  // A height alone tells a surfer what they need and a parent very little.
-  expect(screen.getByText(/about waist high, 5 seconds apart/)).toBeDefined();
+  // A height alone tells a surfer what they need and a parent very little, so
+  // the plain-language companion survives the move to a card. The period left
+  // this sentence and became a figure of its own; what it must not do is stop
+  // being said.
+  expect(screen.getByText(/about waist high/)).toBeDefined();
+  expect(screen.getByText("5 s")).toBeDefined();
 });
 
 test("water temperature comes from the same reading, rounded", () => {
@@ -39,7 +43,9 @@ test("water temperature comes from the same reading, rounded", () => {
       }}
     />,
   );
-  expect(screen.getByText(/The water is 70°F/)).toBeDefined();
+  // Shown as a figure now rather than as the tail of a sentence, and still
+  // rounded: the buoy publishes 69.98 and nobody swims to two decimal places.
+  expect(screen.getByText("70°F")).toBeDefined();
 });
 
 test("a buoy reporting no water temperature says so rather than omitting it", () => {
@@ -56,10 +62,21 @@ test("a buoy reporting no water temperature says so rather than omitting it", ()
       }}
     />,
   );
-  expect(screen.getByText(/reported no water temperature/)).toBeDefined();
+  // A buoy that publishes waves and no water temperature is a measured fact
+  // about that buoy, not a hypothetical. Both figures state their absence
+  // rather than vanishing, because a missing row reads as an oversight and a
+  // blank one reads as a calm sea.
+  expect(screen.getAllByText("Not reported").length).toBe(2);
+  expect(screen.getByText("Water")).toBeDefined();
 });
 
-test("the reading is attributed as open water, not as the breaking wave", () => {
+/**
+ * That an open-water buoy is not the breaking wave is asserted in
+ * `ConditionsNotes.test.tsx` now — it is true at every beach, so it was
+ * collected rather than repeated under each reading. What stays here is the
+ * buoy, and the distance when there is one worth disclosing.
+ */
+test("a nearby buoy is credited without a distance", () => {
   render(
     <WavesToday
       beachName="La Jolla Shores Beach"
@@ -73,9 +90,8 @@ test("the reading is attributed as open water, not as the breaking wave", () => 
       }}
     />,
   );
-  expect(
-    screen.getByText(/not the height of the wave breaking at the shore/),
-  ).toBeDefined();
+  const line = screen.getByText(/NDBC/).textContent ?? "";
+  expect(line).toContain(NEAR.name);
   expect(screen.queryByText(/km from this beach/)).toBeNull();
 });
 

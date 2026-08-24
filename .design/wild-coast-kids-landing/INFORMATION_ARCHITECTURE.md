@@ -2,13 +2,14 @@
 
 ## Site Map
 
-Six routes. The landing page keeps a teaser for each program area; the routed
-pages carry the fuller version.
+Six static routes and one dynamic segment beneath one of them. The landing page
+keeps a teaser for each program area; the routed pages carry the fuller version.
 
 - Home `/`
   - Art Classes `/art`
   - Tuesday Co-op `/coop`
   - Conditions `/conditions`
+    - One beach `/conditions/<slug>` — the only dynamic segment on the site
   - Community `/community`
   - Book Now `/book` (utility; not in the nav's link row)
 
@@ -92,6 +93,50 @@ interest-list form under its own heading, without the landing page's teaser
 column — otherwise the "Meet the community" CTA would sit on the page it
 points at.
 
+**`/conditions` has left that shape entirely**, and is the only routed page
+that has. It is a tool rather than a page of copy, and its structure is
+documented under _Conditions_ below.
+
+### Conditions `/conditions` and `/conditions/<slug>` (#78)
+
+**One section, two addresses.** Both routes render the same conditions section;
+the only difference is which beach it is given. That is deliberate and is the
+reason the component exists — two routes rendering two copies of a reading
+would drift, and a reader should not get a different answer depending on which
+URL they arrived at. Both carry the same revalidation interval for the same
+reason.
+
+**`/conditions` opens on a named default beach**, not on whichever beach sorts
+first. The default is chosen for being central, close to its tide station, and
+the beach the National Weather Service means when its surf zone forecast says
+"La Jolla". The page asserts the default is still in the inventory at build
+time, so a rename upstream stops a build rather than rendering a page about
+nothing.
+
+**How a reader reaches a per-beach page.** Only from the conditions page itself.
+The nav links to `/conditions` and nothing links to a slug directly. The beach
+chooser — a grouped `<select>` in the page header — navigates on change, and a
+`<noscript>` list of the same inventory as plain links is the fallback, because
+a family checking the tide on a phone with blocked scripts would otherwise get
+a control that silently does nothing.
+
+**Reading order, top to bottom:**
+
+1. Eyebrow, title and lead — with the **beach chooser on the same row as the
+   title**, right-aligned, because it decides what every figure below it means.
+2. **The now-band**: today's lowest tide, waves and water, air. Three cards
+   across at `lg`, each leading with one figure and carrying its own station
+   attribution.
+3. **The week grid**: days across, products down; a week of lowest lows is its
+   first live row. Transposes to day-rows below `lg` rather than scrolling.
+4. **The sighting map slot** — a reserved slot until #121 is built.
+5. **The notes block**: the datum, why a buoy reading is not the wave at the
+   shore, why visibility is an airport reading, the standing sentence that none
+   of this is a safety assessment, and the caveats and coverage disclosures.
+
+**A slug that does not resolve is a 404.** See _URL Strategy_ for the closed
+slug set and for why nothing under `/conditions/` is prerendered.
+
 ## User Flows
 
 ### Book an art class
@@ -116,6 +161,30 @@ lands on `/art` first; that page's CTA is "Book a class →" → `/book`.
    place with the same-page `#community`.
 4. Fills name, email, kids' ages, interest checkboxes → submits.
 5. Sees the "You're in!" success state (client-side only for now).
+
+### Check conditions for a beach (#78)
+
+1. Parent lands on `/`, clicks "Learn more →" on the conditions teaser, or
+   Conditions in the nav → `/conditions`.
+2. The page opens on the named default beach, already showing readings. There
+   is no empty state to get past and nothing to choose before an answer
+   appears — the default exists so the page always opens on something that can
+   answer.
+3. Reads the now-band for today, or the week grid for the day they are planning
+   for. This is usually a Thursday reading a Tuesday.
+4. Picks a different beach from the chooser in the page header → navigates to
+   `/conditions/<slug>`, and every panel re-reads for that beach.
+5. Compares by repeating step 4. Comparison is sequential rather than
+   side-by-side, which is a known limit of this shape and not an oversight —
+   there is no multi-beach view.
+
+Without JavaScript, step 4 is the `<noscript>` list of plain links instead of
+the chooser, and the flow is otherwise identical.
+
+Dead ends are deliberate and each says which kind it is: a beach the inventory
+does not serve is described in prose on the page rather than linked, and a
+stale or hand-typed slug 404s rather than rendering a page about a beach that
+does not exist.
 
 ## Naming Conventions
 
@@ -159,17 +228,21 @@ lands on `/art` first; that page's CTA is "Book a class →" → `/book`.
   inside the two program pages rather than at one of their own. Adding a
   combined `/schedule` route later would be a genuine IA exercise, and is
   deliberately not one this took.
-- **Dynamic routes** arrived too, in `/conditions/[slug]`, and this document
-  does not describe them anywhere — the sentence you are reading is currently
-  their only mention. That gap belongs to the conditions work rather than to
-  the schedule, and is filed as #78.
+- **Dynamic routes** arrived in `/conditions/[slug]`, and are now described —
+  in _Site Map_, in _The routed pages_, in _User Flows_ and in _URL Strategy_
+  (#78). The pattern they establish is narrow on purpose: a dynamic segment is
+  warranted where one page answers about **one of many interchangeable
+  subjects** the site does not author — the beaches, read from an upstream
+  inventory. It is not warranted for content this site writes, which is why
+  sessions render inside a program page and have no URL of their own.
 - Anything beyond that (a blog, a store, a login) is a new IA exercise.
 
 ## URL Strategy
 
 - Pattern: six static routes — `/`, `/art`, `/coop`, `/conditions`,
-  `/community`, `/book`. The slugs are the short ids the sections carried
-  before the routes existed, not the labels (`/art`, not `/art-classes`).
+  `/community`, `/book` — plus one dynamic segment, `/conditions/<slug>`. The
+  static slugs are the short ids the sections carried before the routes existed,
+  not the labels (`/art`, not `/art-classes`).
 - **One anchor id remains, and it is stable API**: `community`, on the
   `SnapSection` wrapping the interest-list teaser on `/`. Three things point
   at it — the co-op card as `#community`, and `/book` and `/coop` as
@@ -183,4 +256,19 @@ lands on `/art` first; that page's CTA is "Book a class →" → `/book`.
   route instead.
 - Anchor targets clear the sticky nav via `scroll-pt-nav-sm md:scroll-pt-nav`
   on `html`, which subtracts the same tokens the nav sets its height from.
-- No dynamic segments, no query parameters.
+- **One dynamic segment: `/conditions/<slug>`.** The slug set is **closed** — it
+  is exactly the served beaches in `src/data/beaches.json`, and a slug outside
+  that set is a 404 rather than a page apologising about a beach that does not
+  exist. The chooser cannot produce one; a stale link can. Beaches the inventory
+  lists but does not serve are 404s too: they are recorded in the data file's
+  `_excluded` block, which is rendered to the reader as prose on `/conditions`,
+  not as routes.
+- The slug count is deliberately **not written down here.** It is derived from
+  the inventory, which a script rewrites from an upstream resource — the same
+  reasoning `inventoryReach()` uses for declining to hand-maintain a count of
+  somebody else's list.
+- **Nothing under `/conditions/` is prerendered at build.** `generateStaticParams`
+  returns an empty array on purpose, so upstream is asked about a beach the
+  first time a reader actually chooses it, and served from cache afterwards.
+  Upstream load follows real readers rather than the size of the inventory.
+- No query parameters.

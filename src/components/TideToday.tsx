@@ -13,8 +13,11 @@
  * **The datum is explained once, in words.** A tide of -0.4 ft reads as an error
  * to anyone who has not met mean lower low water, and it is the single most
  * useful figure on the page for a tidepooler. So the sign is explained where it
- * appears and the acronym is named once, at the bottom, rather than beside every
- * figure.
+ * appears — `heightSentence` still says what a negative number means — and the
+ * acronym is named once rather than beside every figure. That naming now lives
+ * in `ConditionsNotes`, one block for the whole page, because this panel was
+ * making the argument and then two panels beside it repeated their own version
+ * of it. What stays here is the attribution: which station, and how far.
  *
  * **An absent reading is a sentence, not a blank.** A missing number renders as
  * an explanation a reader can act on, with the upstream detail behind a
@@ -31,6 +34,8 @@
  */
 
 import type { TideTodayView } from "@/lib/conditions";
+import { ProvenanceLine } from "./ProvenanceLine";
+import { ReadingCard } from "./ReadingCard";
 
 export type TideTodayProps = TideTodayView;
 
@@ -52,23 +57,16 @@ export function TideToday({ beachName, station, state }: TideTodayProps) {
       : null;
 
   return (
-    <section aria-labelledby="tide-today-heading" className="max-w-130">
-      <h2
-        id="tide-today-heading"
-        className="text-2xs mb-3 font-extrabold tracking-widest text-ocean uppercase"
-      >
-        Lowest tide today · {beachName}
-      </h2>
-
+    <ReadingCard
+      emoji="🌊"
+      headingId="tide-today-heading"
+      title={`Lowest tide today · ${beachName}`}
+      figure={state.kind === "reading" ? state.timeLabel : null}
+    >
       {state.kind === "reading" && (
-        <>
-          <p className="leading-tight mb-2 text-4xl font-black italic">
-            {state.timeLabel}
-          </p>
-          <p className="leading-relaxed mb-4 text-base text-fog">
-            {heightSentence(state.feet)}
-          </p>
-        </>
+        <p className="leading-relaxed mb-4 text-base text-fog">
+          {heightSentence(state.feet)}
+        </p>
       )}
 
       {state.kind === "no-low-today" && (
@@ -113,17 +111,23 @@ export function TideToday({ beachName, station, state }: TideTodayProps) {
         </>
       )}
 
+      {/*
+        The network name carries a plain ampersand rather than `&amp;`: it is a
+        string attribute, and JSX decodes entities in text children but not in
+        those. Written as `&amp;` it would reach the reader verbatim.
+      */}
       {station !== null && (
-        <p className="text-2xs leading-relaxed text-fog">
-          Predicted for {station.name}, NOAA Tides &amp; Currents
-          {distantKm !== null
-            ? ` — the nearest ${station.water === "bay" ? "bay" : "open-coast"} station publishing predictions, about ${distantKm} km away`
-            : ""}
-          . Heights are feet above mean lower low water, the average of the
-          lower low tide each day. Predictions are astronomy, not a measurement
-          of the water on the day, and they are not a safety assessment.
-        </p>
+        <ProvenanceLine
+          source={station.name}
+          network="NOAA Tides & Currents"
+          distance={distantKm !== null ? `about ${distantKm} km away` : null}
+          note={
+            distantKm !== null
+              ? `the nearest ${station.water === "bay" ? "bay" : "open-coast"} station publishing predictions`
+              : null
+          }
+        />
       )}
-    </section>
+    </ReadingCard>
   );
 }
