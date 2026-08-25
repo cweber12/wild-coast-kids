@@ -1,6 +1,5 @@
 import { expect, test } from "vitest";
 import { render, screen } from "@testing-library/react";
-import { GLYPH_CHIP } from "./glyphChip";
 import { ReadingCard } from "./ReadingCard";
 
 function card(figure?: string | null) {
@@ -134,13 +133,13 @@ test("a card fills the height of the row it sits in", () => {
 
 /**
  * ADR-0015. The glyph was inline in the heading at 10px, where a full-colour
- * emoji carries nothing; it is now a chip on the lead figure's row. Beside the
+ * emoji carries nothing; it now stands at 30px on the lead figure's row. Beside the
  * figure rather than above the heading is the whole of why it can be large
- * again: the row already exists and is 36px tall, so the chip costs the 8px it
- * stands proud of the figure rather than the 46px the old block above the
- * heading cost.
+ * again: the row already exists and is 36px tall, and a 30px glyph fits inside
+ * it, so the size costs nothing at all where the old block above the heading
+ * cost 46px.
  */
-test("the glyph is a chip on the figure's row, not text inside the heading", () => {
+test("the glyph sits on the figure's row, not as text inside the heading", () => {
   const { container } = render(card("6:24 AM"));
 
   const heading = screen.getByRole("heading", { name: "Lowest tide today" });
@@ -148,7 +147,7 @@ test("the glyph is a chip on the figure's row, not text inside the heading", () 
 
   const glyph = container.querySelector('[aria-hidden="true"]');
   expect(glyph?.textContent).toBe("🐚");
-  expect(glyph?.className).toBe(GLYPH_CHIP);
+  expect(glyph?.className).toContain("text-3xl");
 
   // Same row as the figure, which is what makes the size affordable.
   const figure = container.querySelector(".text-stat");
@@ -177,7 +176,7 @@ test("moving the glyph out leaves the accessible name the words alone", () => {
  * A tide card with no station and a wave card with no buoy both pass
  * `figure={null}`, and those are exactly the states a reader is most likely to
  * be confused by. A card that drops its subject mark when the station goes
- * quiet reads as more broken than it is, so the chip stays and the row holds
+ * quiet reads as more broken than it is, so the glyph stays and the row holds
  * it alone.
  */
 test("a card with no figure keeps its glyph", () => {
@@ -185,14 +184,15 @@ test("a card with no figure keeps its glyph", () => {
 
   const glyph = container.querySelector('[aria-hidden="true"]');
   expect(glyph?.textContent).toBe("🐚");
-  expect(glyph?.className).toBe(GLYPH_CHIP);
+  expect(glyph?.className).toContain("text-3xl");
   // Still no empty figure slot beside it — that is a separate contract.
   expect(container.querySelector(".text-stat")).toBeNull();
 });
 
 /**
  * The raw arbitrary size the old block carried, in a component whose docstring
- * makes the case against exactly that. The chip's size lives in `glyphChip.ts`.
+ * makes the case against exactly that. `text-3xl` is the scale ReservedSlot
+ * already uses for a glyph, not a bracket value invented here.
  */
 test("the card sets no arbitrary glyph size of its own", () => {
   const { container } = render(card("6:24 AM"));

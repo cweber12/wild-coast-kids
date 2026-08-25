@@ -1,4 +1,4 @@
-# 0015 — The reading cards take 🐚 🏄 💨, on a chip that carries them
+# 0015 — The reading cards take 🐚 🏄 💨, on a surface that carries them
 
 Date: 2026-08-25. Status: accepted.
 
@@ -50,60 +50,77 @@ consider is that the row above the heading is not the only place a glyph can go.
 the same three mark the same products in the week grid and its reserved rows.
 🌊 leaves `/conditions` entirely.
 
-**The glyph renders at 34px inside a 56px `rounded-thumb` chip filled
-`bg-ocean`, on the lead-figure row rather than above the heading.**
+**The card is `bg-dark`, and the glyph stands on it bare at 30px, beside the
+lead figure.** The contrast objection is answered by the surface the glyph
+stands on, and the card is that surface.
 
-Three things follow from that one sentence, and each answers an objection above:
+Three things follow, and each answers an objection above:
 
-- **The chip is what makes 🐚 and 💨 possible.** They are pale glyphs; a
-  saturated backing is the "adjust the background" the contrast objection was
-  always asking for. It adjusts the glyph's own backing, not the card's, so the
-  reading surface stays what ADR-0009 and `ReadingCard` require of it.
-- **Beside the figure, the glyph costs no height.** The figure line is already
-  36px (`--text-stat`). A 56px chip sharing that row adds nothing to the card,
-  so the 46px that bought the first screen back is not spent again. The
-  constraint that shrank the glyph was about a _position_, and it does not apply
-  to this one.
-- **`bg-ocean` and not the alternatives.** Rendered as a set on five treatments:
-  ocean and dark both carry all three glyphs; purple leaves the shell pale;
-  yellow washes out the air puff; bare on mist loses two of the three. Ocean
-  over dark because `text-ocean` is already this page's accent, so the chip
-  reads as the same system as the eyebrow above it rather than as a foreign
-  black block. `bg-dark` is the higher-contrast fallback if it ever needs one.
+- **A dark card is what makes 🐚 and 💨 possible.** They are pale glyphs, so
+  they need something dark behind them; that is the whole of the "adjust the
+  background" the objection was asking for. Rendered as a set on five
+  treatments, all three glyphs read on `bg-dark`, on `bg-ocean` and on
+  `bg-purple-deep`, and two of the three are lost on `bg-mist`.
+- **Beside the figure, the glyph costs nothing.** The figure line is already
+  36px (`--text-stat`) and a 30px glyph fits inside it, so the row does not
+  grow: the card measures 283px at 1536×639 and 301px at 1280, which are the
+  heights it had before any of this. The 46px that shrinking the glyph bought
+  back is not spent again. The constraint was always about the _position_ above
+  the heading, not about the size.
+- **`bg-dark` and not `bg-ocean` or `bg-purple-deep`, which also carry the
+  glyphs.** Those two are the exact surfaces `ProgramCards` uses for the
+  landing page's offer cards. A reading is not an offer, and a page that dresses
+  an instrument panel like a sales card has said something about it. `--color-dark`
+  is the footer's colour, which is a neutral register rather than a competing one.
 
-**When a card has no lead figure, the chip renders on its own row.** `TideToday`
-and `WavesToday` pass `figure={null}` in their no-station, no-buoy and
-unavailable states. A card that loses its subject mark when a station goes quiet
-is worse than one that spends 56px, and those cards are the short ones anyway.
+**A first attempt put the glyph on a 44px `bg-ocean` chip and kept the card on
+`bg-mist`.** It was built, measured and rejected on review: the badge shape read
+as applied decoration rather than as part of the card, and it cost 8px per card
+that the bare glyph does not. Recorded because the chip is the obvious answer to
+"the glyph is too pale" and the next person to have the problem will reach for
+it — the surface is the cheaper fix and the better-looking one.
+
+**The card carries no text pair it inherited.** `text-fog` is a colour measured
+against `mist` and it is unreadable on `bg-dark`, so every pairing was replaced
+and re-measured: the figure and stat values at `text-white` (17.06:1), prose at
+`text-white/75` (10.02:1), provenance and stat labels at `text-white/55`
+(5.96:1), the eyebrow at `text-yellow` (15.22:1). The two secondary roles are
+named once in `cardText.ts` rather than spelled out across three panels.
+
+**The eyebrow is yellow, which is the first of the brand's colours to reach this
+page.** Before this the page painted three backgrounds — mist, white and
+white/60 — all within 1.30:1 of the cream behind them, and used no yellow,
+purple or pink at all. The brief opens by saying the page "does not look like
+the site it belongs to"; this is the smallest change that stops being true.
 
 **💨 and not 🌬️.** The wind face is the obvious Unicode choice and it is a face,
 which puts a character on a page of instrument readings. Of the faceless
 alternatives, 🍃 is a plant, 🌀 is a hurricane, 🎐 is a wind chime, 🪁 is a toy and
 🌪️ reads as a funnel at 44px; each is either the wrong subject or overstates a
-3 mph breeze. 💨 is the only faceless glyph that means moving air, and it is
-precisely the one that needs the chip.
+3 mph breeze. 💨 is the only faceless glyph that means moving air.
 
-**The chip is decoration, not a verdict.** ADR-0009 forbids this site making a
-judgement about whether conditions are good, and `ReadingCard` extends that to
+**A dark card is decoration, not a verdict.** ADR-0009 forbids this site making
+a judgement about whether conditions are good, and `ReadingCard` extends that to
 "a card that looked like a verdict would be making one in CSS". What makes
-colour a verdict is _differential_ colour — a green card and a red one. The chip
-is identical on all three cards and carries no text, so it asserts nothing about
-the water. This is the same escape the docstring itself named when it said the
-colour goes into the glyph; that outlet closed when the glyph reached 10px, and
-this reopens it.
+colour a verdict is _differential_ colour — a green card and a red one. All
+three cards take the same surface whatever the water is doing, so nothing here
+asserts anything about it. The docstring's own resolution was that the colour
+goes into the glyph and the eyebrow; that outlet closed when the glyph reached
+10px, and this reopens it wider than the docstring imagined.
 
 ## Consequences
 
-`/conditions` gains its first saturated surface. Before this the page painted
-three background colours — mist, white and white/60 — all within 1.30:1 of the
-cream behind them, and used none of the site's yellow, purple or pink. Three
-ocean chips are the whole of the change.
+`/conditions` gains its first saturated surface, and the now-band stops being
+the palest thing on a pale page. The week grid below it stays on `bg-mist` and
+is not converted here: "now" and "planning" are different registers and it is
+defensible for them to look different, but if it ever reads as an oversight
+rather than a distinction, this is the decision it gets converted against.
 
 **`ReadingCard`'s "the glyph labels the heading rather than floating above it"
-paragraph is superseded and is rewritten in the same commit.** Its reasoning
-about `WeekGrid` marking one product two ways still stands — the week grid keeps
-its inline `<dt>` glyph, because a 56px chip in a 148px cell is not the same
-problem as a 56px chip beside a 36px figure.
+paragraph is superseded and rewritten.** Its reasoning about `WeekGrid` marking
+one product two ways still stands — the week grid keeps its inline `<dt>` glyph,
+because a 30px glyph in a 148px cell on a pale surface is not the same problem
+as a 30px glyph beside a 36px figure on a dark one.
 
 **This reverses finding 9 of `.design/conditions-page/DESIGN_REVIEW.md`
 (2026-08-24), which shipped the 10px inline glyph.** That finding was right
@@ -112,12 +129,22 @@ recover it. The reversal is recorded here rather than left as a silent swap, so
 the next reader finds the argument and not just the diff. `TideWeek`'s comment
 arguing 🌊-over-🐚 is rewritten to point here for the same reason.
 
-**The gate cannot check that a glyph reads.** jsdom applies no stylesheets
-(ADR-0001), so tests assert which glyph a card composes, that it stays
-`aria-hidden`, that it is no longer inside the heading, and that it still
-renders when `figure` is null. That 34px on ocean is legible where 10px on mist
-was not is a human check at the review viewport — the same compromise ADR-0004
-records for the touch target and ADR-0014 for a heading rank.
+**The gate cannot check that a glyph reads, or that a contrast ratio holds.**
+jsdom applies no stylesheets (ADR-0001), so tests assert which glyph a card
+composes, that it stays `aria-hidden`, that it is no longer inside the heading,
+that it still renders when `figure` is null, and that a stat value is at full
+strength where its label is muted. That 30px on dark is legible where 10px on
+mist was not, and that the ratios above hold as rendered, are human checks at
+the review viewport — the same compromise ADR-0004 records for the touch target
+and ADR-0014 for a heading rank.
+
+**The reading card's corner radius is no longer the defect the review called
+it.** Finding 1 of the 2026-08-25 review argued that `rounded-card` at 24px read
+as a blob _because_ `bg-mist` sits at 1.10:1 against the page, so the corner arc
+was the only visible part of the shape. On `bg-dark` the fill is 16:1 and the
+card is a plainly visible rectangle, so the radius now reads as intended. That
+finding still stands for the week grid's 159x148 cells, which keep the mist
+surface and the 24px radius both.
 
 **🌊 is not left meaning one thing, and this decision does not reach the page
 that would fix it.** `Conditions.tsx` — the landing page's teaser — marks
@@ -141,5 +168,5 @@ quietly means "the three cards it was written for".
 
 The part most likely to be re-litigated is overriding a principle the brief
 states in full. The honest answer is that the brief's two reasons were checked
-rather than assumed: one was measured and answered with a chip, and the other
+rather than assumed: one was measured and answered by the surface, and the other
 turned out to describe a roster the glyph is not on.

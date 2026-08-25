@@ -2,7 +2,6 @@ import { expect, test } from "vitest";
 import { render, screen } from "@testing-library/react";
 import { TideToday } from "./TideToday";
 import { DISCLOSURE_TARGET } from "./disclosure";
-import { GLYPH_CHIP } from "./glyphChip";
 
 const NEAR_STATION = {
   name: "La Jolla (Scripps Institution Wharf)",
@@ -267,5 +266,4 @@ test("the tide card is marked by a shell", () => {
 
   const glyph = container.querySelector('[aria-hidden="true"]');
   expect(glyph?.textContent).toBe("🐚");
-  expect(glyph?.className).toBe(GLYPH_CHIP);
 });

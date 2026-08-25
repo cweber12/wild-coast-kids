@@ -38,6 +38,8 @@
  * size invented here.
  */
 
+import { CARD_MUTED } from "./cardText";
+
 export type Stat = {
   /** What the figure is. Short: it sets in 10px uppercase. */
   label: string;
@@ -50,14 +52,16 @@ export function StatGroup({ stats }: { stats: readonly Stat[] }) {
     <dl className="mb-3 flex flex-wrap gap-x-7 gap-y-2">
       {stats.map(({ label, value }) => (
         <div key={label}>
-          <dt className="text-2xs font-extrabold tracking-widest text-fog uppercase">
+          <dt
+            className={`text-2xs font-extrabold tracking-widest uppercase ${CARD_MUTED}`}
+          >
             {label}
           </dt>
           <dd
             className={
               value === null
-                ? "text-base text-fog italic"
-                : "text-base font-extrabold text-dark"
+                ? `text-base italic ${CARD_MUTED}`
+                : "text-base font-extrabold text-white"
             }
           >
             {value ?? "Not reported"}

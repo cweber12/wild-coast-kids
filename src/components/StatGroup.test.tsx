@@ -1,5 +1,6 @@
 import { expect, test } from "vitest";
 import { render, screen } from "@testing-library/react";
+import { CARD_MUTED } from "./cardText";
 import { StatGroup } from "./StatGroup";
 
 test("each figure is shown with the label that says what it is", () => {
@@ -70,16 +71,25 @@ test("a missing figure is never dropped from the list", () => {
  * Prominence comes from weight, not size. The token scale jumps 13px to 36px
  * with nothing between, and the site's direction is that "weight and italics
  * carry the hierarchy" — so a figure is body-sized and extrabold against the
- * fog-grey prose around it rather than an off-system size invented here.
+ * muted label above it rather than an off-system size invented here.
+ *
+ * The pair is asserted together rather than the value alone. What matters is
+ * that the figure is at full strength and its label is not; the colours that
+ * express it changed when the card became `bg-dark` (ADR-0015), and a test
+ * naming only one half would have passed with both at the same weight.
  */
-test("a figure is set heavier than the prose it sits among", () => {
+test("a figure is set heavier than the label it sits under", () => {
   const { container } = render(
     <StatGroup stats={[{ label: "Period", value: "6 s" }]} />,
   );
 
   const value = container.querySelector("dd");
   expect(value?.className).toContain("font-extrabold");
-  expect(value?.className).toContain("text-dark");
+  expect(value?.className).toContain("text-white");
+
+  const label = container.querySelector("dt");
+  expect(label?.className).toContain(CARD_MUTED);
+  expect(label?.className).not.toContain("text-white/75");
 });
 
 test("an absent figure is set apart from a real one, not styled as a value", () => {

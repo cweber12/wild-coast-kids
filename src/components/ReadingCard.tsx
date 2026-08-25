@@ -10,33 +10,40 @@
  * defines `--text-stat` at the same 36px for exactly this. Two names for one
  * decision is one of them waiting to be wrong.
  *
- * **The surface is `mist`, and that pairing is not a guess.** `globals.css`
- * records that `--color-fog` was darkened from the template specifically because
- * the original failed WCAG AA against mist, and the replacement "reads the same
- * and clears 5:1 everywhere". Fog on mist is the one secondary-text pairing this
- * repo has already measured, so the card is built on it.
+ * **The surface is `dark`, and it is what makes the glyphs legible.** See
+ * ADR-0015. The card was `mist`, which sits at 1.10:1 against the page it is on
+ * -- a fill that barely exists -- and which loses a shell and a wind puff
+ * entirely, both being pale glyphs. Nothing about the text needed the pale
+ * surface: `text-fog` was measured against mist and is simply replaced here, by
+ * `text-white` for figures and the two roles named in `cardText.ts` for
+ * everything else, each re-measured on this surface.
  *
- * **Quiet surface, loud chrome.** The site's other cards are saturated purple and
- * ocean with white type, and that is right for an offer. This is an instrument
- * reading shown to people taking children into the ocean, and ADR-0009 forbids
- * the site from making a judgement about it. A card that looked like a verdict
- * would be making one in CSS. So the colour goes into the glyph and the eyebrow,
- * and the figure stays dark on light where a number belongs.
+ * **Dark rather than purple or ocean, and that is the whole of the choice.**
+ * The site's other cards are saturated purple and ocean with white type, and
+ * that is right for an offer. This is an instrument reading shown to people
+ * taking children into the ocean, and ADR-0009 forbids the site from making a
+ * judgement about it -- so it must not be dressed as the thing next to it that
+ * *is* selling something. `--color-dark` is the footer's colour: present,
+ * saturated, and not already spoken for.
  *
- * **The glyph is a chip on the figure's row.** See ADR-0015. It was a 34px block
- * with a 12px margin on a line of its own -- 46px per card, in every card -- and
- * that cost was real, so it became 10px of inline text inside the heading. At
- * 10px a full-colour emoji is not a mark, it is a smudge in front of an
- * otherwise crisp eyebrow: the fix traded the glyph away rather than moving it.
+ * A verdict would be *differential* colour, a green card beside a red one. All
+ * three take this surface whatever the water is doing.
  *
- * The row above the heading is not the only place a glyph can go. Beside the
- * lead figure it shares a row that already exists and is already 36px tall, so
- * a 44px chip costs the 8px it stands proud of the figure rather than 46. That
- * is what buys the size back without spending the first screen twice.
+ * **The glyph sits beside the figure rather than above the heading.** It was a
+ * 34px block with a 12px margin on a line of its own -- 46px per card, in every
+ * card -- and that cost was real, so it became 10px of inline text inside the
+ * heading. At 10px a full-colour emoji is not a mark, it is a smudge in front
+ * of an otherwise crisp eyebrow: the fix traded the glyph away rather than
+ * moving it.
+ *
+ * The row above the heading is not the only place a glyph can go. The lead
+ * figure's row already exists and is already 36px tall, and a 30px glyph fits
+ * inside it -- so the size comes back for nothing, and the 46px stays bought.
  *
  * `WeekGrid` keeps its inline `<dt>` glyph and is not converted with this. Its
- * cells are 148px and a chip in one is a different problem than a chip beside a
- * 36px figure; one page marking a product two ways is the lesser cost here.
+ * cells are 148px on a pale surface, which is a different problem from a glyph
+ * beside a 36px figure on a dark one; one page marking a product two ways is
+ * the lesser cost here.
  *
  * **The figure slot is never empty.** A caller with nothing to lead on passes
  * null and gets no slot at all, rather than a blank one — an empty space where a
@@ -45,7 +52,6 @@
  */
 
 import type { ReactNode } from "react";
-import { GLYPH_CHIP } from "./glyphChip";
 
 type ReadingCardProps = {
   /** Sets the subject at a glance; hidden from assistive tech, which reads the heading. */
@@ -96,29 +102,31 @@ export function ReadingCard({
     // tallest, which reads as three different components rather than one row.
     <section
       aria-label={context !== null ? `${title} · ${context}` : title}
-      className="rounded-card flex h-full flex-col bg-mist px-6 py-4"
+      className="rounded-card flex h-full flex-col bg-dark px-6 py-4"
     >
       <h2
         id={headingId}
-        className="text-2xs mb-3 font-extrabold tracking-widest text-ocean uppercase"
+        className="text-2xs mb-3 font-extrabold tracking-widest text-yellow uppercase"
       >
         {title}
       </h2>
 
       {/*
-        One row for the chip and the figure, and the row renders whether or not
+        One row for the glyph and the figure, and the row renders whether or not
         there is a figure. A card with no station still has a subject, and
         dropping its mark when the reading goes quiet makes the card read as
         more broken than it is -- the same argument the empty figure slot loses
         on, in the opposite direction.
       */}
       <div className="mb-2 flex items-center gap-3">
-        <span aria-hidden="true" className={GLYPH_CHIP}>
+        <span aria-hidden="true" className="text-3xl leading-none">
           {emoji}
         </span>
 
         {figure !== null && (
-          <p className="text-stat leading-none font-black italic">{figure}</p>
+          <p className="text-stat leading-none font-black text-white italic">
+            {figure}
+          </p>
         )}
       </div>
 
