@@ -1,5 +1,11 @@
 # Build Tasks: The Conditions Page
 
+> **Historical.** Planned 2026-08-24, shipped in PRs #123, #124 and #128 on
+> 2026-08-24. The design review this file was still carrying is done and
+> recorded in [`DESIGN_REVIEW.md`](DESIGN_REVIEW.md).
+> It records what was intended then, not what the code does now, and is not
+> maintained. See [`docs/plans/README.md`](../../docs/plans/README.md).
+
 Generated from: `.design/conditions-page/DESIGN_BRIEF.md`
 Date: 2026-08-24
 
@@ -220,18 +226,13 @@ Remove `.next/` before believing anything about the built stylesheet.
 
 ## Review
 
-- [ ] **Design review**: run `/design-review` against the brief once PR B has
-      merged and there is something to look at.
-
-**This file carries no historical note yet, and that is deliberate.** All ten
-slices have merged — PRs #123, #124 and #128, all on 2026-08-24 — so everything
-above this heading is now a dated record of what was intended rather than a
-description of what the code does. But `docs/plans/README.md` is explicit that
-"a plan still being worked carries no such note", and the design review above is
-work this file is still carrying. Marking it historical now would freeze an open
-task into a record, which is the exact "neither one nor the other" failure that
-README warns against. The note goes on in the PR that closes the review. The
-landing page's `TASKS.md` sits in the same state, with the same one box open.
+- [x] **Design review**: run `/design-review` against the brief once PR B has
+      merged and there is something to look at. Done 2026-08-24 against all ten
+      merged slices; findings in [`DESIGN_REVIEW.md`](DESIGN_REVIEW.md). It
+      answers the nine-pixel question left open under _Verification_ — leave
+      them — and raises two must-fixes, neither of which is worked here: a
+      review pass reports, and fixing its own findings inside it would leave
+      nothing to review them against.
 
 ## Addenda
 
