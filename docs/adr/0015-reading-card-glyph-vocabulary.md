@@ -48,7 +48,7 @@ consider is that the row above the heading is not the only place a glyph can go.
 
 **The now-band's vocabulary is 🐚 lowest tide, 🏄 waves and water, 💨 air**, and
 the same three mark the same products in the week grid and its reserved rows.
-🌊 leaves `/conditions` entirely and is left meaning one thing site-wide.
+🌊 leaves `/conditions` entirely.
 
 **The glyph renders at 34px inside a 56px `rounded-thumb` chip filled
 `bg-ocean`, on the lead-figure row rather than above the heading.**
@@ -118,6 +118,19 @@ arguing 🌊-over-🐚 is rewritten to point here for the same reason.
 renders when `figure` is null. That 34px on ocean is legible where 10px on mist
 was not is a human check at the review viewport — the same compromise ADR-0004
 records for the touch target and ADR-0014 for a heading rank.
+
+**🌊 is not left meaning one thing, and this decision does not reach the page
+that would fix it.** `Conditions.tsx` — the landing page's teaser — marks
+"Today's low tide is live" with 🌊, which is the tide meaning this ADR just
+moved to 🐚 one click away. So the site now names the same product two ways
+across two pages, which is worse in one sense than the collision this started
+with. It is left alone deliberately: the landing page is a finished composition
+outside this brief, the teaser is a `ReservedSlot` on an ocean surface rather
+than a reading card, and changing it is a visible edit to the first screen of
+the site that wants its own branch. This ADR is what it is converted _against_
+when someone does it. What is true today is that 🌊 means the tide on the
+landing page and Tidepools in `ProgramCards` and `InterestListForm`, and that
+`/conditions` no longer competes with either.
 
 **🏖️ still marks the surf-zone forecast, and that is still wrong.** The product
 is rip-current risk and the glyph is a beach parasol; it was reported as finding

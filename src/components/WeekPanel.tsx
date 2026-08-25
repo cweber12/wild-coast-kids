@@ -47,7 +47,7 @@ const RESERVED: readonly ReservedRow[] = [
       "Swell height and period for each day, forecast close to this shore rather than at a buoy miles offshore.",
   },
   {
-    emoji: "🌡️",
+    emoji: "💨",
     headline: "A gridded forecast is coming.",
     detail:
       "Temperature, wind and sky for this beach's own grid cell, instead of the nearest airport's reading.",

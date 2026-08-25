@@ -267,7 +267,7 @@ export function WindToday({
 
   return (
     <ReadingCard
-      emoji="🌡️"
+      emoji="💨"
       headingId="wind-today-heading"
       title="Air"
       context={beachName}

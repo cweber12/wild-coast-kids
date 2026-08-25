@@ -2,6 +2,7 @@ import { expect, test } from "vitest";
 import { render, screen } from "@testing-library/react";
 import { WindToday } from "./WindToday";
 import { DISCLOSURE_TARGET } from "./disclosure";
+import { GLYPH_CHIP } from "./glyphChip";
 
 /** Scripps Pier: what La Jolla Shores now reads for temperature and wind. */
 const PIER = { name: "Scripps Pier", distanceM: 1_381 };
@@ -548,4 +549,19 @@ test("every wind band has its own words", () => {
     expect(screen.getByText(words)).toBeDefined();
     unmount();
   }
+});
+
+/**
+ * ADR-0015. 💨 rather than the thermometer it replaced, and rather than 🌬️:
+ * the wind face is the obvious Unicode choice and putting a face on a page of
+ * instrument readings was the objection to it. 💨 is the one faceless glyph
+ * that means moving air, and it is also the one that cannot be read without
+ * the chip beneath it — so both halves are asserted together.
+ */
+test("the air card is marked by wind, on the chip that makes it legible", () => {
+  const { container } = render(<WindToday {...panel()} />);
+
+  const glyph = container.querySelector('[aria-hidden="true"]');
+  expect(glyph?.textContent).toBe("💨");
+  expect(glyph?.className).toBe(GLYPH_CHIP);
 });

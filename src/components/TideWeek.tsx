@@ -29,9 +29,11 @@ import type { TideWeekDay } from "@/lib/conditions";
 
 /** What every day of this row shares: the glyph that marks it and the words that name it. */
 export const TIDE_WEEK_ROW = {
-  // 🌊 rather than 🐚: the animal vocabulary belongs to sightings, and a shell
-  // renders pale on this surface. The now-band's tide card made the same call.
-  emoji: "🌊",
+  // 🐚 rather than 🌊, reversing what this comment used to argue. See ADR-0015:
+  // the sightings roster is ten animals and a shell is not among them, and the
+  // pale-on-pale objection is answered by backing the glyph rather than by
+  // giving it up. The now-band's tide card makes the same call.
+  emoji: "🐚",
   label: "Lowest tide",
 } as const;
 
