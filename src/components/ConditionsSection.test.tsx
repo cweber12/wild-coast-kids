@@ -80,3 +80,27 @@ test("the slot promises a record of reports, never a survey", () => {
     screen.getByText(/reported by naturalists, not surveyed by us/),
   ).toBeDefined();
 });
+
+/**
+ * The tense is the claim. Named animals, a named window and a named place in
+ * the past tense read as a report of what was found here, and no such report
+ * exists — the map is deferred. On a page whose discipline is that every figure
+ * names its station and nothing unmeasured is asserted, this was the one
+ * sentence a skimming reader could come away believing.
+ *
+ * The three forecast slots in `WeekPanel` do not have the problem because each
+ * describes a product shape — "Swell height and period for each day" — rather
+ * than asserting something about the world. This slot has to read the same way.
+ * The rolling week stays in the copy: a seven-day window is what the product
+ * is (#121), and under "Will show" it describes the map rather than the coast.
+ */
+test("the slot says what the map will show, not what was found", () => {
+  render(<ConditionsSection slug={DEFAULT_BEACH_SLUG} />);
+
+  const slot = screen.getByText(/A map of what people have found here/);
+
+  expect(slot.textContent).toContain(
+    "Will show octopus, nudibranchs, sea hares and leopard sharks logged " +
+      "near this beach in the past week",
+  );
+});
