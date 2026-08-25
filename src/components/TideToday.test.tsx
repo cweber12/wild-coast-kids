@@ -1,6 +1,7 @@
 import { expect, test } from "vitest";
 import { render, screen } from "@testing-library/react";
 import { TideToday } from "./TideToday";
+import { DISCLOSURE_TARGET } from "./disclosure";
 
 const NEAR_STATION = {
   name: "La Jolla (Scripps Institution Wharf)",
@@ -198,4 +199,51 @@ test("drift is called out as a bug here rather than a problem at the station", (
   expect(
     screen.getByText(/a bug here rather than a problem at the station/),
   ).toBeDefined();
+});
+
+/**
+ * ADR-0004's 44px floor, on the elements that were the last thing on this page
+ * under it. A `<summary>` is background-less, so it takes the floor at every
+ * breakpoint and carries no `md:min-h-0` -- see `disclosure.ts` for why the
+ * display is left alone and why the padding is part of the composition.
+ *
+ * Every summary the component can render rather than a named one, because the
+ * failure this repo has is drift: a disclosure added later without the floor.
+ * Per ADR-0001 jsdom applies no stylesheets, so this proves the class is
+ * referenced, not that the box measures 44px. That stays a human check.
+ */
+test("every disclosure this card can render composes the touch-target floor", () => {
+  const renders = [
+    render(
+      <TideToday
+        beachName="Imperial Beach pier area"
+        station={null}
+        state={{
+          kind: "no-station",
+          reason: "no tide station could be joined to this beach",
+        }}
+      />,
+    ),
+    render(
+      <TideToday
+        beachName="La Jolla Shores Beach"
+        station={NEAR_STATION}
+        state={{
+          kind: "unavailable",
+          detail: "NOAA returned HTTP 503 for station 9410230.",
+          drift: false,
+        }}
+      />,
+    ),
+  ];
+
+  const summaries = renders.flatMap((r) => [
+    ...r.container.querySelectorAll("summary"),
+  ]);
+
+  // Both degraded states, so neither disclosure can be the one that was missed.
+  expect(summaries).toHaveLength(2);
+  for (const summary of summaries) {
+    expect(summary.className).toContain(DISCLOSURE_TARGET);
+  }
 });

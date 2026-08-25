@@ -136,7 +136,7 @@ export function ConditionsSection({ slug }: { slug: string }) {
         <ReservedSlot
           emoji="🗺️"
           headline="A map of what people have found here is coming."
-          detail="Octopus, nudibranchs, sea hares and leopard sharks logged near this beach in the past week — reported by naturalists, not surveyed by us."
+          detail="Will show octopus, nudibranchs, sea hares and leopard sharks logged near this beach in the past week — reported by naturalists, not surveyed by us."
         />
       </div>
 

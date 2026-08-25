@@ -26,6 +26,7 @@
  */
 
 import type { InventoryReach } from "@/lib/beaches";
+import { DISCLOSURE_TARGET } from "./disclosure";
 
 export function Caveats({
   entries,
@@ -43,7 +44,9 @@ export function Caveats({
 
       {reach.excluded.length > 0 && (
         <details className="mt-3">
-          <summary>Why the other {reach.excluded.length} are not here</summary>
+          <summary className={DISCLOSURE_TARGET}>
+            Why the other {reach.excluded.length} are not here
+          </summary>
           <p className="leading-relaxed mt-3">
             A beach is left out rather than answered with a reading measured
             somewhere else — a station further away than we would publish a
@@ -62,7 +65,9 @@ export function Caveats({
 
       {entries.length > 0 && (
         <details className="mt-3">
-          <summary>What we are unsure about in this data</summary>
+          <summary className={DISCLOSURE_TARGET}>
+            What we are unsure about in this data
+          </summary>
           <ul className="leading-relaxed mt-3">
             {entries.map((entry) => (
               <li key={entry} className="mb-3">
