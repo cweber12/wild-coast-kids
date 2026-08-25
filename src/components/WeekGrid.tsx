@@ -181,11 +181,28 @@ export function WeekGrid({
         they are; what this asks for is the density sized to a row.
       */}
       {reserved.length > 0 && (
-        <div className="grid gap-3 sm:grid-cols-3">
-          {reserved.map((slot) => (
-            <ReservedSlot key={slot.headline} {...slot} density="row" />
-          ))}
-        </div>
+        <>
+          {/*
+            The band says what it is. Nothing tied it to the grid above, so a
+            reader had no way to tell that a wave forecast lands *in* the week
+            rather than in a box of its own -- three dashed panels under a
+            table read as a separate thing that happens to sit below it.
+
+            A sentence is the whole fix, and the band stays where it is. A
+            reserved product is one fact about a feed rather than seven facts
+            about seven days: `ReservedRow` carries no `cells`, so there is
+            nothing to put in a day-block until the product exists, and moving
+            one into the `<ol>` would print its headline seven times.
+          */}
+          <p className="leading-relaxed mb-3 max-w-130 text-base text-fog">
+            Each of these will join the week above as a row of its own.
+          </p>
+          <div className="grid gap-3 sm:grid-cols-3">
+            {reserved.map((slot) => (
+              <ReservedSlot key={slot.headline} {...slot} density="row" />
+            ))}
+          </div>
+        </>
       )}
     </section>
   );

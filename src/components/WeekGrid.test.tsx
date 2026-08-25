@@ -160,3 +160,17 @@ test("the week's reserved slots take the row density, not the section one", () =
   expect(reservedSlot()?.className).toContain("py-5");
   expect(reservedSlot()?.className).not.toContain("py-12");
 });
+
+test("the reserved band says it belongs to the week above it", () => {
+  renderGrid({ reserved: RESERVED });
+
+  // Without this the three dashed panels read as a separate thing sitting
+  // below the table rather than as rows the week is waiting for. The band
+  // stays where it is: a reserved product has no cells, so it cannot be a row
+  // until it exists, and one inside the `<ol>` would print seven times.
+  expect(
+    screen.getByText(
+      "Each of these will join the week above as a row of its own.",
+    ),
+  ).toBeDefined();
+});
