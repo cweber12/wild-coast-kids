@@ -34,6 +34,7 @@
  */
 
 import type { TideTodayView } from "@/lib/conditions";
+import { DISCLOSURE_TARGET } from "./disclosure";
 import { ProvenanceLine } from "./ProvenanceLine";
 import { ReadingCard } from "./ReadingCard";
 import { StatGroup } from "./StatGroup";
@@ -107,7 +108,7 @@ export function TideToday({ beachName, station, state }: TideTodayProps) {
             is not different, we simply have no published figure for it.
           </p>
           <details className="mb-4 text-sm text-fog">
-            <summary>Why not</summary>
+            <summary className={DISCLOSURE_TARGET}>Why not</summary>
             <p className="mt-2">{state.reason}</p>
           </details>
         </>
@@ -121,7 +122,7 @@ export function TideToday({ beachName, station, state }: TideTodayProps) {
             printed tide table.
           </p>
           <details className="mb-4 text-sm text-fog">
-            <summary>What went wrong</summary>
+            <summary className={DISCLOSURE_TARGET}>What went wrong</summary>
             <p className="mt-2">{state.detail}</p>
             {state.drift && (
               <p className="mt-2">

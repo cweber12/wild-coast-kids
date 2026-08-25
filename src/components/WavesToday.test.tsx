@@ -1,6 +1,7 @@
 import { expect, test } from "vitest";
 import { render, screen } from "@testing-library/react";
 import { WavesToday } from "./WavesToday";
+import { DISCLOSURE_TARGET } from "./disclosure";
 
 const NEAR = { name: "Scripps Nearshore", distanceM: 1400 };
 const FAR = { name: "Point Loma South", distanceM: 34_159 };
@@ -170,4 +171,53 @@ test("drift is named as a bug here rather than a problem at the buoy", () => {
   expect(
     screen.getByText(/a bug here rather than a problem at the buoy/),
   ).toBeDefined();
+});
+
+/**
+ * ADR-0004's 44px floor, on the elements that were the last thing on this page
+ * under it. A `<summary>` is background-less, so it takes the floor at every
+ * breakpoint and carries no `md:min-h-0` -- see `disclosure.ts` for why the
+ * display is left alone and why the padding is part of the composition.
+ *
+ * Every summary the component can render rather than a named one, because the
+ * failure this repo has is drift: a disclosure added later without the floor.
+ * Per ADR-0001 jsdom applies no stylesheets, so this proves the class is
+ * referenced, not that the box measures 44px. That stays a human check.
+ */
+test("every disclosure this card can render composes the touch-target floor", () => {
+  const renders = [
+    render(
+      <WavesToday
+        beachName="Kellogg Park"
+        buoy={null}
+        state={{
+          kind: "no-buoy",
+          reason: "every wave buoy sits on the open coast",
+        }}
+      />,
+    ),
+    render(
+      <WavesToday
+        beachName="La Jolla Shores Beach"
+        buoy={NEAR}
+        state={{
+          kind: "unavailable",
+          detail: "NDBC 46254's newest observation is 214 minutes old.",
+          drift: false,
+        }}
+      />,
+    ),
+  ];
+
+  const summaries = renders.flatMap((r) => [
+    ...r.container.querySelectorAll("summary"),
+  ]);
+
+  // The no-buoy "Why not" is the one the review measured at 279x17; the
+  // unavailable disclosure eighteen lines below it in the source is the one a
+  // fix scoped to what rendered that day would have left behind.
+  expect(summaries).toHaveLength(2);
+  for (const summary of summaries) {
+    expect(summary.className).toContain(DISCLOSURE_TARGET);
+  }
 });
