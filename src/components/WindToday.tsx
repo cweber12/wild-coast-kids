@@ -48,6 +48,7 @@
  */
 
 import type { AirView } from "@/lib/conditions";
+import { DISCLOSURE_TARGET } from "./disclosure";
 import { ProvenanceLine } from "./ProvenanceLine";
 import { ReadingCard } from "./ReadingCard";
 import { type Stat, StatGroup } from "./StatGroup";
@@ -219,14 +220,18 @@ export function WindToday({
 
       {air.kind === "no-station" && (
         <details className="mb-4 text-sm text-fog">
-          <summary>Why there is no temperature or wind</summary>
+          <summary className={DISCLOSURE_TARGET}>
+            Why there is no temperature or wind
+          </summary>
           <p className="mt-2">{air.reason}</p>
         </details>
       )}
 
       {air.kind === "unavailable" && (
         <details className="mb-4 text-sm text-fog">
-          <summary>Why there is no temperature or wind</summary>
+          <summary className={DISCLOSURE_TARGET}>
+            Why there is no temperature or wind
+          </summary>
           <p className="mt-2">{air.detail}</p>
           {air.drift && (
             <p className="mt-2">
@@ -239,7 +244,9 @@ export function WindToday({
 
       {sky.kind === "unavailable" && (
         <details className="mb-4 text-sm text-fog">
-          <summary>Why there is no sky or visibility</summary>
+          <summary className={DISCLOSURE_TARGET}>
+            Why there is no sky or visibility
+          </summary>
           <p className="mt-2">{sky.detail}</p>
           {sky.drift && (
             <p className="mt-2">
@@ -253,7 +260,9 @@ export function WindToday({
 
       {sky.kind === "no-station" && (
         <details className="mb-4 text-sm text-fog">
-          <summary>Why there is no sky or visibility</summary>
+          <summary className={DISCLOSURE_TARGET}>
+            Why there is no sky or visibility
+          </summary>
           <p className="mt-2">{sky.reason}</p>
         </details>
       )}

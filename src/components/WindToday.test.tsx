@@ -1,6 +1,7 @@
 import { expect, test } from "vitest";
 import { render, screen } from "@testing-library/react";
 import { WindToday } from "./WindToday";
+import { DISCLOSURE_TARGET } from "./disclosure";
 
 /** Scripps Pier: what La Jolla Shores now reads for temperature and wind. */
 const PIER = { name: "Scripps Pier", distanceM: 1_381 };
@@ -355,4 +356,60 @@ test("no sky station leaves the temperature standing on its own", () => {
   expect(screen.getByText("71°F")).toBeDefined();
   expect(screen.getByText(/publishes a sky description/)).toBeDefined();
   expect(screen.queryByText(/Sky and visibility/)).toBeNull();
+});
+
+/**
+ * ADR-0004's 44px floor, on the elements that were the last thing on this page
+ * under it. A `<summary>` is background-less, so it takes the floor at every
+ * breakpoint and carries no `md:min-h-0` -- see `disclosure.ts` for why the
+ * display is left alone and why the padding is part of the composition.
+ *
+ * Every summary the component can render rather than a named one, because the
+ * failure this repo has is drift: a disclosure added later without the floor.
+ * Per ADR-0001 jsdom applies no stylesheets, so this proves the class is
+ * referenced, not that the box measures 44px. That stays a human check.
+ */
+test("every disclosure this card can render composes the touch-target floor", () => {
+  // Four of the ten on this page are here, because the two halves fail
+  // separately and each has both a no-station and an unavailable disclosure.
+  const renders = [
+    render(
+      <WindToday
+        {...panel({
+          airStation: null,
+          skyStation: null,
+          air: { kind: "no-station", reason: "no station near enough" },
+          sky: {
+            kind: "no-station",
+            reason: "nothing near here publishes sky",
+          },
+        })}
+      />,
+    ),
+    render(
+      <WindToday
+        {...panel({
+          air: {
+            kind: "unavailable",
+            detail: "NDBC LJAC1 returns 404 for realtime2.",
+            drift: false,
+          },
+          sky: {
+            kind: "unavailable",
+            detail: "NWS KNKX returns 404 for its latest observation.",
+            drift: false,
+          },
+        })}
+      />,
+    ),
+  ];
+
+  const summaries = renders.flatMap((r) => [
+    ...r.container.querySelectorAll("summary"),
+  ]);
+
+  expect(summaries).toHaveLength(4);
+  for (const summary of summaries) {
+    expect(summary.className).toContain(DISCLOSURE_TARGET);
+  }
 });
