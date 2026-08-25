@@ -130,3 +130,26 @@ test("a card fills the height of the row it sits in", () => {
 
   expect(container.firstElementChild?.className).toContain("h-full");
 });
+
+/**
+ * The week grid's treatment, adopted here. Its glyph sits inside the `<dt>` —
+ * "🌊 Lowest tide" — where it labels rather than floats, and one page marking
+ * the same product two ways was the inconsistency. The 34px block plus its
+ * 12px margin cost 46px per card for a mark that carries nothing a reader
+ * without it would lose.
+ */
+test("the glyph labels the heading rather than taking a line of its own", () => {
+  const { container } = render(card("6:24 AM"));
+
+  const heading = screen.getByRole("heading", { name: "Lowest tide today" });
+
+  expect(heading.textContent).toContain("🐚");
+  // Still hidden, so the accessible name stays the words alone. The assertion
+  // above and this one together are the contract: visible beside the label,
+  // absent from the name.
+  expect(heading.querySelector('[aria-hidden="true"]')?.textContent).toBe("🐚");
+
+  // The block it replaced carried the one raw arbitrary size in a component
+  // whose docstring makes the case against exactly that.
+  expect(container.innerHTML).not.toContain("text-[34px]");
+});

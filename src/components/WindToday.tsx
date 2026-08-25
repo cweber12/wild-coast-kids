@@ -53,6 +53,15 @@ import { ProvenanceLine } from "./ProvenanceLine";
 import { ReadingCard } from "./ReadingCard";
 import { type Stat, StatGroup } from "./StatGroup";
 
+/**
+ * Under a knot the wind is calm. Named once because two readers disagree
+ * otherwise: `windStats` prints "Calm" and suppresses the gust here, and
+ * `windWords` says "no wind" -- a card that said "no wind" above "Gusting
+ * 2 mph" would be contradicting itself, which is the bug the gust rule was
+ * written to stop.
+ */
+const CALM_MPH = 1;
+
 const COMPASS = [
   "north",
   "north-east",
@@ -119,7 +128,7 @@ function roundedKm(metres: number): string {
  * figure is noise from the instrument rather than weather anybody feels.
  */
 function windStats(air: Extract<AirView["air"], { kind: "reading" }>): Stat[] {
-  const calm = air.windMph !== null && air.windMph < 1;
+  const calm = air.windMph !== null && air.windMph < CALM_MPH;
 
   const speed =
     air.windMph === null
@@ -168,6 +177,85 @@ function temperatureWords(air: AirView["air"]): string {
     : `${Math.round(air.airTempF)}°F`;
 }
 
+/**
+ * The air temperature in plain words.
+ *
+ * Descriptive rather than advisory, for the reason `WavesToday`'s `heightWords`
+ * gives about its own bands: this site relays measurements and does not decide
+ * whether anybody should go. "Warm" restates 76 °F; "a good day for it" would
+ * be a verdict, and ADR-0009 forbids the site from making one. That ADR's own
+ * wording is the licence for this line -- "facts get described in plain
+ * language" -- and the boundary it draws is inference, not description.
+ *
+ * The bands are this site's own wording for a published figure. Nothing
+ * upstream publishes them and they are not a standard.
+ */
+function warmthWord(fahrenheit: number): string {
+  if (fahrenheit < 52) return "Cold";
+  if (fahrenheit < 60) return "Chilly";
+  if (fahrenheit < 68) return "Cool";
+  if (fahrenheit < 75) return "Mild";
+  if (fahrenheit < 84) return "Warm";
+  return "Hot";
+}
+
+/**
+ * The wind in plain words, in the Beaufort scale's register.
+ *
+ * Miles per hour is the figure on this card that most needs translating: a
+ * parent reads 76 °F without help and reads 11 mph without knowing whether
+ * that is windy. So the wind earns a clause even though the temperature leads,
+ * the same way `TideToday`'s sentence explains the height while the figure is
+ * the time.
+ *
+ * `CALM_MPH` rather than a second threshold, so this and `windStats` cannot
+ * come to different conclusions about the same reading.
+ */
+function windWords(mph: number): string {
+  if (mph < CALM_MPH) return "no wind";
+  if (mph < 4) return "barely any wind";
+  if (mph < 8) return "a light breeze";
+  if (mph < 13) return "a gentle breeze";
+  if (mph < 19) return "a moderate breeze";
+  if (mph < 25) return "a fresh breeze";
+  if (mph < 32) return "a strong breeze";
+  return "a hard wind";
+}
+
+/**
+ * What this card's figures mean, in one line.
+ *
+ * The brief specifies this line as card anatomy in three places -- "leads with
+ * one big number, says what it means in plain words" under Solution, "emoji
+ * header, lead figure, plain-language line, stat groups, attribution" in
+ * `ReadingCard`'s inventory row, and "the lead figure, the plain-language line
+ * and the stat groups are all present without interaction" under Key
+ * Interactions. Two of the three cards shipped with it: `TASKS.md` slices 2 and
+ * 3 each preserve their card's line explicitly and slice 4 does not mention
+ * one, which is where this card's was dropped. Without it nothing below the
+ * lead figure aligned across the band, so three instances of one component read
+ * as three different layouts.
+ *
+ * Temperature leads because it is this card's figure; the wind follows as a
+ * clause. Either half alone still makes a sentence, because the field each
+ * station publishes can be absent on its own.
+ *
+ * `null` rather than an empty line when neither arrived. `ReadingCard` refuses
+ * to render an empty primary because "an empty one reads as a fault", and a
+ * blank sentence is the same mistake one row down.
+ */
+function plainWords(
+  air: Extract<AirView["air"], { kind: "reading" }>,
+): string | null {
+  const warmth = air.airTempF === null ? null : warmthWord(air.airTempF);
+  const wind = air.windMph === null ? null : windWords(air.windMph);
+
+  if (warmth !== null && wind !== null) return `${warmth}, with ${wind}.`;
+  if (warmth !== null) return `${warmth}.`;
+  if (wind === null) return null;
+  return `${wind[0].toUpperCase()}${wind.slice(1)}.`;
+}
+
 export function WindToday({
   beachName,
   airStation,
@@ -175,6 +263,8 @@ export function WindToday({
   air,
   sky,
 }: AirView) {
+  const words = air.kind === "reading" ? plainWords(air) : null;
+
   return (
     <ReadingCard
       emoji="🌡️"
@@ -183,6 +273,21 @@ export function WindToday({
       context={beachName}
       figure={temperatureWords(air)}
     >
+      {/*
+        The plain-words line every card on this page is specified to carry, and
+        the one this card shipped without. Measured row tops across the band:
+        tide and waves align on all seven rows, and air matched for three and
+        then diverged, because where the others say what the number means it
+        went straight from 76°F to WIND.
+
+        A restatement, never advice. ADR-0009 forbids this site a verdict, so a
+        Beaufort-style "a light breeze" is available and "a good day for it" is
+        not.
+      */}
+      {words !== null && (
+        <p className="leading-relaxed mb-3 text-base text-fog">{words}</p>
+      )}
+
       {/*
         Two groups, each followed by its own attribution, and that arrangement
         IS ADR-0010 rather than a layout preference. The four figures come from

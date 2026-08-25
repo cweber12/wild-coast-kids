@@ -437,3 +437,115 @@ test("one station bound to both halves is worded the same way twice", () => {
     expect(line).toContain("San Diego Airport · about 4.7 km from this beach");
   }
 });
+
+/**
+ * The brief's card anatomy: "leads with one big number, says what it means in
+ * plain words, and then shows its supporting measurements". The tide and waves
+ * cards shipped with the line and this one did not, so nothing below the lead
+ * figure aligned across the band and three instances of one component read as
+ * three different layouts.
+ */
+test("the card says what its figures mean in plain words", () => {
+  render(<WindToday {...panel()} />);
+
+  // 71°F and 8 mph, restated. Never advice: ADR-0009 forbids a verdict, so a
+  // Beaufort-style "a gentle breeze" is available and "a good day for it" is
+  // not.
+  expect(screen.getByText("Mild, with a gentle breeze.")).toBeDefined();
+});
+
+test("a calm wind is calm in the words and in the figure", () => {
+  render(
+    <WindToday {...panel({ air: { ...AIR, windMph: 0.4, gustMph: 2 } })} />,
+  );
+
+  expect(screen.getByText("Mild, with no wind.")).toBeDefined();
+  expect(screen.getByText("Calm")).toBeDefined();
+  // One threshold read by both. Two would let the card say "no wind" above
+  // "Gusting 2 mph", which is the contradiction the gust rule already exists
+  // to stop.
+  expect(screen.queryByText("Gusting")).toBeNull();
+});
+
+test("either figure alone still makes a sentence", () => {
+  // The two halves of this card fail separately, and so does each field a
+  // station publishes: a station carrying a temperature and no wind is a
+  // measured absence rather than an outage.
+  const { unmount } = render(
+    <WindToday {...panel({ air: { ...AIR, windMph: null, gustMph: null } })} />,
+  );
+  expect(screen.getByText("Mild.")).toBeDefined();
+  unmount();
+
+  render(<WindToday {...panel({ air: { ...AIR, airTempF: null } })} />);
+  expect(screen.getByText("A gentle breeze.")).toBeDefined();
+});
+
+test("no line at all when neither figure arrived", () => {
+  render(
+    <WindToday
+      {...panel({
+        air: { ...AIR, airTempF: null, windMph: null, gustMph: null },
+      })}
+    />,
+  );
+
+  // A blank sentence is the same mistake as a blank primary: it reads as a
+  // fault rather than as an absence, and this card already refuses one.
+  expect(screen.getByText("No temperature reading")).toBeDefined();
+  expect(screen.queryByText(/^(Cold|Chilly|Cool|Mild|Warm|Hot)/)).toBeNull();
+  expect(screen.queryByText(/breeze|no wind/)).toBeNull();
+});
+
+/**
+ * The bands themselves, which are the whole of what these two lines say. They
+ * are this site's own wording for published figures rather than a standard, so
+ * nothing upstream asserts them and this is the only place they are pinned.
+ */
+test("every temperature band has its own word", () => {
+  const bands: [number, string][] = [
+    [48, "Cold"],
+    [55, "Chilly"],
+    [64, "Cool"],
+    [71, "Mild"],
+    [79, "Warm"],
+    [90, "Hot"],
+  ];
+
+  for (const [airTempF, word] of bands) {
+    const { unmount } = render(
+      <WindToday
+        {...panel({ air: { ...AIR, airTempF, windMph: null, gustMph: null } })}
+      />,
+    );
+
+    expect(screen.getByText(`${word}.`)).toBeDefined();
+    unmount();
+  }
+});
+
+test("every wind band has its own words", () => {
+  const bands: [number, string][] = [
+    [0.4, "No wind."],
+    [2, "Barely any wind."],
+    [6, "A light breeze."],
+    [11, "A gentle breeze."],
+    [16, "A moderate breeze."],
+    [22, "A fresh breeze."],
+    [28, "A strong breeze."],
+    [40, "A hard wind."],
+  ];
+
+  // Read with no temperature, so the wind is the whole sentence and reaches
+  // the capitalising branch the clause form never does.
+  for (const [windMph, words] of bands) {
+    const { unmount } = render(
+      <WindToday
+        {...panel({ air: { ...AIR, airTempF: null, windMph, gustMph: null } })}
+      />,
+    );
+
+    expect(screen.getByText(words)).toBeDefined();
+    unmount();
+  }
+});
