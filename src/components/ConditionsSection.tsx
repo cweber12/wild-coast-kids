@@ -58,7 +58,30 @@ export function ConditionsSection({ slug }: { slug: string }) {
           </p>
         </div>
 
-        <div className="mt-7 md:mt-0">
+        {/*
+          The standing notice ADR-0009 turns on: that decision rejects an embed
+          partly because "the host page is asserting something it does not
+          control", and this sentence is the assertion. It said less than this
+          and sat fourth of four at the bottom of a 2171px page until now.
+
+          Here rather than in a band of its own above the readings, and the
+          reason is measured. The row is `md:items-end`, so this column is
+          bottom-aligned to a taller one and 85px sat empty in it; the notice
+          fills waste and costs the first screen 25px, where a band above the
+          readings cost 63px and put the air card's second attribution below
+          the fold. ADR-0010 turns on those two distances being comparable at a
+          glance. See the 2026-08-25 addendum in docs/plans/conditions-tool.md
+          for the three placements and their numbers.
+
+          Above the chooser, not below it, so it is read before the control
+          rather than as a footnote to it.
+        */}
+        <div className="mt-7 md:mt-0 md:w-72">
+          <p className="leading-relaxed mb-4 text-base text-fog">
+            These are readings from public instruments, not a safety assessment.
+            Lifeguards and the signs posted at the beach are the authority on
+            the day.
+          </p>
           <BeachSelector groups={groups} current={slug} />
         </div>
       </div>

@@ -702,3 +702,59 @@ the seam the caveats gate already walks. As with #70 it holds the sentence still
 and not the ocean: a gate must not fetch `realtime2`, so nothing in CI notices if
 NDBC changes what these stations publish. The measurement above is the evidence;
 the test only stops the claim reverting silently.
+
+### 2026-08-25 — slice 9 splits, and where the standing notice actually goes
+
+**Slice 9 ships in two parts, and this is the first.** As written it is three
+things: active alerts, the surf zone forecast relayed verbatim, and the standing
+notice. The first two need upstream products this repo does not read yet; the
+notice needs none, and it is what three documents are queued behind — this
+plan's _Presentation_ section, `DESIGN_BRIEF.md`'s Solution paragraph, and
+finding 13 of `.design/conditions-page/DESIGN_REVIEW.md`, which says the entry
+under "How to read these numbers" "may move anyway" when this lands. ADR-0009's
+argument for building the tool here rather than embedding it rests on this
+notice existing, so shipping it alone is worth more than holding it for a feed.
+
+**The placement was decided by measurement, because two documents disagreed.**
+_Presentation_ above says "Above the readings, a standing notice". The brief
+designs the first screen against a 555px budget and spent a whole slice — moving
+the chooser into the header row, worth about 103px — buying the now-band its
+place above that fold. Measured on `main` at `e00b163`, the band runs **354–637
+against a 639px fold**: two pixels of slack. Anything above the readings is paid
+for out of that.
+
+Three placements were built and measured at 1536×639, same copy in each:
+
+| Placement                            | Notice  | Now-band    | Air card's second attribution | Cost  |
+| ------------------------------------ | ------- | ----------- | ----------------------------- | ----- |
+| Its own line above the band          | 354–401 | 417–**700** | 666–684, fully below the fold | +63px |
+| Header row, above the chooser        | 164–258 | 379–**662** | 628–646, cut mid-line         | +25px |
+| Its own line, lead paragraph trimmed | 354–401 | 417–**700** | 666–684                       | +63px |
+
+**Taken: the header row, above the chooser.** It is cheap for a reason rather
+than by trick — the row is `md:items-end`, so the right column is bottom-aligned
+to a taller left column and 85px sits empty in it. The notice fills waste, which
+is what the brief means by content that "is arranged, never removed". It also
+lands at y164, level with the eyebrow and higher up the page than the literal
+placement's y354, and it pairs sensibly with the control beneath it: the chooser
+decides what every figure means, the notice says what every figure is.
+
+**What that costs, named so it is a trade rather than a discovery.** The notice
+sets to 288px over four lines rather than to the page's prose measure, and a
+reader may parse it as a caption for the chooser rather than for the page. The
+literal placement was rejected on one specific loss: at 417–700 the air card's
+second attribution falls at 666, entirely below the fold, and ADR-0010 turns on
+a reader being able to compare the two stations' distances.
+
+**The third row is recorded because it was wrong.** Trimming "Know before you
+go." from the lead paragraph was expected to buy back a line and did not — the
+paragraph sets to two lines either way, so that variant measured identically to
+the first. The sentence stays.
+
+**The safety entry leaves `ConditionsNotes` rather than being said twice.** The
+notice carries everything that entry carried and adds the clause ADR-0009 names
+and the entry never had: that lifeguards and the posted signs are the authority
+on the day. That resolves finding 13 of the design review — "None of it is a
+safety assessment" is not a note about how to read a number — and leaves the
+block with three notes, which is an input to that review's finding 8 rather than
+a decision taken here.

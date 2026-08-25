@@ -25,11 +25,14 @@
  * are shown" rather than asserting this beach has them. That is a description
  * of how the page works, not a claim about this shore.
  *
- * **Not the standing safety notice.** `docs/plans/conditions-tool.md` reserves a
- * prominent notice *above* the readings — instruments rather than judgement,
- * lifeguards and posted signs the authority on the day — for its own slice. This
- * block collects the qualifications that already existed in the page and adds
- * none, so that slice still has something to do.
+ * **Not the standing safety notice, which now exists.** That slice has landed:
+ * `ConditionsSection` carries it in the header row, above the chooser, saying
+ * that these are instruments rather than a judgement and that lifeguards and
+ * the posted signs are the authority on the day. The entry this block used to
+ * carry — "None of it is a safety assessment" — went with it rather than being
+ * said twice, and it was never a note about how to read a number, which is the
+ * heading it sat under. Three notes rather than four for that reason, not
+ * because one was dropped.
  */
 
 import type { InventoryReach } from "@/lib/beaches";
@@ -60,12 +63,6 @@ const NOTES = [
       "published by airports in this county, so that reading is taken further from the " +
       "water than the temperature beside it — and coastal fog is exactly what changes " +
       "across that distance.",
-  },
-  {
-    term: "None of it is a safety assessment",
-    detail:
-      "These are readings relayed from public instruments, each shown with the station " +
-      "that supplied it and how far away that station is.",
   },
 ] as const;
 

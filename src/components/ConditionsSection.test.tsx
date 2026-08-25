@@ -104,3 +104,38 @@ test("the slot says what the map will show, not what was found", () => {
       "near this beach in the past week",
   );
 });
+
+/**
+ * The standing notice ADR-0009 rests on. That decision rejects an embed partly
+ * because inside a frame "the host page is asserting something it does not
+ * control", and this sentence is the assertion — so the page not carrying it
+ * would make a shipped ADR untrue rather than merely leave a gap.
+ *
+ * Both halves are asserted because the entry this replaced only had the first.
+ * `docs/plans/conditions-tool.md` names the second: lifeguards and posted signs
+ * on the day are the authority.
+ */
+test("the page says these are instruments and not a safety assessment", () => {
+  render(<ConditionsSection slug={DEFAULT_BEACH_SLUG} />);
+
+  expect(
+    screen.getByText(/readings from public instruments, not a safety/),
+  ).toBeDefined();
+  expect(
+    screen.getByText(/Lifeguards and the signs posted at the beach are the/),
+  ).toBeDefined();
+});
+
+/**
+ * Said once. The notes block carried "None of it is a safety assessment" as the
+ * fourth of four entries under "How to read these numbers", where it was
+ * neither prominent nor a note about how to read a number. It moved rather than
+ * being duplicated, which is what this asserts end to end: the section renders
+ * `ConditionsNotes` for real, so a regression there fails here.
+ */
+test("the safety framing is stated once, above the readings", () => {
+  render(<ConditionsSection slug={DEFAULT_BEACH_SLUG} />);
+
+  expect(screen.queryByText(/None of it is a safety assessment/)).toBeNull();
+  expect(screen.getAllByText(/not a safety assessment/)).toHaveLength(1);
+});
