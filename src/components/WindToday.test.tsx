@@ -1,6 +1,7 @@
 import { expect, test } from "vitest";
 import { render, screen } from "@testing-library/react";
 import { WindToday } from "./WindToday";
+import { DISCLOSURE_TARGET } from "./disclosure";
 
 /** Scripps Pier: what La Jolla Shores now reads for temperature and wind. */
 const PIER = { name: "Scripps Pier", distanceM: 1_381 };
@@ -85,11 +86,11 @@ test("both stations are named, each with its own distance", () => {
 
   const air = screen.getByText(/Scripps Pier/).textContent ?? "";
   expect(air).toContain("Temperature and wind");
-  expect(air).toContain("1.4 km from this beach");
+  expect(air).toContain("about 1.4 km from this beach");
 
   const sky = screen.getByText(/Miramar/).textContent ?? "";
   expect(sky).toContain("Sky and visibility");
-  expect(sky).toContain("10 km away");
+  expect(sky).toContain("about 10 km from this beach");
 });
 
 test("a near station keeps its distance rather than rounding it away", () => {
@@ -98,7 +99,7 @@ test("a near station keeps its distance rather than rounding it away", () => {
   // tells a reader why the sky is less local than the temperature.
   render(<WindToday {...panel()} />);
 
-  expect(screen.getByText(/1\.4 km from this beach/)).toBeDefined();
+  expect(screen.getByText(/about 1\.4 km from this beach/)).toBeDefined();
 });
 
 /**
@@ -355,4 +356,196 @@ test("no sky station leaves the temperature standing on its own", () => {
   expect(screen.getByText("71°F")).toBeDefined();
   expect(screen.getByText(/publishes a sky description/)).toBeDefined();
   expect(screen.queryByText(/Sky and visibility/)).toBeNull();
+});
+
+/**
+ * ADR-0004's 44px floor, on the elements that were the last thing on this page
+ * under it. A `<summary>` is background-less, so it takes the floor at every
+ * breakpoint and carries no `md:min-h-0` -- see `disclosure.ts` for why the
+ * display is left alone and why the padding is part of the composition.
+ *
+ * Every summary the component can render rather than a named one, because the
+ * failure this repo has is drift: a disclosure added later without the floor.
+ * Per ADR-0001 jsdom applies no stylesheets, so this proves the class is
+ * referenced, not that the box measures 44px. That stays a human check.
+ */
+test("every disclosure this card can render composes the touch-target floor", () => {
+  // Four of the ten on this page are here, because the two halves fail
+  // separately and each has both a no-station and an unavailable disclosure.
+  const renders = [
+    render(
+      <WindToday
+        {...panel({
+          airStation: null,
+          skyStation: null,
+          air: { kind: "no-station", reason: "no station near enough" },
+          sky: {
+            kind: "no-station",
+            reason: "nothing near here publishes sky",
+          },
+        })}
+      />,
+    ),
+    render(
+      <WindToday
+        {...panel({
+          air: {
+            kind: "unavailable",
+            detail: "NDBC LJAC1 returns 404 for realtime2.",
+            drift: false,
+          },
+          sky: {
+            kind: "unavailable",
+            detail: "NWS KNKX returns 404 for its latest observation.",
+            drift: false,
+          },
+        })}
+      />,
+    ),
+  ];
+
+  const summaries = renders.flatMap((r) => [
+    ...r.container.querySelectorAll("summary"),
+  ]);
+
+  expect(summaries).toHaveLength(4);
+  for (const summary of summaries) {
+    expect(summary.className).toContain(DISCLOSURE_TARGET);
+  }
+});
+
+/**
+ * The finding as a reader met it. On `fiesta-island` both halves bind to the
+ * same station, so one card printed "San Diego Airport · 4.7 km from this
+ * beach" and "San Diego Airport · 4.7 km away" 80px apart: the identical fact,
+ * phrased two ways, on one card. `ProvenanceLine` owns the wording now, so two
+ * lines can only differ where the facts differ.
+ */
+test("one station bound to both halves is worded the same way twice", () => {
+  const AIRPORT = { name: "San Diego Airport", distanceM: 4_700 };
+
+  render(
+    <WindToday {...panel({ airStation: AIRPORT, skyStation: AIRPORT })} />,
+  );
+
+  const lines = screen
+    .getAllByText(/San Diego Airport/)
+    .map((line) => line.textContent ?? "");
+
+  expect(lines).toHaveLength(2);
+  for (const line of lines) {
+    expect(line).toContain("San Diego Airport · about 4.7 km from this beach");
+  }
+});
+
+/**
+ * The brief's card anatomy: "leads with one big number, says what it means in
+ * plain words, and then shows its supporting measurements". The tide and waves
+ * cards shipped with the line and this one did not, so nothing below the lead
+ * figure aligned across the band and three instances of one component read as
+ * three different layouts.
+ */
+test("the card says what its figures mean in plain words", () => {
+  render(<WindToday {...panel()} />);
+
+  // 71°F and 8 mph, restated. Never advice: ADR-0009 forbids a verdict, so a
+  // Beaufort-style "a gentle breeze" is available and "a good day for it" is
+  // not.
+  expect(screen.getByText("Mild, with a gentle breeze.")).toBeDefined();
+});
+
+test("a calm wind is calm in the words and in the figure", () => {
+  render(
+    <WindToday {...panel({ air: { ...AIR, windMph: 0.4, gustMph: 2 } })} />,
+  );
+
+  expect(screen.getByText("Mild, with no wind.")).toBeDefined();
+  expect(screen.getByText("Calm")).toBeDefined();
+  // One threshold read by both. Two would let the card say "no wind" above
+  // "Gusting 2 mph", which is the contradiction the gust rule already exists
+  // to stop.
+  expect(screen.queryByText("Gusting")).toBeNull();
+});
+
+test("either figure alone still makes a sentence", () => {
+  // The two halves of this card fail separately, and so does each field a
+  // station publishes: a station carrying a temperature and no wind is a
+  // measured absence rather than an outage.
+  const { unmount } = render(
+    <WindToday {...panel({ air: { ...AIR, windMph: null, gustMph: null } })} />,
+  );
+  expect(screen.getByText("Mild.")).toBeDefined();
+  unmount();
+
+  render(<WindToday {...panel({ air: { ...AIR, airTempF: null } })} />);
+  expect(screen.getByText("A gentle breeze.")).toBeDefined();
+});
+
+test("no line at all when neither figure arrived", () => {
+  render(
+    <WindToday
+      {...panel({
+        air: { ...AIR, airTempF: null, windMph: null, gustMph: null },
+      })}
+    />,
+  );
+
+  // A blank sentence is the same mistake as a blank primary: it reads as a
+  // fault rather than as an absence, and this card already refuses one.
+  expect(screen.getByText("No temperature reading")).toBeDefined();
+  expect(screen.queryByText(/^(Cold|Chilly|Cool|Mild|Warm|Hot)/)).toBeNull();
+  expect(screen.queryByText(/breeze|no wind/)).toBeNull();
+});
+
+/**
+ * The bands themselves, which are the whole of what these two lines say. They
+ * are this site's own wording for published figures rather than a standard, so
+ * nothing upstream asserts them and this is the only place they are pinned.
+ */
+test("every temperature band has its own word", () => {
+  const bands: [number, string][] = [
+    [48, "Cold"],
+    [55, "Chilly"],
+    [64, "Cool"],
+    [71, "Mild"],
+    [79, "Warm"],
+    [90, "Hot"],
+  ];
+
+  for (const [airTempF, word] of bands) {
+    const { unmount } = render(
+      <WindToday
+        {...panel({ air: { ...AIR, airTempF, windMph: null, gustMph: null } })}
+      />,
+    );
+
+    expect(screen.getByText(`${word}.`)).toBeDefined();
+    unmount();
+  }
+});
+
+test("every wind band has its own words", () => {
+  const bands: [number, string][] = [
+    [0.4, "No wind."],
+    [2, "Barely any wind."],
+    [6, "A light breeze."],
+    [11, "A gentle breeze."],
+    [16, "A moderate breeze."],
+    [22, "A fresh breeze."],
+    [28, "A strong breeze."],
+    [40, "A hard wind."],
+  ];
+
+  // Read with no temperature, so the wind is the whole sentence and reaches
+  // the capitalising branch the clause form never does.
+  for (const [windMph, words] of bands) {
+    const { unmount } = render(
+      <WindToday
+        {...panel({ air: { ...AIR, airTempF: null, windMph, gustMph: null } })}
+      />,
+    );
+
+    expect(screen.getByText(words)).toBeDefined();
+    unmount();
+  }
 });

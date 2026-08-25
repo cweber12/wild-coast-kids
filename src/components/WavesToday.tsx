@@ -21,6 +21,7 @@
  */
 
 import type { WavesView } from "@/lib/conditions";
+import { DISCLOSURE_TARGET } from "./disclosure";
 import { ProvenanceLine } from "./ProvenanceLine";
 import { ReadingCard } from "./ReadingCard";
 import { StatGroup } from "./StatGroup";
@@ -99,7 +100,7 @@ export function WavesToday({ beachName, buoy, state }: WavesView) {
             than a fault. Every wave buoy sits out on the open coast.
           </p>
           <details className="mb-4 text-sm text-fog">
-            <summary>Why not</summary>
+            <summary className={DISCLOSURE_TARGET}>Why not</summary>
             <p className="mt-2">{state.reason}</p>
           </details>
         </>
@@ -112,7 +113,7 @@ export function WavesToday({ beachName, buoy, state }: WavesView) {
             shortly.
           </p>
           <details className="mb-4 text-sm text-fog">
-            <summary>What went wrong</summary>
+            <summary className={DISCLOSURE_TARGET}>What went wrong</summary>
             <p className="mt-2">{state.detail}</p>
             {state.drift && (
               <p className="mt-2">
@@ -128,9 +129,7 @@ export function WavesToday({ beachName, buoy, state }: WavesView) {
         <ProvenanceLine
           source={`Buoy ${buoy.name}`}
           network="NDBC"
-          distance={
-            distantKm !== null ? `about ${distantKm} km from this beach` : null
-          }
+          distanceKm={distantKm}
         />
       )}
     </ReadingCard>
