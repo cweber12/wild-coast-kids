@@ -23,14 +23,20 @@
  * would be making one in CSS. So the colour goes into the glyph and the eyebrow,
  * and the figure stays dark on light where a number belongs.
  *
- * **The glyph labels the heading rather than floating above it.** It was a 34px
- * block with a 12px margin on a line of its own -- 46px per card, in every card
- * -- for a mark that carries nothing a reader would lose. `WeekGrid` puts its
- * glyph inside the `<dt>`, "🌊 Lowest tide", where it labels rather than floats,
- * and that is the better of the two: one page should not mark a product two
- * ways. Recovering the row is also where the first screen's spare height is,
- * and it takes `text-[34px]` with it -- the one raw arbitrary size in the
- * component whose own docstring argues against exactly that.
+ * **The glyph is a chip on the figure's row.** See ADR-0015. It was a 34px block
+ * with a 12px margin on a line of its own -- 46px per card, in every card -- and
+ * that cost was real, so it became 10px of inline text inside the heading. At
+ * 10px a full-colour emoji is not a mark, it is a smudge in front of an
+ * otherwise crisp eyebrow: the fix traded the glyph away rather than moving it.
+ *
+ * The row above the heading is not the only place a glyph can go. Beside the
+ * lead figure it shares a row that already exists and is already 36px tall, so
+ * a 44px chip costs the 8px it stands proud of the figure rather than 46. That
+ * is what buys the size back without spending the first screen twice.
+ *
+ * `WeekGrid` keeps its inline `<dt>` glyph and is not converted with this. Its
+ * cells are 148px and a chip in one is a different problem than a chip beside a
+ * 36px figure; one page marking a product two ways is the lesser cost here.
  *
  * **The figure slot is never empty.** A caller with nothing to lead on passes
  * null and gets no slot at all, rather than a blank one — an empty space where a
@@ -39,6 +45,7 @@
  */
 
 import type { ReactNode } from "react";
+import { GLYPH_CHIP } from "./glyphChip";
 
 type ReadingCardProps = {
   /** Sets the subject at a glance; hidden from assistive tech, which reads the heading. */
@@ -95,14 +102,25 @@ export function ReadingCard({
         id={headingId}
         className="text-2xs mb-3 font-extrabold tracking-widest text-ocean uppercase"
       >
-        <span aria-hidden="true">{emoji}</span> {title}
+        {title}
       </h2>
 
-      {figure !== null && (
-        <p className="text-stat leading-none mb-2 font-black italic">
-          {figure}
-        </p>
-      )}
+      {/*
+        One row for the chip and the figure, and the row renders whether or not
+        there is a figure. A card with no station still has a subject, and
+        dropping its mark when the reading goes quiet makes the card read as
+        more broken than it is -- the same argument the empty figure slot loses
+        on, in the opposite direction.
+      */}
+      <div className="mb-2 flex items-center gap-3">
+        <span aria-hidden="true" className={GLYPH_CHIP}>
+          {emoji}
+        </span>
+
+        {figure !== null && (
+          <p className="text-stat leading-none font-black italic">{figure}</p>
+        )}
+      </div>
 
       {children}
     </section>
