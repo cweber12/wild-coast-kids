@@ -1,6 +1,7 @@
 import { expect, test } from "vitest";
 import { render, screen } from "@testing-library/react";
 import { ConditionsNotes } from "./ConditionsNotes";
+import { REGION_HEADING } from "./headingRank";
 
 const ENTRIES = [
   "beach_type is UNKNOWN upstream for most of these beaches.",
@@ -108,4 +109,23 @@ test("it is a labelled region, so the notes are reachable as a landmark", () => 
     name: /how to read these numbers/i,
   });
   expect(heading).toBeDefined();
+});
+
+/**
+ * ADR-0014: a region heading is display register, so it outranks the card and
+ * day headings inside the page. This block introduces one of the page's two
+ * regions and rendered at 10px — the smallest token in the system, and smaller
+ * than the 13px body it introduces.
+ */
+test("the block's heading takes the region rank", () => {
+  render(<ConditionsNotes entries={ENTRIES} reach={REACH} />);
+
+  const heading = screen.getByRole("heading", {
+    name: "How to read these numbers",
+  });
+
+  expect(heading.className).toBe(REGION_HEADING);
+  // Per ADR-0001 jsdom applies no stylesheets, so this proves the rank is
+  // referred to, not that 34px renders. That stays a human check.
+  expect(heading.className).not.toContain("text-2xs");
 });

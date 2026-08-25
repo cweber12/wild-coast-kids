@@ -34,6 +34,7 @@
 
 import type { InventoryReach } from "@/lib/beaches";
 import { Caveats } from "./Caveats";
+import { REGION_HEADING } from "./headingRank";
 
 /** One thing worth understanding about every figure of its kind. */
 const NOTES = [
@@ -79,10 +80,7 @@ export function ConditionsNotes({
     // No top margin: the now-band above carries the gap. Spacing on both is
     // counted twice, which is the failure `SnapSection`'s docstring records.
     <section aria-labelledby="conditions-notes-heading">
-      <h2
-        id="conditions-notes-heading"
-        className="text-2xs mb-3 font-extrabold tracking-widest text-ocean uppercase"
-      >
+      <h2 id="conditions-notes-heading" className={REGION_HEADING}>
         How to read these numbers
       </h2>
 
