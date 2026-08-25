@@ -12,10 +12,11 @@
  * arranged so that nobody can use it: the reader is choosing when to leave the
  * house, and the two clock times are what that turns on.
  *
- * **🌅 rather than ☀️.** The glyph has to mean sunrise and sunset rather than
- * "sunny", because the air card next to it is where sky belongs and a page's
- * glyph may mean one thing. It is also not an animal, which the brief reserves
- * for sightings.
+ * **No glyph.** This row carried 🌅, and the tide row beside it 🐚, at the 10px
+ * the week grid's labels are set in. See ADR-0015: at that size a full-colour
+ * emoji is not a mark, and the shell in particular rendered as a grey smudge on
+ * the pale cell. A glyph marks a panel on this page; a row inside one is named
+ * in words.
  *
  * **A cell rather than a row**, for the reason `TideWeek` gives: the grid is
  * day-major, so a row is seven of these rather than one subtree.
@@ -23,9 +24,8 @@
 
 import type { DaylightWeekDay } from "@/lib/conditions";
 
-/** What every day of this row shares: the glyph that marks it and the words that name it. */
+/** What every day of this row shares: the words that name it. */
 export const DAYLIGHT_WEEK_ROW = {
-  emoji: "🌅",
   label: "Daylight",
 } as const;
 

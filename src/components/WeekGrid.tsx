@@ -52,8 +52,6 @@ export type WeekDay = {
 
 /** One product across the week. */
 export type WeekRow = {
-  /** Marks the product at a glance; hidden from assistive tech, which reads the label. */
-  emoji: string;
   /**
    * Names the product inside every day.
    *
@@ -158,7 +156,7 @@ export function WeekGrid({
                   return (
                     <div key={row.label} className="mb-2 last:mb-0">
                       <dt className="text-2xs font-extrabold tracking-widest text-fog uppercase">
-                        <span aria-hidden="true">{row.emoji}</span> {row.label}
+                        {row.label}
                       </dt>
                       <dd className="text-base text-dark">{cell}</dd>
                     </div>

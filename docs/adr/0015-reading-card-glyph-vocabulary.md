@@ -47,8 +47,17 @@ consider is that the row above the heading is not the only place a glyph can go.
 ## Decision
 
 **The now-band's vocabulary is 🐚 lowest tide, 🏄 waves and water, 💨 air**, and
-the same three mark the same products in the week grid and its reserved rows.
-🌊 leaves `/conditions` entirely.
+the same three mark the same products in the week's reserved rows. 🌊 leaves
+`/conditions` entirely.
+
+> Amended 2026-08-25, after this shipped. The vocabulary reached the week
+> grid's `<dt>` labels too, and it should not have: those are set at 10px, and
+> at 10px a shell is a grey smudge on a pale cell — the exact failure the card
+> was given a dark surface to escape, repeated fourteen times. **A glyph marks a
+> panel on this page. A row inside one is named in words.** The week grid's row
+> glyphs are gone; the reserved slots keep theirs, being panels at 24px and 48px.
+> The rule this ADR was reaching for is about which glyph means which product,
+> and that is unaffected.
 
 **The card is `bg-dark`, and the glyph stands on it bare at 30px, beside the
 lead figure.** The contrast objection is answered by the surface the glyph
@@ -117,10 +126,11 @@ defensible for them to look different, but if it ever reads as an oversight
 rather than a distinction, this is the decision it gets converted against.
 
 **`ReadingCard`'s "the glyph labels the heading rather than floating above it"
-paragraph is superseded and rewritten.** Its reasoning about `WeekGrid` marking
-one product two ways still stands — the week grid keeps its inline `<dt>` glyph,
-because a 30px glyph in a 148px cell on a pale surface is not the same problem
-as a 30px glyph beside a 36px figure on a dark one.
+paragraph is superseded and rewritten.** Its reasoning was that one page should
+not mark a product two ways, and it resolved that by copying the week grid's
+inline treatment onto the card. The resolution is now the other way round: the
+card's glyph is the one that works, and the week grid has none, so there is one
+treatment on the page and it is the legible one.
 
 **This reverses finding 9 of `.design/conditions-page/DESIGN_REVIEW.md`
 (2026-08-24), which shipped the 10px inline glyph.** That finding was right

@@ -11,7 +11,6 @@ const DAYS: WeekDay[] = [
 
 /** Deliberately ragged: the 19th is missing, which is a row this product cannot fill that far out. */
 const TIDE_ROW: WeekRow = {
-  emoji: "🌊",
   label: "Lowest tide",
   cells: {
     "2026-08-17": "6:41 PM",
@@ -80,14 +79,24 @@ test("today is named in words, not carried by a colour alone", () => {
   expect(screen.getByText(/Today · Mon, Aug 17/)).toBeDefined();
 });
 
-test("the glyph is decoration and never the only label a row has", () => {
-  const { container } = renderGrid();
+/**
+ * ADR-0015. The rows carried 🐚 and 🌅 at the 10px these labels are set in,
+ * where a full-colour emoji is not a mark -- the shell rendered as a grey
+ * smudge on the pale cell, fourteen times over. A glyph marks a panel on this
+ * page now; a row inside one is named in words, which is what a screen reader
+ * was hearing all along.
+ */
+test("a row is named in words, with no glyph beside it", () => {
+  const { container } = renderGrid({ reserved: RESERVED });
 
-  const glyph = container.querySelector('[aria-hidden="true"]');
-  expect(glyph?.textContent).toBe("🌊");
-  // The text label is what a screen reader hears, per the brief's rule that
-  // emoji mark categories and never carry them.
   expect(screen.getAllByText("Lowest tide").length).toBeGreaterThan(0);
+
+  // The reserved band below still carries one, so this cannot pass by the grid
+  // having rendered nothing at all.
+  const glyphs = [...container.querySelectorAll('[aria-hidden="true"]')].map(
+    (node) => node.textContent,
+  );
+  expect(glyphs).toEqual(["🏄"]);
 });
 
 test("label and value are a description list, so the pairing is structural", () => {
