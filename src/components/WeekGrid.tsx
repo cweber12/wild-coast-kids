@@ -131,17 +131,28 @@ export function WeekGrid({
         `bg-lavender` was tried and removed: fog on lavender is 4.29:1, under
         the 4.5:1 this page holds itself to, and it would have reintroduced on
         one column the exact failure `globals.css` records fog being darkened to
-        escape. A border is a boundary rather than text, and ocean on mist
-        clears 7:1 as one. Every block carries `border-2` so the marked day is
-        not two pixels wider than its neighbours.
+        escape. A border is a boundary rather than text, and ocean clears 7:1 as
+        one. Every block carries the same border width so the marked day is not
+        wider than its neighbours -- what changes is only its colour.
+
+        `rounded-tile` with a `lavender` edge on `white/60`, which is the
+        treatment `SessionSchedule` and `/art` already use for a box this size,
+        rather than `rounded-card` on `bg-mist`. Two things were wrong with
+        that. The radius is a 520px hero card's, and on a 159x148 cell it is 15%
+        of the width -- the corner stops being a corner. And `mist` sits at
+        1.10:1 against the cream page, so the fill was never visible and the
+        corner arc was most of what the eye had to go on: a large radius on an
+        invisible surface is what reads as a blob. The reading cards escaped
+        this by going dark (ADR-0015); a cell this size takes the edge instead,
+        because seven dark blocks under a dark band is a different page.
       */}
       {days.length > 0 && (
         <ol className="mb-4 grid gap-3 lg:grid-cols-7">
           {days.map((day) => (
             <li
               key={day.localDate}
-              className={`rounded-card border-2 bg-mist px-4 py-3 ${
-                day.isToday ? "border-ocean" : "border-transparent"
+              className={`rounded-tile border-[1.5px] bg-white/60 px-4 py-3 ${
+                day.isToday ? "border-ocean" : "border-lavender"
               }`}
             >
               <h3 className="text-2xs mb-2 font-extrabold tracking-widest text-ocean uppercase">

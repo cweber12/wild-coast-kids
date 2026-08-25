@@ -215,3 +215,39 @@ test("the week's heading outranks the day headings inside it", () => {
   expect(day?.className).toContain("text-2xs");
   expect(day?.className).not.toContain("text-quote");
 });
+
+/**
+ * The property the cell's own comment claims and nothing asserted: today is
+ * marked by the colour of its edge, not by a thicker one. A `border-2` on the
+ * marked day alone would make it two pixels narrower inside than the six beside
+ * it, which is the kind of misalignment nobody finds by reading the diff.
+ */
+test("today is marked by the colour of its edge, never by a wider one", () => {
+  const { container } = renderGrid();
+
+  const cells = [...container.querySelectorAll("ol > li")];
+  expect(cells.length).toBe(3);
+
+  const widths = new Set(
+    cells.map((c) => (c.className.match(/border-\[[^\]]+\]/) ?? [""])[0]),
+  );
+  expect(widths.size).toBe(1);
+
+  expect(cells[0].className).toContain("border-ocean");
+  expect(cells[1].className).toContain("border-lavender");
+  expect(cells[2].className).toContain("border-lavender");
+});
+
+/**
+ * `rounded-tile`, not the 24px `rounded-card` a 520px hero card takes. On a
+ * 159x148 cell that radius is 15% of the width and the corner stops reading as
+ * a corner — see this component's own comment, and finding 1 of the 2026-08-25
+ * review.
+ */
+test("a day cell takes the radius of a box its own size", () => {
+  const { container } = renderGrid();
+
+  const cell = container.querySelector("ol > li");
+  expect(cell?.className).toContain("rounded-tile");
+  expect(cell?.className).not.toContain("rounded-card");
+});
