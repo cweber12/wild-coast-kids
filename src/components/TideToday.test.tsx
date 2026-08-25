@@ -104,7 +104,7 @@ test("a nearby station is credited without a distance", () => {
       state={{ kind: "reading", timeLabel: "6:24 AM", feet: 1.368 }}
     />,
   );
-  expect(screen.queryByText(/km away/)).toBeNull();
+  expect(screen.queryByText(/km from this beach/)).toBeNull();
 });
 
 test("a distant station discloses how far away it is", () => {
@@ -117,7 +117,7 @@ test("a distant station discloses how far away it is", () => {
   );
   // 57 km up the coast is the difference between a prediction for this shore and
   // the nearest one anybody publishes, so it is said where the number is given.
-  expect(screen.getByText(/57 km away/)).toBeDefined();
+  expect(screen.getByText(/about 57 km from this beach/)).toBeDefined();
   expect(
     screen.getByText(/nearest open-coast station publishing predictions/),
   ).toBeDefined();

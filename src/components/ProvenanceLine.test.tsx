@@ -23,16 +23,33 @@ test("no distance is shown when the caller withholds one", () => {
   expect(screen.queryByText(/km/)).toBeNull();
 });
 
-test("a distance is shown when the caller gives one", () => {
+/**
+ * The caller hands over a rounded number and this component writes the
+ * sentence. Handing out the wording as well produced four phrasings of one
+ * fact across three components -- "about N km away", "about N km from this
+ * beach", "N km from this beach" and "N km away" -- two of them twenty lines
+ * apart in the same file. The rounding stays with the caller, where each
+ * threshold has its reason recorded.
+ */
+test("the caller gives a number and this line words it", () => {
   render(
     <ProvenanceLine
       source={SOURCE}
       network="NOAA Tides & Currents"
-      distance="about 12 km away"
+      distanceKm="12"
     />,
   );
 
-  expect(screen.getByText(/about 12 km away/)).toBeDefined();
+  expect(screen.getByText(/about 12 km from this beach/)).toBeDefined();
+});
+
+test("the caller's rounding survives verbatim", () => {
+  // "4.7" and "12" are decisions made upstream: the air panel keeps a decimal
+  // under ten kilometres precisely so a 1.4 km station and a 10.4 km one stay
+  // comparable, and this line must not round that away again.
+  render(<ProvenanceLine source={SOURCE} distanceKm="4.7" />);
+
+  expect(screen.getByText(/about 4\.7 km from this beach/)).toBeDefined();
 });
 
 /**
@@ -45,7 +62,7 @@ test("the reason a distant source was used survives", () => {
     <ProvenanceLine
       source={SOURCE}
       network="NOAA Tides & Currents"
-      distance="about 12 km away"
+      distanceKm="12"
       note="the nearest open-coast station publishing predictions"
     />,
   );
@@ -60,7 +77,7 @@ test("no note is rendered when there is nothing to explain", () => {
     <ProvenanceLine
       source={SOURCE}
       network="NOAA Tides & Currents"
-      distance="1.4 km away"
+      distanceKm="1.4"
     />,
   );
 
@@ -77,7 +94,7 @@ test("a label says which figures this source supplied", () => {
       label="Sky and visibility"
       source="San Diego International"
       network="NWS"
-      distance="10 km away"
+      distanceKm="10"
     />,
   );
 

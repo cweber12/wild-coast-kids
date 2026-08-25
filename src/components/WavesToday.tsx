@@ -129,9 +129,7 @@ export function WavesToday({ beachName, buoy, state }: WavesView) {
         <ProvenanceLine
           source={`Buoy ${buoy.name}`}
           network="NDBC"
-          distance={
-            distantKm !== null ? `about ${distantKm} km from this beach` : null
-          }
+          distanceKm={distantKm}
         />
       )}
     </ReadingCard>

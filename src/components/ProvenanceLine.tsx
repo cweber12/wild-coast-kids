@@ -14,6 +14,18 @@
  * scannable and let two of these stack legibly under one card, which is what the
  * air panel needs.
  *
+ * **The distance is worded here, and rounded by the caller.** Those are two
+ * decisions and they were handed out as one. `distance` arrived "already
+ * worded by the caller", which is right for the rounding -- `TideToday`'s 5 km
+ * threshold, `WavesToday`'s 10 km one and `WindToday`'s sub-10 km decimal each
+ * have a reason recorded where they are made -- and wrong for the phrasing,
+ * which drifted immediately into four wordings of one fact across three
+ * components. On `fiesta-island`, where air and sky bind to the same station,
+ * one card printed "San Diego Airport · 4.7 km from this beach" and "San Diego
+ * Airport · 4.7 km away" 80px apart. So this takes the number and prints the
+ * sentence: same drift `ReadingCard` and `ReservedSlot` both cite in their
+ * docstrings as the reason to share a component at all.
+ *
  * **The note is not decoration.** Some stations are far enough away that the
  * distance alone understates the situation, and `TideToday` records why that is
  * disclosed rather than buried: it "is the difference between a prediction for
@@ -35,8 +47,16 @@ type ProvenanceLineProps = {
    * change rather than a presentation one.
    */
   network?: string | null;
-  /** Already worded by the caller, which owns the rounding. `null` withholds it. */
-  distance?: string | null;
+  /**
+   * How far the station stands, in kilometres and already rounded. `null`
+   * withholds it, which is what a caller under its own threshold does.
+   *
+   * The number and nothing else: a string rather than a number so the caller's
+   * rounding survives verbatim, since "4.7" and "12" are decisions made
+   * upstream for reasons recorded there. Everything around it -- the hedge,
+   * the unit and the reference point -- belongs to this component.
+   */
+  distanceKm?: string | null;
   /** Why this source and not a nearer one, when there is something to say. */
   note?: string | null;
   /** What these figures are, when a card carries more than one source. */
@@ -46,7 +66,7 @@ type ProvenanceLineProps = {
 export function ProvenanceLine({
   source,
   network = null,
-  distance = null,
+  distanceKm = null,
   note = null,
   label = null,
 }: ProvenanceLineProps) {
@@ -55,7 +75,7 @@ export function ProvenanceLine({
       {label !== null && <span className="font-extrabold">{label} </span>}
       {source}
       {network !== null ? ` · ${network}` : ""}
-      {distance !== null ? ` · ${distance}` : ""}
+      {distanceKm !== null ? ` · about ${distanceKm} km from this beach` : ""}
       {note !== null ? ` — ${note}` : ""}
     </p>
   );

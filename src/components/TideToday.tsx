@@ -143,7 +143,7 @@ export function TideToday({ beachName, station, state }: TideTodayProps) {
         <ProvenanceLine
           source={station.name}
           network="NOAA Tides & Currents"
-          distance={distantKm !== null ? `about ${distantKm} km away` : null}
+          distanceKm={distantKm}
           note={
             distantKm !== null
               ? `the nearest ${station.water === "bay" ? "bay" : "open-coast"} station publishing predictions`
