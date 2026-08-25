@@ -145,3 +145,18 @@ test("the week is a region a reader can navigate to by its heading", () => {
   expect(section?.getAttribute("aria-labelledby")).toBe("week-heading");
   expect(screen.getByText("The week ahead").id).toBe("week-heading");
 });
+
+/** The slot's own box, reached through the copy the caller gave it. */
+function reservedSlot() {
+  return screen.getByText(/A wave forecast is coming/).closest("div");
+}
+
+test("the week's reserved slots take the row density, not the section one", () => {
+  renderGrid({ reserved: RESERVED });
+
+  // 244px of dashed box against 128px of live week was the finding.
+  // `ReservedSlot` owns the numbers; what this asserts is that the grid asks
+  // for the density sized to a row rather than reusing the section default.
+  expect(reservedSlot()?.className).toContain("py-5");
+  expect(reservedSlot()?.className).not.toContain("py-12");
+});

@@ -172,10 +172,18 @@ export function WeekGrid({
         </ol>
       )}
 
+      {/*
+        `density="row"` rather than the section default. At section density
+        these three slots measured 244px against 128px of live week above
+        them -- three dashed boxes physically larger than the seven days they
+        annotate, because `ReservedSlot` was built to hold open a whole section
+        and was reused here unchanged. It records why its own numbers are what
+        they are; what this asks for is the density sized to a row.
+      */}
       {reserved.length > 0 && (
         <div className="grid gap-3 sm:grid-cols-3">
           {reserved.map((slot) => (
-            <ReservedSlot key={slot.headline} {...slot} />
+            <ReservedSlot key={slot.headline} {...slot} density="row" />
           ))}
         </div>
       )}

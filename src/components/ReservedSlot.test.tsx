@@ -40,3 +40,24 @@ test("the tone follows the surface the slot sits on", () => {
   expect(light.firstElementChild?.className).toContain("border-lavender");
   expect(ocean.firstElementChild?.className).toContain("border-white/20");
 });
+
+test("the density follows what the slot stands in for", () => {
+  const { container: section } = render(
+    <ReservedSlot emoji="🗓️" headline="Soon." detail="Here." />,
+  );
+  const { container: row } = render(
+    <ReservedSlot emoji="🏄" headline="Soon." detail="Here." density="row" />,
+  );
+
+  // The default is the section density, and that is the half of this variant
+  // that matters most: five of the six call sites hold open a whole section
+  // and none of them names a density, so none of them may move.
+  expect(section.firstElementChild?.className).toContain("py-12");
+  expect(row.firstElementChild?.className).toContain("py-5");
+  expect(row.firstElementChild?.className).not.toContain("py-12");
+
+  // The glyph is the other half. 48px of emoji plus 96px of padding is most of
+  // why three row-scale slots measured taller than the seven days above them.
+  expect(section.querySelector("span")?.className).toContain("text-5xl");
+  expect(row.querySelector("span")?.className).toContain("text-2xl");
+});
