@@ -145,3 +145,44 @@ test("the week is a region a reader can navigate to by its heading", () => {
   expect(section?.getAttribute("aria-labelledby")).toBe("week-heading");
   expect(screen.getByText("The week ahead").id).toBe("week-heading");
 });
+
+/** The slot's own box, reached through the copy the caller gave it. */
+function reservedSlot() {
+  return screen.getByText(/A wave forecast is coming/).closest("div");
+}
+
+test("the week's reserved slots take the row density, not the section one", () => {
+  renderGrid({ reserved: RESERVED });
+
+  // 244px of dashed box against 128px of live week was the finding.
+  // `ReservedSlot` owns the numbers; what this asserts is that the grid asks
+  // for the density sized to a row rather than reusing the section default.
+  expect(reservedSlot()?.className).toContain("py-5");
+  expect(reservedSlot()?.className).not.toContain("py-12");
+});
+
+test("the reserved band says it belongs to the week above it", () => {
+  renderGrid({ reserved: RESERVED });
+
+  // Without this the three dashed panels read as a separate thing sitting
+  // below the table rather than as rows the week is waiting for. The band
+  // stays where it is: a reserved product has no cells, so it cannot be a row
+  // until it exists, and one inside the `<ol>` would print seven times.
+  expect(
+    screen.getByText(
+      "Each of these will join the week above as a row of its own.",
+    ),
+  ).toBeDefined();
+});
+
+test("the reserved band steps at the same width the days do", () => {
+  renderGrid({ reserved: RESERVED });
+
+  // The day blocks are `lg:grid-cols-7`, so at `sm` the live week is stacked
+  // full-width. Three slots side by side from 640px gave roughly 26 characters
+  // over five ragged lines at 768 -- the page's own responsive logic
+  // disagreeing with itself in adjacent bands of the same section.
+  const band = reservedSlot()?.parentElement;
+  expect(band?.className).toContain("lg:grid-cols-3");
+  expect(band?.className).not.toContain("sm:grid-cols-3");
+});
