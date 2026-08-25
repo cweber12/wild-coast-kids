@@ -37,6 +37,7 @@
  */
 
 import type { ReactNode } from "react";
+import { REGION_HEADING } from "./headingRank";
 import { ReservedSlot } from "./ReservedSlot";
 
 /** One column of the week. */
@@ -106,10 +107,7 @@ export function WeekGrid({
 }: WeekGridProps) {
   return (
     <section aria-labelledby={headingId}>
-      <h2
-        id={headingId}
-        className="text-2xs mb-3 font-extrabold tracking-widest text-ocean uppercase"
-      >
+      <h2 id={headingId} className={REGION_HEADING}>
         {title}
       </h2>
 

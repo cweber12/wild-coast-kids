@@ -1,5 +1,6 @@
 import { expect, test } from "vitest";
 import { render, screen } from "@testing-library/react";
+import { REGION_HEADING } from "./headingRank";
 import { WeekGrid, type WeekDay, type WeekRow } from "./WeekGrid";
 
 const DAYS: WeekDay[] = [
@@ -144,4 +145,23 @@ test("the week is a region a reader can navigate to by its heading", () => {
   const section = container.querySelector("section");
   expect(section?.getAttribute("aria-labelledby")).toBe("week-heading");
   expect(screen.getByText("The week ahead").id).toBe("week-heading");
+});
+
+/**
+ * ADR-0014, asserted where both ranks render inside one component. "The week
+ * ahead" is a region and "Tue, Aug 18" is a day inside it, and the two were
+ * `text-2xs font-extrabold tracking-widest text-ocean uppercase` apiece —
+ * indistinguishable, on a page whose outline has four levels.
+ */
+test("the week's heading outranks the day headings inside it", () => {
+  const { container } = renderGrid();
+
+  const region = screen.getByRole("heading", { name: "The week ahead" });
+  expect(region.className).toBe(REGION_HEADING);
+
+  // The other half of the rank: the label register stays where it is. A day
+  // heading moving with the region would restore the flat scale one level down.
+  const day = container.querySelector("h3");
+  expect(day?.className).toContain("text-2xs");
+  expect(day?.className).not.toContain("text-quote");
 });
