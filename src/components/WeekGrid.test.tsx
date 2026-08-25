@@ -174,3 +174,15 @@ test("the reserved band says it belongs to the week above it", () => {
     ),
   ).toBeDefined();
 });
+
+test("the reserved band steps at the same width the days do", () => {
+  renderGrid({ reserved: RESERVED });
+
+  // The day blocks are `lg:grid-cols-7`, so at `sm` the live week is stacked
+  // full-width. Three slots side by side from 640px gave roughly 26 characters
+  // over five ragged lines at 768 -- the page's own responsive logic
+  // disagreeing with itself in adjacent bands of the same section.
+  const band = reservedSlot()?.parentElement;
+  expect(band?.className).toContain("lg:grid-cols-3");
+  expect(band?.className).not.toContain("sm:grid-cols-3");
+});

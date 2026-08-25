@@ -197,7 +197,15 @@ export function WeekGrid({
           <p className="leading-relaxed mb-3 max-w-130 text-base text-fog">
             Each of these will join the week above as a row of its own.
           </p>
-          <div className="grid gap-3 sm:grid-cols-3">
+          {/*
+            `lg:grid-cols-3`, matching the days above rather than stepping a
+            breakpoint earlier. The day blocks stay one column until `lg`, so
+            at `sm` the live week was stacked full-width while these three sat
+            side by side at 216px each -- roughly 26 characters over five
+            ragged lines. The week said 768 was narrow and the slots said it
+            was wide, in adjacent bands of the same section.
+          */}
+          <div className="grid gap-3 lg:grid-cols-3">
             {reserved.map((slot) => (
               <ReservedSlot key={slot.headline} {...slot} density="row" />
             ))}
