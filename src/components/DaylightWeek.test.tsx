@@ -20,3 +20,20 @@ test("sunrise leads, and sunset follows it in reading order", () => {
 
   expect(container.textContent).toBe("6:48 AM to 4:47 PM");
 });
+
+/**
+ * Regression. The two clock times were set on one line, which fitted six days
+ * of the week and wrapped on the seventh, taking that column's rows out of line
+ * with its neighbours. Breaking them deliberately fixed the grid and, on the
+ * first attempt, silently joined the words: two `block` spans with no text node
+ * between them read aloud as "6:48 AMto 4:47 PM". A line break a reader can see
+ * must not become a word break a reader can hear.
+ */
+test("breaking the line does not join the words", () => {
+  const { container } = render(
+    <DaylightWeek day={{ sunriseLabel: "6:48 AM", sunsetLabel: "4:47 PM" }} />,
+  );
+
+  expect(container.textContent).toContain("6:48 AM to 4:47 PM");
+  expect(container.textContent).not.toContain("AMto");
+});

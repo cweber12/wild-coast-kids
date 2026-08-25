@@ -155,7 +155,29 @@ export function WeekGrid({
                 day.isToday ? "border-ocean" : "border-lavender"
               }`}
             >
-              <h3 className="text-2xs mb-2 font-extrabold tracking-widest text-ocean uppercase">
+              {/*
+                `min-h-8` holds two lines whether or not this day needs them.
+                "Today · " is eight characters of a 10px `tracking-widest`
+                label in a 124px cell, so the marked day wraps where the other
+                six do not -- and every row beneath it in that column then sits
+                a line lower than the same row beside it. Reserving the line is
+                what keeps the seven columns readable across rather than only
+                down.
+
+                It costs one line. Together with the daylight cell's deliberate
+                break, the grid goes 146px to 163px at 1280 -- no cell had both
+                a two-line header and a two-line value before, and now every
+                cell has both. That is the price of the seven columns being
+                identical, paid once and below the fold, and it is worth it:
+                a grid whose rows do not line up across is a table pretending.
+
+                Reserved rather than shortened. "Today" alone fits, and drops
+                the date from the one column a reader without the layout most
+                needs it named in; splitting the visible text from the
+                accessible one would need an `sr-only`, which this repo does
+                not use (`ReadingCard` records why).
+              */}
+              <h3 className="text-2xs mb-2 min-h-8 font-extrabold tracking-widest text-ocean uppercase">
                 {day.isToday ? `Today · ${day.dayLabel}` : day.dayLabel}
               </h3>
 
