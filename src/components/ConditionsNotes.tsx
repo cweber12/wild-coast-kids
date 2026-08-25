@@ -85,10 +85,30 @@ export function ConditionsNotes({
         A description list rather than paragraphs: each entry is a topic and its
         explanation, and the pairing is what a reader is scanning for. It also
         survives for someone who cannot see the bolding.
+
+        Columns rather than one stacked ribbon, and the cap moves from the list
+        to each note. As a single column this block was 520px of prose in a
+        1440px section, leaving 920px blank beside it for its full height -- the
+        complaint the brief opens with, reproduced in the page's own closing
+        section. The notes are independent of each other, so columns cost the
+        reader nothing to scan.
+
+        It also reads better rather than merely narrower. Measured at 520px the
+        lines ran 83-84 characters at every width, which is past a comfortable
+        measure; three columns at 1536 set to about 74 and two at 768 to about
+        52. The brief's principle is that prose keeps its measure and is not
+        stretched to fill space, and `max-w-130` per note is what holds that --
+        on a very wide screen the columns stop growing rather than pulling the
+        lines back out to 83.
+
+        Two steps, matching the now-band's `sm:grid-cols-2 lg:grid-cols-3`
+        rhythm rather than inventing one. `lg:grid-cols-3` alone would put three
+        columns at 1024 where each is 288px, about 47 characters, and this ramp
+        never takes prose below roughly 52.
       */}
-      <dl className="leading-relaxed max-w-130 text-sm text-fog">
+      <dl className="leading-relaxed text-sm text-fog md:grid md:grid-cols-2 md:gap-x-8 xl:grid-cols-3">
         {NOTES.map(({ term, detail }) => (
-          <div key={term} className="mb-3">
+          <div key={term} className="mb-3 max-w-130">
             <dt className="font-extrabold text-dark">{term}</dt>
             <dd>{detail}</dd>
           </div>

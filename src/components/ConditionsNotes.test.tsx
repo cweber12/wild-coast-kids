@@ -149,3 +149,38 @@ test("the block's heading takes the region rank", () => {
   // referred to, not that 34px renders. That stays a human check.
   expect(heading.className).not.toContain("text-2xs");
 });
+
+/**
+ * Finding 8 of the conditions-page design review. As a single column this block
+ * was 520px of prose in a 1440px section, leaving 920px blank beside it for its
+ * full height — the complaint the brief opens with, reproduced in the page's own
+ * closing section. The notes are independent of one another, so columns cost a
+ * reader nothing to scan.
+ *
+ * The cap moves from the list to each note, which is what the review's "each
+ * still capped at its own measure" requires: on a very wide screen the columns
+ * stop growing rather than pulling the lines back out to the 83 characters they
+ * measured before.
+ *
+ * Per ADR-0001 jsdom applies no stylesheets, so this proves the classes are
+ * referenced, not that three columns render. The measurements are in the PR.
+ */
+test("the notes lay out in columns, each keeping its own measure", () => {
+  const { container } = render(
+    <ConditionsNotes entries={ENTRIES} reach={REACH} />,
+  );
+
+  const list = container.querySelector("dl");
+
+  expect(list?.className).toContain("md:grid-cols-2");
+  expect(list?.className).toContain("xl:grid-cols-3");
+
+  // On the list the cap would hold the whole grid inside 520px and put the
+  // three columns back into the one ribbon this replaces.
+  expect(list?.className).not.toContain("max-w-130");
+  const notes = Array.from(list?.children ?? []);
+  expect(notes.length).toBeGreaterThan(0);
+  for (const note of notes) {
+    expect(note.className).toContain("max-w-130");
+  }
+});
