@@ -23,6 +23,15 @@
  * would be making one in CSS. So the colour goes into the glyph and the eyebrow,
  * and the figure stays dark on light where a number belongs.
  *
+ * **The glyph labels the heading rather than floating above it.** It was a 34px
+ * block with a 12px margin on a line of its own -- 46px per card, in every card
+ * -- for a mark that carries nothing a reader would lose. `WeekGrid` puts its
+ * glyph inside the `<dt>`, "🌊 Lowest tide", where it labels rather than floats,
+ * and that is the better of the two: one page should not mark a product two
+ * ways. Recovering the row is also where the first screen's spare height is,
+ * and it takes `text-[34px]` with it -- the one raw arbitrary size in the
+ * component whose own docstring argues against exactly that.
+ *
  * **The figure slot is never empty.** A caller with nothing to lead on passes
  * null and gets no slot at all, rather than a blank one — an empty space where a
  * number goes reads as a fault, which is the same reason `WindToday` refuses to
@@ -66,11 +75,6 @@ type ReadingCardProps = {
   children: ReactNode;
 };
 
-/* leading-none on a decorative glyph, for the reason `ProgramCards` gives:
-   at this size the default line box adds visible height around an emoji that
-   nothing on screen accounts for. */
-const EMOJI = "mb-3 block text-[34px] leading-none";
-
 export function ReadingCard({
   emoji,
   headingId,
@@ -87,15 +91,11 @@ export function ReadingCard({
       aria-label={context !== null ? `${title} · ${context}` : title}
       className="rounded-card flex h-full flex-col bg-mist px-6 py-4"
     >
-      <span aria-hidden="true" className={EMOJI}>
-        {emoji}
-      </span>
-
       <h2
         id={headingId}
         className="text-2xs mb-3 font-extrabold tracking-widest text-ocean uppercase"
       >
-        {title}
+        <span aria-hidden="true">{emoji}</span> {title}
       </h2>
 
       {figure !== null && (

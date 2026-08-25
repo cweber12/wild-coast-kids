@@ -1,6 +1,7 @@
 import { expect, test } from "vitest";
 import { render, screen } from "@testing-library/react";
 import { Caveats } from "./Caveats";
+import { DISCLOSURE_TARGET } from "./disclosure";
 
 const ENTRIES = [
   "beach_type is UNKNOWN upstream for most of these beaches.",
@@ -96,4 +97,26 @@ test("the uncertainty disclosure is absent when there is nothing to disclose", (
     screen.queryByText("What we are unsure about in this data"),
   ).toBeNull();
   expect(screen.getByText(/answers for 41 of the 73/)).toBeDefined();
+});
+
+/**
+ * ADR-0004's 44px floor, on the elements that were the last thing on this page
+ * under it. A `<summary>` is background-less, so it takes the floor at every
+ * breakpoint and carries no `md:min-h-0` -- see `disclosure.ts` for why the
+ * display is left alone and why the padding is part of the composition.
+ *
+ * Every summary the component can render rather than a named one, because the
+ * failure this repo has is drift: a disclosure added later without the floor.
+ * Per ADR-0001 jsdom applies no stylesheets, so this proves the class is
+ * referenced, not that the box measures 44px. That stays a human check.
+ */
+test("both disclosures compose the touch-target floor", () => {
+  const { container } = render(<Caveats entries={ENTRIES} reach={REACH} />);
+
+  const summaries = [...container.querySelectorAll("summary")];
+
+  expect(summaries).toHaveLength(2);
+  for (const summary of summaries) {
+    expect(summary.className).toContain(DISCLOSURE_TARGET);
+  }
 });
