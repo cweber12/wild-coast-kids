@@ -1,0 +1,119 @@
+# Design Review: The Conditions Page
+
+Reviewed against: `DESIGN_BRIEF.md`
+Philosophy: Coastal pop editorial
+Date: 2026-08-24
+Reviewed at: `main`, commit `67e3c46` — slices 1–10 merged in PRs #123, #124 and #128
+Method: Chromium via Playwright against `next dev`, `.next/` removed first. Every layout, contrast and touch-target number below was measured in the browser, per ADR-0001.
+
+## Screenshots Captured
+
+**The `screenshots/` folder is git-ignored** (`.design/conditions-page/.gitignore`), so these files exist beside this review locally and are not in the repository. They are named here so the findings are traceable for anyone re-running the capture, not so they can be opened from a clone.
+
+| Screenshot                              | Viewport                    | What it shows                                                |
+| --------------------------------------- | --------------------------- | ------------------------------------------------------------ |
+| `review-index-review-1536x639-fold.png` | 1536×639, first screen      | The 555px budget as the review machine sees it               |
+| `review-index-review-1536x639-full.png` | 1536×639, full page         | The whole composition, 2171px                                |
+| `review-1536-now-band-anatomy.png`      | 1536×639                    | Three cards side by side; the third breaks the shared rhythm |
+| `review-1536-week-grid.png`             | 1536×639                    | Seven day-columns, today outlined in ocean                   |
+| `review-1536-reserved-run.png`          | 1536×639                    | The week grid against the four dashed slots below it         |
+| `review-1536-notes-empty-right.png`     | 1536×639                    | The notes block and the empty two-thirds beside it           |
+| `review-1536-select-focus.png`          | 1536×639                    | Keyboard focus on the beach selector                         |
+| `review-768-reserved-three-across.png`  | 768×1024                    | Reserved slots three-across while the week grid has stacked  |
+| `review-375-now-band.png`               | 375×812                     | The now-band stacked                                         |
+| `review-375-week-grid.png`              | 375×812                     | The week transposed to seven day-rows                        |
+| `review-375-notes-disclosures.png`      | 375×812                     | The two disclosure targets                                   |
+| `review-states-fiesta-island.png`       | 1536×639                    | A beach with no buoy — the expected-absence state            |
+| `review-states-shell-beach.png`         | 1536×639                    | A second beach, confirming the band is not tuned to one      |
+| `review-index-*-{full,fold}.png`        | 1280×800, 768×1024, 375×812 | The skill's three standard breakpoints                       |
+| `review-la-jolla-shores-*.png`          | all four                    | `/conditions/<slug>` rendering identically to `/conditions`  |
+
+## Summary
+
+The page delivers what the brief set out to do. The numbers a parent came for are three across the top in one glance, every figure names its station, the week transposes to seven readable day-rows on a phone without a scroll container, and nothing anywhere on the page looks like a verdict. Contrast was measured across twenty distinct text-on-surface pairs and **every one clears WCAG AA**, with the floor at 5.04:1 — the fog-on-mist pairing `TASKS.md` claimed, confirmed independently.
+
+The biggest finding is not in the live content at all. It is that **the page's reserved slots are physically larger than the data they stand in for** — 503 contiguous pixels of dashed boxes, 21% of the page, sitting between the week grid and the notes — because `ReservedSlot` was built as a whole-section stand-in and is reused unchanged at row scale. Under that, two smaller things: every heading below the `<h1>` renders at 10px, the smallest token in the system and smaller than the body text it introduces; and the one sentence on the page that could be read as a factual claim about the world is inside a slot for a feature that does not exist.
+
+On the nine pixels `TASKS.md` referred here: **leave them, and buy back more than nine by a different route.** Reasoning below.
+
+## Must Fix
+
+1. **Every disclosure on the page is a 17px touch target.** Measured at 375: "Why the other 32 are not here" and "What we are unsure about in this data" are 327×17, and "Why not" inside the waves card is 279×17. `TOUCH_TARGET` (`min-h-11`, 44px) exists at `src/components/touchTarget.ts`, is composed by `Nav`, `PillLink` and `BeachSelector`, and is asserted by tests on all three — the `<summary>` elements compose nothing. These are inherited rather than introduced: `git log` shows `Caveats.tsx` was last touched by `6bc5b81` and `be2655c`, both predating this work, and the brief specified it move "unchanged", which it did. But they are now the only interactive elements on this page below 44px, the brief's own accessibility section re-states the requirement, and `TASKS.md` records that ADR-0004 exists _because_ two design reviews reported touch targets and nothing happened either time. This is the third report. _Fix: compose `TOUCH_TARGET` on the three `<summary>` elements, in `Caveats` and in the `*Today` disclosure blocks._
+
+2. **The map slot describes hypothetical sightings in a tense that reads as fact.** `ConditionsSection.tsx` passes the detail "Octopus, nudibranchs, sea hares and leopard sharks logged near this beach in the past week — reported by naturalists, not surveyed by us." Named animals, a named window and a named place, in the past tense, with only the headline above it ("A map of what people have found here **is coming**") marking it as illustrative. The three forecast slots do not have this problem, because each describes a _product shape_ — "Swell height and period for each day" — rather than asserting something about the world. On a page whose entire discipline is that every figure is attributed and nothing unmeasured is asserted, this is the one sentence a skimming parent could come away believing. _Fix: put it in the future tense — "will show octopus, nudibranchs, sea hares and leopard sharks logged near this beach" — so the slot describes the product like the other three do._
+
+## Should Fix
+
+3. **The reserved slots outweigh the live content and are detached from the grid they belong to.** Measured at 1536: the seven day-blocks are 128px tall; the three reserved forecast slots below them are 244px; the map slot is 223px. That is a 503px unbroken run of dashed boxes from y855 to y1358 — 21% of the 2171px page — against 128px of the week it is annotating. Two separate causes. First, `ReservedSlot` carries `px-8 py-12` and a `text-5xl` glyph because its docstring's job is standing in for a whole section ("a schedule, a scheduler embed, the conditions tool"); reused unchanged, it brings 96px of vertical padding and a 48px glyph to a slot that wanted a table row. Second, `WeekGrid` renders them as `<div className="grid gap-3 sm:grid-cols-3">` _after_ the `<ol>` rather than as rows within it, so nothing visually connects "A wave forecast is coming" to the seven days above it — a reader cannot tell the wave forecast will land _in_ the grid. Both the brief and slice 9 describe these as rows. See `review-1536-reserved-run.png`. _Fix: give `ReservedSlot` a density variant the way `PillLink` has tones — a closed list, same pattern, no new component — and render the three forecast slots as rows inside the `<ol>` so they inherit the day columns._
+
+4. **Between 640px and 1024px the week grid and its own reserved slots contradict each other.** The day blocks are `lg:grid-cols-7`, so they stay one column until 1024px. The reserved slots are `sm:grid-cols-3`, so they go three-across from 640px and never step back. At 768 the live week is stacked full-width while the three slots sit three-across at 216px each, giving centred prose at roughly 26 characters over five ragged lines. The page's own responsive logic disagrees with itself in adjacent bands: the week says 768 is narrow, the slots say it is wide. See `review-768-reserved-three-across.png`. _Fix: match the slots to the grid — `lg:grid-cols-3`, or drop out of the question entirely by making them rows per finding 3._
+
+5. **Twelve of the thirteen headings render at 10px, smaller than the body text they introduce.** Measured: the `<h1>` is 56px, and every other heading on the page — the three card `<h2>`s, the two region `<h2>`s and the seven day `<h3>`s — is 10px/800/uppercase/ocean, identical to each other and to the stat labels and provenance lines. `--text-2xs` is the smallest token in the system; `--text-base` body is 13px. So "The week ahead" (a region), "Air" (a card inside it) and "Tue, Aug 25" (a day inside that) are typographically indistinguishable, and the page has exactly two type levels where the outline has four. The DOM outline itself is correct and nothing is skipped — this is purely visual. The system already defines the missing middle: `--text-card` (clamp 30–44px) and `--text-quote` (clamp 20–34px) are declared in `globals.css` and neither appears anywhere on this page. _Fix: give the two region headings a step up from the card and day headings, using a token that already exists rather than a new one._
+
+6. **The same fact — how far a station is — is written four ways across three components.** `TideToday` renders `about N km away`; `WavesToday` renders `about N km from this beach`; `WindToday` renders `N km from this beach` for the air station and `N km away` for the sky station, twenty lines apart in the same file. On `fiesta-island`, where both air and sky bind to the same station, the card prints "San Diego Airport · 4.7 km from this beach" and "San Diego Airport · 4.7 km away" 80px apart — the identical fact, phrased two ways, on one card. See `review-states-fiesta-island.png`. `ProvenanceLine` centralised the interpunct ordering and left `distance` "already worded by the caller", which is right for the rounding (the 5 km and 10 km thresholds and the sub-10 km decimal all have documented reasons) but handed out the phrasing too, and it drifted immediately — the same drift `ReadingCard` and `ReservedSlot` both cite in their docstrings as the reason to share a component at all. _Fix: let `ProvenanceLine` own the suffix and take the already-rounded number, so callers keep the rounding decision and lose the wording one._
+
+7. **The air card skips the plain-words line the other two cards have.** Measured row tops: tide and waves align on all seven rows (glyph 370, heading 416, figure 443, sentence 487, stat label 522, stat value 537, provenance 569). Air matches for three rows and then diverges, because where the others say what the number means — "Above the average low tide", "about knee to thigh high" — it goes straight from 76°F to WIND. The brief's card anatomy is "leads with one big number, says what it means in plain words, and then shows its supporting measurements"; two of three do. The consequence is that nothing below the lead figure aligns across the band, so three instances of one component read as three different layouts. See `review-1536-now-band-anatomy.png`. Note this must stay a restatement rather than advice — ADR-0009 forbids a verdict, so a Beaufort-style "a light breeze" is available and "a good day for it" is not. _Fix: give the air card its plain-words line; the wording is the author's call, and see finding 9 for where the ~35px it costs comes from._
+
+8. **The notes block leaves roughly 920 × 546 pixels of the page empty, which is the complaint the brief opens with.** `ConditionsNotes` caps its `<dl>` at `max-w-130` and left-aligns it, so at 1536 the closing section is a 520px ribbon of prose in a 1440px column with two-thirds of the width blank beside it for its full 546px height. The cap is right for a line of prose and the brief is right that it was never the problem — but it is applied to the whole four-note block as a single column, and the four notes are independent. The brief's own first principle says explanations keep their readable measure and neither is stretched to fill space; two columns of four notes honours that exactly, since each note keeps its own measure and the block stops being a column of text beside an empty half-page. See `review-1536-notes-empty-right.png`. _Fix: lay the four notes two-up from `lg`, each still capped at its own measure._
+
+## Could Improve
+
+9. **The glyph sits on its own 46px line in the now-cards and inline with its label in the week grid, and the week grid's version is the better one.** `ReadingCard`'s `EMOJI` is `mb-3 block text-[34px] leading-none` — a 34px glyph plus 12px margin, above the heading, in every card. `WeekGrid` puts its glyph inside the `<dt>` — "🌊 Lowest tide" — where it labels rather than floats. Beyond consistency this is where the first screen's spare height is: recovering even half of that 46px covers both the nine pixels below and the ~35px that finding 7 adds back. _Suggestion: adopt the week grid's inline treatment in the now-cards._
+
+10. **`text-[34px]` is a raw arbitrary value in the component that removed one.** `ReadingCard`'s docstring makes the case against exactly this — "the three panels rendered their leading figure at `text-4xl`, a raw Tailwind size, while the design system defines `--text-stat` at the same 36px... Two names for one decision is one of them waiting to be wrong" — and then sets the glyph with an arbitrary bracket value that no token backs. _Suggestion: token it, or reuse `--text-stat` if 36px is close enough._
+
+11. **The week grid costs more vertical space on a phone than it needs to.** At 375 each day block is ~130px and the grid is 968px tall, because the product label sits above its value and both repeat for all seven days — so a reader scrolls past fourteen labels to read fourteen values. At `lg` the labels align into what reads as a header row and cost nothing; stacked, they are pure repetition in the scroll path. `WeekGrid`'s docstring is right that the label has to live inside each day (there is no side to print it down below `lg`), and this does not question that. _Suggestion: put label and value on one line below `lg`, keeping every day self-describing at about half the height._
+
+12. **🏖️ marks a hazard product with a leisure glyph.** The surf zone forecast's slot is a beach parasol, and the product is rip current risk. The rest of the vocabulary is disciplined — 🏄 and 🌡️ correctly mean the same product in the live card and its reserved row — so this is the one glyph carrying a mood at odds with its content. _Suggestion: a glyph that reads as water hazard rather than as a day at the beach._
+
+13. **The safety note is filed under a heading that does not quite cover it.** "None of it is a safety assessment" is the fourth entry under "How to read these numbers", but it is not a note about how to read a number. The _prominence_ question is already answered and correctly deferred — see below — so this is only about the heading it sits under. _Suggestion: nothing urgent; worth a thought when the standing notice slice lands and this entry may move anyway._
+
+## The 555px budget, and the nine pixels
+
+`TASKS.md` deferred this here, so it gets an answer rather than a restatement.
+
+Confirmed on `main` at `67e3c46`: the now-band runs **354–648 against a 639px fold**, nine pixels over. But _what_ is nine pixels over matters. The last ink in the tallest card — the sky provenance line — sits at 614–632, comfortably inside the viewport. Every figure, every label, every attribution on all three cards is above the fold. What is clipped is nine pixels of the cards' bottom padding and their corner radius.
+
+**Leave it.** Two reasons. A card whose bottom edge is visibly cut is a truthful signal that the page continues, and it is a better one than a band that ends flush at the fold, which reads as the bottom of the page. And trimming nine pixels off a margin to make a number go green is fixing a symptom with a constant, which is the thing `CLAUDE.md` bans by name — the band is 294px tall because the air card carries two stat groups and two attributions, and that is ADR-0010 doing its job, not slack.
+
+If the height is wanted anyway, findings 9 and 7 are the honest route: the glyph row costs 46px per card and buys back far more than nine, while making the now-cards consistent with the week grid and leaving room for the air card's missing sentence. That is a composition change with a reason. A smaller `mb` is not.
+
+## Already considered and answered
+
+Recorded so the next reader does not re-open them. Each of these looked like a finding from the rendered page and turned out to be argued in the code.
+
+- **Labels repeat inside every day block** — `WeekGrid` answers it: below `lg` a day is a row and there is no side to print a label down, and repetition is what makes the stacked layout read as sentences. Finding 11 works within this, not against it.
+- **Two cards carry 61px of dead space at the bottom** — `ReadingCard`'s `h-full flex-col` is deliberate: "three cards of unequal content otherwise leave two ragged surfaces beside the tallest, which reads as three different components rather than one row." The dead space is the accepted price of an equal row, and the row is tall because of ADR-0010. Not raised as a finding.
+- **The air card names no network** — `ProvenanceLine`'s prop doc answers it: `StationBinding` carries no network, an air station may be on NWS or NDBC, and rendering a guess would be worse than rendering nothing.
+- **The safety sentence is fourth of four and no louder than the rest** — `ConditionsNotes` answers it: `docs/plans/conditions-tool.md` reserves a prominent notice _above_ the readings for its own slice, and this block deliberately collects only what already existed so that slice still has something to do. Correct call; finding 13 is only about the heading.
+- **Two cards at `sm` rather than three** — `ConditionsSection` answers it: three cards below `lg` wrap the 10px uppercase stat labels, and a wrapped label is worse than a card further down.
+- **Today marked by a border rather than a surface** — `WeekGrid` answers it, and the measurement backs it: fog on lavender is 4.29:1, ocean on mist is 7.18:1, and every block carries `border-2` so the marked day is not two pixels wider.
+- **The week transposes rather than scrolling** — argued in `WeekGrid` and confirmed at 375: seven readable day-rows, no scroll container, no horizontal overflow at any width tested.
+
+## Noted, not filed
+
+- **An excluded beach's URL returns the unstyled Next 404.** `/conditions/san-onofre-state-beach`, `/conditions/border-field-state-park`, `/conditions/tijana-river` and `/conditions/imperial-beach-pier-area` all render "404 — This page could not be found", with no nav back and none of the page's voice. The selector cannot reach these, so it takes a typed or shared URL, and the page one click away spends a disclosure explaining why 32 beaches are missing. This is arguably issue #78's ground rather than this brief's, and it is recorded here rather than opened as an issue, per `CLAUDE.md`.
+- **The brief says `--color-pink` has "zero uses anywhere in the codebase".** It is used at `src/components/Footer.tsx:7` (`text-pink` on the wordmark), which the contrast sweep picked up at 8.47:1 on dark. `border-lavender` is used in six places too, though `bg-lavender` as a background may well be unused as claimed. The decision the brief draws from it — that this page does not claim pink — is unaffected.
+
+## What Works Well
+
+- **The three lead figures are the best thing on the page.** 2:23 AM, 2.0 ft and 76°F at `--text-stat` in italic 900, landing on one baseline across the band, answer the question the reader arrived with before they read a word. This is the brief's whole thesis working.
+- **The expected-absence state is excellent, and it is the hardest one to get right.** "We cannot give a wave height here, and that is what we expect rather than a fault. Every wave buoy sits out on the open coast." That sentence separates _no station will ever exist here_ from _the station could not be reached_, which the brief called the two most worth separating, and it does it in plain words with no blank and no zero.
+- **Contrast is not merely claimed, it holds.** Twenty distinct text-on-surface pairs, zero failures, floor 5.04:1. The lavender surface was pulled from the week grid before it shipped for a measured reason and nothing below AA replaced it.
+- **The week transposes exactly as argued.** Seven columns at `lg`, seven rows below, one DOM, no hidden copy, no scroll container, day-then-values order for a screen reader. On a phone a parent can see Tuesday without discovering an affordance that was hiding it.
+- **Nothing on the page looks like a verdict.** No green, no rating, no gauge, no colour standing in for a judgement — today is marked by a border and by the word "Today". ADR-0009 is visibly respected in a page type whose every convention pushes the other way.
+- **Attribution survived becoming legible.** Moving the general prose to one block did not cost the specific line: every figure still names its station on its own card, and the air card names two.
+- **The `<noscript>` beach list is intact**, grouped by region in the served markup, exactly as the brief required of the control for a reader without JavaScript.
+
+## Checklist Notes
+
+- **Hierarchy** — reading order and DOM outline ✓; visual hierarchy below the `<h1>` is flat, finding 5.
+- **Consistency** — tokens throughout with two exceptions: `text-[34px]` at finding 10 and the four distance phrasings at finding 6.
+- **Aesthetic fidelity** — the header is unmistakably the site; the body is deliberately quieter, and `ReadingCard` argues that restraint as ADR-0009 compliance rather than timidity. Not raised as a finding.
+- **Component quality** — `ReadingCard`, `StatGroup` and `ProvenanceLine` are shared rather than repeated, and `ReservedSlot` and `PillLink` were reused unchanged; the reuse in finding 3 is the one place that reuse cost something.
+- **States** — four reading states distinct and verified on two beaches ✓; focus ring on the selector visible and following the pill radius ✓ (`review-1536-select-focus.png`).
+- **Responsive** — no horizontal overflow at 375, 768, 1280 or 1536 ✓; the 640–1024 disagreement at finding 4.
+- **Touch targets** — nav, selector and links all ≥44px ✓; the three `<summary>` elements at 17px, finding 1.
+- **Motion** — measured: zero elements on this page carry a transition or animation, so the brief's "none added" holds and no `prefers-reduced-motion` query is owed here.
+- **Dark mode** — N/A by decision, one fixed art-directed palette.
+- **Typography** — Montserrat loading, italics rendering, no FOIT observed; sub-16px body is the template's editorial voice and is intentional per the brief.
