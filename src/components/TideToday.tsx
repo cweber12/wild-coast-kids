@@ -34,6 +34,7 @@
  */
 
 import type { TideTodayView } from "@/lib/conditions";
+import { CARD_PROSE } from "./cardText";
 import { DISCLOSURE_TARGET } from "./disclosure";
 import { ProvenanceLine } from "./ProvenanceLine";
 import { ReadingCard } from "./ReadingCard";
@@ -68,7 +69,7 @@ export function TideToday({ beachName, station, state }: TideTodayProps) {
 
   return (
     <ReadingCard
-      emoji="🌊"
+      emoji="🐚"
       headingId="tide-today-heading"
       title="Lowest tide today"
       context={beachName}
@@ -76,7 +77,7 @@ export function TideToday({ beachName, station, state }: TideTodayProps) {
     >
       {state.kind === "reading" && (
         <>
-          <p className="leading-relaxed mb-3 text-base text-fog">
+          <p className={`leading-relaxed mb-3 text-base ${CARD_PROSE}`}>
             {heightSentence(state.feet)}
           </p>
           {/*
@@ -93,7 +94,7 @@ export function TideToday({ beachName, station, state }: TideTodayProps) {
       )}
 
       {state.kind === "no-low-today" && (
-        <p className="leading-relaxed mb-4 text-base text-fog">
+        <p className={`leading-relaxed mb-4 text-base ${CARD_PROSE}`}>
           No low tide falls on today&apos;s date in the range we asked NOAA for.
           That is a gap in our request rather than a calm sea — the tide still
           goes out.
@@ -102,12 +103,12 @@ export function TideToday({ beachName, station, state }: TideTodayProps) {
 
       {state.kind === "no-station" && (
         <>
-          <p className="leading-relaxed mb-4 text-base text-fog">
+          <p className={`leading-relaxed mb-4 text-base ${CARD_PROSE}`}>
             We cannot give a tide time for this beach. No tide station could be
             matched to it, so there is nothing to predict from — the tide here
             is not different, we simply have no published figure for it.
           </p>
-          <details className="mb-4 text-sm text-fog">
+          <details className={`mb-4 text-sm ${CARD_PROSE}`}>
             <summary className={DISCLOSURE_TARGET}>Why not</summary>
             <p className="mt-2">{state.reason}</p>
           </details>
@@ -116,12 +117,12 @@ export function TideToday({ beachName, station, state }: TideTodayProps) {
 
       {state.kind === "unavailable" && (
         <>
-          <p className="leading-relaxed mb-4 text-base text-fog">
+          <p className={`leading-relaxed mb-4 text-base ${CARD_PROSE}`}>
             We could not get today&apos;s tide prediction from NOAA just now.
             Nothing is wrong with the beach — try again shortly, or check a
             printed tide table.
           </p>
-          <details className="mb-4 text-sm text-fog">
+          <details className={`mb-4 text-sm ${CARD_PROSE}`}>
             <summary className={DISCLOSURE_TARGET}>What went wrong</summary>
             <p className="mt-2">{state.detail}</p>
             {state.drift && (

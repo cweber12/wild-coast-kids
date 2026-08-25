@@ -247,3 +247,23 @@ test("every disclosure this card can render composes the touch-target floor", ()
     expect(summary.className).toContain(DISCLOSURE_TARGET);
   }
 });
+
+/**
+ * ADR-0015. The brief committed 🌊 here and argued against a shell; both of its
+ * reasons were re-measured and one of them did not hold. Pinned as a test
+ * because a glyph is the kind of thing a later edit changes without noticing
+ * that a decision was attached to it — and because 🌊 now means one thing
+ * site-wide, Tidepools, which this card leaving it is what protects.
+ */
+test("the tide card is marked by a shell", () => {
+  const { container } = render(
+    <TideToday
+      beachName="La Jolla Shores Beach"
+      station={NEAR_STATION}
+      state={{ kind: "reading", timeLabel: "6:24 AM", feet: 1.368 }}
+    />,
+  );
+
+  const glyph = container.querySelector('[aria-hidden="true"]');
+  expect(glyph?.textContent).toBe("🐚");
+});

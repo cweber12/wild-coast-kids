@@ -1,6 +1,6 @@
 import { expect, test } from "vitest";
 import { render, screen } from "@testing-library/react";
-import { TideWeek } from "./TideWeek";
+import { TIDE_WEEK_ROW, TideWeek } from "./TideWeek";
 
 test("a reading leads with the time and keeps the height beside it", () => {
   render(
@@ -29,4 +29,15 @@ test("a day the window did not cover says so rather than rendering a blank", () 
   // A blank cell in a tide row reads as a calm sea. This one says the range did
   // not reach, which is a fact about our request rather than about the sea.
   expect(screen.getByText(/Not in range/)).toBeDefined();
+});
+
+/**
+ * ADR-0015, and the reason the row exports its glyph rather than each caller
+ * writing one: the tide is marked the same way in the now-band and in the week,
+ * and a page marking one product two ways was the drift `ReadingCard` and
+ * `ReservedSlot` were both extracted to stop.
+ */
+test("the week's tide row is marked by the same shell as the now-band", () => {
+  expect(TIDE_WEEK_ROW.emoji).toBe("🐚");
+  expect(TIDE_WEEK_ROW.label).toBe("Lowest tide");
 });

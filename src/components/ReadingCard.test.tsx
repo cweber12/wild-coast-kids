@@ -132,24 +132,70 @@ test("a card fills the height of the row it sits in", () => {
 });
 
 /**
- * The week grid's treatment, adopted here. Its glyph sits inside the `<dt>` —
- * "🌊 Lowest tide" — where it labels rather than floats, and one page marking
- * the same product two ways was the inconsistency. The 34px block plus its
- * 12px margin cost 46px per card for a mark that carries nothing a reader
- * without it would lose.
+ * ADR-0015. The glyph was inline in the heading at 10px, where a full-colour
+ * emoji carries nothing; it now stands at 30px on the lead figure's row. Beside the
+ * figure rather than above the heading is the whole of why it can be large
+ * again: the row already exists and is 36px tall, and a 30px glyph fits inside
+ * it, so the size costs nothing at all where the old block above the heading
+ * cost 46px.
  */
-test("the glyph labels the heading rather than taking a line of its own", () => {
+test("the glyph sits on the figure's row, not as text inside the heading", () => {
   const { container } = render(card("6:24 AM"));
 
   const heading = screen.getByRole("heading", { name: "Lowest tide today" });
+  expect(heading.textContent).not.toContain("🐚");
 
-  expect(heading.textContent).toContain("🐚");
-  // Still hidden, so the accessible name stays the words alone. The assertion
-  // above and this one together are the contract: visible beside the label,
-  // absent from the name.
-  expect(heading.querySelector('[aria-hidden="true"]')?.textContent).toBe("🐚");
+  const glyph = container.querySelector('[aria-hidden="true"]');
+  expect(glyph?.textContent).toBe("🐚");
+  expect(glyph?.className).toContain("text-3xl");
 
-  // The block it replaced carried the one raw arbitrary size in a component
-  // whose docstring makes the case against exactly that.
+  // Same row as the figure, which is what makes the size affordable.
+  const figure = container.querySelector(".text-stat");
+  expect(glyph?.parentElement).toBe(figure?.parentElement);
+});
+
+/**
+ * The heading is the accessible name and the glyph is hidden, so moving the
+ * glyph out must not change what a screen reader hears. Asserted separately
+ * from the layout above: these two can break independently.
+ */
+test("moving the glyph out leaves the accessible name the words alone", () => {
+  render(card("6:24 AM"));
+
+  expect(
+    screen.getByRole("heading", { name: "Lowest tide today" }),
+  ).toBeDefined();
+  expect(
+    screen.getByRole("region", {
+      name: "Lowest tide today · La Jolla Shores Beach",
+    }),
+  ).toBeDefined();
+});
+
+/**
+ * A tide card with no station and a wave card with no buoy both pass
+ * `figure={null}`, and those are exactly the states a reader is most likely to
+ * be confused by. A card that drops its subject mark when the station goes
+ * quiet reads as more broken than it is, so the glyph stays and the row holds
+ * it alone.
+ */
+test("a card with no figure keeps its glyph", () => {
+  const { container } = render(card(null));
+
+  const glyph = container.querySelector('[aria-hidden="true"]');
+  expect(glyph?.textContent).toBe("🐚");
+  expect(glyph?.className).toContain("text-3xl");
+  // Still no empty figure slot beside it — that is a separate contract.
+  expect(container.querySelector(".text-stat")).toBeNull();
+});
+
+/**
+ * The raw arbitrary size the old block carried, in a component whose docstring
+ * makes the case against exactly that. `text-3xl` is the scale ReservedSlot
+ * already uses for a glyph, not a bracket value invented here.
+ */
+test("the card sets no arbitrary glyph size of its own", () => {
+  const { container } = render(card("6:24 AM"));
+
   expect(container.innerHTML).not.toContain("text-[34px]");
 });

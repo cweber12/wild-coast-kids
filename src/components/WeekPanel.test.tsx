@@ -127,3 +127,27 @@ test("a failure to resolve the beach is not swallowed into a rendered nothing", 
     /no beach in the inventory/,
   );
 });
+
+/**
+ * ADR-0015. The reserved row and the live card describe the same product from
+ * different feeds, so they take the same glyph — the gridded forecast is the
+ * air card's replacement, and marking it with the thermometer the air card no
+ * longer uses would leave the page saying two things about one product.
+ */
+test("the gridded forecast is marked like the air card it will replace", async () => {
+  readWeekOfLowestLows.mockResolvedValue({
+    beachName: "La Jolla Shores Beach",
+    station: { name: "La Jolla (Scripps Institution Wharf)", distanceM: 1369 },
+    state: { kind: "reading", days: [] },
+  });
+
+  const { container } = render(
+    await WeekPanel({ slug: "la-jolla-shores-beach" }),
+  );
+
+  const glyphs = [...container.querySelectorAll('[aria-hidden="true"]')].map(
+    (node) => node.textContent,
+  );
+  expect(glyphs).toContain("💨");
+  expect(glyphs).not.toContain("🌡️");
+});

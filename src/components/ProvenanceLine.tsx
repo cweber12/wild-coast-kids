@@ -33,6 +33,8 @@
  * clause here rather than dropping it.
  */
 
+import { CARD_MUTED } from "./cardText";
+
 type ProvenanceLineProps = {
   /** What the figure names it, ready to print. Never a callsign turned into prose — see #87. */
   source: string;
@@ -71,7 +73,7 @@ export function ProvenanceLine({
   label = null,
 }: ProvenanceLineProps) {
   return (
-    <p className="text-2xs leading-relaxed text-fog">
+    <p className={`text-2xs leading-relaxed ${CARD_MUTED}`}>
       {label !== null && <span className="font-extrabold">{label} </span>}
       {source}
       {network !== null ? ` · ${network}` : ""}

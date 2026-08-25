@@ -549,3 +549,17 @@ test("every wind band has its own words", () => {
     unmount();
   }
 });
+
+/**
+ * ADR-0015. 💨 rather than the thermometer it replaced, and rather than 🌬️:
+ * the wind face is the obvious Unicode choice and putting a face on a page of
+ * instrument readings was the objection to it. 💨 is the one faceless glyph
+ * that means moving air, and it is also the one that cannot be read without
+ * the dark card beneath it — the glyph and the surface were decided together.
+ */
+test("the air card is marked by wind rather than by a thermometer", () => {
+  const { container } = render(<WindToday {...panel()} />);
+
+  const glyph = container.querySelector('[aria-hidden="true"]');
+  expect(glyph?.textContent).toBe("💨");
+});

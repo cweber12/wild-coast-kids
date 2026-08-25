@@ -21,6 +21,7 @@
  */
 
 import type { WavesView } from "@/lib/conditions";
+import { CARD_PROSE } from "./cardText";
 import { DISCLOSURE_TARGET } from "./disclosure";
 import { ProvenanceLine } from "./ProvenanceLine";
 import { ReadingCard } from "./ReadingCard";
@@ -61,7 +62,7 @@ export function WavesToday({ beachName, buoy, state }: WavesView) {
     >
       {state.kind === "reading" && (
         <>
-          <p className="leading-relaxed mb-3 text-base text-fog">
+          <p className={`leading-relaxed mb-3 text-base ${CARD_PROSE}`}>
             {heightWords(state.heightFt)}.
           </p>
           {/*
@@ -95,11 +96,11 @@ export function WavesToday({ beachName, buoy, state }: WavesView) {
 
       {state.kind === "no-buoy" && (
         <>
-          <p className="leading-relaxed mb-4 text-base text-fog">
+          <p className={`leading-relaxed mb-4 text-base ${CARD_PROSE}`}>
             We cannot give a wave height here, and that is what we expect rather
             than a fault. Every wave buoy sits out on the open coast.
           </p>
-          <details className="mb-4 text-sm text-fog">
+          <details className={`mb-4 text-sm ${CARD_PROSE}`}>
             <summary className={DISCLOSURE_TARGET}>Why not</summary>
             <p className="mt-2">{state.reason}</p>
           </details>
@@ -108,11 +109,11 @@ export function WavesToday({ beachName, buoy, state }: WavesView) {
 
       {state.kind === "unavailable" && (
         <>
-          <p className="leading-relaxed mb-4 text-base text-fog">
+          <p className={`leading-relaxed mb-4 text-base ${CARD_PROSE}`}>
             We could not get a wave reading from the buoy just now. Try again
             shortly.
           </p>
-          <details className="mb-4 text-sm text-fog">
+          <details className={`mb-4 text-sm ${CARD_PROSE}`}>
             <summary className={DISCLOSURE_TARGET}>What went wrong</summary>
             <p className="mt-2">{state.detail}</p>
             {state.drift && (
