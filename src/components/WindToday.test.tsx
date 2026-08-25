@@ -85,11 +85,11 @@ test("both stations are named, each with its own distance", () => {
 
   const air = screen.getByText(/Scripps Pier/).textContent ?? "";
   expect(air).toContain("Temperature and wind");
-  expect(air).toContain("1.4 km from this beach");
+  expect(air).toContain("about 1.4 km from this beach");
 
   const sky = screen.getByText(/Miramar/).textContent ?? "";
   expect(sky).toContain("Sky and visibility");
-  expect(sky).toContain("10 km away");
+  expect(sky).toContain("about 10 km from this beach");
 });
 
 test("a near station keeps its distance rather than rounding it away", () => {
@@ -98,7 +98,7 @@ test("a near station keeps its distance rather than rounding it away", () => {
   // tells a reader why the sky is less local than the temperature.
   render(<WindToday {...panel()} />);
 
-  expect(screen.getByText(/1\.4 km from this beach/)).toBeDefined();
+  expect(screen.getByText(/about 1\.4 km from this beach/)).toBeDefined();
 });
 
 /**
@@ -355,4 +355,28 @@ test("no sky station leaves the temperature standing on its own", () => {
   expect(screen.getByText("71°F")).toBeDefined();
   expect(screen.getByText(/publishes a sky description/)).toBeDefined();
   expect(screen.queryByText(/Sky and visibility/)).toBeNull();
+});
+
+/**
+ * The finding as a reader met it. On `fiesta-island` both halves bind to the
+ * same station, so one card printed "San Diego Airport · 4.7 km from this
+ * beach" and "San Diego Airport · 4.7 km away" 80px apart: the identical fact,
+ * phrased two ways, on one card. `ProvenanceLine` owns the wording now, so two
+ * lines can only differ where the facts differ.
+ */
+test("one station bound to both halves is worded the same way twice", () => {
+  const AIRPORT = { name: "San Diego Airport", distanceM: 4_700 };
+
+  render(
+    <WindToday {...panel({ airStation: AIRPORT, skyStation: AIRPORT })} />,
+  );
+
+  const lines = screen
+    .getAllByText(/San Diego Airport/)
+    .map((line) => line.textContent ?? "");
+
+  expect(lines).toHaveLength(2);
+  for (const line of lines) {
+    expect(line).toContain("San Diego Airport · about 4.7 km from this beach");
+  }
 });
