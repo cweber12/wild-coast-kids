@@ -48,6 +48,7 @@
  */
 
 import type { AirView } from "@/lib/conditions";
+import { DISCLOSURE_TARGET } from "./disclosure";
 import { ProvenanceLine } from "./ProvenanceLine";
 import { ReadingCard } from "./ReadingCard";
 import { type Stat, StatGroup } from "./StatGroup";
@@ -91,15 +92,22 @@ function visibilityWords(miles: number, atCeiling: boolean): string {
 }
 
 /**
- * How far the station is, in words.
+ * How far the station is, in kilometres, rounded.
  *
  * A decimal under ten kilometres because that is the range these two bindings
  * differ across: an air station at 1.4 km and a sky station at 10.4 km is the
  * whole point, and rounding the first to "1 km" throws away the comparison.
+ *
+ * The number only. This panel used to append the unit and a reference point
+ * too, and it wrote two different ones twenty lines apart -- "from this beach"
+ * for the air station and "away" for the sky station, which on a beach whose
+ * two halves bind to the same station printed the identical fact two ways on
+ * one card. `ProvenanceLine` owns that wording now; the rounding stays here,
+ * where the reason for it is.
  */
-function distanceWords(metres: number): string {
+function roundedKm(metres: number): string {
   const km = metres / 1000;
-  return `${km < 10 ? km.toFixed(1) : km.toFixed(0)} km`;
+  return km < 10 ? km.toFixed(1) : km.toFixed(0);
 }
 
 /**
@@ -296,9 +304,9 @@ export function WindToday({
         <ProvenanceLine
           label="Temperature and wind"
           source={airStation.name}
-          distance={
+          distanceKm={
             airStation.distanceM !== null
-              ? `${distanceWords(airStation.distanceM)} from this beach`
+              ? roundedKm(airStation.distanceM)
               : null
           }
         />
@@ -314,9 +322,9 @@ export function WindToday({
         <ProvenanceLine
           label="Sky and visibility"
           source={skyStation.name}
-          distance={
+          distanceKm={
             skyStation.distanceM !== null
-              ? `${distanceWords(skyStation.distanceM)} away`
+              ? roundedKm(skyStation.distanceM)
               : null
           }
         />
@@ -324,14 +332,18 @@ export function WindToday({
 
       {air.kind === "no-station" && (
         <details className="mb-4 text-sm text-fog">
-          <summary>Why there is no temperature or wind</summary>
+          <summary className={DISCLOSURE_TARGET}>
+            Why there is no temperature or wind
+          </summary>
           <p className="mt-2">{air.reason}</p>
         </details>
       )}
 
       {air.kind === "unavailable" && (
         <details className="mb-4 text-sm text-fog">
-          <summary>Why there is no temperature or wind</summary>
+          <summary className={DISCLOSURE_TARGET}>
+            Why there is no temperature or wind
+          </summary>
           <p className="mt-2">{air.detail}</p>
           {air.drift && (
             <p className="mt-2">
@@ -344,7 +356,9 @@ export function WindToday({
 
       {sky.kind === "unavailable" && (
         <details className="mb-4 text-sm text-fog">
-          <summary>Why there is no sky or visibility</summary>
+          <summary className={DISCLOSURE_TARGET}>
+            Why there is no sky or visibility
+          </summary>
           <p className="mt-2">{sky.detail}</p>
           {sky.drift && (
             <p className="mt-2">
@@ -358,7 +372,9 @@ export function WindToday({
 
       {sky.kind === "no-station" && (
         <details className="mb-4 text-sm text-fog">
-          <summary>Why there is no sky or visibility</summary>
+          <summary className={DISCLOSURE_TARGET}>
+            Why there is no sky or visibility
+          </summary>
           <p className="mt-2">{sky.reason}</p>
         </details>
       )}
