@@ -123,7 +123,10 @@ a control that silently does nothing.
 **Reading order, top to bottom:**
 
 1. Eyebrow, title and lead — with the **beach chooser on the same row as the
-   title**, right-aligned, because it decides what every figure below it means.
+   title**, right-aligned, because it decides what every figure below it means,
+   and the **standing safety notice** above the chooser in that same column:
+   instruments rather than a judgement, lifeguards and the posted signs the
+   authority on the day. ADR-0009 turns on it sitting around the readings.
 2. **The now-band**: today's lowest tide, waves and water, air. Three cards
    across at `lg`, each leading with one figure and carrying its own station
    attribution.
@@ -131,8 +134,9 @@ a control that silently does nothing.
    first live row. Transposes to day-rows below `lg` rather than scrolling.
 4. **The sighting map slot** — a reserved slot until #121 is built.
 5. **The notes block**: the datum, why a buoy reading is not the wave at the
-   shore, why visibility is an airport reading, the standing sentence that none
-   of this is a safety assessment, and the caveats and coverage disclosures.
+   shore, why visibility is an airport reading, and the caveats and coverage
+   disclosures. The safety framing is not here — it is the standing notice in
+   item 1, because it is not a note about how to read a figure.
 
 **A slug that does not resolve is a 404.** See _URL Strategy_ for the closed
 slug set and for why nothing under `/conditions/` is prerendered.

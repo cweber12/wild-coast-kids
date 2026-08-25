@@ -59,10 +59,22 @@ test("the sky is named as an airport reading, and why it is one", () => {
   expect(screen.getByText(/coastal fog is exactly what changes/)).toBeDefined();
 });
 
-test("the page does not offer any of it as a safety call", () => {
+/**
+ * The property this block used to hold, kept as a negative now that it has
+ * moved — the same way the airport clause was kept verbatim when it arrived
+ * here from `WindToday.test.tsx`. The standing notice in `ConditionsSection`
+ * asserts it positively and adds the clause ADR-0009 names, and this block
+ * saying it too would be the page stating one thing twice.
+ */
+test("the safety framing is not repeated here, it is above the readings", () => {
   render(<ConditionsNotes entries={ENTRIES} reach={REACH} />);
 
-  expect(screen.getByText(/None of it is a safety assessment/)).toBeDefined();
+  expect(screen.queryByText(/None of it is a safety assessment/)).toBeNull();
+  // Three notes, not four, and the three that stay are all about reading a
+  // figure -- which is what the heading above them promises.
+  expect(screen.getByText("Tide heights")).toBeDefined();
+  expect(screen.getByText("Wave heights")).toBeDefined();
+  expect(screen.getByText("Sky and visibility")).toBeDefined();
 });
 
 /**
@@ -97,9 +109,17 @@ test("each note is a term and its explanation, not a run of prose", () => {
   );
 
   // A description list, so the pairing survives for a reader who cannot see
-  // the bolding that carries it visually.
-  expect(container.querySelectorAll("dt").length).toBe(4);
-  expect(container.querySelectorAll("dd").length).toBe(4);
+  // the bolding that carries it visually. Asserted as a pairing rather than as
+  // two independent counts: a note that lost its `<dd>` is the failure this
+  // catches, and the count alone would not see it.
+  const terms = container.querySelectorAll("dt");
+  const details = container.querySelectorAll("dd");
+
+  expect(terms.length).toBe(details.length);
+  // Three since the safety framing became a standing notice above the
+  // readings. The named-term assertions elsewhere in this file are what stop a
+  // note being dropped silently; this number only tracks them.
+  expect(terms.length).toBe(3);
 });
 
 test("it is a labelled region, so the notes are reachable as a landmark", () => {
