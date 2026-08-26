@@ -49,6 +49,22 @@ test("a wave height is attributed as open water, not as the breaking wave", () =
   ).toBeDefined();
 });
 
+test("the forecast is named as a model, beside the height that is a measurement", () => {
+  // The page now carries two wave numbers for one beach on one day. The
+  // difference between them has to be stated where a reader looking at both
+  // will find it -- see docs/adr/0016.
+  render(<ConditionsNotes entries={ENTRIES} reach={REACH} />);
+
+  expect(screen.getByText(/modelled rather than measured/)).toBeDefined();
+  expect(screen.getByText(/two wave numbers/)).toBeDefined();
+});
+
+test("CDIP and Scripps are credited where the forecast is explained", () => {
+  render(<ConditionsNotes entries={ENTRIES} reach={REACH} />);
+
+  expect(screen.getByText(/Scripps Institution of Oceanography/)).toBeDefined();
+});
+
 test("the sky is named as an airport reading, and why it is one", () => {
   render(<ConditionsNotes entries={ENTRIES} reach={REACH} />);
 
@@ -116,10 +132,12 @@ test("each note is a term and its explanation, not a run of prose", () => {
   const details = container.querySelectorAll("dd");
 
   expect(terms.length).toBe(details.length);
-  // Three since the safety framing became a standing notice above the
-  // readings. The named-term assertions elsewhere in this file are what stop a
+  // Five: three since the safety framing became a standing notice above the
+  // readings, a fourth when the week gained a modelled wave height beside the
+  // measured one, and a fifth when the rows began leading with what daylight
+  // reaches. The named-term assertions elsewhere in this file are what stop a
   // note being dropped silently; this number only tracks them.
-  expect(terms.length).toBe(3);
+  expect(terms.length).toBe(5);
 });
 
 test("it is a labelled region, so the notes are reachable as a landmark", () => {
@@ -183,4 +201,17 @@ test("the notes lay out in columns, each keeping its own measure", () => {
   for (const note of notes) {
     expect(note.className).toContain("max-w-130");
   }
+});
+
+test("the reader is told why the leading figure is not the day's lowest", () => {
+  // The cell says "Lowest daylight tide" and shows a higher number than the one
+  // beneath it. Without this, that reads as a fault -- see docs/adr/0017.
+  render(<ConditionsNotes entries={ENTRIES} reach={REACH} />);
+
+  expect(
+    screen.getByText(/because those are the ones you can be there for/),
+  ).toBeDefined();
+  expect(
+    screen.getByText(/nothing here is a judgement about when you should go/),
+  ).toBeDefined();
 });

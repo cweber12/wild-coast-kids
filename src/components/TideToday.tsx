@@ -10,6 +10,19 @@
  * house. The height is what distinguishes a good tidepooling day from an
  * ordinary one, so it stays -- but it is not the number that leads.
  *
+ * **The daylight low leads, and the day's lowest sits beside it.** This card
+ * used to answer "how low does it get today", which on this coast in summer is
+ * a figure from before sunrise on most days. It now answers "how low does it
+ * get while the sun is up", and keeps the other as a supporting figure rather
+ * than dropping it -- a tidepooler willing to set an alarm still wants to know
+ * a -0.2 ft exists at 3:14 AM.
+ *
+ * **Both figures are one group and one attribution**, unlike the wave card
+ * beside it. `StatGroup`'s rule is that a group is one provenance, and these
+ * two lows come from one station and one request -- the same run of predicted
+ * extremes, read twice with different windows. Splitting them would imply a
+ * second source that does not exist.
+ *
  * **The datum is explained once, in words.** A tide of -0.4 ft reads as an error
  * to anyone who has not met mean lower low water, and it is the single most
  * useful figure on the page for a tidepooler. So the sign is explained where it
@@ -71,14 +84,18 @@ export function TideToday({ beachName, station, state }: TideTodayProps) {
     <ReadingCard
       emoji="🐚"
       headingId="tide-today-heading"
-      title="Lowest tide today"
+      title="Lowest daylight tide"
       context={beachName}
-      figure={state.kind === "reading" ? state.timeLabel : null}
+      figure={
+        state.kind === "reading" ? (state.daylight?.timeLabel ?? null) : null
+      }
     >
       {state.kind === "reading" && (
         <>
           <p className={`leading-relaxed mb-3 text-base ${CARD_PROSE}`}>
-            {heightSentence(state.feet)}
+            {state.daylight === null
+              ? "No low tide falls between sunrise and sunset today. The day's lowest is below."
+              : heightSentence(state.daylight.feet)}
           </p>
           {/*
             The height as a figure. It was the last measurement on the page
@@ -86,9 +103,30 @@ export function TideToday({ beachName, station, state }: TideTodayProps) {
             numbers are figures it read as the one that had been forgotten. It
             is also the number a tidepooler reads most closely: how much reef
             comes out of the water.
+
+            The day's lowest joins it as a second figure rather than a second
+            group, because it is the same station and the same request read
+            through a different window. Its time and height are one value: what
+            a reader wants is the pair, and two labels for one fact would leave
+            "Lowest all day" sitting over a height with no time beside it.
           */}
           <StatGroup
-            stats={[{ label: "Height", value: `${state.feet.toFixed(1)} ft` }]}
+            stats={[
+              {
+                label: "Height",
+                value:
+                  state.daylight === null
+                    ? null
+                    : `${state.daylight.feet.toFixed(1)} ft`,
+              },
+              {
+                label: "Lowest all day",
+                value:
+                  state.allDay === null
+                    ? "None lower"
+                    : `${state.allDay.timeLabel} · ${state.allDay.feet.toFixed(1)} ft`,
+              },
+            ]}
           />
         </>
       )}

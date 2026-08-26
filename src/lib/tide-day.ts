@@ -11,6 +11,13 @@
  * whose instant falls on that local date -- not the lowest of all extremes, and
  * not the low nearest to noon. A day with two lows a foot apart is exactly the
  * day a tidepooling group needs the deeper one named.
+ *
+ * TWO SELECTIONS, NOT ONE, since the page began leading with the tide a reader
+ * can actually reach. `lowestLowOn` answers "how low does it get today";
+ * `lowestLowBetween` answers "how low does it get while the sun is up", which
+ * is a different question and usually a different low. On this coast in summer
+ * the deeper of the day's two lows falls before sunrise on most days, so the
+ * two disagree far more often than they agree.
  */
 
 import { localDateOf, SITE_TIME_ZONE } from "./pacific-time";
@@ -33,6 +40,43 @@ export function lowestLowOn(
   for (const extreme of extremes) {
     if (extreme.kind !== "low") continue;
     if (localDateOf(extreme.atMs, timeZone) !== localDate) continue;
+    if (lowest === null || extreme.feet < lowest.feet) {
+      lowest = extreme;
+    }
+  }
+
+  return lowest;
+}
+
+/**
+ * The lowest predicted low tide falling between two instants, or null when the
+ * run contains none.
+ *
+ * **No local date, because the window already pins one.** A caller passes
+ * sunrise and sunset for one day, and only that day's lows can fall between
+ * them — so a second date filter would be a second way of saying the same
+ * thing, and the two could disagree about which zone the date is in.
+ *
+ * **Both ends inclusive.** A low at the instant of sunrise is a low a reader
+ * can stand in front of. The alternative excludes a reading for being exactly
+ * on a boundary computed to the millisecond from an ephemeris, which is
+ * precision neither the sunrise nor the prediction has.
+ *
+ * Null means no low falls in the window. On this coast that is close to
+ * unreachable — two lows about twelve and a half hours apart against ten to
+ * fourteen hours of daylight — but it is a real state and never means the tide
+ * did not go out.
+ */
+export function lowestLowBetween(
+  extremes: readonly TideExtreme[],
+  fromMs: number,
+  toMs: number,
+): TideExtreme | null {
+  let lowest: TideExtreme | null = null;
+
+  for (const extreme of extremes) {
+    if (extreme.kind !== "low") continue;
+    if (extreme.atMs < fromMs || extreme.atMs > toMs) continue;
     if (lowest === null || extreme.feet < lowest.feet) {
       lowest = extreme;
     }
