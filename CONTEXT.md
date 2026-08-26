@@ -129,7 +129,10 @@ in this repo (ADR-0009). Has a teaser on the landing page and a page of its own;
 the teaser still carries a reserved slot, which comes out in the slice that has
 something to put in its place. It shows readings and forecasts relayed from
 public sources, attributed and timestamped — never a judgement this site makes
-about whether conditions are safe.
+about whether conditions are safe. The tool is `src/components/conditions/`; the
+teaser is not part of it and sits at the root of `src/components/` as
+`ConditionsTeaser.tsx`, because it belongs to the landing page rather than to
+the tool (ADR-0018).
 _Avoid_: weather, forecast, surf report
 
 **Observation station**:
