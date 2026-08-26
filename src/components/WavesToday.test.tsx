@@ -6,6 +6,22 @@ import { DISCLOSURE_TARGET } from "./disclosure";
 const NEAR = { name: "Scripps Nearshore", distanceM: 1400 };
 const FAR = { name: "Point Loma South", distanceM: 34_159 };
 
+const READING = {
+  kind: "reading",
+  heightFt: 2.62,
+  periodS: 5,
+  directionDegT: 278,
+  waterTempF: 69.98,
+} as const;
+
+/** Today's peak, as `WavePanel` hands it over: already selected, already worded. */
+const PEAK = {
+  line: { id: "D0498", distanceM: 325 },
+  timeLabel: "11:00 AM",
+  heightFt: 0.8,
+  periodS: 6.25,
+};
+
 test("a reading leads with the height and puts it in plain words", () => {
   render(
     <WavesToday
@@ -220,4 +236,105 @@ test("every disclosure this card can render composes the touch-target floor", ()
   for (const summary of summaries) {
     expect(summary.className).toContain(DISCLOSURE_TARGET);
   }
+});
+
+/* =========================================================================
+ * The forecast beside the measurement
+ * ========================================================================= */
+
+test("the forecast is a second group with its own figures", () => {
+  render(
+    <WavesToday
+      beachName="La Jolla Shores Beach"
+      buoy={NEAR}
+      state={READING}
+      peak={PEAK}
+    />,
+  );
+
+  expect(screen.getByText("11:00 AM")).toBeDefined();
+  expect(screen.getByText("0.8 ft")).toBeDefined();
+  // Whole seconds, as the measured period beside it is.
+  expect(screen.getByText("6 s")).toBeDefined();
+});
+
+test("the two sources are labelled by kind, not by distance", () => {
+  // Both are a wave height in feet, so which is nearer is not the distinction
+  // a reader has to make. Which is an instrument and which is a model is.
+  render(
+    <WavesToday
+      beachName="La Jolla Shores Beach"
+      buoy={NEAR}
+      state={READING}
+      peak={PEAK}
+    />,
+  );
+
+  expect(screen.getByText(/NDBC/).textContent).toContain("Measured now");
+  const forecast = screen.getByText(/MOP line D0498/).textContent ?? "";
+  expect(forecast).toContain("Forecast today");
+  expect(forecast).toContain("CDIP, Scripps Institution of Oceanography");
+  expect(forecast).toContain("about 0.3 km from this beach");
+  expect(forecast).toContain("not a measurement");
+});
+
+test("one stat group never spans the two sources", () => {
+  // ADR-0010, and here it is load-bearing rather than tidy: the two groups
+  // carry the same quantity in the same unit, so a single group of five would
+  // let a reader attribute the model's height to the buoy.
+  const { container } = render(
+    <WavesToday
+      beachName="La Jolla Shores Beach"
+      buoy={NEAR}
+      state={READING}
+      peak={PEAK}
+    />,
+  );
+
+  const groups = [...container.querySelectorAll("dl")];
+  expect(groups).toHaveLength(2);
+  expect(
+    [...groups[0].querySelectorAll("dt")].map((n) => n.textContent),
+  ).toEqual(["Period", "Water"]);
+  expect(
+    [...groups[1].querySelectorAll("dt")].map((n) => n.textContent),
+  ).toEqual(["Biggest at", "Height", "Period"]);
+});
+
+test("the card leads with the measurement even when only the model answered", () => {
+  // The one thing ADR-0016 refuses outright: promoting a modelled height into
+  // the slot a measurement had. A quiet buoy leads with nothing.
+  const { container } = render(
+    <WavesToday
+      beachName="La Jolla Shores Beach"
+      buoy={NEAR}
+      state={{
+        kind: "unavailable",
+        detail: "NDBC 46254 returns 404.",
+        drift: false,
+      }}
+      peak={PEAK}
+    />,
+  );
+
+  expect(container.querySelector(".text-stat")).toBeNull();
+  // And the forecast is still there, so the card is not empty.
+  expect(screen.getByText("11:00 AM")).toBeDefined();
+});
+
+test("no forecast renders no second block, and no explanation either", () => {
+  // Three different reasons -- no line bound, CDIP quiet, a forecast that no
+  // longer reaches today -- all render the same way here, because the week
+  // grid below says which it was in words.
+  render(
+    <WavesToday
+      beachName="La Jolla Shores Beach"
+      buoy={NEAR}
+      state={READING}
+    />,
+  );
+
+  expect(screen.queryByText(/MOP line/)).toBeNull();
+  expect(screen.queryByText(/Forecast today/)).toBeNull();
+  expect(screen.queryByText(/Biggest at/)).toBeNull();
 });

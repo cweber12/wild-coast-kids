@@ -232,3 +232,39 @@ covers the whole grid in one request. The hindcast is 155 MB.
 - **Contacting CDIP.** The data is public and no credentials appear anywhere in
   the probe. The maintainer is writing to `www@cdip.ucsd.edu` in parallel; the
   build does not wait on it, and the credit ships from day one.
+
+## Addendum, 2026-08-26: the row leads with a time, and the card carries it too
+
+Two changes asked for after the row shipped to a branch, recorded here rather
+than folded into the text above, which is what was decided before the work
+began.
+
+**The wave row leads with the time of the day's biggest swell.** The first draft
+led with the height, on the argument that a swell is a decision about whether to
+go rather than when. Seen in the grid that was wrong about what the grid is:
+every other row opens with a time — the lowest low, sunrise — so a reader
+scanning down one day reads "when, when, when", and a fourth row opening with a
+number broke the column. The cell now takes `TideWeek`'s shape: the time in bold,
+the height and period beneath it.
+
+That time is a three-hour step rather than a peak located to the minute, because
+that is MOP's resolution. `ConditionsNotes` now says so, since it sits directly
+under a tide time that _is_ a turning point.
+
+**The now-card carries today's peak beside the measurement**, which reverses
+decision 1 of the triage brief and the first version of ADR-0016. The reasoning
+is in that ADR, which was rewritten rather than amended because it had not
+merged. What made the ADR's earlier reasoning survivable is that the mitigation
+was already built: two stat groups, two labelled attributions, one group never
+spanning two sources. Moving the collision onto one card made that machinery
+load-bearing rather than precautionary.
+
+**The wording for how a MOP line is named moved into `src/components/mopLine.ts`
+before the second consumer existed**, rather than after the two had drifted.
+`ProvenanceLine`'s docstring records what the alternative looks like.
+
+**Measured rather than reasoned about**, which the original plan could not do
+because no browser was available in the checkout: at 1536×639 the seven day
+cells come out at exactly 225px each, two lines in the wave cell, no day
+wrapping where its neighbours do not. On a 375px viewport the wave cell stays
+one line, the break being scoped to `lg`.

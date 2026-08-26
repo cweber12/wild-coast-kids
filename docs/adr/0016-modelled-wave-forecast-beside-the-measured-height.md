@@ -31,28 +31,45 @@ two behind one _sentence_.
 
 ## Decision
 
-**MOP fills the week grid's wave row, and nothing else. The NDBC now-card is
-untouched.**
+**MOP fills the week grid's wave row, and appears a second time on the now-card
+as a subordinate block beside the measurement. It never replaces the measured
+reading and never becomes the card's lead figure.**
 
-The two numbers are separated by what they are _about_, not by styling. The card
-answers "what is it doing now" and the row answers "what will it be like on
-Thursday". A measurement of now beside a forecast for a named future day is a
-distinction a reader already holds, and it is the permitted shape under ADR-0010
-rather than the forbidden one: two wave heights for the same instant would be the
-forbidden one.
+The two numbers are separated by what they are _about_, not by styling. The
+measurement answers "what is it doing at the buoy this minute"; the forecast
+answers "when does today's biggest swell reach this shore, and how big". That is
+two questions, not two answers to one, which is what keeps this the permitted
+shape under ADR-0010 rather than the forbidden one. Two wave heights presented as
+the same reading of the same instant would be the forbidden one, and nothing here
+does that.
 
-Three things make the distinction legible rather than merely true:
+Putting the forecast on the card as well as in the row was a later decision than
+the rest of this document and reverses what the triage brief settled. The
+argument that changed it: a parent checking one beach reads the now-band and
+often stops there, so a forecast that lives only below the fold is a forecast
+most readers never meet. The cost is that the collision moves from "one column of
+a grid" to "one card", where the two figures are eighty pixels apart.
 
-- **The row carries its own provenance, printed once beneath the grid.** It names
-  the MOP line, credits CDIP and the Scripps Institution of Oceanography, gives
-  the distance to the line, and says in words that it is a model of the swell at
-  10 m depth rather than a measurement.
-- **The row's label names its own statistic.** "Biggest swell", the way the tide
-  row says "Lowest tide". A day has fifty-six estimates behind it and the cell
-  shows one.
-- **`ConditionsNotes` carries the model-versus-measurement distinction** as a
-  fourth entry, in the block a reader goes to when they want to know what a
+Four things make the distinction legible rather than merely true:
+
+- **Each source has its own stat group and its own attribution, and one
+  `StatGroup` never spans both.** This is the air panel's arrangement (ADR-0010)
+  and it is doing more work here: the air card's two groups carry different
+  quantities, and these two carry the same quantity in the same unit.
+- **The two attributions are labelled by kind, not by distance.** "Measured now"
+  against "Forecast today". Which source is nearer is not the distinction a
+  reader has to make; which is an instrument and which is a model is.
+- **Every attribution names the model in full** — the MOP line, CDIP and the
+  Scripps Institution of Oceanography, the distance, and the clause "a model of
+  the swell at 10 m depth, not a measurement". The wording lives in one module
+  so the card and the grid cannot drift apart on it.
+- **`ConditionsNotes` carries the model-versus-measurement distinction** as an
+  entry of its own, in the block a reader goes to when they want to know what a
   number on this page means.
+
+**The row's label names its own statistic** — "Biggest swell", the way the tide
+row says "Lowest tide" — and the card's group repeats the selection in its stat
+labels. A day has fifty-six estimates behind it and both places show one.
 
 ## Alternatives considered
 
@@ -66,9 +83,18 @@ measured case for it does not currently hold — no beach in this inventory can
 even disclose a buoy distance, because the inventory bound and `WavesToday`'s
 disclosure threshold are the same 10 km.
 
-**Show both on the now-card, side by side.** Two wave heights for the same
-instant behind one heading. This is precisely the shape ADR-0010 forbids, and
-nothing about MOP makes it safer.
+**Show both on the now-card as one set of figures.** Two wave heights for the
+same instant behind one heading, in one stat group. This is precisely the shape
+ADR-0010 forbids, and nothing about MOP makes it safer. What ships instead is
+two groups with two attributions, which is the arrangement ADR-0010 permits and
+the air panel already uses.
+
+**Lead the card with the forecast when the buoy is quiet.** It would keep the
+card's largest text from ever being empty. Rejected: the lead figure is where a
+reader's eye lands first and is the one place on the card with no attribution
+beside it, so a modelled number there would be read as measured. A quiet buoy
+leads with nothing, which is what `ReadingCard` already does for a station that
+cannot answer.
 
 **Leave the row reserved until the two can be told apart some other way.** The
 slot has been open since the grid was built and says a wave forecast is coming.
@@ -84,8 +110,9 @@ skips its first column would also have to explain why.
 
 ## Consequences
 
-- Today's column shows a modelled height while the card above it shows a measured
-  one, and they will disagree — by more than rounding. Measured at La Jolla
+- The measured height and the modelled one sit eighty pixels apart on the card
+  and one above the other in today's column, and they will disagree — by more
+  than rounding. Measured at La Jolla
   Shores on 2026-08-26 within one hour: the buoy 1.6 km offshore reported 0.6 m
   at 13 s, MOP's nowcast for the line 325 m out gave 0.33 m at 6.3 s, and the
   forecast product this page reads gave 0.20 m at 4.8 s. On the page that is
@@ -112,3 +139,13 @@ skips its first column would also have to explain why.
   of scope.
 - The wave `ReservedRow` is gone. Two reserved slots remain, and the reasoning
   about what a reserved slot promises is unchanged.
+- The now-card is taller, and it now sets the height of the three-across band
+  where the air card used to. Measured at 1536×639: the wave card's content goes
+  127px to 209px, and the band goes 283px to 301px — so 64px of the 82px was
+  already being held open by `items-stretch` for the air card's two groups and
+  two attributions. Eighteen pixels of the first screen is the real cost, and it
+  was accepted because a forecast only in the grid is one most readers never
+  scroll to.
+- `WavePanel` and `WeekPanel` now make the same CDIP read. They build the same
+  window, so Next dedupes on the URL and the page reaches CDIP once per beach.
+  A change that makes either window differ would silently double the request.
