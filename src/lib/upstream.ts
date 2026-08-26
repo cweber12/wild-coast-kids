@@ -1,13 +1,16 @@
 /**
- * The only module here that touches NOAA.
+ * The only module here that touches the conditions upstreams.
  *
- * Not the only one that touches the network any more: `sessions.ts` reads the
- * schedule from Supabase and follows this module's shape deliberately. The two
- * stay apart because they share no upstream, no failure vocabulary and no
- * cache policy -- only a form.
+ * It was "the only module that touches NOAA" while NOAA was all of them. CDIP
+ * is the second publisher, and it belongs here rather than in a module of its
+ * own for the reason `sessions.ts` does not: what separates a module here is a
+ * different failure vocabulary and a different cache policy, and MOP has
+ * neither -- it fails into the same `unavailable` shape and is cached the same
+ * way. `sessions.ts` reads Supabase, shares none of that, and follows this
+ * module's form without joining it.
  *
  * Fetching, caching and deciding what a failure means live together for these
- * three feeds, and nowhere else: the parsers next door are pure so they can be asserted against committed
+ * four feeds, and nowhere else: the parsers next door are pure so they can be asserted against committed
  * payloads, and a component that wants a reading calls this rather than reaching
  * for `fetch`.
  *
@@ -19,6 +22,9 @@
  *   Predictions  6 hours. Tide predictions are astronomical; they do not change
  *                between requests at all. The only reason to refetch is to roll
  *                the window forward as days pass.
+ *
+ *   MOP          3 hours, the interval the model's own estimates sit on. Asking
+ *                more often cannot return a different value.
  *
  * The route that renders this sets its own, shorter, page-level revalidate so
  * that "today" does not go stale; see `app/conditions/page.tsx`. Page
@@ -55,6 +61,14 @@ import {
   parseNdbcRealtime2,
   type WaveObservation,
 } from "./ndbc-realtime2";
+import {
+  MopDriftError,
+  type MopForecast,
+  MopNoDataError,
+  mopForecastUrl,
+  type MopRequestContract,
+  parseMopForecast,
+} from "./mop-forecast";
 import {
   NwsObservationDriftError,
   NwsObservationNoDataError,
@@ -472,4 +486,114 @@ export async function fetchLatestNdbcAir(
     windDirDegT: fresh(observation.wind, observation.wind?.dirDegT ?? null),
     url,
   };
+}
+
+/* =========================================================================
+ * CDIP MOP: the wave forecast the week grid reads
+ * ========================================================================= */
+
+/**
+ * Three hours, which is the interval the estimates themselves sit on.
+ *
+ * Asking more often cannot return a different value: the model publishes on a
+ * three-hour grid, so a cached response is at most one grid step behind the
+ * newest one there could be. The run observed on 2026-08-26 rewrote all 1,210
+ * San Diego lines inside the 07:00 UTC hour, so the rerun cadence is at most
+ * daily and this is generous rather than tight. Longer than the readings above
+ * for the same reason it can be: this fills a row about the week, where a few
+ * hours of staleness changes nothing a reader would act on differently.
+ */
+export const MOP_FORECAST_REVALIDATE_SECONDS = 10800;
+
+/**
+ * How much of an NCSS error body is quoted back. These are one short sentence
+ * -- 39 bytes for the one that matters -- and a cap stops an HTML error page
+ * from arriving in a reader's disclosure.
+ */
+const NCSS_ERROR_LIMIT = 200;
+
+/** What NCSS says when the window it was given holds none of the file's times. */
+const NO_FEATURES = "No features are in the requested subset";
+
+export type MopForecastResult =
+  | { kind: "ok"; forecast: MopForecast; url: string }
+  | { kind: "unavailable"; reason: string; drift: boolean; url: string };
+
+/**
+ * Fetch one MOP line's forecast for a window.
+ *
+ * Never throws.
+ *
+ * NCSS ANSWERS 400 FOR TWO DIFFERENT THINGS and they are not the same kind of
+ * problem, so the body is read rather than the status alone. A window holding
+ * none of the file's times means the forecast has not been rerun and is now
+ * behind us -- a quiet feed, and the reader is told to come back. A variable
+ * this site asks for and the dataset does not carry is drift, and a bug to
+ * chase here.
+ */
+export async function fetchMopForecast(
+  contract: MopRequestContract,
+): Promise<MopForecastResult> {
+  const url = mopForecastUrl(contract);
+  const { lineId } = contract;
+
+  const unavailable = (reason: string, drift = false): MopForecastResult => ({
+    kind: "unavailable",
+    reason,
+    drift,
+    url,
+  });
+
+  let response: Response;
+  try {
+    response = await fetch(url, {
+      headers: { "User-Agent": USER_AGENT },
+      next: { revalidate: MOP_FORECAST_REVALIDATE_SECONDS },
+    });
+  } catch (cause) {
+    return unavailable(
+      `The request to CDIP for MOP line ${lineId} did not complete: ` +
+        `${cause instanceof Error ? cause.message : String(cause)}`,
+    );
+  }
+
+  if (response.status === 404) {
+    // What a line CDIP has stopped publishing does. The line table records
+    // which lines carry a forecast, so this means that table has gone stale.
+    return unavailable(
+      `CDIP publishes no forecast file for MOP line ${lineId}. The line table needs re-probing.`,
+    );
+  }
+
+  if (response.status === 400) {
+    const detail = (await response.text()).trim().slice(0, NCSS_ERROR_LIMIT);
+    if (detail.startsWith(NO_FEATURES)) {
+      return unavailable(
+        `CDIP's forecast for MOP line ${lineId} does not reach the week this page is showing. ` +
+          `The model has not been rerun recently enough to cover it.`,
+      );
+    }
+    return unavailable(
+      `CDIP refused this site's request for MOP line ${lineId}: ${detail}`,
+      true,
+    );
+  }
+
+  if (!response.ok) {
+    return unavailable(
+      `CDIP returned HTTP ${response.status} for MOP line ${lineId}.`,
+    );
+  }
+
+  try {
+    return {
+      kind: "ok",
+      forecast: parseMopForecast(await response.text(), lineId),
+      url,
+    };
+  } catch (cause) {
+    if (cause instanceof MopDriftError) return unavailable(cause.message, true);
+    if (cause instanceof MopNoDataError) return unavailable(cause.message);
+    return unavailable(cause instanceof Error ? cause.message : String(cause));
+  }
 }

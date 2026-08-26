@@ -15,6 +15,7 @@ import {
   airStationFor,
   type Beach,
   beachBySlug,
+  mopLineFor,
   tideStationFor,
   waveBuoyFor,
   type ObservationStation,
@@ -29,10 +30,12 @@ import {
   localTimeOf,
 } from "./pacific-time";
 import { lowestLowOn } from "./tide-day";
+import type { MopWaveRow } from "./mop-forecast";
 import {
   fetchLatestNdbcAir,
   fetchLatestObservation,
   fetchLatestWave,
+  fetchMopForecast,
   fetchTideExtremes,
 } from "./upstream";
 
@@ -713,4 +716,160 @@ async function readSkyHalf(
     visibilityAtCeiling: observation.visibilityAtCeiling,
     sky: observation.sky,
   };
+}
+
+/* =========================================================================
+ * The wave forecast the week grid reads, from CDIP MOP
+ * ========================================================================= */
+
+/** One day of the week grid's wave row. */
+export interface WaveWeekDay extends WeekDayFrame {
+  /** The day's biggest significant wave height, in feet. */
+  heightFt: number;
+  /** The period of the estimate that height came from, in seconds. */
+  periodS: number;
+}
+
+/**
+ * What the week grid's wave row renders.
+ *
+ * The same three-way split as the tide week, and the same reason: `no-line` is
+ * a permanent fact about a place, `unavailable` is a transient fact about a
+ * feed.
+ *
+ * `week` CARRIES ONLY THE DAYS THE FORECAST REACHES, which is where this
+ * differs from `TideWeekView`. A tide prediction runs years ahead, so a short
+ * tide week is a fault and is named `no-low`; a forecast that stops on Sunday
+ * is a forecast doing what forecasts do. The grid draws no cell where a row has
+ * none, which is exactly the shape a ragged row needs -- see `WeekGrid`.
+ */
+export interface WaveWeekView {
+  beachName: string;
+  /** null exactly when the state is `no-line`. */
+  line: { id: string; distanceM: number | null } | null;
+  state:
+    | { kind: "week"; days: WaveWeekDay[] }
+    | { kind: "no-line"; reason: string }
+    | { kind: "unavailable"; detail: string; drift: boolean };
+}
+
+/**
+ * The window this page asks CDIP for.
+ *
+ * A day of slack either side, for the reason `predictionsWindow` gives: the
+ * request is made in UTC instants and the days on the page are Pacific days, so
+ * a Pacific day straddles two UTC dates and a window ending on the week's last
+ * day would clip its afternoon off. The dates are stepped with `addLocalDays`
+ * rather than by adding milliseconds, because twice a year on this coast a day
+ * is twenty-three hours or twenty-five.
+ *
+ * Slack costs nothing here. The whole forecast is about 6 KB and reaches only
+ * ten days, so a window wider than the file returns the file; a window narrower
+ * than the week would silently lose a column.
+ */
+function mopWindow(nowMs: number): { startIso: string; endIso: string } {
+  const today = localDateOf(nowMs);
+  return {
+    startIso: `${addLocalDays(today, -1)}T00:00:00Z`,
+    endIso: `${addLocalDays(today, WEEK_DAYS + 1)}T00:00:00Z`,
+  };
+}
+
+/**
+ * The biggest estimate of each Pacific day, keyed by date.
+ *
+ * THE MAXIMUM RATHER THAN THE MEAN, and it is a consequential choice rather
+ * than a cosmetic one: on two of ten sampled days the day's smallest and
+ * largest estimates fell either side of one of `WavesToday`'s plain-language
+ * bands, so the two statistics would describe the same day in different words.
+ * The row's label names the selection so it is not a hidden judgement.
+ *
+ * Ties keep the earlier estimate. Strictly-greater rather than
+ * greater-or-equal: the rows arrive oldest first, so this is deterministic, and
+ * a reader planning a morning is better served by the earlier of two identical
+ * heights.
+ */
+function biggestPerDay(rows: readonly MopWaveRow[]): Map<string, MopWaveRow> {
+  const biggest = new Map<string, MopWaveRow>();
+  for (const row of rows) {
+    const localDate = localDateOf(row.atMs);
+    const standing = biggest.get(localDate);
+    if (standing === undefined || row.heightFt > standing.heightFt) {
+      biggest.set(localDate, row);
+    }
+  }
+  return biggest;
+}
+
+/**
+ * Read a week of wave forecasts for one beach, starting today.
+ *
+ * A SECOND WAVE READ BESIDE `readLatestWaves`, NOT A REPLACEMENT FOR IT. That
+ * one is a measurement of now from an NDBC buoy; this is model output for the
+ * week from CDIP. Both appear on the page for today, which is why the row
+ * carries its own provenance -- see the ADR.
+ *
+ * Throws only when the slug is not in the inventory. A beach the join bound no
+ * line to -- every bay, lagoon and sheltered beach -- arrives as `no-line`
+ * without a request being made, because there is nothing to ask.
+ */
+export async function readWaveWeek(
+  slug: string,
+  nowMs: number = Date.now(),
+): Promise<WaveWeekView> {
+  const beach = beachBySlug(slug);
+  if (!beach) {
+    throw new Error(
+      `readWaveWeek: no beach in the inventory with slug "${slug}".`,
+    );
+  }
+
+  const line = mopLineFor(beach);
+  if (line === null) {
+    return {
+      beachName: beach.name,
+      line: null,
+      state: {
+        kind: "no-line",
+        reason:
+          beach.mop_line_null_reason ??
+          "the join bound no MOP line to this beach, and recorded no reason",
+      },
+    };
+  }
+
+  const binding = {
+    beachName: beach.name,
+    line: { id: line.id, distanceM: beach.mop_line_distance_m },
+  };
+
+  const result = await fetchMopForecast({
+    lineId: line.id,
+    ...mopWindow(nowMs),
+  });
+  if (result.kind === "unavailable") {
+    return {
+      ...binding,
+      state: {
+        kind: "unavailable",
+        detail: result.reason,
+        drift: result.drift,
+      },
+    };
+  }
+
+  const biggest = biggestPerDay(result.forecast.rows);
+
+  // The slack in the window and the forecast's own reach both put estimates
+  // outside the seven columns. Building from `weekOfDays` rather than from the
+  // rows is what keeps this row agreeing with the tide and daylight rows about
+  // which day is Tuesday, and drops the rest.
+  const days = weekOfDays(nowMs).flatMap((frame) => {
+    const row = biggest.get(frame.localDate);
+    return row === undefined
+      ? []
+      : [{ ...frame, heightFt: row.heightFt, periodS: row.periodS }];
+  });
+
+  return { ...binding, state: { kind: "week", days } };
 }

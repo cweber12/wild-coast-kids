@@ -5,11 +5,13 @@ const fetchTideExtremes = vi.fn();
 const fetchLatestWave = vi.fn();
 const fetchLatestObservation = vi.fn();
 const fetchLatestNdbcAir = vi.fn();
+const fetchMopForecast = vi.fn();
 vi.mock("./upstream", () => ({
   fetchTideExtremes,
   fetchLatestWave,
   fetchLatestObservation,
   fetchLatestNdbcAir,
+  fetchMopForecast,
 }));
 
 const BEACH = "la-jolla-shores-beach";
@@ -47,6 +49,10 @@ vi.mock("./beaches", async (importOriginal) => {
     wave_buoy_distance_m: null,
     wave_buoy_from_end: null,
     wave_buoy_null_reason: reason,
+    mop_line: null,
+    mop_line_distance_m: null,
+    mop_line_from_end: null,
+    mop_line_null_reason: reason,
     sky_station: null,
     sky_station_distance_m: null,
     sky_station_from_end: null,
@@ -69,6 +75,7 @@ const {
   readDaylightWeek,
   readLatestWaves,
   readLatestAir,
+  readWaveWeek,
 } = await import("./conditions");
 
 /**
@@ -85,6 +92,7 @@ beforeEach(() => {
   fetchLatestWave.mockReset();
   fetchLatestObservation.mockReset();
   fetchLatestNdbcAir.mockReset();
+  fetchMopForecast.mockReset();
 });
 
 function ok(extremes: { atMs: number; feet: number; kind: "low" | "high" }[]) {
@@ -734,5 +742,177 @@ test("the clock is passed to both fetches, so freshness is judged not guessed", 
 test("an unknown slug is a coding error, not a quiet feed", async () => {
   await expect(
     readLatestAir("not-a-beach", NOON_PACIFIC_20260817),
+  ).rejects.toThrow(/no beach in the inventory/);
+});
+
+/* =========================================================================
+ * The wave forecast, from CDIP MOP
+ * ========================================================================= */
+
+/** Three-hourly rows for one Pacific day, in metres-converted feet. */
+function mopRows(
+  entries: { atMs: number; heightFt: number; periodS: number }[],
+) {
+  fetchMopForecast.mockResolvedValue({
+    kind: "ok",
+    forecast: {
+      lineId: "D0498",
+      rows: entries.map((entry) => ({ ...entry, directionDegT: 270 })),
+      flaggedOut: 0,
+    },
+    url: "https://example.invalid",
+  });
+}
+
+/** 3am, noon and 9pm Pacific on the given offset from 2026-08-17. */
+const pacificHour = (dayOffset: number, hour: number) =>
+  Date.UTC(2026, 7, 17 + dayOffset, hour + 7);
+
+test("each cell is that day's biggest estimate, with the period that went with it", async () => {
+  // The statistic is consequential rather than cosmetic: the smallest and
+  // largest estimates of one day can fall either side of a plain-language band,
+  // so the mean and the maximum describe the same day in different words.
+  mopRows([
+    { atMs: pacificHour(0, 3), heightFt: 1.2, periodS: 8 },
+    { atMs: pacificHour(0, 12), heightFt: 3.4, periodS: 14 },
+    { atMs: pacificHour(0, 21), heightFt: 2.1, periodS: 11 },
+  ]);
+
+  const view = await readWaveWeek(BEACH, NOON_PACIFIC_20260817);
+
+  expect(view.state.kind).toBe("week");
+  if (view.state.kind !== "week") return;
+  expect(view.state.days).toHaveLength(1);
+  expect(view.state.days[0]).toMatchObject({
+    localDate: "2026-08-17",
+    isToday: true,
+    heightFt: 3.4,
+    periodS: 14,
+  });
+});
+
+test("a tie keeps the earlier estimate", async () => {
+  // The rows arrive oldest first, so strictly-greater is what makes this
+  // deterministic -- and a reader planning a morning is better served by the
+  // earlier of two identical heights.
+  mopRows([
+    { atMs: pacificHour(0, 6), heightFt: 2.5, periodS: 9 },
+    { atMs: pacificHour(0, 18), heightFt: 2.5, periodS: 15 },
+  ]);
+
+  const view = await readWaveWeek(BEACH, NOON_PACIFIC_20260817);
+
+  if (view.state.kind !== "week") throw new Error("expected a week");
+  expect(view.state.days[0].periodS).toBe(9);
+});
+
+test("days are grouped by the Pacific date, not the UTC one", async () => {
+  // 9pm Pacific is the next day in UTC. Grouping on UTC would move the whole
+  // evening of every day into the column after it.
+  mopRows([
+    { atMs: pacificHour(0, 21), heightFt: 4.0, periodS: 16 },
+    { atMs: pacificHour(1, 9), heightFt: 1.0, periodS: 6 },
+  ]);
+
+  const view = await readWaveWeek(BEACH, NOON_PACIFIC_20260817);
+
+  if (view.state.kind !== "week") throw new Error("expected a week");
+  expect(view.state.days.map((day) => day.localDate)).toEqual([
+    "2026-08-17",
+    "2026-08-18",
+  ]);
+  expect(view.state.days[0].heightFt).toBe(4.0);
+});
+
+test("the row goes ragged rather than blank where the forecast stops", async () => {
+  // A tide prediction runs years ahead and a short tide week is a fault. A
+  // forecast that stops on Sunday is a forecast doing what forecasts do, and
+  // the grid draws no cell where a row has none.
+  mopRows([
+    { atMs: pacificHour(0, 12), heightFt: 2.0, periodS: 10 },
+    { atMs: pacificHour(1, 12), heightFt: 2.0, periodS: 10 },
+    { atMs: pacificHour(2, 12), heightFt: 2.0, periodS: 10 },
+  ]);
+
+  const view = await readWaveWeek(BEACH, NOON_PACIFIC_20260817);
+
+  if (view.state.kind !== "week") throw new Error("expected a week");
+  expect(view.state.days).toHaveLength(3);
+});
+
+test("estimates outside the seven columns are dropped", async () => {
+  // The window is asked with a day of slack either side, and the forecast
+  // reaches three days back on its own. Building from the week's own days is
+  // what keeps this row agreeing with the tide row about which day is Tuesday.
+  mopRows([
+    { atMs: pacificHour(-1, 12), heightFt: 9.9, periodS: 20 },
+    { atMs: pacificHour(0, 12), heightFt: 2.0, periodS: 10 },
+    { atMs: pacificHour(8, 12), heightFt: 9.9, periodS: 20 },
+  ]);
+
+  const view = await readWaveWeek(BEACH, NOON_PACIFIC_20260817);
+
+  if (view.state.kind !== "week") throw new Error("expected a week");
+  expect(view.state.days.map((day) => day.localDate)).toEqual(["2026-08-17"]);
+});
+
+test("the window is bounded and slack on both ends", async () => {
+  mopRows([{ atMs: pacificHour(0, 12), heightFt: 2.0, periodS: 10 }]);
+
+  await readWaveWeek(BEACH, NOON_PACIFIC_20260817);
+
+  expect(fetchMopForecast).toHaveBeenCalledWith({
+    lineId: "D0498",
+    startIso: "2026-08-16T00:00:00Z",
+    endIso: "2026-08-25T00:00:00Z",
+  });
+});
+
+test("the line and its distance travel with the reading", async () => {
+  mopRows([{ atMs: pacificHour(0, 12), heightFt: 2.0, periodS: 10 }]);
+
+  const view = await readWaveWeek(BEACH, NOON_PACIFIC_20260817);
+
+  expect(view.line?.id).toBe("D0498");
+  expect(view.line?.distanceM).toBeGreaterThan(0);
+  expect(view.beachName).toBe("La Jolla Shores Beach");
+});
+
+test("a bay beach is not asked for a forecast either, for the same reason", async () => {
+  const view = await readWaveWeek(BAY_BEACH, NOON_PACIFIC_20260817);
+
+  expect(view.state.kind).toBe("no-line");
+  expect(view.line).toBeNull();
+  expect(fetchMopForecast).not.toHaveBeenCalled();
+  if (view.state.kind === "no-line") {
+    expect(view.state.reason).toMatch(/does not reach into a bay/);
+  }
+});
+
+test("an unavailable forecast carries its reason and its drift flag through", async () => {
+  fetchMopForecast.mockResolvedValue({
+    kind: "unavailable",
+    reason:
+      "CDIP's forecast for MOP line D0498 does not reach the week this page is showing.",
+    drift: false,
+    url: "https://example.invalid",
+  });
+
+  const view = await readWaveWeek(BEACH, NOON_PACIFIC_20260817);
+
+  expect(view.state).toEqual({
+    kind: "unavailable",
+    detail:
+      "CDIP's forecast for MOP line D0498 does not reach the week this page is showing.",
+    drift: false,
+  });
+  // The binding survives the failure, so the page can still say which line it
+  // was asking about.
+  expect(view.line?.id).toBe("D0498");
+});
+
+test("a slug that is not in the inventory is a coding error, not a quiet feed", async () => {
+  await expect(
+    readWaveWeek("no-such-beach", NOON_PACIFIC_20260817),
   ).rejects.toThrow(/no beach in the inventory/);
 });
