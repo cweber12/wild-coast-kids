@@ -142,20 +142,53 @@ test("carries the beach and station bindings, including how far the station is",
   expect(view.station?.distanceM).toBeGreaterThan(0);
 });
 
-test("picks the day's deeper low and renders it as Pacific wall-clock time", async () => {
+test("leads with the deepest low a reader can reach, and keeps the day's own", async () => {
+  // The instants are hours clear of sunrise and sunset on purpose: a fixture
+  // that turned on the ephemeris agreeing to the minute would be asserting
+  // something other than the rule under test.
   ok([
     // 6:41 PM on the 16th in California: the previous day, and must not win.
     { atMs: Date.UTC(2026, 7, 17, 1, 41), feet: 0.9, kind: "low" },
-    { atMs: Date.UTC(2026, 7, 17, 13, 24), feet: 1.368, kind: "low" },
-    { atMs: Date.UTC(2026, 7, 18, 2, 46), feet: 1.51, kind: "low" },
+    // 3:14 AM: deeper than anything in daylight, and hours before sunrise.
+    { atMs: Date.UTC(2026, 7, 17, 10, 14), feet: -0.42, kind: "low" },
+    // 2:00 PM: the lowest a parent can stand in front of.
+    { atMs: Date.UTC(2026, 7, 17, 21, 0), feet: 1.368, kind: "low" },
   ]);
 
   const view = await readTodaysLowestLow(BEACH, NOON_PACIFIC_20260817);
 
   expect(view.state).toEqual({
     kind: "reading",
-    timeLabel: "6:24 AM",
-    feet: 1.368,
+    daylight: { timeLabel: "2:00 PM", feet: 1.368 },
+    allDay: { timeLabel: "3:14 AM", feet: -0.42 },
+  });
+});
+
+test("says there is nothing lower when the day's lowest is the daylight one", async () => {
+  // Null means "nothing lower than the one above", never "unknown". Printing
+  // the same reading twice would read as a fault rather than as agreement.
+  ok([{ atMs: Date.UTC(2026, 7, 17, 21, 0), feet: 0.4, kind: "low" }]);
+
+  const view = await readTodaysLowestLow(BEACH, NOON_PACIFIC_20260817);
+
+  expect(view.state).toEqual({
+    kind: "reading",
+    daylight: { timeLabel: "2:00 PM", feet: 0.4 },
+    allDay: null,
+  });
+});
+
+test("a day whose only low is overnight still answers, from the other figure", async () => {
+  // Close to unreachable on this coast, and a real state: the reading is not
+  // withheld, it simply has nothing to lead with.
+  ok([{ atMs: Date.UTC(2026, 7, 17, 10, 14), feet: -0.42, kind: "low" }]);
+
+  const view = await readTodaysLowestLow(BEACH, NOON_PACIFIC_20260817);
+
+  expect(view.state).toEqual({
+    kind: "reading",
+    daylight: null,
+    allDay: { timeLabel: "3:14 AM", feet: -0.42 },
   });
 });
 
@@ -287,14 +320,14 @@ test("the week is anchored to the Pacific date, not the UTC one", async () => {
   expect(daysOf(view)[0].localDate).toBe("2026-08-17");
 });
 
-test("each day gets its own deeper low, and never a high", async () => {
+test("each day gets its own two lows, and never a high", async () => {
   ok([
-    // 6:24 AM on the 17th.
-    { atMs: Date.UTC(2026, 7, 17, 13, 24), feet: 1.368, kind: "low" },
-    // 6:41 PM on the 17th, and the deeper of that day's two.
-    { atMs: Date.UTC(2026, 7, 18, 1, 41), feet: 0.9, kind: "low" },
-    // 7:10 AM on the 18th.
-    { atMs: Date.UTC(2026, 7, 18, 14, 10), feet: -0.4, kind: "low" },
+    // 3:00 AM on the 17th: deeper than anything in daylight that day.
+    { atMs: Date.UTC(2026, 7, 17, 10, 0), feet: -0.4, kind: "low" },
+    // 2:00 PM on the 17th: the lowest a reader can reach.
+    { atMs: Date.UTC(2026, 7, 17, 21, 0), feet: 0.9, kind: "low" },
+    // 10:00 AM on the 18th, and the only low that day.
+    { atMs: Date.UTC(2026, 7, 18, 17, 0), feet: 1.2, kind: "low" },
     // A high on the 18th, lower in the list and irrelevant to a lowest low.
     { atMs: Date.UTC(2026, 7, 18, 20, 0), feet: 3.0, kind: "high" },
   ]);
@@ -303,14 +336,40 @@ test("each day gets its own deeper low, and never a high", async () => {
 
   expect(days[0].state).toEqual({
     kind: "reading",
-    timeLabel: "6:41 PM",
-    feet: 0.9,
+    daylight: { timeLabel: "2:00 PM", feet: 0.9 },
+    allDay: { timeLabel: "3:00 AM", feet: -0.4 },
   });
+  // The one day of the two whose lowest low does fall in daylight, so there is
+  // nothing lower to report beside it.
   expect(days[1].state).toEqual({
     kind: "reading",
-    timeLabel: "7:10 AM",
-    feet: -0.4,
+    daylight: { timeLabel: "10:00 AM", feet: 1.2 },
+    allDay: null,
   });
+});
+
+test("all three rows are selected by one computation of the week's daylight", async () => {
+  // A tide row that thought Tuesday's sun set at a different minute from the
+  // daylight row beside it would be the same class of bug weekOfDays exists to
+  // prevent for dates.
+  ok([
+    { atMs: Date.UTC(2026, 7, 17, 10, 0), feet: -0.4, kind: "low" },
+    { atMs: Date.UTC(2026, 7, 17, 21, 0), feet: 0.9, kind: "low" },
+  ]);
+
+  const tide = daysOf(await readWeekOfLowestLows(BEACH, NOON_PACIFIC_20260817));
+  const daylight = readDaylightWeek(BEACH, NOON_PACIFIC_20260817).days;
+
+  const state = tide[0].state;
+  if (state.kind !== "reading" || state.daylight === null) {
+    throw new Error("expected a daylight reading");
+  }
+  expect(daylight[0].sunriseLabel).toBe("6:14 AM");
+  expect(daylight[0].sunsetLabel).toBe("7:32 PM");
+  // 2:00 PM sits inside that window; 3:00 AM does not, and is the one carried
+  // beside it rather than led with.
+  expect(state.daylight.timeLabel).toBe("2:00 PM");
+  expect(state.allDay?.timeLabel).toBe("3:00 AM");
 });
 
 test("a day the window did not cover is named, not dropped from the week", async () => {

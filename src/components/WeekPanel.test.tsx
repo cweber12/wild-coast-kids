@@ -29,7 +29,11 @@ const DATES = [
 function tideDay(index: number, timeLabel: string, feet: number) {
   return {
     ...DATES[index],
-    state: { kind: "reading", timeLabel, feet },
+    state: {
+      kind: "reading",
+      daylight: { timeLabel, feet },
+      allDay: { timeLabel: "3:14 AM", feet: -1.1 },
+    },
   };
 }
 
@@ -106,7 +110,9 @@ test("asks for the slug it was given and renders both live rows", async () => {
     },
   });
 
-  render(await WeekPanel({ slug: "la-jolla-shores-beach" }));
+  const { container } = render(
+    await WeekPanel({ slug: "la-jolla-shores-beach" }),
+  );
 
   expect(readWeekOfLowestLows).toHaveBeenCalledWith("la-jolla-shores-beach");
   expect(readDaylightWeek).toHaveBeenCalledWith("la-jolla-shores-beach");
@@ -114,7 +120,7 @@ test("asks for the slug it was given and renders both live rows", async () => {
   expect(screen.getByText("-0.4 ft")).toBeDefined();
   expect(screen.getByText("to 7:32 PM")).toBeDefined();
   // Each row's own label, which is what stops a glyph carrying the meaning.
-  expect(screen.getAllByText("Lowest tide")).toHaveLength(2);
+  expect(countOf(cellLabels(container), "Lowest daylight tide")).toBe(2);
   expect(screen.getAllByText("Daylight")).toHaveLength(2);
 });
 
@@ -150,7 +156,7 @@ test("a NOAA outage costs the tide row, not the whole grid", async () => {
   // cannot fail, so the week still stands and still answers a question.
   expect(screen.getByText("Tue, Aug 18")).toBeDefined();
   expect(screen.getAllByText("Daylight")).toHaveLength(2);
-  expect(screen.queryByText("Lowest tide")).toBeNull();
+  expect(screen.queryByText("Lowest daylight tide")).toBeNull();
 });
 
 test("a beach with no station keeps its daylight, and does not read as an outage", async () => {
@@ -325,13 +331,15 @@ test("a CDIP outage costs the wave row and nothing else", async () => {
     },
   });
 
-  render(await WeekPanel({ slug: "la-jolla-shores-beach" }));
+  const { container } = render(
+    await WeekPanel({ slug: "la-jolla-shores-beach" }),
+  );
 
   // Said in full here rather than pointed at a card, because CDIP is read here
   // and nowhere else on the page.
   expect(screen.getByText(/HTTP 503 for MOP line D0498/)).toBeDefined();
   expect(screen.queryByText("Biggest swell")).toBeNull();
-  expect(screen.getAllByText("Lowest tide")).toHaveLength(2);
+  expect(countOf(cellLabels(container), "Lowest daylight tide")).toBe(2);
   expect(screen.getAllByText("Daylight")).toHaveLength(2);
 });
 
@@ -373,7 +381,7 @@ test("NOAA going quiet does not take the wave row with it", async () => {
     await WeekPanel({ slug: "la-jolla-shores-beach" }),
   );
 
-  expect(screen.queryByText("Lowest tide")).toBeNull();
+  expect(screen.queryByText("Lowest daylight tide")).toBeNull();
   expect(countOf(cellLabels(container), "Biggest swell")).toBe(2);
 });
 
@@ -393,7 +401,7 @@ test("the wave row sits under daylight, not between it and the tide", async () =
   const labels = [...container.querySelectorAll("li:first-child dt")].map(
     (node) => node.textContent,
   );
-  expect(labels).toEqual(["Lowest tide", "Daylight", "Biggest swell"]);
+  expect(labels).toEqual(["Lowest daylight tide", "Daylight", "Biggest swell"]);
 });
 
 test("a line with no recorded distance is still named, without one", async () => {

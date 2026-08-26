@@ -20,12 +20,16 @@ test("a reading leads with the time, and the beach names the region", () => {
     <TideToday
       beachName="La Jolla Shores Beach"
       station={NEAR_STATION}
-      state={{ kind: "reading", timeLabel: "6:24 AM", feet: 1.368 }}
+      state={{
+        kind: "reading",
+        daylight: { timeLabel: "6:24 AM", feet: 1.368 },
+        allDay: { timeLabel: "3:14 AM", feet: -1.1 },
+      }}
     />,
   );
 
   const heading = screen.getByRole("heading", { level: 2 });
-  expect(heading.textContent).toContain("Lowest tide today");
+  expect(heading.textContent).toContain("Lowest daylight tide");
   expect(screen.getByText("6:24 AM")).toBeDefined();
 
   // The beach left the visible heading when three cards went side by side —
@@ -36,7 +40,7 @@ test("a reading leads with the time, and the beach names the region", () => {
   expect(heading.textContent).not.toContain("La Jolla Shores Beach");
   expect(
     screen.getByRole("region", {
-      name: "Lowest tide today · La Jolla Shores Beach",
+      name: "Lowest daylight tide · La Jolla Shores Beach",
     }),
   ).toBeDefined();
 });
@@ -46,7 +50,11 @@ test("a positive height is described against the average low", () => {
     <TideToday
       beachName="La Jolla Shores Beach"
       station={NEAR_STATION}
-      state={{ kind: "reading", timeLabel: "6:24 AM", feet: 1.368 }}
+      state={{
+        kind: "reading",
+        daylight: { timeLabel: "6:24 AM", feet: 1.368 },
+        allDay: { timeLabel: "3:14 AM", feet: -1.1 },
+      }}
     />,
   );
   // The number is a figure now, beside the sentence that explains it — it was
@@ -60,7 +68,11 @@ test("a negative height explains its own minus sign", () => {
     <TideToday
       beachName="Cabrillo"
       station={NEAR_STATION}
-      state={{ kind: "reading", timeLabel: "3:12 PM", feet: -0.4 }}
+      state={{
+        kind: "reading",
+        daylight: { timeLabel: "3:12 PM", feet: -0.4 },
+        allDay: { timeLabel: "3:14 AM", feet: -1.1 },
+      }}
     />,
   );
   // The sign is the most useful fact on the page for a tidepooler and the most
@@ -82,7 +94,11 @@ test("the station that supplied the prediction is credited here, not elsewhere",
     <TideToday
       beachName="La Jolla Shores Beach"
       station={NEAR_STATION}
-      state={{ kind: "reading", timeLabel: "6:24 AM", feet: 1.368 }}
+      state={{
+        kind: "reading",
+        daylight: { timeLabel: "6:24 AM", feet: 1.368 },
+        allDay: { timeLabel: "3:14 AM", feet: -1.1 },
+      }}
     />,
   );
   // Read off the rendered paragraph rather than matched as a pattern: the
@@ -101,7 +117,11 @@ test("a nearby station is credited without a distance", () => {
     <TideToday
       beachName="La Jolla Shores Beach"
       station={NEAR_STATION}
-      state={{ kind: "reading", timeLabel: "6:24 AM", feet: 1.368 }}
+      state={{
+        kind: "reading",
+        daylight: { timeLabel: "6:24 AM", feet: 1.368 },
+        allDay: { timeLabel: "3:14 AM", feet: -1.1 },
+      }}
     />,
   );
   expect(screen.queryByText(/km from this beach/)).toBeNull();
@@ -112,7 +132,11 @@ test("a distant station discloses how far away it is", () => {
     <TideToday
       beachName="San Onofre State Beach"
       station={FAR_STATION}
-      state={{ kind: "reading", timeLabel: "6:24 AM", feet: 1.368 }}
+      state={{
+        kind: "reading",
+        daylight: { timeLabel: "6:24 AM", feet: 1.368 },
+        allDay: { timeLabel: "3:14 AM", feet: -1.1 },
+      }}
     />,
   );
   // 57 km up the coast is the difference between a prediction for this shore and
@@ -260,10 +284,73 @@ test("the tide card is marked by a shell", () => {
     <TideToday
       beachName="La Jolla Shores Beach"
       station={NEAR_STATION}
-      state={{ kind: "reading", timeLabel: "6:24 AM", feet: 1.368 }}
+      state={{
+        kind: "reading",
+        daylight: { timeLabel: "6:24 AM", feet: 1.368 },
+        allDay: { timeLabel: "3:14 AM", feet: -1.1 },
+      }}
     />,
   );
 
   const glyph = container.querySelector('[aria-hidden="true"]');
   expect(glyph?.textContent).toBe("🐚");
+});
+
+test("the day's lowest sits beside the daylight one, from the same station", () => {
+  // One group and one attribution: both lows come from one station and one
+  // request, read twice through different windows. A second group would imply
+  // a second source, which is what StatGroup's rule exists to stop.
+  const { container } = render(
+    <TideToday
+      beachName="La Jolla Shores Beach"
+      station={NEAR_STATION}
+      state={{
+        kind: "reading",
+        daylight: { timeLabel: "6:41 PM", feet: 0.9 },
+        allDay: { timeLabel: "3:14 AM", feet: -0.42 },
+      }}
+    />,
+  );
+
+  expect(container.querySelectorAll("dl")).toHaveLength(1);
+  expect(screen.getByText("Lowest all day")).toBeDefined();
+  expect(screen.getByText("3:14 AM · -0.4 ft")).toBeDefined();
+});
+
+test("a daylight low that is also the day's lowest says so rather than repeating", () => {
+  render(
+    <TideToday
+      beachName="La Jolla Shores Beach"
+      station={NEAR_STATION}
+      state={{
+        kind: "reading",
+        daylight: { timeLabel: "6:41 PM", feet: 0.9 },
+        allDay: null,
+      }}
+    />,
+  );
+
+  expect(screen.getByText("None lower")).toBeDefined();
+});
+
+test("no low in daylight leads with nothing, and still gives the day's lowest", () => {
+  // ReadingCard refuses to render an empty figure slot, so the card leads with
+  // no figure at all rather than promoting a reading a parent cannot use.
+  const { container } = render(
+    <TideToday
+      beachName="La Jolla Shores Beach"
+      station={NEAR_STATION}
+      state={{
+        kind: "reading",
+        daylight: null,
+        allDay: { timeLabel: "3:14 AM", feet: -0.42 },
+      }}
+    />,
+  );
+
+  expect(container.querySelector(".text-stat")).toBeNull();
+  expect(
+    screen.getByText(/No low tide falls between sunrise and sunset/),
+  ).toBeDefined();
+  expect(screen.getByText("3:14 AM · -0.4 ft")).toBeDefined();
 });

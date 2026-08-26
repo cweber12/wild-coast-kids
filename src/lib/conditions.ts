@@ -29,7 +29,7 @@ import {
   localDayLabel,
   localTimeOf,
 } from "./pacific-time";
-import { lowestLowOn } from "./tide-day";
+import { lowestLowBetween, lowestLowOn } from "./tide-day";
 import type { MopWaveRow } from "./mop-forecast";
 import {
   fetchLatestNdbcAir,
@@ -38,6 +38,38 @@ import {
   fetchMopForecast,
   fetchTideExtremes,
 } from "./upstream";
+
+/** One predicted low, worded for a reader. */
+export interface TideReading {
+  timeLabel: string;
+  feet: number;
+}
+
+/**
+ * The two lows a tide row carries, and which of them leads.
+ *
+ * **`daylight` is the primary figure**, because it is the one a reader can act
+ * on. A lowest low at 3:14 AM is a real prediction and a useless plan, and
+ * until now the page printed it as the answer and left the reader to check it
+ * against the daylight row themselves. On the seven days measured on
+ * 2026-08-26 the day's lowest low fell before sunrise on six of them.
+ *
+ * **`allDay` is present only when it is a different extreme.** When the day's
+ * lowest low happens to fall in daylight the two are the same reading, and
+ * printing it twice would be noise; the view says there is nothing lower
+ * instead. Null therefore means "nothing lower than the one above", not
+ * "unknown".
+ *
+ * **Both can be null in only one direction.** `daylight` is null when no low
+ * falls between sunrise and sunset, and `allDay` then carries the day's lowest
+ * so the cell still has a figure. They are never both null: a day with no low
+ * at all is `no-low`, which is a fact about the window this site asked NOAA
+ * for.
+ */
+export interface TideLows {
+  daylight: TideReading | null;
+  allDay: TideReading | null;
+}
 
 /**
  * What the view renders. Four states, kept distinct on purpose, because the
@@ -53,7 +85,7 @@ import {
  * about something that will never work, or the reverse.
  */
 export type TideTodayState =
-  | { kind: "reading"; timeLabel: string; feet: number }
+  | ({ kind: "reading" } & TideLows)
   | { kind: "no-low-today" }
   | { kind: "no-station"; reason: string }
   | {
@@ -195,7 +227,12 @@ interface TideBinding {
 type TideWindowRead =
   | { kind: "no-station"; beachName: string; reason: string }
   | (TideBinding & { kind: "unavailable"; detail: string; drift: boolean })
-  | (TideBinding & { kind: "ok"; extremes: readonly TideExtreme[] });
+  | (TideBinding & {
+      kind: "ok";
+      extremes: readonly TideExtreme[];
+      /** Sunrise and sunset per day, which is what selects the figure each row leads with. */
+      daylight: ReadonlyMap<string, Daylight>;
+    });
 
 /**
  * Bind the beach to its tide station and ask NOAA once for the shared window.
@@ -254,7 +291,44 @@ async function readTideWindow(
         detail: result.reason,
         drift: result.drift,
       }
-    : { ...binding, kind: "ok", extremes: result.extremes };
+    : {
+        ...binding,
+        kind: "ok",
+        extremes: result.extremes,
+        daylight: daylightByDate(beach, nowMs),
+      };
+}
+
+/**
+ * The two lows one day carries, or null when the run holds none for that date.
+ *
+ * The comparison is on the instant rather than the height, because two lows can
+ * share a height to one decimal and are still two different times to leave the
+ * house.
+ */
+function tideLowsOn(
+  extremes: readonly TideExtreme[],
+  localDate: string,
+  daylight: Daylight,
+): TideLows | null {
+  const allDay = lowestLowOn(extremes, localDate);
+  if (allDay === null) return null;
+
+  const inDaylight = lowestLowBetween(
+    extremes,
+    daylight.sunriseMs,
+    daylight.sunsetMs,
+  );
+
+  const reading = (extreme: TideExtreme): TideReading => ({
+    timeLabel: localTimeOf(extreme.atMs),
+    feet: extreme.feet,
+  });
+
+  return {
+    daylight: inDaylight === null ? null : reading(inDaylight),
+    allDay: inDaylight?.atMs === allDay.atMs ? null : reading(allDay),
+  };
 }
 
 /**
@@ -295,17 +369,17 @@ export async function readTodaysLowestLow(
     };
   }
 
-  const lowest = lowestLowOn(read.extremes, localDateOf(nowMs));
+  const localDate = localDateOf(nowMs);
+  const lows = tideLowsOn(
+    read.extremes,
+    localDate,
+    read.daylight.get(localDate)!,
+  );
+
   return {
     ...binding,
     state:
-      lowest === null
-        ? { kind: "no-low-today" }
-        : {
-            kind: "reading",
-            timeLabel: localTimeOf(lowest.atMs),
-            feet: lowest.feet,
-          },
+      lows === null ? { kind: "no-low-today" } : { kind: "reading", ...lows },
   };
 }
 
@@ -324,8 +398,7 @@ export interface TideWeekDay {
   dayLabel: string;
   /** True for the day the reader is standing in, so the grid reads no clock. */
   isToday: boolean;
-  state:
-    { kind: "reading"; timeLabel: string; feet: number } | { kind: "no-low" };
+  state: ({ kind: "reading" } & TideLows) | { kind: "no-low" };
 }
 
 /**
@@ -380,17 +453,14 @@ export async function readWeekOfLowestLows(
   }
 
   const days: TideWeekDay[] = weekOfDays(nowMs).map((frame) => {
-    const lowest = lowestLowOn(read.extremes, frame.localDate);
+    const lows = tideLowsOn(
+      read.extremes,
+      frame.localDate,
+      read.daylight.get(frame.localDate)!,
+    );
     return {
       ...frame,
-      state:
-        lowest === null
-          ? { kind: "no-low" }
-          : {
-              kind: "reading",
-              timeLabel: localTimeOf(lowest.atMs),
-              feet: lowest.feet,
-            },
+      state: lows === null ? { kind: "no-low" } : { kind: "reading", ...lows },
     };
   });
 
