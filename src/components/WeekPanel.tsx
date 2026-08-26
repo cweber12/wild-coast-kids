@@ -26,28 +26,15 @@ import {
   readWeekOfLowestLows,
 } from "@/lib/conditions";
 import { DaylightWeek, DAYLIGHT_WEEK_ROW } from "./DaylightWeek";
+import {
+  MOP_MODEL_NOTE,
+  MOP_NETWORK,
+  mopLineDistanceKm,
+  mopLineSource,
+} from "./mopLine";
 import { TideWeek, TIDE_WEEK_ROW } from "./TideWeek";
 import { WaveWeek, WAVE_WEEK_ROW } from "./WaveWeek";
 import { WeekGrid, type ReservedRow, type WeekRow } from "./WeekGrid";
-
-/**
- * How far the MOP line is, in kilometres, rounded.
- *
- * One decimal, always, and no threshold under which it is withheld. The two
- * now-cards each have one -- `WavesToday` hides a buoy nearer than 10 km,
- * `TideToday` a station nearer than 5 km -- because a distance small enough not
- * to change the reading is noise beside it. This distance is never large: every
- * bound line is between 117 m and 910 m away, so rounding to whole kilometres
- * would print "1 km" or "0 km" for all fifteen and say nothing.
- *
- * It is shown rather than withheld because it is the answer to the question the
- * row invites. A modelled height sitting beside a measured one is only readable
- * if the reader can see that the model's point is nearer than the buoy, and
- * this is the number that says so.
- */
-function roundedKm(metres: number): string {
-  return (metres / 1000).toFixed(1);
-}
 
 /**
  * The forecasts this grid is shaped for and does not yet carry.
@@ -144,14 +131,14 @@ export async function WeekPanel({ slug }: { slug: string }) {
           <WaveWeek key={day.localDate} day={day} />,
         ]),
       ),
+      // Every word of this comes from `mopLine.ts`, because the wave card
+      // states the same four facts and two call sites wording one fact is how
+      // `ProvenanceLine` came to print the same station two ways on one card.
       provenance: {
-        // "MOP line D0498" rather than a name, because CDIP gives these no
-        // name: they are numbered south to north behind a county prefix. See
-        // CONTEXT.md, and #87 for why a callsign is never turned into prose.
-        source: `MOP line ${line.id}`,
-        network: "CDIP, Scripps Institution of Oceanography",
-        distanceKm: line.distanceM === null ? null : roundedKm(line.distanceM),
-        note: "a model of the swell at 10 m depth, not a measurement",
+        source: mopLineSource(line.id),
+        network: MOP_NETWORK,
+        distanceKm: mopLineDistanceKm(line.distanceM),
+        note: MOP_MODEL_NOTE,
       },
     });
   }
