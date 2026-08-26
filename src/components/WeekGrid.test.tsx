@@ -11,7 +11,6 @@ const DAYS: WeekDay[] = [
 
 /** Deliberately ragged: the 19th is missing, which is a row this product cannot fill that far out. */
 const TIDE_ROW: WeekRow = {
-  emoji: "🌊",
   label: "Lowest tide",
   cells: {
     "2026-08-17": "6:41 PM",
@@ -80,14 +79,24 @@ test("today is named in words, not carried by a colour alone", () => {
   expect(screen.getByText(/Today · Mon, Aug 17/)).toBeDefined();
 });
 
-test("the glyph is decoration and never the only label a row has", () => {
-  const { container } = renderGrid();
+/**
+ * ADR-0015. The rows carried 🐚 and 🌅 at the 10px these labels are set in,
+ * where a full-colour emoji is not a mark -- the shell rendered as a grey
+ * smudge on the pale cell, fourteen times over. A glyph marks a panel on this
+ * page now; a row inside one is named in words, which is what a screen reader
+ * was hearing all along.
+ */
+test("a row is named in words, with no glyph beside it", () => {
+  const { container } = renderGrid({ reserved: RESERVED });
 
-  const glyph = container.querySelector('[aria-hidden="true"]');
-  expect(glyph?.textContent).toBe("🌊");
-  // The text label is what a screen reader hears, per the brief's rule that
-  // emoji mark categories and never carry them.
   expect(screen.getAllByText("Lowest tide").length).toBeGreaterThan(0);
+
+  // The reserved band below still carries one, so this cannot pass by the grid
+  // having rendered nothing at all.
+  const glyphs = [...container.querySelectorAll('[aria-hidden="true"]')].map(
+    (node) => node.textContent,
+  );
+  expect(glyphs).toEqual(["🏄"]);
 });
 
 test("label and value are a description list, so the pairing is structural", () => {
@@ -205,4 +214,40 @@ test("the week's heading outranks the day headings inside it", () => {
   const day = container.querySelector("h3");
   expect(day?.className).toContain("text-2xs");
   expect(day?.className).not.toContain("text-quote");
+});
+
+/**
+ * The property the cell's own comment claims and nothing asserted: today is
+ * marked by the colour of its edge, not by a thicker one. A `border-2` on the
+ * marked day alone would make it two pixels narrower inside than the six beside
+ * it, which is the kind of misalignment nobody finds by reading the diff.
+ */
+test("today is marked by the colour of its edge, never by a wider one", () => {
+  const { container } = renderGrid();
+
+  const cells = [...container.querySelectorAll("ol > li")];
+  expect(cells.length).toBe(3);
+
+  const widths = new Set(
+    cells.map((c) => (c.className.match(/border-\[[^\]]+\]/) ?? [""])[0]),
+  );
+  expect(widths.size).toBe(1);
+
+  expect(cells[0].className).toContain("border-ocean");
+  expect(cells[1].className).toContain("border-lavender");
+  expect(cells[2].className).toContain("border-lavender");
+});
+
+/**
+ * `rounded-tile`, not the 24px `rounded-card` a 520px hero card takes. On a
+ * 159x148 cell that radius is 15% of the width and the corner stops reading as
+ * a corner — see this component's own comment, and finding 1 of the 2026-08-25
+ * review.
+ */
+test("a day cell takes the radius of a box its own size", () => {
+  const { container } = renderGrid();
+
+  const cell = container.querySelector("ol > li");
+  expect(cell?.className).toContain("rounded-tile");
+  expect(cell?.className).not.toContain("rounded-card");
 });

@@ -32,12 +32,12 @@ test("a day the window did not cover says so rather than rendering a blank", () 
 });
 
 /**
- * ADR-0015, and the reason the row exports its glyph rather than each caller
- * writing one: the tide is marked the same way in the now-band and in the week,
- * and a page marking one product two ways was the drift `ReadingCard` and
- * `ReservedSlot` were both extracted to stop.
+ * ADR-0015. The row carried 🐚 to match the now-band's card, and at the 10px a
+ * week label is set in it rendered as a grey smudge on the pale cell -- the
+ * exact pale-on-pale failure the card was given a dark surface to escape. The
+ * row is named in words instead, so there is no glyph here to keep in step.
  */
-test("the week's tide row is marked by the same shell as the now-band", () => {
-  expect(TIDE_WEEK_ROW.emoji).toBe("🐚");
+test("the week's tide row is named in words and carries no glyph", () => {
   expect(TIDE_WEEK_ROW.label).toBe("Lowest tide");
+  expect(TIDE_WEEK_ROW).not.toHaveProperty("emoji");
 });

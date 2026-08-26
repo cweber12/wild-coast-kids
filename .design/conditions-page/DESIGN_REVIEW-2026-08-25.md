@@ -12,6 +12,12 @@ Reviewed URL: `http://localhost:3000/conditions/la-jolla-shores-beach`
 > overwritten. Where a note below reverses something that file recommended, it
 > says so.
 
+> **Findings 1–4 have been acted on; see the addendum at the foot of this file
+> before following any _Fix:_ clause above.** Two of them were answered
+> differently from what is written here, and finding 3's fix in particular was
+> built and rejected. Findings 5–8 are still open and are the brief for the work
+> that follows.
+
 ## Screenshots Captured
 
 | Screenshot                                                                | Breakpoint       | What it shows                                      |
@@ -63,6 +69,12 @@ own backing_, not to the card, and the fix is four lines.
 
 ### 1. Radius is being chosen by token name, not by the size of the box it lands on
 
+> Half superseded 2026-08-25 by PR #142. The reading card's radius was not
+> reduced and did not need to be: this finding's own argument is that the corner
+> was all you could see _because_ `bg-mist` sits at 1.10:1 against the page, and
+> the card is now `bg-dark` at 16:1, where 24px reads as intended. **The week
+> day cell is untouched and this finding stands for it in full.**
+
 **(note 1 — "the cards with large border radius are tacky")**
 
 Measured radii and boxes on the rendered page:
@@ -109,6 +121,10 @@ part with nothing in it but corners.
 
 ### 2. Every glyph on real data is 10px; the only big glyphs on the page are in empty boxes
 
+> Shipped 2026-08-25 in PR #142, by the position this finding proposed. The
+> glyph is 30px on the figure's row and costs no height at all — better than the
+> 8px this predicted, because a 30px glyph fits inside the 36px figure line.
+
 **(note 2 — "I liked the large emojis better")**
 
 Measured, every `aria-hidden` glyph inside `<main>`:
@@ -146,6 +162,15 @@ it is asserting the decision being changed, so it gets rewritten in the same
 commit.
 
 ### 3. 🐚 and 💨 cannot sit on the mist card as-is — an ocean chip is what makes the swap possible
+
+> **Superseded 2026-08-25 by PR #142. Do not follow the _Fix:_ below.** The
+> vocabulary shipped — 🐚 tide, 🏄 waves, 💨 air — but the ocean chip was built,
+> reviewed and rejected: a badge behind each glyph read as decoration applied to
+> the card rather than as part of it, and it cost 8px per card. The card itself
+> went `bg-dark` instead, which carries the pale glyphs for nothing and fixes
+> finding 1's cause as a side effect. The chip table below is still a correct
+> measurement of glyphs on backings; it is the conclusion drawn from it that was
+> wrong. See ADR-0015, which is the maintained record.
 
 **(note 3 — "tide should be a shell and air should be the wind; adjust
 background if necessary")**
@@ -240,6 +265,12 @@ arguing 🌊-over-🐚 needs rewriting, not deleting) and
 ## Should Fix
 
 ### 4. The page renders in three background tones and two of the brand's colours never appear
+
+> Partly answered 2026-08-25 by PR #142: the three reading cards are `bg-dark`
+> and their eyebrows `text-yellow`, which is the first brand colour to reach
+> this page. The measurement below describes the page before that. Everything
+> outside the now-band — the week grid, the reserved slots, the notes — is
+> unchanged and the finding stands for it.
 
 **(note: "more fun")**
 
@@ -373,3 +404,58 @@ four dashed boxes carrying the page's biggest marks contribute to the first.
 - **The waves glyph was raised and settled.** I flagged 🏄 as a human figure in an
   otherwise environmental set and suggested 🌊; the surfer stays, by your call.
   Finding 3 is written to the decided set and notes what it saves.
+
+---
+
+## Addendum, 2026-08-25 — what PR #142 shipped, and what it changed here
+
+Written while the work is in flight, per `CLAUDE.md`. The findings above are a
+dated record of the page as it was and are not rewritten; this says what
+happened to each of them. When the remaining work merges, this file gets the
+historical note that `docs/plans/README.md` describes and stops being amended.
+
+| Finding                                   | Status                                                                                                |
+| ----------------------------------------- | ----------------------------------------------------------------------------------------------------- |
+| 1 · Radius by token name                  | **Half done.** Reading card resolved by its new surface, not by a radius change. Week cell untouched. |
+| 2 · Every live glyph is 10px              | **Done.** 30px on the figure's row, at no height cost.                                                |
+| 3 · 🐚 and 💨 need a backing              | **Done differently.** Vocabulary shipped; the ocean chip was rejected.                                |
+| 4 · Three pale tones, no brand colour     | **Partly done.** Now-band only.                                                                       |
+| 5 · Ragged week cells                     | Open.                                                                                                 |
+| 6 · 🏖️ on a rip-current product           | Open.                                                                                                 |
+| 7 · Week as a matrix                      | Open, and still needs a decision before it can be worked.                                             |
+| 8 · 19% of the page is dashed placeholder | Open.                                                                                                 |
+
+### The two things this review got wrong
+
+**The chip.** Finding 3 concluded that because 🐚 and 💨 are pale, the _glyph_
+needed a saturated backing, and specified a 44px `bg-ocean` chip. That was
+built and rejected on sight: it reads as a badge stuck onto the card. The
+premise was right and the conclusion was one level too low — what needed to be
+dark was the card, not a shape behind the glyph. Darkening the card also
+removed finding 1's cause on the same element, which the chip did not.
+
+The general shape of the error is worth keeping: the review measured a glyph
+against seven backgrounds and then proposed the smallest object that could hold
+one of those backgrounds, rather than asking which existing surface should hold
+it.
+
+**The height.** Finding 2 predicted a chip beside the figure would cost 8px per
+card, and it did. What shipped costs **0** — a 30px glyph fits inside the 36px
+figure line, so the row never grows. Cards measure 283px at 1536×639 and 301px
+at 1280, which are the heights they had before this branch. The fold concern
+raised against the chip does not apply to what merged.
+
+### What is now true of the page, measured after the merge
+
+- The three reading cards are `bg-dark` `#1a1a2e`. Text on them: figures and
+  stat values `text-white` (17.06:1), eyebrow `text-yellow` (15.22:1), prose
+  `text-white/75` (10.02:1), provenance and stat labels `text-white/55`
+  (5.96:1). The two secondary roles are named in `src/components/cardText.ts`.
+- The now-band's glyphs are 🐚 🏄 💨 at 30px, bare, on the figure's row.
+- **The week grid is unchanged**: seven `bg-mist` cells at 1.10:1 against the
+  page, 159 × 148 at 1280, `rounded-card` 24px, labels repeated fourteen times,
+  one cell wrapping where six do not.
+- So the page now has a dark band above a pale grid. ADR-0015 left that
+  deliberately — "now" and "planning" as different registers — and names itself
+  as the decision to convert against if it reads as an oversight instead. That
+  is the open question in front of finding 5.
