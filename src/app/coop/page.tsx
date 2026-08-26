@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
-import { PillLink } from "@/components/PillLink";
-import { Placeholder } from "@/components/Placeholder";
+import { PillLink } from "@/components/ui/PillLink";
+import { Placeholder } from "@/components/ui/Placeholder";
 import { SessionSchedule } from "@/components/SessionSchedule";
 import { fetchSessions } from "@/lib/sessions";
 

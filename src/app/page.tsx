@@ -1,10 +1,10 @@
-import { Conditions } from "@/components/Conditions";
+import { ConditionsTeaser } from "@/components/ConditionsTeaser";
 import { GallerySection } from "@/components/GallerySection";
 import { HeroViewport } from "@/components/HeroViewport";
 import { InterestListTeaser } from "@/components/InterestListTeaser";
 import { ProgramCards } from "@/components/ProgramCards";
 import { QuoteStats } from "@/components/QuoteStats";
-import { SnapSection } from "@/components/SnapSection";
+import { SnapSection } from "@/components/ui/SnapSection";
 
 export default function Home() {
   return (
@@ -19,7 +19,7 @@ export default function Home() {
         <ProgramCards />
       </SnapSection>
       <SnapSection tone="ocean">
-        <Conditions />
+        <ConditionsTeaser />
       </SnapSection>
       <SnapSection id="community">
         <InterestListTeaser />

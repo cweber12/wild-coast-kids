@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { ConditionsSection } from "@/components/ConditionsSection";
+import { ConditionsSection } from "@/components/conditions/ConditionsSection";
 import { beachBySlug } from "@/lib/beaches";
 
 /**

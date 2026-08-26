@@ -1,13 +1,13 @@
 import { expect, test, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 
-vi.mock("@/components/TidePanel", () => ({
+vi.mock("@/components/conditions/TidePanel", () => ({
   TidePanel: ({ slug }: { slug: string }) => {
     if (slug === "suspend-the-panels") throw new Promise(() => {});
     return <p>panel for {slug}</p>;
   },
 }));
-vi.mock("@/components/WavePanel", () => ({
+vi.mock("@/components/conditions/WavePanel", () => ({
   WavePanel: ({ slug }: { slug: string }) => {
     if (slug === "suspend-the-panels") throw new Promise(() => {});
     return <p>waves for {slug}</p>;
@@ -23,13 +23,13 @@ vi.mock("@/components/WavePanel", () => ({
 // `vi.mock` is hoisted above every other statement in the file, so a `const`
 // declared beside them is not initialised when the factory is defined.
 const SUSPEND = "suspend-the-panels";
-vi.mock("@/components/WindPanel", () => ({
+vi.mock("@/components/conditions/WindPanel", () => ({
   WindPanel: ({ slug }: { slug: string }) => {
     if (slug === "suspend-the-panels") throw new Promise(() => {});
     return <p>wind for {slug}</p>;
   },
 }));
-vi.mock("@/components/WeekPanel", () => ({
+vi.mock("@/components/conditions/WeekPanel", () => ({
   WeekPanel: ({ slug }: { slug: string }) => <p>week for {slug}</p>,
 }));
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push: vi.fn() }) }));

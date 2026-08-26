@@ -1,5 +1,5 @@
-import { PillLink } from "./PillLink";
-import { Placeholder } from "./Placeholder";
+import { PillLink } from "./ui/PillLink";
+import { Placeholder } from "./ui/Placeholder";
 
 const COOP_ACTIVITIES = [
   { emoji: "🌊", name: "Tidepools" },

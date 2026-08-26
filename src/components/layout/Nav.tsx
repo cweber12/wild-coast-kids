@@ -1,6 +1,6 @@
 import { NavLink } from "./NavLink";
-import { Placeholder } from "./Placeholder";
-import { TOUCH_TARGET } from "./touchTarget";
+import { Placeholder } from "../ui/Placeholder";
+import { TOUCH_TARGET } from "../ui/touchTarget";
 
 // Every interactive element in the bar composes the shared floor, because the
 // failure this repo has is drift -- a link added later without it. The

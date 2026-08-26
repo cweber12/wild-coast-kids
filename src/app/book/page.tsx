@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
-import { PillLink } from "@/components/PillLink";
-import { ReservedSlot } from "@/components/ReservedSlot";
+import { PillLink } from "@/components/ui/PillLink";
+import { ReservedSlot } from "@/components/ui/ReservedSlot";
 
 export const metadata: Metadata = {
   title: "Book Now",
