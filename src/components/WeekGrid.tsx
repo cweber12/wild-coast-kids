@@ -38,6 +38,7 @@
 
 import type { ReactNode } from "react";
 import { REGION_HEADING } from "./headingRank";
+import { ProvenanceLine } from "./ProvenanceLine";
 import { ReservedSlot } from "./ReservedSlot";
 
 /** One column of the week. */
@@ -48,6 +49,27 @@ export type WeekDay = {
   dayLabel: string;
   /** True for the day the reader is standing in. Decided upstream, so this renders no clock. */
   isToday: boolean;
+};
+
+/**
+ * Which instrument or model a row's figures came from, for the line beneath the
+ * grid.
+ *
+ * The fields `ProvenanceLine` takes, and no others: this carries them across
+ * rather than re-deciding them, so the wording of "how far away" stays in the
+ * one component that owns it -- the drift that component's docstring records.
+ * The rounding is still the caller's, because what counts as a distance worth
+ * a decimal differs per product.
+ *
+ * Shaped for the rows that are coming as much as for the one that is here. Two
+ * of the reserved forecasts below will each want to name a source, and a field
+ * shaped around waves alone would have to be widened to hold them.
+ */
+export type WeekRowProvenance = {
+  source: string;
+  network?: string | null;
+  distanceKm?: string | null;
+  note?: string | null;
 };
 
 /** One product across the week. */
@@ -67,6 +89,15 @@ export type WeekRow = {
    * and an array would align its cells with the wrong days the moment it was.
    */
   cells: Readonly<Record<string, ReactNode>>;
+  /**
+   * Where this row's figures came from, printed once beneath the grid.
+   *
+   * Optional because most rows do not need one. The tide row's station is
+   * already named on the card that shares its request, and daylight is computed
+   * in this repo from coordinates the inventory holds -- there is no instrument
+   * to name. A row whose source appears nowhere else on the page carries this.
+   */
+  provenance?: WeekRowProvenance;
 };
 
 /** What `ReservedSlot` needs, carried through so the caller names its own slots. */
@@ -209,6 +240,37 @@ export function WeekGrid({
             </li>
           ))}
         </ol>
+      )}
+
+      {/*
+        Once beneath the grid, never inside a day. A feed's identity is one fact
+        about a feed, not seven facts about seven days -- the same argument the
+        `notes` prop above is built on, and the reason `TideWeek`'s docstring
+        gives for carrying no attribution of its own.
+
+        It is here rather than in the day blocks for a second reason too: the
+        wave row's figures are model output and the wave card above the grid is
+        a measurement, so on today's column a reader is looking at two wave
+        heights for one beach. Being able to tell which is which is what
+        ADR-0010 turns on, and ADR-0016 records why the two are allowed to share
+        a page at all.
+
+        Labelled with the row's own name, because a grid may carry more than one
+        of these and "MOP line D0498 · CDIP" under a table says nothing about
+        which row it belongs to.
+      */}
+      {rows.some((row) => row.provenance !== undefined) && (
+        <div className="mb-4">
+          {rows.map((row) =>
+            row.provenance === undefined ? null : (
+              <ProvenanceLine
+                key={row.label}
+                label={row.label}
+                {...row.provenance}
+              />
+            ),
+          )}
+        </div>
       )}
 
       {/*

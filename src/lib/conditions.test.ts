@@ -5,11 +5,13 @@ const fetchTideExtremes = vi.fn();
 const fetchLatestWave = vi.fn();
 const fetchLatestObservation = vi.fn();
 const fetchLatestNdbcAir = vi.fn();
+const fetchMopForecast = vi.fn();
 vi.mock("./upstream", () => ({
   fetchTideExtremes,
   fetchLatestWave,
   fetchLatestObservation,
   fetchLatestNdbcAir,
+  fetchMopForecast,
 }));
 
 const BEACH = "la-jolla-shores-beach";
@@ -47,6 +49,10 @@ vi.mock("./beaches", async (importOriginal) => {
     wave_buoy_distance_m: null,
     wave_buoy_from_end: null,
     wave_buoy_null_reason: reason,
+    mop_line: null,
+    mop_line_distance_m: null,
+    mop_line_from_end: null,
+    mop_line_null_reason: reason,
     sky_station: null,
     sky_station_distance_m: null,
     sky_station_from_end: null,
@@ -69,6 +75,7 @@ const {
   readDaylightWeek,
   readLatestWaves,
   readLatestAir,
+  readWaveWeek,
 } = await import("./conditions");
 
 /**
@@ -85,6 +92,7 @@ beforeEach(() => {
   fetchLatestWave.mockReset();
   fetchLatestObservation.mockReset();
   fetchLatestNdbcAir.mockReset();
+  fetchMopForecast.mockReset();
 });
 
 function ok(extremes: { atMs: number; feet: number; kind: "low" | "high" }[]) {
@@ -134,20 +142,53 @@ test("carries the beach and station bindings, including how far the station is",
   expect(view.station?.distanceM).toBeGreaterThan(0);
 });
 
-test("picks the day's deeper low and renders it as Pacific wall-clock time", async () => {
+test("leads with the deepest low a reader can reach, and keeps the day's own", async () => {
+  // The instants are hours clear of sunrise and sunset on purpose: a fixture
+  // that turned on the ephemeris agreeing to the minute would be asserting
+  // something other than the rule under test.
   ok([
     // 6:41 PM on the 16th in California: the previous day, and must not win.
     { atMs: Date.UTC(2026, 7, 17, 1, 41), feet: 0.9, kind: "low" },
-    { atMs: Date.UTC(2026, 7, 17, 13, 24), feet: 1.368, kind: "low" },
-    { atMs: Date.UTC(2026, 7, 18, 2, 46), feet: 1.51, kind: "low" },
+    // 3:14 AM: deeper than anything in daylight, and hours before sunrise.
+    { atMs: Date.UTC(2026, 7, 17, 10, 14), feet: -0.42, kind: "low" },
+    // 2:00 PM: the lowest a parent can stand in front of.
+    { atMs: Date.UTC(2026, 7, 17, 21, 0), feet: 1.368, kind: "low" },
   ]);
 
   const view = await readTodaysLowestLow(BEACH, NOON_PACIFIC_20260817);
 
   expect(view.state).toEqual({
     kind: "reading",
-    timeLabel: "6:24 AM",
-    feet: 1.368,
+    daylight: { timeLabel: "2:00 PM", feet: 1.368 },
+    allDay: { timeLabel: "3:14 AM", feet: -0.42 },
+  });
+});
+
+test("says there is nothing lower when the day's lowest is the daylight one", async () => {
+  // Null means "nothing lower than the one above", never "unknown". Printing
+  // the same reading twice would read as a fault rather than as agreement.
+  ok([{ atMs: Date.UTC(2026, 7, 17, 21, 0), feet: 0.4, kind: "low" }]);
+
+  const view = await readTodaysLowestLow(BEACH, NOON_PACIFIC_20260817);
+
+  expect(view.state).toEqual({
+    kind: "reading",
+    daylight: { timeLabel: "2:00 PM", feet: 0.4 },
+    allDay: null,
+  });
+});
+
+test("a day whose only low is overnight still answers, from the other figure", async () => {
+  // Close to unreachable on this coast, and a real state: the reading is not
+  // withheld, it simply has nothing to lead with.
+  ok([{ atMs: Date.UTC(2026, 7, 17, 10, 14), feet: -0.42, kind: "low" }]);
+
+  const view = await readTodaysLowestLow(BEACH, NOON_PACIFIC_20260817);
+
+  expect(view.state).toEqual({
+    kind: "reading",
+    daylight: null,
+    allDay: { timeLabel: "3:14 AM", feet: -0.42 },
   });
 });
 
@@ -279,14 +320,14 @@ test("the week is anchored to the Pacific date, not the UTC one", async () => {
   expect(daysOf(view)[0].localDate).toBe("2026-08-17");
 });
 
-test("each day gets its own deeper low, and never a high", async () => {
+test("each day gets its own two lows, and never a high", async () => {
   ok([
-    // 6:24 AM on the 17th.
-    { atMs: Date.UTC(2026, 7, 17, 13, 24), feet: 1.368, kind: "low" },
-    // 6:41 PM on the 17th, and the deeper of that day's two.
-    { atMs: Date.UTC(2026, 7, 18, 1, 41), feet: 0.9, kind: "low" },
-    // 7:10 AM on the 18th.
-    { atMs: Date.UTC(2026, 7, 18, 14, 10), feet: -0.4, kind: "low" },
+    // 3:00 AM on the 17th: deeper than anything in daylight that day.
+    { atMs: Date.UTC(2026, 7, 17, 10, 0), feet: -0.4, kind: "low" },
+    // 2:00 PM on the 17th: the lowest a reader can reach.
+    { atMs: Date.UTC(2026, 7, 17, 21, 0), feet: 0.9, kind: "low" },
+    // 10:00 AM on the 18th, and the only low that day.
+    { atMs: Date.UTC(2026, 7, 18, 17, 0), feet: 1.2, kind: "low" },
     // A high on the 18th, lower in the list and irrelevant to a lowest low.
     { atMs: Date.UTC(2026, 7, 18, 20, 0), feet: 3.0, kind: "high" },
   ]);
@@ -295,14 +336,40 @@ test("each day gets its own deeper low, and never a high", async () => {
 
   expect(days[0].state).toEqual({
     kind: "reading",
-    timeLabel: "6:41 PM",
-    feet: 0.9,
+    daylight: { timeLabel: "2:00 PM", feet: 0.9 },
+    allDay: { timeLabel: "3:00 AM", feet: -0.4 },
   });
+  // The one day of the two whose lowest low does fall in daylight, so there is
+  // nothing lower to report beside it.
   expect(days[1].state).toEqual({
     kind: "reading",
-    timeLabel: "7:10 AM",
-    feet: -0.4,
+    daylight: { timeLabel: "10:00 AM", feet: 1.2 },
+    allDay: null,
   });
+});
+
+test("all three rows are selected by one computation of the week's daylight", async () => {
+  // A tide row that thought Tuesday's sun set at a different minute from the
+  // daylight row beside it would be the same class of bug weekOfDays exists to
+  // prevent for dates.
+  ok([
+    { atMs: Date.UTC(2026, 7, 17, 10, 0), feet: -0.4, kind: "low" },
+    { atMs: Date.UTC(2026, 7, 17, 21, 0), feet: 0.9, kind: "low" },
+  ]);
+
+  const tide = daysOf(await readWeekOfLowestLows(BEACH, NOON_PACIFIC_20260817));
+  const daylight = readDaylightWeek(BEACH, NOON_PACIFIC_20260817).days;
+
+  const state = tide[0].state;
+  if (state.kind !== "reading" || state.daylight === null) {
+    throw new Error("expected a daylight reading");
+  }
+  expect(daylight[0].sunriseLabel).toBe("6:14 AM");
+  expect(daylight[0].sunsetLabel).toBe("7:32 PM");
+  // 2:00 PM sits inside that window; 3:00 AM does not, and is the one carried
+  // beside it rather than led with.
+  expect(state.daylight.timeLabel).toBe("2:00 PM");
+  expect(state.allDay?.timeLabel).toBe("3:00 AM");
 });
 
 test("a day the window did not cover is named, not dropped from the week", async () => {
@@ -734,5 +801,234 @@ test("the clock is passed to both fetches, so freshness is judged not guessed", 
 test("an unknown slug is a coding error, not a quiet feed", async () => {
   await expect(
     readLatestAir("not-a-beach", NOON_PACIFIC_20260817),
+  ).rejects.toThrow(/no beach in the inventory/);
+});
+
+/* =========================================================================
+ * The wave forecast, from CDIP MOP
+ * ========================================================================= */
+
+/** Three-hourly rows for one Pacific day, in metres-converted feet. */
+function mopRows(
+  entries: { atMs: number; heightFt: number; periodS: number }[],
+) {
+  fetchMopForecast.mockResolvedValue({
+    kind: "ok",
+    forecast: {
+      lineId: "D0498",
+      rows: entries.map((entry) => ({ ...entry, directionDegT: 270 })),
+      flaggedOut: 0,
+    },
+    url: "https://example.invalid",
+  });
+}
+
+/** 3am, noon and 9pm Pacific on the given offset from 2026-08-17. */
+const pacificHour = (dayOffset: number, hour: number) =>
+  Date.UTC(2026, 7, 17 + dayOffset, hour + 7);
+
+test("each cell is that day's biggest estimate, with the period that went with it", async () => {
+  // The statistic is consequential rather than cosmetic: the smallest and
+  // largest estimates of one day can fall either side of a plain-language band,
+  // so the mean and the maximum describe the same day in different words.
+  mopRows([
+    { atMs: pacificHour(0, 3), heightFt: 1.2, periodS: 8 },
+    { atMs: pacificHour(0, 12), heightFt: 3.4, periodS: 14 },
+    { atMs: pacificHour(0, 21), heightFt: 2.1, periodS: 11 },
+  ]);
+
+  const view = await readWaveWeek(BEACH, NOON_PACIFIC_20260817);
+
+  expect(view.state.kind).toBe("week");
+  if (view.state.kind !== "week") return;
+  expect(view.state.days).toHaveLength(1);
+  expect(view.state.days[0]).toMatchObject({
+    localDate: "2026-08-17",
+    isToday: true,
+    // The instant of the estimate that supplied the maximum, worded in
+    // Pacific. A three-hour step rather than a peak located to the minute --
+    // the row and ConditionsNotes both say so.
+    daylight: { timeLabel: "12:00 PM", heightFt: 3.4, periodS: 14 },
+    // The 3am and 9pm estimates are both outside daylight and both smaller, so
+    // the day's biggest is the one already led with.
+    allDay: null,
+  });
+});
+
+test("the day's biggest is kept beside it when it falls outside daylight", async () => {
+  // Six of the seven days measured on 2026-08-26 were this shape, four of them
+  // peaking at 11 PM or 2 AM. A row printing the day's biggest full stop was
+  // answering a question nobody planning a trip had asked.
+  mopRows([
+    { atMs: pacificHour(0, 3), heightFt: 4.1, periodS: 5 },
+    { atMs: pacificHour(0, 12), heightFt: 2.6, periodS: 14 },
+  ]);
+
+  const view = await readWaveWeek(BEACH, NOON_PACIFIC_20260817);
+
+  if (view.state.kind !== "week") throw new Error("expected a week");
+  expect(view.state.days[0]).toMatchObject({
+    daylight: { timeLabel: "12:00 PM", heightFt: 2.6, periodS: 14 },
+    allDay: { timeLabel: "3:00 AM", heightFt: 4.1, periodS: 5 },
+  });
+});
+
+test("a day whose estimates are all overnight still answers", async () => {
+  // A ragged forecast can cover only part of a day. The reading is not
+  // withheld; it simply has nothing to lead with.
+  mopRows([{ atMs: pacificHour(0, 3), heightFt: 4.1, periodS: 5 }]);
+
+  const view = await readWaveWeek(BEACH, NOON_PACIFIC_20260817);
+
+  if (view.state.kind !== "week") throw new Error("expected a week");
+  expect(view.state.days[0]).toMatchObject({
+    daylight: null,
+    allDay: { timeLabel: "3:00 AM", heightFt: 4.1, periodS: 5 },
+  });
+});
+
+test("the time comes from the estimate that supplied the height", async () => {
+  // Not the first row of the day, and not the middle of it. Picking the
+  // maximum and then labelling it with somebody else's clock would be a time
+  // about nothing.
+  mopRows([
+    { atMs: pacificHour(0, 3), heightFt: 1.2, periodS: 8 },
+    { atMs: pacificHour(0, 18), heightFt: 3.4, periodS: 14 },
+  ]);
+
+  const view = await readWaveWeek(BEACH, NOON_PACIFIC_20260817);
+
+  if (view.state.kind !== "week") throw new Error("expected a week");
+  expect(view.state.days[0].daylight?.timeLabel).toBe("6:00 PM");
+});
+
+test("a tie keeps the earlier estimate", async () => {
+  // The rows arrive oldest first, so strictly-greater is what makes this
+  // deterministic -- and a reader planning a morning is better served by the
+  // earlier of two identical heights.
+  // Both inside daylight -- sunrise is 6:14 AM, so a 6 AM estimate would not
+  // reach the tie-break at all.
+  mopRows([
+    { atMs: pacificHour(0, 9), heightFt: 2.5, periodS: 9 },
+    { atMs: pacificHour(0, 18), heightFt: 2.5, periodS: 15 },
+  ]);
+
+  const view = await readWaveWeek(BEACH, NOON_PACIFIC_20260817);
+
+  if (view.state.kind !== "week") throw new Error("expected a week");
+  expect(view.state.days[0].daylight?.periodS).toBe(9);
+  expect(view.state.days[0].daylight?.timeLabel).toBe("9:00 AM");
+});
+
+test("days are grouped by the Pacific date, not the UTC one", async () => {
+  // 9pm Pacific is the next day in UTC. Grouping on UTC would move the whole
+  // evening of every day into the column after it.
+  mopRows([
+    { atMs: pacificHour(0, 21), heightFt: 4.0, periodS: 16 },
+    { atMs: pacificHour(1, 9), heightFt: 1.0, periodS: 6 },
+  ]);
+
+  const view = await readWaveWeek(BEACH, NOON_PACIFIC_20260817);
+
+  if (view.state.kind !== "week") throw new Error("expected a week");
+  expect(view.state.days.map((day) => day.localDate)).toEqual([
+    "2026-08-17",
+    "2026-08-18",
+  ]);
+  // 9pm Pacific is outside daylight, so it is the day's own rather than the
+  // one led with -- and it is still on the 17th, which is the point.
+  expect(view.state.days[0].allDay?.heightFt).toBe(4.0);
+});
+
+test("the row goes ragged rather than blank where the forecast stops", async () => {
+  // A tide prediction runs years ahead and a short tide week is a fault. A
+  // forecast that stops on Sunday is a forecast doing what forecasts do, and
+  // the grid draws no cell where a row has none.
+  mopRows([
+    { atMs: pacificHour(0, 12), heightFt: 2.0, periodS: 10 },
+    { atMs: pacificHour(1, 12), heightFt: 2.0, periodS: 10 },
+    { atMs: pacificHour(2, 12), heightFt: 2.0, periodS: 10 },
+  ]);
+
+  const view = await readWaveWeek(BEACH, NOON_PACIFIC_20260817);
+
+  if (view.state.kind !== "week") throw new Error("expected a week");
+  expect(view.state.days).toHaveLength(3);
+});
+
+test("estimates outside the seven columns are dropped", async () => {
+  // The window is asked with a day of slack either side, and the forecast
+  // reaches three days back on its own. Building from the week's own days is
+  // what keeps this row agreeing with the tide row about which day is Tuesday.
+  mopRows([
+    { atMs: pacificHour(-1, 12), heightFt: 9.9, periodS: 20 },
+    { atMs: pacificHour(0, 12), heightFt: 2.0, periodS: 10 },
+    { atMs: pacificHour(8, 12), heightFt: 9.9, periodS: 20 },
+  ]);
+
+  const view = await readWaveWeek(BEACH, NOON_PACIFIC_20260817);
+
+  if (view.state.kind !== "week") throw new Error("expected a week");
+  expect(view.state.days.map((day) => day.localDate)).toEqual(["2026-08-17"]);
+});
+
+test("the window is bounded and slack on both ends", async () => {
+  mopRows([{ atMs: pacificHour(0, 12), heightFt: 2.0, periodS: 10 }]);
+
+  await readWaveWeek(BEACH, NOON_PACIFIC_20260817);
+
+  expect(fetchMopForecast).toHaveBeenCalledWith({
+    lineId: "D0498",
+    startIso: "2026-08-16T00:00:00Z",
+    endIso: "2026-08-25T00:00:00Z",
+  });
+});
+
+test("the line and its distance travel with the reading", async () => {
+  mopRows([{ atMs: pacificHour(0, 12), heightFt: 2.0, periodS: 10 }]);
+
+  const view = await readWaveWeek(BEACH, NOON_PACIFIC_20260817);
+
+  expect(view.line?.id).toBe("D0498");
+  expect(view.line?.distanceM).toBeGreaterThan(0);
+  expect(view.beachName).toBe("La Jolla Shores Beach");
+});
+
+test("a bay beach is not asked for a forecast either, for the same reason", async () => {
+  const view = await readWaveWeek(BAY_BEACH, NOON_PACIFIC_20260817);
+
+  expect(view.state.kind).toBe("no-line");
+  expect(view.line).toBeNull();
+  expect(fetchMopForecast).not.toHaveBeenCalled();
+  if (view.state.kind === "no-line") {
+    expect(view.state.reason).toMatch(/does not reach into a bay/);
+  }
+});
+
+test("an unavailable forecast carries its reason and its drift flag through", async () => {
+  fetchMopForecast.mockResolvedValue({
+    kind: "unavailable",
+    reason:
+      "CDIP's forecast for MOP line D0498 does not reach the week this page is showing.",
+    drift: false,
+    url: "https://example.invalid",
+  });
+
+  const view = await readWaveWeek(BEACH, NOON_PACIFIC_20260817);
+
+  expect(view.state).toEqual({
+    kind: "unavailable",
+    detail:
+      "CDIP's forecast for MOP line D0498 does not reach the week this page is showing.",
+    drift: false,
+  });
+  // The binding survives the failure, so the page can still say which line it
+  // was asking about.
+  expect(view.line?.id).toBe("D0498");
+});
+
+test("a slug that is not in the inventory is a coding error, not a quiet feed", async () => {
+  await expect(
+    readWaveWeek("no-such-beach", NOON_PACIFIC_20260817),
   ).rejects.toThrow(/no beach in the inventory/);
 });

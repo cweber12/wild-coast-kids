@@ -5,9 +5,11 @@ import {
   fetchLatestNdbcAir,
   fetchLatestObservation,
   fetchLatestWave,
+  fetchMopForecast,
   fetchTideExtremes,
   MAX_OBSERVATION_AGE_MINUTES,
   MAX_WAVE_AGE_MINUTES,
+  MOP_FORECAST_REVALIDATE_SECONDS,
   OBSERVATIONS_REVALIDATE_SECONDS,
   PREDICTIONS_REVALIDATE_SECONDS,
   WAVES_REVALIDATE_SECONDS,
@@ -25,6 +27,18 @@ const CAPTURED = readFileSync(
   join(process.cwd(), "src/lib/__fixtures__/ndbc-46254-realtime2.txt"),
   "utf8",
 );
+
+const MOP_CAPTURED = readFileSync(
+  join(process.cwd(), "src/lib/__fixtures__/mop-d0481-forecast-20260826.csv"),
+  "utf8",
+);
+
+/** The window one week's read asks for. Shape only; the fetch is stubbed. */
+const MOP_WINDOW = {
+  lineId: "D0481",
+  startIso: "2026-08-25T00:00:00Z",
+  endIso: "2026-09-03T00:00:00Z",
+};
 
 /** The instant the captured payload's newest row was observed. */
 const OBSERVED_AT = Date.UTC(2026, 7, 18, 3, 26);
@@ -560,5 +574,150 @@ describe("fetchLatestNdbcAir", () => {
     if (result.kind !== "unavailable") return;
     expect(result.reason).toContain("terminated");
     expect(result.drift).toBe(false);
+  });
+});
+
+describe("fetchMopForecast", () => {
+  test("asks for the forecast product, the four variables and CSV", async () => {
+    // Not `_nowcast`, which only reaches backwards, and not `_hindcast`, which
+    // is 155 MB per line. `accept=csv` is what keeps NetCDF out of this repo.
+    fetchMock.mockResolvedValue(textResponse(MOP_CAPTURED));
+
+    await fetchMopForecast(MOP_WINDOW);
+
+    const [url] = fetchMock.mock.calls[0];
+    expect(url).toContain("/MOP_alongshore/D0481_forecast.nc?");
+    expect(url).toContain("accept=csv");
+    for (const variable of ["waveHs", "waveTp", "waveDp", "waveFlagPrimary"]) {
+      expect(url).toContain(`var=${variable}`);
+    }
+  });
+
+  test("always bounds the window", async () => {
+    // `time=all` on a nowcast returned 914 KB of rolling history back to April
+    // 2025. Bounded, the whole forecast is about 6 KB.
+    fetchMock.mockResolvedValue(textResponse(MOP_CAPTURED));
+
+    await fetchMopForecast(MOP_WINDOW);
+
+    const [url] = fetchMock.mock.calls[0];
+    expect(url).toContain("time_start=2026-08-25T00%3A00%3A00Z");
+    expect(url).toContain("time_end=2026-09-03T00%3A00%3A00Z");
+    expect(url).not.toContain("time=all");
+  });
+
+  test("opts the request into caching, since Next 16 does not cache fetch by default", async () => {
+    fetchMock.mockResolvedValue(textResponse(MOP_CAPTURED));
+
+    await fetchMopForecast(MOP_WINDOW);
+
+    const [, options] = fetchMock.mock.calls[0];
+    expect(options.next).toEqual({
+      revalidate: MOP_FORECAST_REVALIDATE_SECONDS,
+    });
+  });
+
+  test("returns the parsed forecast", async () => {
+    fetchMock.mockResolvedValue(textResponse(MOP_CAPTURED));
+
+    const result = await fetchMopForecast(MOP_WINDOW);
+
+    expect(result.kind).toBe("ok");
+    if (result.kind !== "ok") return;
+    expect(result.forecast.rows).toHaveLength(56);
+  });
+
+  test("a window the forecast no longer reaches is a quiet feed, not drift", async () => {
+    // NCSS answers 400 for this and for a variable it does not carry, so the
+    // body is read rather than the status alone. A forecast that has not been
+    // rerun is something a reader comes back for.
+    fetchMock.mockResolvedValue(
+      textResponse("No features are in the requested subset", 400),
+    );
+
+    const result = await fetchMopForecast(MOP_WINDOW);
+
+    expect(result.kind).toBe("unavailable");
+    if (result.kind !== "unavailable") return;
+    expect(result.drift).toBe(false);
+    expect(result.reason).toMatch(/has not been rerun recently enough/);
+  });
+
+  test("a variable the dataset does not carry is drift", async () => {
+    // The other 400. This one is a bug here rather than a bad day at CDIP.
+    fetchMock.mockResolvedValue(
+      textResponse(
+        "Variable: waveHs is not contained in the requested dataset",
+        400,
+      ),
+    );
+
+    const result = await fetchMopForecast(MOP_WINDOW);
+
+    expect(result.kind).toBe("unavailable");
+    if (result.kind !== "unavailable") return;
+    expect(result.drift).toBe(true);
+    expect(result.reason).toContain("waveHs is not contained");
+  });
+
+  test("a line that has stopped being published says the table is stale", async () => {
+    fetchMock.mockResolvedValue(
+      textResponse("FileNotFound: No such file or directory", 404),
+    );
+
+    const result = await fetchMopForecast(MOP_WINDOW);
+
+    expect(result.kind).toBe("unavailable");
+    if (result.kind !== "unavailable") return;
+    expect(result.reason).toMatch(/needs re-probing/);
+    expect(result.drift).toBe(false);
+  });
+
+  test("a drifted payload is reported as drift", async () => {
+    fetchMock.mockResolvedValue(
+      textResponse(
+        [
+          'time,station,waveHs[unit="feet"]',
+          "2026-08-26T00:00:00Z,D0481,1.6",
+        ].join("\n"),
+      ),
+    );
+
+    const result = await fetchMopForecast(MOP_WINDOW);
+
+    expect(result.kind).toBe("unavailable");
+    if (result.kind !== "unavailable") return;
+    expect(result.drift).toBe(true);
+  });
+
+  test("a line answering with no usable rows is not drift", async () => {
+    fetchMock.mockResolvedValue(textResponse(MOP_CAPTURED.split("\n")[0]));
+
+    const result = await fetchMopForecast(MOP_WINDOW);
+
+    expect(result.kind).toBe("unavailable");
+    if (result.kind !== "unavailable") return;
+    expect(result.drift).toBe(false);
+    expect(result.reason).toMatch(/not a week with no waves in it/);
+  });
+
+  test("a request that never completes is reported, not thrown", async () => {
+    fetchMock.mockRejectedValue(new Error("socket hang up"));
+
+    const result = await fetchMopForecast(MOP_WINDOW);
+
+    expect(result.kind).toBe("unavailable");
+    if (result.kind !== "unavailable") return;
+    expect(result.reason).toContain("socket hang up");
+  });
+
+  test("any other status is reported with its code", async () => {
+    fetchMock.mockResolvedValue(textResponse("upstream is down", 503));
+
+    const result = await fetchMopForecast(MOP_WINDOW);
+
+    expect(result.kind).toBe("unavailable");
+    if (result.kind !== "unavailable") return;
+    expect(result.reason).toContain("HTTP 503");
   });
 });

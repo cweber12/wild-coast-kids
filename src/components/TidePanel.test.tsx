@@ -22,7 +22,11 @@ beforeEach(() => {
 test("asks for the slug it was given and renders the reading", async () => {
   readTodaysLowestLow.mockResolvedValue({
     ...BINDING,
-    state: { kind: "reading", timeLabel: "6:24 AM", feet: 1.368 },
+    state: {
+      kind: "reading",
+      daylight: { timeLabel: "6:24 AM", feet: 1.368 },
+      allDay: null,
+    },
   });
 
   render(await TidePanel({ slug: "la-jolla-shores-beach" }));

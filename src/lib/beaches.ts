@@ -14,6 +14,7 @@
 import inventory from "@/data/beaches.json";
 import stationTable from "@/data/tide-stations.json";
 import buoyTable from "@/data/wave-buoys.json";
+import mopLineTable from "@/data/mop-lines.json";
 import observationTable from "@/data/observation-stations.json";
 
 export interface Coordinate {
@@ -59,6 +60,17 @@ export interface Beach {
   wave_buoy_from_end: string | null;
   /** Present exactly when wave_buoy is null, and required then. */
   wave_buoy_null_reason?: string;
+  /**
+   * Joined, never typed: the CDIP MOP line this beach's wave forecast comes
+   * from. A second wave binding rather than a replacement -- `wave_buoy`
+   * answers for now and this answers for the week ahead -- and null for the
+   * same 26 beaches, because every line sits at 10 m depth on the open coast.
+   */
+  mop_line: string | null;
+  mop_line_distance_m: number | null;
+  mop_line_from_end: string | null;
+  /** Present exactly when mop_line is null, and required then. */
+  mop_line_null_reason?: string;
   /** Joined, never typed. Unlike the buoy, every beach binds one: air reaches a lagoon. */
   /**
    * Joined, never typed. Supplies sky and visibility only: it is the nearest
@@ -98,6 +110,23 @@ export interface WaveBuoy {
   /** Present when `publishes_waves` is false for a reason other than absence. */
   waves_note?: string | null;
   dead_note?: string | null;
+}
+
+/**
+ * A point CDIP's Monitoring and Prediction model publishes wave estimates for,
+ * at 10 m depth and about 100 m from its neighbours.
+ *
+ * It has coordinates and a number and no name, because CDIP does not give it
+ * one: the lines are numbered south to north behind a county prefix. So the
+ * page calls it what it is -- "MOP line D0498" -- rather than turning an
+ * identifier into prose, which is the failure #87 records.
+ */
+export interface MopLine {
+  lat: number;
+  lon: number;
+  /** Measured, not assumed. A line CDIP publishes no forecast for is kept and marked. */
+  delivers: boolean;
+  dead_note?: string;
 }
 
 export interface ObservationStation {
@@ -188,6 +217,7 @@ const BEACHES = inventory.beaches as readonly Beach[];
 const EXCLUDED = inventory._excluded as readonly ExcludedBeach[];
 const STATIONS = stationTable.stations as Readonly<Record<string, TideStation>>;
 const BUOYS = buoyTable.buoys as Readonly<Record<string, WaveBuoy>>;
+const MOP_LINES = mopLineTable.lines as Readonly<Record<string, MopLine>>;
 const OBSERVATION_STATIONS = observationTable.stations as Readonly<
   Record<string, ObservationStation>
 >;
@@ -294,6 +324,27 @@ export function waveBuoyFor(beach: Beach): (WaveBuoy & { id: string }) | null {
 }
 
 /**
+ * The MOP line a beach reads its wave forecast from, or null when the join
+ * bound none -- every bay, lagoon and sheltered beach.
+ *
+ * Throws when a beach names a line the table does not describe -- a broken pair
+ * of data files, which should stop a build rather than render a forecast
+ * attributed to nowhere.
+ */
+export function mopLineFor(beach: Beach): (MopLine & { id: string }) | null {
+  if (beach.mop_line === null) return null;
+
+  const line = MOP_LINES[beach.mop_line];
+  if (!line) {
+    throw new Error(
+      `beaches.json: ${beach.slug} names MOP line ${beach.mop_line}, ` +
+        `which has no entry in mop-lines.json.`,
+    );
+  }
+  return { id: beach.mop_line, ...line };
+}
+
+/**
  * The station a beach reads for sky and visibility, or null when the join bound
  * none. Not the station it reads for temperature and wind -- see
  * `airStationFor` -- and the difference is the whole of ADR 0010.
@@ -358,6 +409,7 @@ export function inventoryCaveats(): readonly string[] {
     ...(inventory.unresolved as readonly string[]),
     ...(stationTable.unresolved as readonly string[]),
     ...(buoyTable.unresolved as readonly string[]),
+    ...(mopLineTable.unresolved as readonly string[]),
     ...(observationTable.unresolved as readonly string[]),
   ];
 }

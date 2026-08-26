@@ -32,6 +32,7 @@ import { pathToFileURL } from "node:url";
 import { distanceMetres } from "./geo.mjs";
 import { generatedDate } from "./generated-date.mjs";
 import { bindAirStation } from "./air-join.mjs";
+import { bindMopLine } from "./mop-join.mjs";
 import { bindTideStation } from "./tide-join.mjs";
 import { bindWaveBuoy } from "./wave-join.mjs";
 import { bindSkyStation } from "./sky-join.mjs";
@@ -44,6 +45,7 @@ const MIRROR_RESOURCE = "fcbc9250-06e3-437d-b0c6-3cc5ddde93fc";
 
 const BEACHES_PATH = new URL("../src/data/beaches.json", import.meta.url);
 const BUOYS_PATH = new URL("../src/data/wave-buoys.json", import.meta.url);
+const MOP_LINES_PATH = new URL("../src/data/mop-lines.json", import.meta.url);
 const STATIONS_PATH = new URL(
   "../src/data/tide-stations.json",
   import.meta.url,
@@ -203,7 +205,7 @@ export function regionOf(waterClass, meanLat) {
   return "South County coast";
 }
 
-export function build(rows, stations, buoys, observationStations) {
+export function build(rows, stations, buoys, observationStations, mopLines) {
   const seen = new Map();
 
   const beaches = rows.map((row) => {
@@ -243,6 +245,16 @@ export function build(rows, stations, buoys, observationStations) {
       : bindWaveBuoy(
           { slug, segment, waterBodyType: row.WaterBodyType },
           buoys,
+        );
+    // The second wave binding, and a separate one on purpose: the buoy answers
+    // for now and the line answers for the week, they fail on different days,
+    // and a buoy dying must not take a coastline's forecast with it. Same
+    // water-class refusal, read from the same table -- see mop-join.mjs.
+    const mop = fault
+      ? { lineId: null, reason: fault }
+      : bindMopLine(
+          { slug, segment, waterBodyType: row.WaterBodyType },
+          mopLines,
         );
     // No water-class rule here, unlike the wave join: air reaches a lagoon.
     // This binds sky and visibility only -- the airport. Temperature and wind
@@ -284,6 +296,10 @@ export function build(rows, stations, buoys, observationStations) {
       wave_buoy_distance_m: wave.buoyId ? Math.round(wave.distanceM) : null,
       wave_buoy_from_end: wave.buoyId ? wave.fromEnd : null,
       wave_buoy_null_reason: wave.buoyId ? undefined : wave.reason,
+      mop_line: mop.lineId,
+      mop_line_distance_m: mop.lineId ? Math.round(mop.distanceM) : null,
+      mop_line_from_end: mop.lineId ? mop.fromEnd : null,
+      mop_line_null_reason: mop.lineId ? undefined : mop.reason,
       sky_station: sky.stationId,
       sky_station_distance_m: sky.stationId ? Math.round(sky.distanceM) : null,
       sky_station_from_end: sky.stationId ? sky.fromEnd : null,
@@ -340,9 +356,13 @@ const kilometres = (metres) => `${(metres / 1000).toFixed(1)} km`;
  * off by a breakwater. Stating it that way subsumes the bay exemption rather
  * than special-casing beside it.
  *
- * Air is deliberately not a clause. Every bound beach already reads air within
- * 7.4 km, so adding it would exclude nobody while implying a filter doing work
- * it is not doing. See docs/adr/0011-inventory-bounded-by-station-networks.md.
+ * Air is deliberately not a clause, and neither is the MOP line. Every bound
+ * beach already reads air within 7.4 km and a MOP line within 1 km, so adding
+ * either would exclude nobody while implying a filter doing work it is not
+ * doing. The MOP omission is the load-bearing one: a wave source this close
+ * WOULD readmit beaches the buoy clause excluded, which is a re-seed of the
+ * inventory and an amendment to ADR-0011 rather than a side effect of filling a
+ * row. It is #146. See docs/adr/0011-inventory-bounded-by-station-networks.md.
  *
  * @param {object} beach A built beach, with its bindings and their distances.
  * @param {number} [toleranceM]
@@ -420,6 +440,21 @@ export function document(built, now = new Date()) {
     .map((b) => b.air_station_distance_m / 1000)
     .sort((a, b) => a - b);
   const medianAirKm = airKm[Math.floor(airKm.length / 2)];
+  // Null when no beach binds a line at all, which is a real state rather than
+  // an oversight: an inventory of nothing but bays reaches no line, and a
+  // sentence about how far the lines are would then be about nothing.
+  const withMop = beaches.filter((b) => b.mop_line !== null);
+  const mopReach =
+    withMop.length === 0
+      ? null
+      : {
+          medianM: withMop
+            .map((b) => b.mop_line_distance_m)
+            .sort((a, b) => a - b)[Math.floor(withMop.length / 2)],
+          farthest: withMop.reduce((a, b) =>
+            b.mop_line_distance_m > a.mop_line_distance_m ? b : a,
+          ),
+        };
   const farthest = beaches
     .filter((b) => b.tide_station !== null)
     .reduce((a, b) =>
@@ -479,6 +514,18 @@ export function document(built, now = new Date()) {
         "Great-circle metres from the nearer segment end to the station.",
       tide_station_from_end:
         "Which end of the segment supplied the distance, upper or lower.",
+      mop_line:
+        "Joined, never typed: the nearest delivering CDIP MOP line, subject to the same " +
+        "water-class refusal as wave_buoy -- every line sits at 10 m depth on the open coast. " +
+        "A SECOND wave binding rather than a replacement: wave_buoy answers for now and this " +
+        "answers for the week ahead. null means the join could not bind one, and " +
+        "mop_line_null_reason says why. See mop-lines.json.",
+      mop_line_distance_m:
+        "Great-circle metres from the nearer segment end to the line. Much smaller than " +
+        "wave_buoy_distance_m -- the lines are about 100 m apart -- which is why the refusal " +
+        "above is a rule about the water and not a distance.",
+      mop_line_from_end:
+        "Which end of the segment supplied the distance, upper or lower.",
       sky_station:
         "Joined, never typed: the nearest station that both answers and publishes sky. Supplies " +
         "the panel's sky and visibility ONLY -- temperature and wind come from air_station. " +
@@ -526,6 +573,18 @@ export function document(built, now = new Date()) {
         `Every NDBC wave buoy sits on the open coast, and ocean swell does not reach into a bay or ` +
         `lagoon, so binding one to the nearest buoy would put an open-ocean number on enclosed water. ` +
         `Their water temperature is missing for the same reason and is not yet filled from another source.`,
+      `The same ${beaches.filter((b) => b.mop_line === null).length} beaches get no wave forecast, ` +
+        `and the refusal costs more here than it does for the buoy: MOP lines sit about 100 m ` +
+        `apart, so the nearest one to an enclosed beach is close enough to look right. It would ` +
+        `still be describing the open coast outside.` +
+        (mopReach === null
+          ? ""
+          : ` The median bound beach reads a line ${mopReach.medianM} m away and the farthest ` +
+            `reads one ${mopReach.farthest.mop_line_distance_m} m away, at ` +
+            `${mopReach.farthest.name}. Every one is inside a kilometre, which is why this ` +
+            `binding is NOT a clause of the service predicate above: admitting it would readmit ` +
+            `beaches the buoy clause excluded, and that is a re-seed of the inventory rather ` +
+            `than a consequence of adding a forecast.`),
       "A tide prediction is for the station, not for the beach. It is the best published figure " +
         "for that stretch of shore and it is not a measurement taken there.",
       `Sky and visibility are read at an airport, because the ten stations in this county that ` +
@@ -566,6 +625,7 @@ async function main() {
 
   const stations = JSON.parse(readFileSync(STATIONS_PATH, "utf8")).stations;
   const buoys = JSON.parse(readFileSync(BUOYS_PATH, "utf8")).buoys;
+  const mopLines = JSON.parse(readFileSync(MOP_LINES_PATH, "utf8")).lines;
   const observationStations = JSON.parse(
     readFileSync(OBSERVATION_STATIONS_PATH, "utf8"),
   ).stations;
@@ -577,7 +637,9 @@ async function main() {
   }
 
   const rows = await fetchRows();
-  const built = document(build(rows, stations, buoys, observationStations));
+  const built = document(
+    build(rows, stations, buoys, observationStations, mopLines),
+  );
 
   // `generated` is the one field that moves on every run by design, so comparing
   // it would make every check fail and mean nothing.

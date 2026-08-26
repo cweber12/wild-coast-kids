@@ -1,12 +1,19 @@
 /**
  * One day's daylight, as the week grid prints it.
  *
- * **It is here to make the tide row mean something.** A lowest low at 2:23 AM
- * and a lowest low at 2:23 PM are the same number and not the same trip, and
- * the tide row alone cannot say which is which. Put beside it, "6:14 AM to 7:32
- * PM" answers the question a parent is actually asking — can we be down there
- * when the water is out — without the page ever offering a verdict about it,
- * which ADR-0009 forbids and which this deliberately stops short of.
+ * **It used to be here to make the tide row mean something**, and it is not any
+ * more. A lowest low at 2:23 AM and one at 2:23 PM are the same number and not
+ * the same trip, and for a while this row was the only thing on the page that
+ * said which. ADR-0017 moved that into the rows themselves: they now lead with
+ * the extreme daylight reaches and name it, so this is no longer the correction
+ * to the figure above it.
+ *
+ * **What it still answers is the question no other row does** — when you can be
+ * down there at all, and how much of the day is left once the tide window
+ * closes. That is narrower than the job it was built for and it is why the row
+ * stayed when the alternative was to drop it and buy back 380px of phone
+ * scroll. It offers no verdict about any of it, which ADR-0009 forbids and this
+ * deliberately stops short of.
  *
  * **Both ends, not a duration.** "13h 18m of daylight" is the same information
  * arranged so that nobody can use it: the reader is choosing when to leave the

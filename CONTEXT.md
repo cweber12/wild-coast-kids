@@ -155,3 +155,13 @@ supply all four values let the scarcest of them, sky, decide where the
 temperature was measured, which put an inland reading on a coastal beach
 (ADR-0010).
 _Avoid_: weather station, wind station
+
+**MOP line**:
+One of the points in `src/data/mop-lines.json` — 1,210 of them along this
+county's coast, numbered south to north behind the prefix CDIP assigns it. Each
+is a place CDIP's Monitoring and Prediction model publishes a wave forecast for,
+at 10 m depth and about 100 m from its neighbours. It has no name, so the page
+calls it what it is: "MOP line D0498". A beach binds one for the week ahead and
+a wave buoy for now; the two are separate joins over separate tables and refuse
+the same water.
+_Avoid_: MOP station, model buoy, virtual buoy, forecast point

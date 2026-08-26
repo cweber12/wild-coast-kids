@@ -15,12 +15,13 @@ import {
   airStationFor,
   type Beach,
   beachBySlug,
+  mopLineFor,
   tideStationFor,
   waveBuoyFor,
   type ObservationStation,
   skyStationFor,
 } from "./beaches";
-import { daylightOn, midpointOf } from "./daylight";
+import { type Daylight, daylightOn, midpointOf } from "./daylight";
 import type { TideExtreme } from "./coops-predictions";
 import {
   addLocalDays,
@@ -28,13 +29,47 @@ import {
   localDayLabel,
   localTimeOf,
 } from "./pacific-time";
-import { lowestLowOn } from "./tide-day";
+import { lowestLowBetween, lowestLowOn } from "./tide-day";
+import type { MopWaveRow } from "./mop-forecast";
 import {
   fetchLatestNdbcAir,
   fetchLatestObservation,
   fetchLatestWave,
+  fetchMopForecast,
   fetchTideExtremes,
 } from "./upstream";
+
+/** One predicted low, worded for a reader. */
+export interface TideReading {
+  timeLabel: string;
+  feet: number;
+}
+
+/**
+ * The two lows a tide row carries, and which of them leads.
+ *
+ * **`daylight` is the primary figure**, because it is the one a reader can act
+ * on. A lowest low at 3:14 AM is a real prediction and a useless plan, and
+ * until now the page printed it as the answer and left the reader to check it
+ * against the daylight row themselves. On the seven days measured on
+ * 2026-08-26 the day's lowest low fell before sunrise on six of them.
+ *
+ * **`allDay` is present only when it is a different extreme.** When the day's
+ * lowest low happens to fall in daylight the two are the same reading, and
+ * printing it twice would be noise; the view says there is nothing lower
+ * instead. Null therefore means "nothing lower than the one above", not
+ * "unknown".
+ *
+ * **Both can be null in only one direction.** `daylight` is null when no low
+ * falls between sunrise and sunset, and `allDay` then carries the day's lowest
+ * so the cell still has a figure. They are never both null: a day with no low
+ * at all is `no-low`, which is a fact about the window this site asked NOAA
+ * for.
+ */
+export interface TideLows {
+  daylight: TideReading | null;
+  allDay: TideReading | null;
+}
 
 /**
  * What the view renders. Four states, kept distinct on purpose, because the
@@ -50,7 +85,7 @@ import {
  * about something that will never work, or the reverse.
  */
 export type TideTodayState =
-  | { kind: "reading"; timeLabel: string; feet: number }
+  | ({ kind: "reading" } & TideLows)
   | { kind: "no-low-today" }
   | { kind: "no-station"; reason: string }
   | {
@@ -115,6 +150,37 @@ function weekOfDays(nowMs: number): WeekDayFrame[] {
   });
 }
 
+/**
+ * Sunrise and sunset for each day of the week, keyed by that day's local date.
+ *
+ * **One computation, three readers.** The daylight row renders it, and the tide
+ * and wave rows are now *selected* by it — each shows the extreme that falls
+ * between these two instants. Three callers computing their own would be three
+ * chances for the rows to disagree about when Tuesday's sun sets, which is
+ * exactly the class of bug `weekOfDays` exists to prevent for dates.
+ *
+ * **A beach is reduced to its midpoint**, as `readDaylightWeek` has always done:
+ * sunset differs by one minute across the entire county, so which end of a
+ * shoreline segment you stand on is below the precision of the answer.
+ *
+ * **Nothing here can fail.** It is astronomy computed from coordinates the
+ * inventory already holds, so constraining a NOAA reading or a CDIP forecast by
+ * it adds no new way for either to go quiet. `daylightOn` throws only on a
+ * latitude with no sunrise, which this county does not have.
+ */
+function daylightByDate(
+  beach: Beach,
+  nowMs: number,
+): ReadonlyMap<string, Daylight> {
+  const at = midpointOf(beach.segment);
+  return new Map(
+    weekOfDays(nowMs).map((frame) => [
+      frame.localDate,
+      daylightOn(frame.localDate, at),
+    ]),
+  );
+}
+
 /** `YYYY-MM-DD` to the `YYYYMMDD` CO-OPS wants. */
 function compact(localDate: string): string {
   return localDate.replaceAll("-", "");
@@ -161,7 +227,12 @@ interface TideBinding {
 type TideWindowRead =
   | { kind: "no-station"; beachName: string; reason: string }
   | (TideBinding & { kind: "unavailable"; detail: string; drift: boolean })
-  | (TideBinding & { kind: "ok"; extremes: readonly TideExtreme[] });
+  | (TideBinding & {
+      kind: "ok";
+      extremes: readonly TideExtreme[];
+      /** Sunrise and sunset per day, which is what selects the figure each row leads with. */
+      daylight: ReadonlyMap<string, Daylight>;
+    });
 
 /**
  * Bind the beach to its tide station and ask NOAA once for the shared window.
@@ -220,7 +291,44 @@ async function readTideWindow(
         detail: result.reason,
         drift: result.drift,
       }
-    : { ...binding, kind: "ok", extremes: result.extremes };
+    : {
+        ...binding,
+        kind: "ok",
+        extremes: result.extremes,
+        daylight: daylightByDate(beach, nowMs),
+      };
+}
+
+/**
+ * The two lows one day carries, or null when the run holds none for that date.
+ *
+ * The comparison is on the instant rather than the height, because two lows can
+ * share a height to one decimal and are still two different times to leave the
+ * house.
+ */
+function tideLowsOn(
+  extremes: readonly TideExtreme[],
+  localDate: string,
+  daylight: Daylight,
+): TideLows | null {
+  const allDay = lowestLowOn(extremes, localDate);
+  if (allDay === null) return null;
+
+  const inDaylight = lowestLowBetween(
+    extremes,
+    daylight.sunriseMs,
+    daylight.sunsetMs,
+  );
+
+  const reading = (extreme: TideExtreme): TideReading => ({
+    timeLabel: localTimeOf(extreme.atMs),
+    feet: extreme.feet,
+  });
+
+  return {
+    daylight: inDaylight === null ? null : reading(inDaylight),
+    allDay: inDaylight?.atMs === allDay.atMs ? null : reading(allDay),
+  };
 }
 
 /**
@@ -261,17 +369,17 @@ export async function readTodaysLowestLow(
     };
   }
 
-  const lowest = lowestLowOn(read.extremes, localDateOf(nowMs));
+  const localDate = localDateOf(nowMs);
+  const lows = tideLowsOn(
+    read.extremes,
+    localDate,
+    read.daylight.get(localDate)!,
+  );
+
   return {
     ...binding,
     state:
-      lowest === null
-        ? { kind: "no-low-today" }
-        : {
-            kind: "reading",
-            timeLabel: localTimeOf(lowest.atMs),
-            feet: lowest.feet,
-          },
+      lows === null ? { kind: "no-low-today" } : { kind: "reading", ...lows },
   };
 }
 
@@ -290,8 +398,7 @@ export interface TideWeekDay {
   dayLabel: string;
   /** True for the day the reader is standing in, so the grid reads no clock. */
   isToday: boolean;
-  state:
-    { kind: "reading"; timeLabel: string; feet: number } | { kind: "no-low" };
+  state: ({ kind: "reading" } & TideLows) | { kind: "no-low" };
 }
 
 /**
@@ -346,17 +453,14 @@ export async function readWeekOfLowestLows(
   }
 
   const days: TideWeekDay[] = weekOfDays(nowMs).map((frame) => {
-    const lowest = lowestLowOn(read.extremes, frame.localDate);
+    const lows = tideLowsOn(
+      read.extremes,
+      frame.localDate,
+      read.daylight.get(frame.localDate)!,
+    );
     return {
       ...frame,
-      state:
-        lowest === null
-          ? { kind: "no-low" }
-          : {
-              kind: "reading",
-              timeLabel: localTimeOf(lowest.atMs),
-              feet: lowest.feet,
-            },
+      state: lows === null ? { kind: "no-low" } : { kind: "reading", ...lows },
     };
   });
 
@@ -422,12 +526,12 @@ export function readDaylightWeek(
     );
   }
 
-  const at = midpointOf(beach.segment);
+  const daylight = daylightByDate(beach, nowMs);
 
   return {
     beachName: beach.name,
     days: weekOfDays(nowMs).map((frame) => {
-      const { sunriseMs, sunsetMs } = daylightOn(frame.localDate, at);
+      const { sunriseMs, sunsetMs } = daylight.get(frame.localDate)!;
       return {
         ...frame,
         sunriseLabel: localTimeOf(toNearestMinute(sunriseMs)),
@@ -713,4 +817,229 @@ async function readSkyHalf(
     visibilityAtCeiling: observation.visibilityAtCeiling,
     sky: observation.sky,
   };
+}
+
+/* =========================================================================
+ * The wave forecast the week grid reads, from CDIP MOP
+ * ========================================================================= */
+
+/** One estimate of the swell, worded for a reader. */
+export interface WaveReading {
+  /**
+   * Pacific wall-clock time of the estimate, already worded.
+   *
+   * NOT a peak the model located to the minute. MOP publishes on a three-hour
+   * grid, so this is the step that carried the largest height and the real peak
+   * can sit up to ninety minutes either side of it. The tide row's time is a
+   * turning point NOAA computed; this one is a bucket. `ConditionsNotes` says
+   * so, because the two sit one above the other and look alike.
+   */
+  timeLabel: string;
+  /** Significant wave height in feet. */
+  heightFt: number;
+  /** The period of the estimate that height came from, in seconds. */
+  periodS: number;
+}
+
+/**
+ * One day of the week grid's wave row: the swell a reader can be there for, and
+ * the day's own if that is a different estimate.
+ *
+ * The same split as `TideLows`, for the same reason and with the same
+ * invariants. `daylight` leads; `allDay` is present only when it is a different
+ * estimate; a day with no estimates at all is not in the week rather than being
+ * a day with two nulls.
+ */
+export interface WaveWeekDay extends WeekDayFrame {
+  daylight: WaveReading | null;
+  allDay: WaveReading | null;
+}
+
+/**
+ * What the week grid's wave row renders.
+ *
+ * The same three-way split as the tide week, and the same reason: `no-line` is
+ * a permanent fact about a place, `unavailable` is a transient fact about a
+ * feed.
+ *
+ * `week` CARRIES ONLY THE DAYS THE FORECAST REACHES, which is where this
+ * differs from `TideWeekView`. A tide prediction runs years ahead, so a short
+ * tide week is a fault and is named `no-low`; a forecast that stops on Sunday
+ * is a forecast doing what forecasts do. The grid draws no cell where a row has
+ * none, which is exactly the shape a ragged row needs -- see `WeekGrid`.
+ */
+export interface WaveWeekView {
+  beachName: string;
+  /** null exactly when the state is `no-line`. */
+  line: { id: string; distanceM: number | null } | null;
+  state:
+    | { kind: "week"; days: WaveWeekDay[] }
+    | { kind: "no-line"; reason: string }
+    | { kind: "unavailable"; detail: string; drift: boolean };
+}
+
+/**
+ * The window this page asks CDIP for.
+ *
+ * A day of slack either side, for the reason `predictionsWindow` gives: the
+ * request is made in UTC instants and the days on the page are Pacific days, so
+ * a Pacific day straddles two UTC dates and a window ending on the week's last
+ * day would clip its afternoon off. The dates are stepped with `addLocalDays`
+ * rather than by adding milliseconds, because twice a year on this coast a day
+ * is twenty-three hours or twenty-five.
+ *
+ * Slack costs nothing here. The whole forecast is about 6 KB and reaches only
+ * ten days, so a window wider than the file returns the file; a window narrower
+ * than the week would silently lose a column.
+ */
+function mopWindow(nowMs: number): { startIso: string; endIso: string } {
+  const today = localDateOf(nowMs);
+  return {
+    startIso: `${addLocalDays(today, -1)}T00:00:00Z`,
+    endIso: `${addLocalDays(today, WEEK_DAYS + 1)}T00:00:00Z`,
+  };
+}
+
+/** Every estimate of each Pacific day, keyed by date, oldest first. */
+function rowsByDate(
+  rows: readonly MopWaveRow[],
+): ReadonlyMap<string, MopWaveRow[]> {
+  const byDate = new Map<string, MopWaveRow[]>();
+  for (const row of rows) {
+    const localDate = localDateOf(row.atMs);
+    const standing = byDate.get(localDate);
+    if (standing === undefined) byDate.set(localDate, [row]);
+    else standing.push(row);
+  }
+  return byDate;
+}
+
+/**
+ * The biggest of a run of estimates, or null when the run is empty.
+ *
+ * THE MAXIMUM RATHER THAN THE MEAN, and it is a consequential choice rather
+ * than a cosmetic one: on two of ten sampled days the day's smallest and
+ * largest estimates fell either side of one of `WavesToday`'s plain-language
+ * bands, so the two statistics would describe the same day in different words.
+ * The row's label names the selection so it is not a hidden judgement.
+ *
+ * Ties keep the earlier estimate. Strictly-greater rather than
+ * greater-or-equal: the rows arrive oldest first, so this is deterministic, and
+ * a reader planning a morning is better served by the earlier of two identical
+ * heights.
+ */
+function biggestOf(rows: readonly MopWaveRow[]): MopWaveRow | null {
+  let biggest: MopWaveRow | null = null;
+  for (const row of rows) {
+    if (biggest === null || row.heightFt > biggest.heightFt) biggest = row;
+  }
+  return biggest;
+}
+
+/**
+ * The two estimates one day carries, or null when the forecast holds none for
+ * that date.
+ *
+ * Compared on the instant rather than the height, for the reason `tideLowsOn`
+ * gives: two steps can share a height to one decimal and are still two
+ * different times to be at the beach.
+ */
+function waveReadingsOn(
+  dayRows: readonly MopWaveRow[],
+  daylight: Daylight,
+): Pick<WaveWeekDay, "daylight" | "allDay"> | null {
+  const allDay = biggestOf(dayRows);
+  if (allDay === null) return null;
+
+  const inDaylight = biggestOf(
+    dayRows.filter(
+      (row) => row.atMs >= daylight.sunriseMs && row.atMs <= daylight.sunsetMs,
+    ),
+  );
+
+  const reading = (row: MopWaveRow): WaveReading => ({
+    timeLabel: localTimeOf(row.atMs),
+    heightFt: row.heightFt,
+    periodS: row.periodS,
+  });
+
+  return {
+    daylight: inDaylight === null ? null : reading(inDaylight),
+    allDay: inDaylight?.atMs === allDay.atMs ? null : reading(allDay),
+  };
+}
+
+/**
+ * Read a week of wave forecasts for one beach, starting today.
+ *
+ * A SECOND WAVE READ BESIDE `readLatestWaves`, NOT A REPLACEMENT FOR IT. That
+ * one is a measurement of now from an NDBC buoy; this is model output for the
+ * week from CDIP. Both appear on the page for today, which is why the row
+ * carries its own provenance -- see the ADR.
+ *
+ * Throws only when the slug is not in the inventory. A beach the join bound no
+ * line to -- every bay, lagoon and sheltered beach -- arrives as `no-line`
+ * without a request being made, because there is nothing to ask.
+ */
+export async function readWaveWeek(
+  slug: string,
+  nowMs: number = Date.now(),
+): Promise<WaveWeekView> {
+  const beach = beachBySlug(slug);
+  if (!beach) {
+    throw new Error(
+      `readWaveWeek: no beach in the inventory with slug "${slug}".`,
+    );
+  }
+
+  const line = mopLineFor(beach);
+  if (line === null) {
+    return {
+      beachName: beach.name,
+      line: null,
+      state: {
+        kind: "no-line",
+        reason:
+          beach.mop_line_null_reason ??
+          "the join bound no MOP line to this beach, and recorded no reason",
+      },
+    };
+  }
+
+  const binding = {
+    beachName: beach.name,
+    line: { id: line.id, distanceM: beach.mop_line_distance_m },
+  };
+
+  const result = await fetchMopForecast({
+    lineId: line.id,
+    ...mopWindow(nowMs),
+  });
+  if (result.kind === "unavailable") {
+    return {
+      ...binding,
+      state: {
+        kind: "unavailable",
+        detail: result.reason,
+        drift: result.drift,
+      },
+    };
+  }
+
+  const byDate = rowsByDate(result.forecast.rows);
+  const daylight = daylightByDate(beach, nowMs);
+
+  // The slack in the window and the forecast's own reach both put estimates
+  // outside the seven columns. Building from `weekOfDays` rather than from the
+  // rows is what keeps this row agreeing with the tide and daylight rows about
+  // which day is Tuesday, and drops the rest.
+  const days = weekOfDays(nowMs).flatMap((frame) => {
+    const readings = waveReadingsOn(
+      byDate.get(frame.localDate) ?? [],
+      daylight.get(frame.localDate)!,
+    );
+    return readings === null ? [] : [{ ...frame, ...readings }];
+  });
+
+  return { ...binding, state: { kind: "week", days } };
 }
