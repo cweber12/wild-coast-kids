@@ -1,5 +1,9 @@
 # A wave forecast in the week, from the model that knows about the islands
 
+> **Historical.** Planned 2026-08-26, shipped in PRs #147 and #148 on
+> 2026-08-26. It records what was intended then, not what the code does now, and
+> is not maintained. See [`README.md`](README.md).
+
 Issue #126. The brief in its first comment supersedes the issue body and
 corrects three claims in it; this plan is written against the brief and against
 the feed, probed again on 2026-08-26 before any code was written.
