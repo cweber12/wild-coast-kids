@@ -264,6 +264,8 @@ test("the header reserves its second line only where there are columns", () => {
   const header = container.querySelector("ol > li h3");
   expect(header?.className).toContain("lg:min-h-8");
   expect(header?.className.split(/\s+/)).not.toContain("min-h-8");
+});
+
 /* =========================================================================
  * Provenance: once beneath the grid, never inside a day
  * ========================================================================= */
