@@ -53,6 +53,9 @@ export const SHELTERED = {
       buoy:
         "The nearest buoy is 2.50 km away on the open coast and describes " +
         "swell the breakwater stops,",
+      mopLine:
+        "The nearest MOP line is 330 m away at 10 m depth outside the " +
+        "breakwater and describes swell it stops,",
     },
   },
 };

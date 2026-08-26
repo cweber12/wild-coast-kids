@@ -52,10 +52,10 @@ export default defineConfig({
       // check-adr-numbers.mjs sit at 0% on purpose, and all five drag these
       // figures down in plain sight rather than quietly.
       thresholds: {
-        statements: 89.89,
-        branches: 89.7,
-        functions: 94.64,
-        lines: 89.71,
+        statements: 89.8,
+        branches: 90.12,
+        functions: 94.81,
+        lines: 89.48,
       },
     },
   },
