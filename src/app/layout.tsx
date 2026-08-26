@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { Montserrat } from "next/font/google";
-import { Footer } from "@/components/Footer";
-import { Nav } from "@/components/Nav";
+import { Footer } from "@/components/layout/Footer";
+import { Nav } from "@/components/layout/Nav";
 import "./globals.css";
 
 // The whole page speaks one family; weight (400–900) and italics carry the
