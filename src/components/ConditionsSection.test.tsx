@@ -2,13 +2,32 @@ import { expect, test, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 
 vi.mock("@/components/TidePanel", () => ({
-  TidePanel: ({ slug }: { slug: string }) => <p>panel for {slug}</p>,
+  TidePanel: ({ slug }: { slug: string }) => {
+    if (slug === "suspend-the-panels") throw new Promise(() => {});
+    return <p>panel for {slug}</p>;
+  },
 }));
 vi.mock("@/components/WavePanel", () => ({
-  WavePanel: ({ slug }: { slug: string }) => <p>waves for {slug}</p>,
+  WavePanel: ({ slug }: { slug: string }) => {
+    if (slug === "suspend-the-panels") throw new Promise(() => {});
+    return <p>waves for {slug}</p>;
+  },
 }));
+// A loading line only exists while its panel is unresolved, and these mocks
+// resolve at once -- so rendering the fallbacks needs a way to hold the three
+// Suspense boundaries open. Each panel mock throws a never-settling promise
+// for one reserved slug and behaves normally for every other, which is what
+// lets the tests below read what a waiting reader sees.
+//
+// Spelled literally inside each factory rather than referencing the constant:
+// `vi.mock` is hoisted above every other statement in the file, so a `const`
+// declared beside them is not initialised when the factory is defined.
+const SUSPEND = "suspend-the-panels";
 vi.mock("@/components/WindPanel", () => ({
-  WindPanel: ({ slug }: { slug: string }) => <p>wind for {slug}</p>,
+  WindPanel: ({ slug }: { slug: string }) => {
+    if (slug === "suspend-the-panels") throw new Promise(() => {});
+    return <p>wind for {slug}</p>;
+  },
 }));
 vi.mock("@/components/WeekPanel", () => ({
   WeekPanel: ({ slug }: { slug: string }) => <p>week for {slug}</p>,
@@ -138,4 +157,46 @@ test("the safety framing is stated once, above the readings", () => {
 
   expect(screen.queryByText(/None of it is a safety assessment/)).toBeNull();
   expect(screen.getAllByText(/not a safety assessment/)).toHaveLength(1);
+});
+
+/**
+ * Issue #94. The air panel's loading line said "Reading the weather station…",
+ * which was wrong twice over. It is singular where the panel reads two — air
+ * for temperature and wind, sky for cloud and visibility, usually a different
+ * station and much further away, which is the whole of ADR-0010. And "weather"
+ * is on the `Conditions` glossary's avoid list in `CONTEXT.md`, so it was
+ * rendered copy using a word the domain model had already rejected.
+ *
+ * Asserted through the rendered fallback rather than against a string constant,
+ * because what matters is that a reader waiting on the panel sees it.
+ */
+test("the air panel's loading line names both stations it is reading", () => {
+  render(<ConditionsSection slug={SUSPEND} />);
+
+  const loading = screen.getByText(/^Reading the .*stations…$/);
+  expect(loading.textContent).toContain("air");
+  expect(loading.textContent).toContain("sky");
+});
+
+/**
+ * The rule the line above broke, checked across all three panels rather than
+ * only the one that broke it. `CONTEXT.md`'s `Conditions` entry ends
+ * `_Avoid_: weather, forecast, surf report`, and a loading line is the easiest
+ * place on the page for one of those to reappear.
+ */
+test("no panel's loading line uses a word the glossary rejects", () => {
+  const { container } = render(<ConditionsSection slug={SUSPEND} />);
+
+  const loading = [...container.querySelectorAll("p")]
+    .map((node) => node.textContent ?? "")
+    .filter((text) => text.startsWith("Reading "));
+
+  // All three panels are suspended, so all three loading lines are on the
+  // page. Asserted so this cannot pass by finding none of them.
+  expect(loading.length).toBe(3);
+  for (const line of loading) {
+    expect(line.toLowerCase()).not.toContain("weather");
+    expect(line.toLowerCase()).not.toContain("forecast");
+    expect(line.toLowerCase()).not.toContain("surf report");
+  }
 });
