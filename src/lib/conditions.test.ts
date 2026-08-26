@@ -786,9 +786,28 @@ test("each cell is that day's biggest estimate, with the period that went with i
   expect(view.state.days[0]).toMatchObject({
     localDate: "2026-08-17",
     isToday: true,
+    // The instant of the estimate that supplied the maximum, worded in
+    // Pacific. A three-hour step rather than a peak located to the minute --
+    // the row and ConditionsNotes both say so.
+    timeLabel: "12:00 PM",
     heightFt: 3.4,
     periodS: 14,
   });
+});
+
+test("the time comes from the estimate that supplied the height", async () => {
+  // Not the first row of the day, and not the middle of it. Picking the
+  // maximum and then labelling it with somebody else's clock would be a time
+  // about nothing.
+  mopRows([
+    { atMs: pacificHour(0, 3), heightFt: 1.2, periodS: 8 },
+    { atMs: pacificHour(0, 18), heightFt: 3.4, periodS: 14 },
+  ]);
+
+  const view = await readWaveWeek(BEACH, NOON_PACIFIC_20260817);
+
+  if (view.state.kind !== "week") throw new Error("expected a week");
+  expect(view.state.days[0].timeLabel).toBe("6:00 PM");
 });
 
 test("a tie keeps the earlier estimate", async () => {
@@ -804,6 +823,7 @@ test("a tie keeps the earlier estimate", async () => {
 
   if (view.state.kind !== "week") throw new Error("expected a week");
   expect(view.state.days[0].periodS).toBe(9);
+  expect(view.state.days[0].timeLabel).toBe("6:00 AM");
 });
 
 test("days are grouped by the Pacific date, not the UTC one", async () => {

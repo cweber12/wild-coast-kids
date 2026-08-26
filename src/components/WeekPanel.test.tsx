@@ -51,15 +51,21 @@ const countOf = (labels: string[], label: string) =>
 const LINE = { id: "D0498", distanceM: 325 };
 
 function waveWeek(
-  days: { index: number; heightFt: number; periodS: number }[],
+  days: {
+    index: number;
+    timeLabel?: string;
+    heightFt: number;
+    periodS: number;
+  }[],
 ) {
   return {
     beachName: BINDING.beachName,
     line: LINE,
     state: {
       kind: "week",
-      days: days.map(({ index, heightFt, periodS }) => ({
+      days: days.map(({ index, timeLabel = "2:00 PM", heightFt, periodS }) => ({
         ...DATES[index],
+        timeLabel,
         heightFt,
         periodS,
       })),
@@ -85,8 +91,8 @@ beforeEach(() => {
   readDaylightWeek.mockReturnValue(daylightWeek());
   readWaveWeek.mockResolvedValue(
     waveWeek([
-      { index: 0, heightFt: 2.62, periodS: 13.333333 },
-      { index: 1, heightFt: 3.41, periodS: 16.666668 },
+      { index: 0, timeLabel: "2:00 PM", heightFt: 2.62, periodS: 13.333333 },
+      { index: 1, timeLabel: "8:00 AM", heightFt: 3.41, periodS: 16.666668 },
     ]),
   );
 });
@@ -210,12 +216,13 @@ test("the wave row renders a height and a period for each day it reaches", async
   render(await WeekPanel({ slug: "la-jolla-shores-beach" }));
 
   expect(readWaveWeek).toHaveBeenCalledWith("la-jolla-shores-beach");
-  expect(screen.getByText("2.6 ft")).toBeDefined();
-  expect(screen.getByText("3.4 ft")).toBeDefined();
+  // The time leads, the way every other row of this grid does.
+  expect(screen.getByText("2:00 PM")).toBeDefined();
+  expect(screen.getByText("8:00 AM")).toBeDefined();
   // Whole seconds. CDIP publishes 13.333333 because it is the reciprocal of a
   // spectral frequency bin, and the buoy card beside this prints whole seconds.
-  expect(screen.getByText("13 s")).toBeDefined();
-  expect(screen.getByText("17 s")).toBeDefined();
+  expect(screen.getByText(/2\.6 ft · 13 s/)).toBeDefined();
+  expect(screen.getByText(/3\.4 ft · 17 s/)).toBeDefined();
 });
 
 test("the row's label names the statistic, so the maximum is not hidden", async () => {

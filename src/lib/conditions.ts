@@ -724,6 +724,16 @@ async function readSkyHalf(
 
 /** One day of the week grid's wave row. */
 export interface WaveWeekDay extends WeekDayFrame {
+  /**
+   * Pacific wall-clock time of the day's biggest estimate, already worded.
+   *
+   * NOT a peak the model located to the minute. MOP publishes on a three-hour
+   * grid, so this is the step that carried the largest height and the real peak
+   * can sit up to ninety minutes either side of it. The tide row's time is a
+   * turning point NOAA computed; this one is a bucket. `ConditionsNotes` says
+   * so, because the two sit one above the other and look alike.
+   */
+  timeLabel: string;
   /** The day's biggest significant wave height, in feet. */
   heightFt: number;
   /** The period of the estimate that height came from, in seconds. */
@@ -868,7 +878,14 @@ export async function readWaveWeek(
     const row = biggest.get(frame.localDate);
     return row === undefined
       ? []
-      : [{ ...frame, heightFt: row.heightFt, periodS: row.periodS }];
+      : [
+          {
+            ...frame,
+            timeLabel: localTimeOf(row.atMs),
+            heightFt: row.heightFt,
+            periodS: row.periodS,
+          },
+        ];
   });
 
   return { ...binding, state: { kind: "week", days } };

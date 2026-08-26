@@ -68,11 +68,13 @@ const NOTES = [
     term: "The wave forecast",
     detail:
       "The week's swell is modelled rather than measured. CDIP's MOP system, run by the " +
-      "Scripps Institution of Oceanography, computes it every few hours at 10 m depth close " +
-      "to this shore, from the directional spectra real buoys report and the way the islands " +
-      "shelter and bend the swell on its way in. So today's beach page carries two wave " +
-      "numbers: one an instrument measured out at sea, one a model computed near the sand. " +
-      "The line under the week says which is which.",
+      "Scripps Institution of Oceanography, computes it at 10 m depth close to this shore " +
+      "from the directional spectra real buoys report and the way the islands shelter and " +
+      "bend the swell on its way in. It steps every three hours, so the time shown is the " +
+      "three-hour step that carried the day's biggest swell rather than a peak located to " +
+      "the minute — unlike a tide time, which is a turning point. So a beach page carries " +
+      "two wave numbers: one an instrument measured out at sea, one a model computed near " +
+      "the sand. The lines naming each source say which is which.",
   },
   {
     term: "Sky and visibility",
