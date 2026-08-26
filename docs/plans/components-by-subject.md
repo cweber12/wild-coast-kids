@@ -1,5 +1,13 @@
 # Group components by subject
 
+> **Historical.** Planned 2026-08-26, shipped in PR #149 on 2026-08-26. It
+> records what was intended then, not what the code does now, and is not
+> maintained. See [`README.md`](README.md).
+
+Issue #116. Its body was revised the same day it was worked, and every figure
+below is re-derived against `main` at `a1edf43` rather than taken from it — the
+original body's numbers had gone stale in six days.
+
 ## Problem, from the user's point of view
 
 The user here is the next person to open this repository, and increasingly the
