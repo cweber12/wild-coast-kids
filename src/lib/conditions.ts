@@ -21,7 +21,7 @@ import {
   type ObservationStation,
   skyStationFor,
 } from "./beaches";
-import { daylightOn, midpointOf } from "./daylight";
+import { type Daylight, daylightOn, midpointOf } from "./daylight";
 import type { TideExtreme } from "./coops-predictions";
 import {
   addLocalDays,
@@ -116,6 +116,37 @@ function weekOfDays(nowMs: number): WeekDayFrame[] {
       isToday: localDate === today,
     };
   });
+}
+
+/**
+ * Sunrise and sunset for each day of the week, keyed by that day's local date.
+ *
+ * **One computation, three readers.** The daylight row renders it, and the tide
+ * and wave rows are now *selected* by it — each shows the extreme that falls
+ * between these two instants. Three callers computing their own would be three
+ * chances for the rows to disagree about when Tuesday's sun sets, which is
+ * exactly the class of bug `weekOfDays` exists to prevent for dates.
+ *
+ * **A beach is reduced to its midpoint**, as `readDaylightWeek` has always done:
+ * sunset differs by one minute across the entire county, so which end of a
+ * shoreline segment you stand on is below the precision of the answer.
+ *
+ * **Nothing here can fail.** It is astronomy computed from coordinates the
+ * inventory already holds, so constraining a NOAA reading or a CDIP forecast by
+ * it adds no new way for either to go quiet. `daylightOn` throws only on a
+ * latitude with no sunrise, which this county does not have.
+ */
+function daylightByDate(
+  beach: Beach,
+  nowMs: number,
+): ReadonlyMap<string, Daylight> {
+  const at = midpointOf(beach.segment);
+  return new Map(
+    weekOfDays(nowMs).map((frame) => [
+      frame.localDate,
+      daylightOn(frame.localDate, at),
+    ]),
+  );
 }
 
 /** `YYYY-MM-DD` to the `YYYYMMDD` CO-OPS wants. */
@@ -425,12 +456,12 @@ export function readDaylightWeek(
     );
   }
 
-  const at = midpointOf(beach.segment);
+  const daylight = daylightByDate(beach, nowMs);
 
   return {
     beachName: beach.name,
     days: weekOfDays(nowMs).map((frame) => {
-      const { sunriseMs, sunsetMs } = daylightOn(frame.localDate, at);
+      const { sunriseMs, sunsetMs } = daylight.get(frame.localDate)!;
       return {
         ...frame,
         sunriseLabel: localTimeOf(toNearestMinute(sunriseMs)),
