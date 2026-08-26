@@ -164,12 +164,22 @@ export function WeekGrid({
                 what keeps the seven columns readable across rather than only
                 down.
 
-                It costs one line. Together with the daylight cell's deliberate
-                break, the grid goes 146px to 163px at 1280 -- no cell had both
-                a two-line header and a two-line value before, and now every
-                cell has both. That is the price of the seven columns being
-                identical, paid once and below the fold, and it is worth it:
-                a grid whose rows do not line up across is a table pretending.
+                It costs one line. Together with the daylight cell's
+                deliberate break, the grid goes 146px to 163px at 1280 -- no
+                cell had both a two-line header and a two-line value before,
+                and now every cell has both. That is the price of the seven
+                columns being identical, paid once and below the fold, and it
+                is worth it: a grid whose rows do not line up across is a table
+                pretending.
+
+                `lg:` because that price is only worth paying where there are
+                columns. Below `lg` the grid is one column, a day is a
+                full-width row, and this header does not wrap -- so reserving
+                the line there bought nothing and cost 35px a day across seven
+                days. It shipped unscoped and put 242px of extra scroll on a
+                phone, on a grid the 2026-08-24 review had already reported as
+                too tall there; it was measured at 1280 and 1536 and not at
+                375.
 
                 Reserved rather than shortened. "Today" alone fits, and drops
                 the date from the one column a reader without the layout most
@@ -177,7 +187,7 @@ export function WeekGrid({
                 accessible one would need an `sr-only`, which this repo does
                 not use (`ReadingCard` records why).
               */}
-              <h3 className="text-2xs mb-2 min-h-8 font-extrabold tracking-widest text-ocean uppercase">
+              <h3 className="text-2xs mb-2 font-extrabold tracking-widest text-ocean uppercase lg:min-h-8">
                 {day.isToday ? `Today · ${day.dayLabel}` : day.dayLabel}
               </h3>
 

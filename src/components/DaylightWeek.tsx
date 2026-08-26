@@ -12,12 +12,18 @@
  * arranged so that nobody can use it: the reader is choosing when to leave the
  * house, and the two clock times are what that turns on.
  *
- * **Two lines, always, rather than one that sometimes becomes two.** Set on one
- * line this is about nineteen characters against a 124px cell, so it fits on
- * six days and wraps on the seventh -- and the wrap pushed that column's rows
- * out of line with its neighbours, which is the thing a grid exists to prevent.
- * Breaking it on purpose costs the same height on every day and buys back the
- * alignment. The sunrise leads because it is the one a reader plans against.
+ * **Two lines at `lg`, one below it.** Set on one line this is about nineteen
+ * characters against a 124px cell, so at seven columns it fits on six days and
+ * wraps on the seventh -- and the wrap pushed that column's rows out of line
+ * with its neighbours, which is the thing a grid exists to prevent. Breaking it
+ * on purpose costs the same height on every day and buys back the alignment.
+ *
+ * Only at `lg`, because only at `lg` is there a column to align with. Below it
+ * the grid is one column and a day is a full-width row: nothing wraps, no
+ * neighbour is being lined up against, and the break was 35px per day across
+ * seven days -- 242px of extra scroll on a phone, on a grid an earlier review
+ * had already called too tall there. The sunrise leads because it is the one a
+ * reader plans against.
  *
  * The space between the two spans stays. Two blocks collapse it visually, but
  * it is still a text node, and without it the accessible text runs together as
@@ -49,8 +55,8 @@ export function DaylightWeek({
 }) {
   return (
     <>
-      <span className="block font-extrabold">{day.sunriseLabel}</span>{" "}
-      <span className="block text-fog">to {day.sunsetLabel}</span>
+      <span className="font-extrabold lg:block">{day.sunriseLabel}</span>{" "}
+      <span className="text-fog lg:block">to {day.sunsetLabel}</span>
     </>
   );
 }

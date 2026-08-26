@@ -37,3 +37,24 @@ test("breaking the line does not join the words", () => {
   expect(container.textContent).toContain("6:48 AM to 4:47 PM");
   expect(container.textContent).not.toContain("AMto");
 });
+
+/**
+ * Regression. The two lines exist so that seven columns line up across each
+ * other at `lg`. Below `lg` the grid is one column and a day is a full-width
+ * row, where nothing was wrapping and there is no neighbour to align with — so
+ * the break there was pure cost: 35px per day, seven days, 242px of extra
+ * scroll on a phone. Measured 968px to 1210px at 375 before this was scoped.
+ */
+test("the deliberate line break applies only where there are columns", () => {
+  const { container } = render(
+    <DaylightWeek day={{ sunriseLabel: "6:48 AM", sunsetLabel: "4:47 PM" }} />,
+  );
+
+  const spans = [...container.querySelectorAll("span")];
+  expect(spans.length).toBe(2);
+  for (const span of spans) {
+    expect(span.className).toContain("lg:block");
+    // Inline below lg, so the two times sit on one line on a phone.
+    expect(span.className.split(/\s+/)).not.toContain("block");
+  }
+});

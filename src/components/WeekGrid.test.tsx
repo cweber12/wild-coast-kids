@@ -251,3 +251,17 @@ test("a day cell takes the radius of a box its own size", () => {
   expect(cell?.className).toContain("rounded-tile");
   expect(cell?.className).not.toContain("rounded-card");
 });
+
+/**
+ * Regression, paired with the one in `DaylightWeek.test.tsx`. The reserved
+ * header line keeps seven columns in step at `lg`. Below `lg` there is one
+ * column and nothing to be in step with, and the header does not wrap at that
+ * width either — so the reserve was pure height on a phone.
+ */
+test("the header reserves its second line only where there are columns", () => {
+  const { container } = renderGrid();
+
+  const header = container.querySelector("ol > li h3");
+  expect(header?.className).toContain("lg:min-h-8");
+  expect(header?.className.split(/\s+/)).not.toContain("min-h-8");
+});
