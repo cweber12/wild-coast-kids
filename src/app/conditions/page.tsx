@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { ConditionsSection } from "@/components/ConditionsSection";
+import { ConditionsSection } from "@/components/conditions/ConditionsSection";
 import { DEFAULT_BEACH_SLUG, defaultBeach } from "@/lib/beaches";
 
 export const metadata: Metadata = {

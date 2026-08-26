@@ -1,4 +1,4 @@
-import { TOUCH_TARGET } from "./ui/touchTarget";
+import { TOUCH_TARGET } from "../ui/touchTarget";
 
 /**
  * A `<summary>` grown to the touch-target floor without losing its marker.

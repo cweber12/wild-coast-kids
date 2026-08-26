@@ -4,10 +4,10 @@ import { render, screen } from "@testing-library/react";
 // The panel fetches, and an async server component cannot be rendered by this
 // client-side test renderer. Its own suite covers every branch of it; here the
 // subject is the page shell around it.
-vi.mock("@/components/TidePanel", () => ({
+vi.mock("@/components/conditions/TidePanel", () => ({
   TidePanel: ({ slug }: { slug: string }) => <p>panel for {slug}</p>,
 }));
-vi.mock("@/components/WavePanel", () => ({
+vi.mock("@/components/conditions/WavePanel", () => ({
   WavePanel: ({ slug }: { slug: string }) => <p>waves for {slug}</p>,
 }));
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push: vi.fn() }) }));

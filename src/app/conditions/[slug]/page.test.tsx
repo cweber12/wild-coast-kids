@@ -1,10 +1,10 @@
 import { expect, test, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 
-vi.mock("@/components/TidePanel", () => ({
+vi.mock("@/components/conditions/TidePanel", () => ({
   TidePanel: ({ slug }: { slug: string }) => <p>panel for {slug}</p>,
 }));
-vi.mock("@/components/WavePanel", () => ({
+vi.mock("@/components/conditions/WavePanel", () => ({
   WavePanel: ({ slug }: { slug: string }) => <p>waves for {slug}</p>,
 }));
 

@@ -39,7 +39,7 @@
 import type { ReactNode } from "react";
 import { REGION_HEADING } from "./headingRank";
 import { ProvenanceLine } from "./ProvenanceLine";
-import { ReservedSlot } from "./ui/ReservedSlot";
+import { ReservedSlot } from "../ui/ReservedSlot";
 
 /** One column of the week. */
 export type WeekDay = {
