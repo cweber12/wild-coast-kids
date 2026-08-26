@@ -7,29 +7,55 @@
  * rather than in `lib/conditions.ts` because which glyph marks a row and what a
  * row is called are presentation.
  *
- * **Two reads, and only one of them can fail.** The tide comes from NOAA;
- * daylight is computed in this repo from the beach's own coordinates. So the
- * columns are taken from the daylight read: an outage then costs a row rather
- * than the whole grid, and the week still answers a question a parent came with.
- * Both reads build their days from one helper in `lib/conditions.ts`, which is
- * what stops the two rows disagreeing about which day is Tuesday.
+ * **Three reads, and only one of them cannot fail.** The tide comes from NOAA
+ * and the wave forecast from CDIP; daylight is computed in this repo from the
+ * beach's own coordinates. So the columns are taken from the daylight read: an
+ * outage then costs a row rather than the whole grid, and the week still
+ * answers a question a parent came with. All three build their days from one
+ * helper in `lib/conditions.ts`, which is what stops the rows disagreeing about
+ * which day is Tuesday.
+ *
+ * **The two upstream reads are made concurrently and fail apart.** They share
+ * no publisher and no failure, and NOAA going quiet must not cost the week its
+ * wave row -- the same argument `readLatestAir` makes for its two stations.
  */
 
-import { readDaylightWeek, readWeekOfLowestLows } from "@/lib/conditions";
+import {
+  readDaylightWeek,
+  readWaveWeek,
+  readWeekOfLowestLows,
+} from "@/lib/conditions";
 import { DaylightWeek, DAYLIGHT_WEEK_ROW } from "./DaylightWeek";
 import { TideWeek, TIDE_WEEK_ROW } from "./TideWeek";
+import { WaveWeek, WAVE_WEEK_ROW } from "./WaveWeek";
 import { WeekGrid, type ReservedRow, type WeekRow } from "./WeekGrid";
+
+/**
+ * How far the MOP line is, in kilometres, rounded.
+ *
+ * One decimal, always, and no threshold under which it is withheld. The two
+ * now-cards each have one -- `WavesToday` hides a buoy nearer than 10 km,
+ * `TideToday` a station nearer than 5 km -- because a distance small enough not
+ * to change the reading is noise beside it. This distance is never large: every
+ * bound line is between 117 m and 910 m away, so rounding to whole kilometres
+ * would print "1 km" or "0 km" for all fifteen and say nothing.
+ *
+ * It is shown rather than withheld because it is the answer to the question the
+ * row invites. A modelled height sitting beside a measured one is only readable
+ * if the reader can see that the model's point is nearer than the buoy, and
+ * this is the number that says so.
+ */
+function roundedKm(metres: number): string {
+  return (metres / 1000).toFixed(1);
+}
 
 /**
  * The forecasts this grid is shaped for and does not yet carry.
  *
- * **Waves are reserved rather than omitted**, and the distinction is the point:
- * only NDBC is observation-only. CDIP's MOP system publishes an hourly wave
- * forecast about ten days ahead at roughly 100 m along the shore, so a layout
- * with no wave row would encode "no wave forecast exists" — which is false.
- * Adopting MOP needs decisions of its own (NetCDF over THREDDS is not a shape
- * this repo parses, and CDIP asks to be contacted and credited), so the row is
- * held open rather than filled. Tracked as #126.
+ * **The wave slot is gone**, because the row it stood in for exists. It came out
+ * in the same change that filled it: a slot removed before its replacement
+ * would leave the page promising less than it did, and a slot left in beside a
+ * filled row would promise it twice.
  *
  * The gridded National Weather Service forecast is #95, which exists so that
  * sky and visibility can come from this beach's own grid cell instead of an
@@ -40,12 +66,6 @@ import { WeekGrid, type ReservedRow, type WeekRow } from "./WeekGrid";
  * backlog — the sighting map's slot set that precedent.
  */
 const RESERVED: readonly ReservedRow[] = [
-  {
-    emoji: "🏄",
-    headline: "A wave forecast is coming.",
-    detail:
-      "Swell height and period for each day, forecast close to this shore rather than at a buoy miles offshore.",
-  },
   {
     emoji: "💨",
     headline: "A gridded forecast is coming.",
@@ -61,7 +81,12 @@ const RESERVED: readonly ReservedRow[] = [
 ];
 
 export async function WeekPanel({ slug }: { slug: string }) {
-  const view = await readWeekOfLowestLows(slug);
+  // Concurrently, and failing apart: NOAA and CDIP share no publisher and no
+  // outage, so neither may hold up or take down the other's row.
+  const [view, waves] = await Promise.all([
+    readWeekOfLowestLows(slug),
+    readWaveWeek(slug),
+  ]);
   const daylight = readDaylightWeek(slug);
 
   /*
@@ -99,6 +124,39 @@ export async function WeekPanel({ slug }: { slug: string }) {
   });
 
   /*
+    Last, under daylight rather than between it and the tide. `DaylightWeek`'s
+    whole argument is that it sits beside the tide row -- a lowest low at 2:23
+    is a different trip depending on whether it is AM or PM, and the daylight
+    row is what answers that -- so putting a third product between them would
+    take away the thing it is there for. It also puts the row that carries a
+    provenance line closest to the line itself.
+
+    Ragged by construction: only the days the forecast reached become cells, and
+    the grid draws no pair where a row has none.
+  */
+  if (waves.state.kind === "week" && waves.line !== null) {
+    const line = waves.line;
+    rows.push({
+      ...WAVE_WEEK_ROW,
+      cells: Object.fromEntries(
+        waves.state.days.map((day) => [
+          day.localDate,
+          <WaveWeek key={day.localDate} day={day} />,
+        ]),
+      ),
+      provenance: {
+        // "MOP line D0498" rather than a name, because CDIP gives these no
+        // name: they are numbered south to north behind a county prefix. See
+        // CONTEXT.md, and #87 for why a callsign is never turned into prose.
+        source: `MOP line ${line.id}`,
+        network: "CDIP, Scripps Institution of Oceanography",
+        distanceKm: line.distanceM === null ? null : roundedKm(line.distanceM),
+        note: "a model of the swell at 10 m depth, not a measurement",
+      },
+    });
+  }
+
+  /*
     One sentence, not seven. The upstream detail stays behind the disclosure on
     the tide card above, which shares this exact request and therefore fails at
     the same moment — repeating it here would be the same failure twice.
@@ -115,6 +173,29 @@ export async function WeekPanel({ slug }: { slug: string }) {
       "We have no tide station for this beach, so there is nothing to predict " +
         "this week from. The tide here is not different; we simply have no " +
         "published figure for it.",
+    );
+  }
+
+  /*
+    The wave forecast gets its own sentences rather than pointing at a card, and
+    that is the difference from the tide above. The tide row shares a request
+    with the card over it, so its disclosure is already on the page; CDIP is
+    read here and nowhere else, so a failure that said only "we could not get
+    it" would be the silent half of a failure.
+  */
+  if (waves.state.kind === "no-line") {
+    notes.push(
+      "There is no wave forecast for this beach either, and for the same reason " +
+        "as the reading above: every point the model publishes sits at 10 m " +
+        "depth out on the open coast.",
+    );
+  }
+  if (waves.state.kind === "unavailable") {
+    notes.push(
+      `We could not get this week's wave forecast from CDIP just now. ${waves.state.detail}` +
+        (waves.state.drift
+          ? " CDIP's payload was not the shape this site pins, which is a bug here rather than a problem with the model."
+          : ""),
     );
   }
 

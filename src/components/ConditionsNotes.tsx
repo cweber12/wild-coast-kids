@@ -31,8 +31,16 @@
  * the posted signs are the authority on the day. The entry this block used to
  * carry — "None of it is a safety assessment" — went with it rather than being
  * said twice, and it was never a note about how to read a number, which is the
- * heading it sat under. Three notes rather than four for that reason, not
- * because one was dropped.
+ * heading it sat under. It left this block rather than being dropped.
+ *
+ * **Waves take two entries, and the second is what makes the first honest.**
+ * The page now shows a measured height from a buoy offshore and a modelled
+ * height from a point near the sand, for the same beach on the same day. Two
+ * numbers of the same kind that are not the same kind of number is exactly the
+ * confusion ADR-0009 refuses to create and ADR-0016 argues is worth creating
+ * here — and it is only worth it if the difference is stated where a reader
+ * looking at both will find it. The provenance line under the week says which
+ * row is which; this says what the difference means.
  */
 
 import type { InventoryReach } from "@/lib/beaches";
@@ -55,6 +63,16 @@ const NOTES = [
       "The height of the swell in open water, measured at a buoy some distance offshore. " +
       "That is not the height of the wave breaking at the shore, and nothing here " +
       "transforms one into the other.",
+  },
+  {
+    term: "The wave forecast",
+    detail:
+      "The week's swell is modelled rather than measured. CDIP's MOP system, run by the " +
+      "Scripps Institution of Oceanography, computes it every few hours at 10 m depth close " +
+      "to this shore, from the directional spectra real buoys report and the way the islands " +
+      "shelter and bend the swell on its way in. So today's beach page carries two wave " +
+      "numbers: one an instrument measured out at sea, one a model computed near the sand. " +
+      "The line under the week says which is which.",
   },
   {
     term: "Sky and visibility",

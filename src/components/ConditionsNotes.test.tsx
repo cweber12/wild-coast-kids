@@ -49,6 +49,22 @@ test("a wave height is attributed as open water, not as the breaking wave", () =
   ).toBeDefined();
 });
 
+test("the forecast is named as a model, beside the height that is a measurement", () => {
+  // The page now carries two wave numbers for one beach on one day. The
+  // difference between them has to be stated where a reader looking at both
+  // will find it -- see docs/adr/0016.
+  render(<ConditionsNotes entries={ENTRIES} reach={REACH} />);
+
+  expect(screen.getByText(/modelled rather than measured/)).toBeDefined();
+  expect(screen.getByText(/two wave numbers/)).toBeDefined();
+});
+
+test("CDIP and Scripps are credited where the forecast is explained", () => {
+  render(<ConditionsNotes entries={ENTRIES} reach={REACH} />);
+
+  expect(screen.getByText(/Scripps Institution of Oceanography/)).toBeDefined();
+});
+
 test("the sky is named as an airport reading, and why it is one", () => {
   render(<ConditionsNotes entries={ENTRIES} reach={REACH} />);
 
@@ -116,10 +132,11 @@ test("each note is a term and its explanation, not a run of prose", () => {
   const details = container.querySelectorAll("dd");
 
   expect(terms.length).toBe(details.length);
-  // Three since the safety framing became a standing notice above the
-  // readings. The named-term assertions elsewhere in this file are what stop a
-  // note being dropped silently; this number only tracks them.
-  expect(terms.length).toBe(3);
+  // Four: three since the safety framing became a standing notice above the
+  // readings, and a fourth when the week gained a modelled wave height beside
+  // the measured one. The named-term assertions elsewhere in this file are what
+  // stop a note being dropped silently; this number only tracks them.
+  expect(terms.length).toBe(4);
 });
 
 test("it is a labelled region, so the notes are reachable as a landmark", () => {

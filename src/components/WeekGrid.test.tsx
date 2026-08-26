@@ -251,3 +251,59 @@ test("a day cell takes the radius of a box its own size", () => {
   expect(cell?.className).toContain("rounded-tile");
   expect(cell?.className).not.toContain("rounded-card");
 });
+
+/* =========================================================================
+ * Provenance: once beneath the grid, never inside a day
+ * ========================================================================= */
+
+/** A row whose source appears nowhere else on the page, so it names itself. */
+const WAVE_ROW: WeekRow = {
+  label: "Biggest swell",
+  cells: {
+    "2026-08-17": "2.6 ft 13 s",
+    "2026-08-18": "3.4 ft 17 s",
+  },
+  provenance: {
+    source: "MOP line D0498",
+    network: "CDIP, Scripps Institution of Oceanography",
+    distanceKm: "0.3",
+    note: "a model of the swell at 10 m depth, not a measurement",
+  },
+};
+
+test("a row's source is printed once, not once per day", () => {
+  // A feed's identity is one fact about a feed, not seven facts about seven
+  // days -- the same argument the notes prop above is built on.
+  renderGrid({ rows: [TIDE_ROW, WAVE_ROW] });
+
+  expect(screen.getAllByText(/MOP line D0498/)).toHaveLength(1);
+});
+
+test("the source sits under the days, not inside them", () => {
+  const { container } = renderGrid({ rows: [TIDE_ROW, WAVE_ROW] });
+
+  const line = screen.getByText(/MOP line D0498/);
+  expect(container.querySelector("ol")!.contains(line)).toBe(false);
+  // And after them in reading order, so it qualifies figures already read.
+  expect(
+    container.querySelector("ol")!.compareDocumentPosition(line) &
+      Node.DOCUMENT_POSITION_FOLLOWING,
+  ).toBeTruthy();
+});
+
+test("the source is labelled with its row, since a grid may carry several", () => {
+  renderGrid({ rows: [TIDE_ROW, WAVE_ROW] });
+
+  const line = screen.getByText(/MOP line D0498/);
+  expect(line.textContent).toContain("Biggest swell");
+  expect(line.textContent).toContain("about 0.3 km from this beach");
+  expect(line.textContent).toContain("not a measurement");
+});
+
+test("a row with no source prints no line at all", () => {
+  // Most rows do not need one: the tide's station is named on the card that
+  // shares its request, and daylight is computed here from coordinates.
+  const { container } = renderGrid({ rows: [TIDE_ROW] });
+
+  expect(container.querySelectorAll("p").length).toBe(0);
+});
