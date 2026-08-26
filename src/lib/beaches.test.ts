@@ -7,6 +7,7 @@ import {
   defaultBeach,
   inventoryCaveats,
   inventoryReach,
+  mopLineFor,
   tideStationFor,
   waveBuoyFor,
 } from "./beaches";
@@ -234,6 +235,66 @@ describe("caveats", () => {
     // The station file's own caveat about the gap on the open coast must reach a
     // reader, not just the inventory's.
     expect(caveats.some((c) => c.includes("TWC0405"))).toBe(true);
+  });
+});
+
+describe("the MOP line binding", () => {
+  test("every beach with a buoy also has a line, and the reverse", () => {
+    // Two separate joins over two tables, and they must agree about which
+    // water ocean swell reaches. If they ever disagree, one of the two wave
+    // numbers on the page is describing somewhere else.
+    for (const beach of allBeaches()) {
+      expect(beach.mop_line === null).toBe(beach.wave_buoy === null);
+    }
+  });
+
+  test("bound lines deliver, and the beach is open coast", () => {
+    const bound = allBeaches().filter((beach) => beach.mop_line !== null);
+    expect(bound.length).toBeGreaterThan(0);
+
+    for (const beach of bound) {
+      expect(mopLineFor(beach)!.delivers).toBe(true);
+      expect(beach.upstream.water_body_type).toBe("Open Coast");
+    }
+  });
+
+  test("no bay, lagoon or inlet is bound to a line", () => {
+    // The refusal that matters more here than it does for the buoy: lines sit
+    // about 100 m apart, so the nearest one to enclosed water is close enough
+    // to look right and is still on the open coast outside.
+    for (const beach of allBeaches()) {
+      if (beach.upstream.water_body_type === "Open Coast") continue;
+      expect(beach.mop_line).toBeNull();
+      expect(beach.mop_line_null_reason).toBeTruthy();
+      expect(mopLineFor(beach)).toBeNull();
+    }
+  });
+
+  test("every bound line is nearer than the buoy the same beach reads", () => {
+    // Not a claim that the forecast is a better reading of now -- it is model
+    // output and the buoy is a measurement. It is why a forecast this close to
+    // the shore is worth relaying at all.
+    for (const beach of allBeaches()) {
+      if (beach.mop_line === null) continue;
+      expect(beach.mop_line_distance_m!).toBeLessThan(
+        beach.wave_buoy_distance_m!,
+      );
+    }
+  });
+
+  test("a beach naming an undescribed line is a broken data file, and says so", () => {
+    const beach = { ...defaultBeach(), mop_line: "D9999" };
+    expect(() => mopLineFor(beach)).toThrow(/no entry in mop-lines.json/);
+  });
+
+  test("the model-not-a-measurement caveat reaches the reader", () => {
+    // The page will show a modelled height beside a measured one. The
+    // distinction is owed to whoever reads both.
+    expect(
+      inventoryCaveats().some((c) =>
+        c.includes("model output, not a measurement"),
+      ),
+    ).toBe(true);
   });
 });
 

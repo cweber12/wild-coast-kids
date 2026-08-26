@@ -25,6 +25,17 @@ const BUOYS = {
   },
 };
 
+/**
+ * MOP lines near the default row's segment. D0002 sits exactly on its upper
+ * endpoint and publishes no forecast, so the join must reach past a line 0 m
+ * away to one 500 m away -- delivery decides this, not distance.
+ */
+const MOP_LINES = {
+  D0001: { lat: 32.875, lon: -117.256, delivers: true },
+  D0002: { lat: 32.88, lon: -117.25, delivers: false },
+  D0003: { lat: 32.877, lon: -117.254, delivers: true },
+};
+
 const STATIONS = {
   9410230: {
     lat: 32.8669,
@@ -182,7 +193,13 @@ describe("regionOf", () => {
 
 describe("build", () => {
   it("binds a beach and records how the join measured it", () => {
-    const [beach] = build([row()], STATIONS, BUOYS, OBSERVATION_STATIONS);
+    const [beach] = build(
+      [row()],
+      STATIONS,
+      BUOYS,
+      OBSERVATION_STATIONS,
+      MOP_LINES,
+    );
 
     expect(beach.slug).toBe("somewhere-beach");
     expect(beach.tide_station).toBe("9410230");
@@ -193,6 +210,18 @@ describe("build", () => {
     // gets one.
     expect(beach.wave_buoy).toBe("46254");
     expect(beach.wave_buoy_distance_m).toBeGreaterThan(0);
+
+    // The second wave binding, from its own table. D0002 sits on this beach's
+    // upper endpoint and publishes no forecast, so delivery decides this
+    // rather than distance.
+    expect(beach.mop_line).not.toBe("D0002");
+    expect(beach.mop_line).toBe("D0003");
+    expect(beach.mop_line_distance_m).toBeGreaterThan(0);
+    expect(["upper", "lower"]).toContain(beach.mop_line_from_end);
+    // Undefined rather than absent: JSON.stringify drops the key on the way to
+    // disk, which is what makes "present exactly when the id is null" true of
+    // the committed file.
+    expect(beach.mop_line_null_reason).toBeUndefined();
 
     // So does the observation station, and it is the nearest one that
     // publishes sky rather than the nearest one full stop: D3101 is closer to
@@ -207,7 +236,13 @@ describe("build", () => {
     // station is the nearest airport; the air station is the nearest station
     // standing in the marine layer, and it is a different station and a much
     // shorter distance. See docs/adr/0010-two-provenances-in-the-air-panel.md.
-    const [beach] = build([row()], STATIONS, BUOYS, OBSERVATION_STATIONS);
+    const [beach] = build(
+      [row()],
+      STATIONS,
+      BUOYS,
+      OBSERVATION_STATIONS,
+      MOP_LINES,
+    );
 
     expect(beach.air_station).toBe("LJAC1");
     expect(beach.sky_station).toBe("KNKX");
@@ -220,7 +255,13 @@ describe("build", () => {
   it("keeps an open-coast beach off a station above the marine layer", () => {
     // D3101 is nearer this row than LJAC1 and publishes temperature and wind,
     // so distance alone would take it. It is not a shore station.
-    const [beach] = build([row()], STATIONS, BUOYS, OBSERVATION_STATIONS);
+    const [beach] = build(
+      [row()],
+      STATIONS,
+      BUOYS,
+      OBSERVATION_STATIONS,
+      MOP_LINES,
+    );
 
     expect(beach.air_station).not.toBe("D3101");
   });
@@ -231,12 +272,19 @@ describe("build", () => {
       STATIONS,
       BUOYS,
       OBSERVATION_STATIONS,
+      MOP_LINES,
     );
 
     // Swell does not reach into a bay, and the tide certainly does.
     expect(beach.tide_station).toBe("9410170");
     expect(beach.wave_buoy).toBeNull();
     expect(beach.wave_buoy_null_reason).toMatch(/does not reach into a bay/);
+
+    // And no forecast either, for the same reason. The two wave bindings are
+    // separate joins and must refuse the same water, or the page would carry a
+    // forecast for a bay it declines to give a measurement for.
+    expect(beach.mop_line).toBeNull();
+    expect(beach.mop_line_null_reason).toMatch(/does not reach into a bay/);
 
     // Air does reach into a bay, so this join is not asymmetric the way the
     // wave join is. Making the two symmetric would silently strip wind and
@@ -264,6 +312,7 @@ describe("build", () => {
       STATIONS,
       BUOYS,
       OBSERVATION_STATIONS,
+      MOP_LINES,
     );
 
     expect(beach.air_station).toBe("D3101");
@@ -285,6 +334,7 @@ describe("build", () => {
       STATIONS,
       BUOYS,
       OBSERVATION_STATIONS,
+      MOP_LINES,
     );
 
     expect(beach.air_station).toBe("LJAC1");
@@ -304,6 +354,7 @@ describe("build", () => {
       STATIONS,
       BUOYS,
       OBSERVATION_STATIONS,
+      MOP_LINES,
     );
 
     expect(beach.tide_station).toBeNull();
@@ -320,7 +371,7 @@ describe("build", () => {
     // A slug is a primary key. Making one unique automatically would make it
     // unstable, and data accumulates against it.
     expect(() =>
-      build([row(), row()], STATIONS, BUOYS, OBSERVATION_STATIONS),
+      build([row(), row()], STATIONS, BUOYS, OBSERVATION_STATIONS, MOP_LINES),
     ).toThrow(/is claimed by both/);
   });
 
@@ -328,7 +379,7 @@ describe("build", () => {
     const missing = row();
     delete missing["Beach_ UpperLon"];
     expect(() =>
-      build([missing], STATIONS, BUOYS, OBSERVATION_STATIONS),
+      build([missing], STATIONS, BUOYS, OBSERVATION_STATIONS, MOP_LINES),
     ).toThrow(/has drifted/);
   });
 
@@ -339,6 +390,7 @@ describe("build", () => {
         STATIONS,
         BUOYS,
         OBSERVATION_STATIONS,
+        MOP_LINES,
       ),
     ).toThrow(/did not parse as numbers/);
   });
@@ -360,6 +412,7 @@ describe("build", () => {
       STATIONS,
       BUOYS,
       OBSERVATION_STATIONS,
+      MOP_LINES,
     );
     expect(built.map((b) => b.slug)).toEqual(["north-one", "south-one"]);
   });
@@ -486,7 +539,7 @@ describe("serviceFault", () => {
 describe("document", () => {
   it("lists only the beaches whose stations reach them", () => {
     const doc = document(
-      build([row(), FAR_ROW], STATIONS, BUOYS, OBSERVATION_STATIONS),
+      build([row(), FAR_ROW], STATIONS, BUOYS, OBSERVATION_STATIONS, MOP_LINES),
     );
 
     expect(doc.beaches.map((b) => b.slug)).toEqual(["somewhere-beach"]);
@@ -494,7 +547,7 @@ describe("document", () => {
 
   it("records every beach it does not list, with the distance that cut it", () => {
     const doc = document(
-      build([row(), FAR_ROW], STATIONS, BUOYS, OBSERVATION_STATIONS),
+      build([row(), FAR_ROW], STATIONS, BUOYS, OBSERVATION_STATIONS, MOP_LINES),
     );
 
     expect(doc._excluded).toEqual([
@@ -514,6 +567,7 @@ describe("document", () => {
       STATIONS,
       BUOYS,
       OBSERVATION_STATIONS,
+      MOP_LINES,
     );
     const doc = document(built);
 
@@ -537,6 +591,7 @@ describe("document", () => {
         STATIONS,
         BUOYS,
         OBSERVATION_STATIONS,
+        MOP_LINES,
       ),
     );
 
@@ -550,12 +605,16 @@ describe("document", () => {
     // table, not a county with no reachable coastline. Writing the empty file
     // would replace the whole inventory with a silence.
     expect(() =>
-      document(build([FAR_ROW], STATIONS, BUOYS, OBSERVATION_STATIONS)),
+      document(
+        build([FAR_ROW], STATIONS, BUOYS, OBSERVATION_STATIONS, MOP_LINES),
+      ),
     ).toThrow(/excluded all 1/);
   });
 
   it("tells a reader that a beach out of range is not listed at all", () => {
-    const doc = document(build([row()], STATIONS, BUOYS, OBSERVATION_STATIONS));
+    const doc = document(
+      build([row()], STATIONS, BUOYS, OBSERVATION_STATIONS, MOP_LINES),
+    );
     const bound = doc.unresolved.find((entry) =>
       entry.includes("nearest station of matching water class"),
     );
@@ -570,7 +629,7 @@ describe("document", () => {
 
   it("tells a reader the sky figures are read at an airport", () => {
     const built = document(
-      build([row()], STATIONS, BUOYS, OBSERVATION_STATIONS),
+      build([row()], STATIONS, BUOYS, OBSERVATION_STATIONS, MOP_LINES),
     );
     const airport = built.unresolved.find((entry) =>
       entry.includes("read at an airport"),
@@ -606,7 +665,7 @@ describe("document", () => {
     });
 
     const built = document(
-      build([near, far], STATIONS, BUOYS, OBSERVATION_STATIONS),
+      build([near, far], STATIONS, BUOYS, OBSERVATION_STATIONS, MOP_LINES),
     );
     const airport = built.unresolved.find((entry) =>
       entry.includes("read at an airport"),
@@ -620,7 +679,13 @@ describe("document", () => {
     // Carrying entries forward from the file duplicated them on the second run,
     // and made --check report movement immediately after a seed. A check that
     // cannot say "unchanged" says nothing.
-    const built = build([row()], STATIONS, BUOYS, OBSERVATION_STATIONS);
+    const built = build(
+      [row()],
+      STATIONS,
+      BUOYS,
+      OBSERVATION_STATIONS,
+      MOP_LINES,
+    );
     const first = document(built).unresolved;
     const second = document(built).unresolved;
 
@@ -634,7 +699,13 @@ describe("document", () => {
     // the county this file describes, and read a day ahead of the station
     // tables probed beside it. The zone is the one the document itself
     // declares two lines below the stamp.
-    const built = build([row()], STATIONS, BUOYS, OBSERVATION_STATIONS);
+    const built = build(
+      [row()],
+      STATIONS,
+      BUOYS,
+      OBSERVATION_STATIONS,
+      MOP_LINES,
+    );
 
     expect(document(built, new Date("2026-08-19T01:59:22Z")).generated).toBe(
       "2026-08-18",
