@@ -1,9 +1,9 @@
 import { expect, test } from "vitest";
 import { render, screen } from "@testing-library/react";
-import { Conditions } from "./Conditions";
+import { ConditionsTeaser } from "./ConditionsTeaser";
 
 test("the conditions teaser renders its heading and reserved slot", () => {
-  render(<Conditions />);
+  render(<ConditionsTeaser />);
 
   const heading = screen.getByRole("heading", { level: 2 });
   expect(heading.textContent).toContain("conditions");
@@ -14,7 +14,7 @@ test("the conditions teaser renders its heading and reserved slot", () => {
 });
 
 test("the slot's copy is addressed to a visitor, not to whoever builds the site", () => {
-  render(<Conditions />);
+  render(<ConditionsTeaser />);
 
   // It read "Drop the URL and it embeds here automatically" until #59: an
   // instruction to a builder, describing an embed ADR-0009 retired, on the copy
@@ -24,7 +24,7 @@ test("the slot's copy is addressed to a visitor, not to whoever builds the site"
 });
 
 test("the section teases the full conditions page", () => {
-  render(<Conditions />);
+  render(<ConditionsTeaser />);
 
   expect(
     screen.getByRole("link", { name: /learn more/i }).getAttribute("href"),
@@ -32,7 +32,7 @@ test("the section teases the full conditions page", () => {
 });
 
 test("the section puts its own padding back where there is no stop", () => {
-  const { container } = render(<Conditions />);
+  const { container } = render(<ConditionsTeaser />);
 
   // See GallerySection.test.tsx: the stop supplies this space, and only a
   // window big enough to hold a stop has one.

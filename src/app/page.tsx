@@ -1,4 +1,4 @@
-import { Conditions } from "@/components/Conditions";
+import { ConditionsTeaser } from "@/components/ConditionsTeaser";
 import { GallerySection } from "@/components/GallerySection";
 import { HeroViewport } from "@/components/HeroViewport";
 import { InterestListTeaser } from "@/components/InterestListTeaser";
@@ -19,7 +19,7 @@ export default function Home() {
         <ProgramCards />
       </SnapSection>
       <SnapSection tone="ocean">
-        <Conditions />
+        <ConditionsTeaser />
       </SnapSection>
       <SnapSection id="community">
         <InterestListTeaser />

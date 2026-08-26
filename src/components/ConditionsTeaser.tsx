@@ -1,7 +1,7 @@
 import { PillLink } from "./ui/PillLink";
 import { ReservedSlot } from "./ui/ReservedSlot";
 
-export function Conditions() {
+export function ConditionsTeaser() {
   return (
     <section className="px-gutter-sm py-section-sm grid items-center gap-8 md:grid-cols-2 md:gap-12 md:px-gutter stops:py-0">
       <div>
