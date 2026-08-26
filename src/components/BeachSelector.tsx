@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { TOUCH_TARGET } from "./touchTarget";
+import { TOUCH_TARGET } from "./ui/touchTarget";
 
 /**
  * Choosing which beach the conditions view is about.

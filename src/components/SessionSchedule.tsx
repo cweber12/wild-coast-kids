@@ -14,7 +14,7 @@
  * and a missing schedule looks like a missing schedule.
  */
 
-import { ReservedSlot } from "./ReservedSlot";
+import { ReservedSlot } from "./ui/ReservedSlot";
 import { localDayOf, localTimeOf } from "@/lib/pacific-time";
 import type { Program, ScheduleResult, Session } from "@/lib/sessions";
 

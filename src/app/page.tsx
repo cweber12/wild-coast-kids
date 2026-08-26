@@ -4,7 +4,7 @@ import { HeroViewport } from "@/components/HeroViewport";
 import { InterestListTeaser } from "@/components/InterestListTeaser";
 import { ProgramCards } from "@/components/ProgramCards";
 import { QuoteStats } from "@/components/QuoteStats";
-import { SnapSection } from "@/components/SnapSection";
+import { SnapSection } from "@/components/ui/SnapSection";
 
 export default function Home() {
   return (

@@ -1,5 +1,5 @@
 import { InterestListForm } from "./InterestListForm";
-import { PillLink } from "./PillLink";
+import { PillLink } from "./ui/PillLink";
 
 /**
  * The landing page's interest-list teaser: the pitch, a link on to the fuller

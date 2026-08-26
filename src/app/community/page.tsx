@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { InterestListForm } from "@/components/InterestListForm";
-import { Placeholder } from "@/components/Placeholder";
-import { ReservedSlot } from "@/components/ReservedSlot";
+import { Placeholder } from "@/components/ui/Placeholder";
+import { ReservedSlot } from "@/components/ui/ReservedSlot";
 
 export const metadata: Metadata = {
   title: "Community",

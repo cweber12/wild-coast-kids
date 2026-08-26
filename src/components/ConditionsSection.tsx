@@ -16,7 +16,7 @@ import {
 } from "@/lib/beaches";
 import { BeachSelector } from "./BeachSelector";
 import { ConditionsNotes } from "./ConditionsNotes";
-import { ReservedSlot } from "./ReservedSlot";
+import { ReservedSlot } from "./ui/ReservedSlot";
 import { TidePanel } from "./TidePanel";
 import { WavePanel } from "./WavePanel";
 import { WeekPanel } from "./WeekPanel";

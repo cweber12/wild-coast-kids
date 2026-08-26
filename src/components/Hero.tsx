@@ -1,6 +1,6 @@
 import Image from "next/image";
 
-import { PillLink } from "./PillLink";
+import { PillLink } from "./ui/PillLink";
 
 export function Hero() {
   return (

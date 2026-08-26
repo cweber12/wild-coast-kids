@@ -1,5 +1,5 @@
-import { PillLink } from "./PillLink";
-import { ReservedSlot } from "./ReservedSlot";
+import { PillLink } from "./ui/PillLink";
+import { ReservedSlot } from "./ui/ReservedSlot";
 
 export function Conditions() {
   return (

@@ -2,7 +2,7 @@ import { expect, test, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { BeachSelector } from "./BeachSelector";
-import { TOUCH_TARGET } from "./touchTarget";
+import { TOUCH_TARGET } from "./ui/touchTarget";
 
 const push = vi.fn();
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push }) }));
