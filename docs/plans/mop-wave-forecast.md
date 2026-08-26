@@ -268,3 +268,22 @@ because no browser was available in the checkout: at 1536×639 the seven day
 cells come out at exactly 225px each, two lines in the wave cell, no day
 wrapping where its neighbours do not. On a 375px viewport the wave cell stays
 one line, the break being scoped to `lg`.
+
+## Addendum, 2026-08-26: the rows lead with what daylight reaches
+
+A third change asked for after the card work, and the one that reaches furthest:
+both product rows now lead with the extreme that falls between sunrise and
+sunset, and carry the day's own extreme beside it. `docs/adr/0017` records the
+decision, the measurement behind it and the three alternatives.
+
+It changes what this plan's wave row is for. The plan above argues that each
+cell shows "that day's **maximum**" and that the maximum is a consequential
+choice; that is still true, and it is now a maximum over a window rather than
+over a day. The same argument therefore applies twice, which is why the row
+label had to grow: "Biggest daylight swell" names both selections rather than
+one.
+
+It also retires a claim made twice in this repository — that the daylight row
+exists to make the tide row mean something. It does not any more. The rows say
+it themselves, and the daylight row keeps the narrower job of saying when you
+can be there at all.

@@ -848,9 +848,42 @@ test("each cell is that day's biggest estimate, with the period that went with i
     // The instant of the estimate that supplied the maximum, worded in
     // Pacific. A three-hour step rather than a peak located to the minute --
     // the row and ConditionsNotes both say so.
-    timeLabel: "12:00 PM",
-    heightFt: 3.4,
-    periodS: 14,
+    daylight: { timeLabel: "12:00 PM", heightFt: 3.4, periodS: 14 },
+    // The 3am and 9pm estimates are both outside daylight and both smaller, so
+    // the day's biggest is the one already led with.
+    allDay: null,
+  });
+});
+
+test("the day's biggest is kept beside it when it falls outside daylight", async () => {
+  // Six of the seven days measured on 2026-08-26 were this shape, four of them
+  // peaking at 11 PM or 2 AM. A row printing the day's biggest full stop was
+  // answering a question nobody planning a trip had asked.
+  mopRows([
+    { atMs: pacificHour(0, 3), heightFt: 4.1, periodS: 5 },
+    { atMs: pacificHour(0, 12), heightFt: 2.6, periodS: 14 },
+  ]);
+
+  const view = await readWaveWeek(BEACH, NOON_PACIFIC_20260817);
+
+  if (view.state.kind !== "week") throw new Error("expected a week");
+  expect(view.state.days[0]).toMatchObject({
+    daylight: { timeLabel: "12:00 PM", heightFt: 2.6, periodS: 14 },
+    allDay: { timeLabel: "3:00 AM", heightFt: 4.1, periodS: 5 },
+  });
+});
+
+test("a day whose estimates are all overnight still answers", async () => {
+  // A ragged forecast can cover only part of a day. The reading is not
+  // withheld; it simply has nothing to lead with.
+  mopRows([{ atMs: pacificHour(0, 3), heightFt: 4.1, periodS: 5 }]);
+
+  const view = await readWaveWeek(BEACH, NOON_PACIFIC_20260817);
+
+  if (view.state.kind !== "week") throw new Error("expected a week");
+  expect(view.state.days[0]).toMatchObject({
+    daylight: null,
+    allDay: { timeLabel: "3:00 AM", heightFt: 4.1, periodS: 5 },
   });
 });
 
@@ -866,23 +899,25 @@ test("the time comes from the estimate that supplied the height", async () => {
   const view = await readWaveWeek(BEACH, NOON_PACIFIC_20260817);
 
   if (view.state.kind !== "week") throw new Error("expected a week");
-  expect(view.state.days[0].timeLabel).toBe("6:00 PM");
+  expect(view.state.days[0].daylight?.timeLabel).toBe("6:00 PM");
 });
 
 test("a tie keeps the earlier estimate", async () => {
   // The rows arrive oldest first, so strictly-greater is what makes this
   // deterministic -- and a reader planning a morning is better served by the
   // earlier of two identical heights.
+  // Both inside daylight -- sunrise is 6:14 AM, so a 6 AM estimate would not
+  // reach the tie-break at all.
   mopRows([
-    { atMs: pacificHour(0, 6), heightFt: 2.5, periodS: 9 },
+    { atMs: pacificHour(0, 9), heightFt: 2.5, periodS: 9 },
     { atMs: pacificHour(0, 18), heightFt: 2.5, periodS: 15 },
   ]);
 
   const view = await readWaveWeek(BEACH, NOON_PACIFIC_20260817);
 
   if (view.state.kind !== "week") throw new Error("expected a week");
-  expect(view.state.days[0].periodS).toBe(9);
-  expect(view.state.days[0].timeLabel).toBe("6:00 AM");
+  expect(view.state.days[0].daylight?.periodS).toBe(9);
+  expect(view.state.days[0].daylight?.timeLabel).toBe("9:00 AM");
 });
 
 test("days are grouped by the Pacific date, not the UTC one", async () => {
@@ -900,7 +935,9 @@ test("days are grouped by the Pacific date, not the UTC one", async () => {
     "2026-08-17",
     "2026-08-18",
   ]);
-  expect(view.state.days[0].heightFt).toBe(4.0);
+  // 9pm Pacific is outside daylight, so it is the day's own rather than the
+  // one led with -- and it is still on the 17th, which is the point.
+  expect(view.state.days[0].allDay?.heightFt).toBe(4.0);
 });
 
 test("the row goes ragged rather than blank where the forecast stops", async () => {

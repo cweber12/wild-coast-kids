@@ -58,6 +58,16 @@ const NOTES = [
       "measurement of the water on the day.",
   },
   {
+    term: "Daylight first",
+    detail:
+      "The tide and swell figures lead with the lowest and biggest that fall between " +
+      "sunrise and sunset, because those are the ones you can be there for. The day's own " +
+      "lowest and biggest sit beneath them, marked “all day” — on this coast they " +
+      "are usually in the small hours, which is why they are not what leads. Sunrise and " +
+      "sunset are computed for this beach; nothing here is a judgement about when you " +
+      "should go.",
+  },
+  {
     term: "Wave heights",
     detail:
       "The height of the swell in open water, measured at a buoy some distance offshore. " +

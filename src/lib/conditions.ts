@@ -823,10 +823,10 @@ async function readSkyHalf(
  * The wave forecast the week grid reads, from CDIP MOP
  * ========================================================================= */
 
-/** One day of the week grid's wave row. */
-export interface WaveWeekDay extends WeekDayFrame {
+/** One estimate of the swell, worded for a reader. */
+export interface WaveReading {
   /**
-   * Pacific wall-clock time of the day's biggest estimate, already worded.
+   * Pacific wall-clock time of the estimate, already worded.
    *
    * NOT a peak the model located to the minute. MOP publishes on a three-hour
    * grid, so this is the step that carried the largest height and the real peak
@@ -835,10 +835,24 @@ export interface WaveWeekDay extends WeekDayFrame {
    * so, because the two sit one above the other and look alike.
    */
   timeLabel: string;
-  /** The day's biggest significant wave height, in feet. */
+  /** Significant wave height in feet. */
   heightFt: number;
   /** The period of the estimate that height came from, in seconds. */
   periodS: number;
+}
+
+/**
+ * One day of the week grid's wave row: the swell a reader can be there for, and
+ * the day's own if that is a different estimate.
+ *
+ * The same split as `TideLows`, for the same reason and with the same
+ * invariants. `daylight` leads; `allDay` is present only when it is a different
+ * estimate; a day with no estimates at all is not in the week rather than being
+ * a day with two nulls.
+ */
+export interface WaveWeekDay extends WeekDayFrame {
+  daylight: WaveReading | null;
+  allDay: WaveReading | null;
 }
 
 /**
@@ -886,8 +900,22 @@ function mopWindow(nowMs: number): { startIso: string; endIso: string } {
   };
 }
 
+/** Every estimate of each Pacific day, keyed by date, oldest first. */
+function rowsByDate(
+  rows: readonly MopWaveRow[],
+): ReadonlyMap<string, MopWaveRow[]> {
+  const byDate = new Map<string, MopWaveRow[]>();
+  for (const row of rows) {
+    const localDate = localDateOf(row.atMs);
+    const standing = byDate.get(localDate);
+    if (standing === undefined) byDate.set(localDate, [row]);
+    else standing.push(row);
+  }
+  return byDate;
+}
+
 /**
- * The biggest estimate of each Pacific day, keyed by date.
+ * The biggest of a run of estimates, or null when the run is empty.
  *
  * THE MAXIMUM RATHER THAN THE MEAN, and it is a consequential choice rather
  * than a cosmetic one: on two of ten sampled days the day's smallest and
@@ -900,16 +928,45 @@ function mopWindow(nowMs: number): { startIso: string; endIso: string } {
  * a reader planning a morning is better served by the earlier of two identical
  * heights.
  */
-function biggestPerDay(rows: readonly MopWaveRow[]): Map<string, MopWaveRow> {
-  const biggest = new Map<string, MopWaveRow>();
+function biggestOf(rows: readonly MopWaveRow[]): MopWaveRow | null {
+  let biggest: MopWaveRow | null = null;
   for (const row of rows) {
-    const localDate = localDateOf(row.atMs);
-    const standing = biggest.get(localDate);
-    if (standing === undefined || row.heightFt > standing.heightFt) {
-      biggest.set(localDate, row);
-    }
+    if (biggest === null || row.heightFt > biggest.heightFt) biggest = row;
   }
   return biggest;
+}
+
+/**
+ * The two estimates one day carries, or null when the forecast holds none for
+ * that date.
+ *
+ * Compared on the instant rather than the height, for the reason `tideLowsOn`
+ * gives: two steps can share a height to one decimal and are still two
+ * different times to be at the beach.
+ */
+function waveReadingsOn(
+  dayRows: readonly MopWaveRow[],
+  daylight: Daylight,
+): Pick<WaveWeekDay, "daylight" | "allDay"> | null {
+  const allDay = biggestOf(dayRows);
+  if (allDay === null) return null;
+
+  const inDaylight = biggestOf(
+    dayRows.filter(
+      (row) => row.atMs >= daylight.sunriseMs && row.atMs <= daylight.sunsetMs,
+    ),
+  );
+
+  const reading = (row: MopWaveRow): WaveReading => ({
+    timeLabel: localTimeOf(row.atMs),
+    heightFt: row.heightFt,
+    periodS: row.periodS,
+  });
+
+  return {
+    daylight: inDaylight === null ? null : reading(inDaylight),
+    allDay: inDaylight?.atMs === allDay.atMs ? null : reading(allDay),
+  };
 }
 
 /**
@@ -969,24 +1026,19 @@ export async function readWaveWeek(
     };
   }
 
-  const biggest = biggestPerDay(result.forecast.rows);
+  const byDate = rowsByDate(result.forecast.rows);
+  const daylight = daylightByDate(beach, nowMs);
 
   // The slack in the window and the forecast's own reach both put estimates
   // outside the seven columns. Building from `weekOfDays` rather than from the
   // rows is what keeps this row agreeing with the tide and daylight rows about
   // which day is Tuesday, and drops the rest.
   const days = weekOfDays(nowMs).flatMap((frame) => {
-    const row = biggest.get(frame.localDate);
-    return row === undefined
-      ? []
-      : [
-          {
-            ...frame,
-            timeLabel: localTimeOf(row.atMs),
-            heightFt: row.heightFt,
-            periodS: row.periodS,
-          },
-        ];
+    const readings = waveReadingsOn(
+      byDate.get(frame.localDate) ?? [],
+      daylight.get(frame.localDate)!,
+    );
+    return readings === null ? [] : [{ ...frame, ...readings }];
   });
 
   return { ...binding, state: { kind: "week", days } };

@@ -69,9 +69,8 @@ function waveWeek(
       kind: "week",
       days: days.map(({ index, timeLabel = "2:00 PM", heightFt, periodS }) => ({
         ...DATES[index],
-        timeLabel,
-        heightFt,
-        periodS,
+        daylight: { timeLabel, heightFt, periodS },
+        allDay: { timeLabel: "2:00 AM", heightFt: 9.9, periodS: 5 },
       })),
     },
   };
@@ -243,7 +242,7 @@ test("the row's label names the statistic, so the maximum is not hidden", async 
     await WeekPanel({ slug: "la-jolla-shores-beach" }),
   );
 
-  expect(countOf(cellLabels(container), "Biggest swell")).toBe(2);
+  expect(countOf(cellLabels(container), "Biggest daylight swell")).toBe(2);
 });
 
 test("the wave row is attributed once, beneath the grid, not seven times", async () => {
@@ -267,7 +266,7 @@ test("the wave row is attributed once, beneath the grid, not seven times", async
     "a model of the swell at 10 m depth, not a measurement",
   );
   // Labelled, because the grid may carry more than one of these.
-  expect(attributions[0].textContent).toContain("Biggest swell");
+  expect(attributions[0].textContent).toContain("Biggest daylight swell");
 });
 
 test("the row goes ragged where the forecast stops, rather than blank", async () => {
@@ -285,7 +284,7 @@ test("the row goes ragged where the forecast stops, rather than blank", async ()
 
   // One cell, one label. A label over a gap would read as an instrument that
   // failed rather than as a forecast that does not reach that far.
-  expect(countOf(cellLabels(container), "Biggest swell")).toBe(1);
+  expect(countOf(cellLabels(container), "Biggest daylight swell")).toBe(1);
   expect(countOf(cellLabels(container), "Daylight")).toBe(2);
 });
 
@@ -308,7 +307,7 @@ test("a beach with no MOP line says so, and keeps the rest of the grid", async (
   render(await WeekPanel({ slug: "mission-bay" }));
 
   expect(screen.getByText(/no wave forecast for this beach/i)).toBeDefined();
-  expect(screen.queryByText("Biggest swell")).toBeNull();
+  expect(screen.queryByText("Biggest daylight swell")).toBeNull();
   expect(screen.queryByText(/MOP line/)).toBeNull();
   expect(screen.getAllByText("Daylight")).toHaveLength(2);
 });
@@ -338,7 +337,7 @@ test("a CDIP outage costs the wave row and nothing else", async () => {
   // Said in full here rather than pointed at a card, because CDIP is read here
   // and nowhere else on the page.
   expect(screen.getByText(/HTTP 503 for MOP line D0498/)).toBeDefined();
-  expect(screen.queryByText("Biggest swell")).toBeNull();
+  expect(screen.queryByText("Biggest daylight swell")).toBeNull();
   expect(countOf(cellLabels(container), "Lowest daylight tide")).toBe(2);
   expect(screen.getAllByText("Daylight")).toHaveLength(2);
 });
@@ -382,7 +381,7 @@ test("NOAA going quiet does not take the wave row with it", async () => {
   );
 
   expect(screen.queryByText("Lowest daylight tide")).toBeNull();
-  expect(countOf(cellLabels(container), "Biggest swell")).toBe(2);
+  expect(countOf(cellLabels(container), "Biggest daylight swell")).toBe(2);
 });
 
 test("the wave row sits under daylight, not between it and the tide", async () => {
@@ -401,7 +400,11 @@ test("the wave row sits under daylight, not between it and the tide", async () =
   const labels = [...container.querySelectorAll("li:first-child dt")].map(
     (node) => node.textContent,
   );
-  expect(labels).toEqual(["Lowest daylight tide", "Daylight", "Biggest swell"]);
+  expect(labels).toEqual([
+    "Lowest daylight tide",
+    "Daylight",
+    "Biggest daylight swell",
+  ]);
 });
 
 test("a line with no recorded distance is still named, without one", async () => {

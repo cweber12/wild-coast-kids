@@ -17,9 +17,8 @@ const READING = {
 /** Today's peak, as `WavePanel` hands it over: already selected, already worded. */
 const PEAK = {
   line: { id: "D0498", distanceM: 325 },
-  timeLabel: "11:00 AM",
-  heightFt: 0.8,
-  periodS: 6.25,
+  daylight: { timeLabel: "11:00 AM", heightFt: 0.8, periodS: 6.25 },
+  allDay: { timeLabel: "2:00 AM", heightFt: 1.1, periodS: 5 },
 };
 
 test("a reading leads with the height and puts it in plain words", () => {
@@ -298,7 +297,7 @@ test("one stat group never spans the two sources", () => {
   ).toEqual(["Period", "Water"]);
   expect(
     [...groups[1].querySelectorAll("dt")].map((n) => n.textContent),
-  ).toEqual(["Biggest at", "Height", "Period"]);
+  ).toEqual(["Biggest at", "Height", "Period", "Biggest all day"]);
 });
 
 test("the card leads with the measurement even when only the model answered", () => {
@@ -337,4 +336,54 @@ test("no forecast renders no second block, and no explanation either", () => {
   expect(screen.queryByText(/MOP line/)).toBeNull();
   expect(screen.queryByText(/Forecast today/)).toBeNull();
   expect(screen.queryByText(/Biggest at/)).toBeNull();
+});
+
+test("the day's biggest joins the same group, since it is the same line", () => {
+  // One MOP line, one request, read twice through different windows -- so a
+  // second group would imply a second source. The measured half above is the
+  // one that genuinely has another.
+  render(
+    <WavesToday
+      beachName="La Jolla Shores Beach"
+      buoy={NEAR}
+      state={READING}
+      peak={PEAK}
+    />,
+  );
+
+  expect(screen.getByText("Biggest all day")).toBeDefined();
+  expect(screen.getByText("2:00 AM · 1.1 ft")).toBeDefined();
+});
+
+test("a daylight peak that is also the day's biggest says so rather than repeating", () => {
+  render(
+    <WavesToday
+      beachName="La Jolla Shores Beach"
+      buoy={NEAR}
+      state={READING}
+      peak={{ ...PEAK, allDay: null }}
+    />,
+  );
+
+  expect(screen.getByText("None bigger")).toBeDefined();
+});
+
+test("no estimate in daylight leaves only the day's own, not three blanks", () => {
+  // StatGroup renders a null as "Not reported", which is right for a station
+  // that published nothing and wrong for three figures that were never asked
+  // for. The group carries what there is.
+  const { container } = render(
+    <WavesToday
+      beachName="La Jolla Shores Beach"
+      buoy={NEAR}
+      state={READING}
+      peak={{ ...PEAK, daylight: null }}
+    />,
+  );
+
+  expect(screen.queryByText("Not reported")).toBeNull();
+  const forecast = [...container.querySelectorAll("dl")][1];
+  expect(
+    [...forecast.querySelectorAll("dt")].map((n) => n.textContent),
+  ).toEqual(["Biggest all day"]);
 });

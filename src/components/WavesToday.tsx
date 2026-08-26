@@ -41,7 +41,7 @@
  * measurement had, which is the one thing ADR-0016 refuses outright.
  */
 
-import type { WavesView } from "@/lib/conditions";
+import type { WaveReading, WavesView } from "@/lib/conditions";
 import { CARD_PROSE } from "./cardText";
 import { DISCLOSURE_TARGET } from "./disclosure";
 import {
@@ -65,10 +65,10 @@ import { StatGroup } from "./StatGroup";
 export type WaveForecastPeak = {
   /** Which MOP line answered, and how far away it stands. */
   line: { id: string; distanceM: number | null };
-  /** Pacific wall-clock time of the day's biggest estimate, already worded. */
-  timeLabel: string;
-  heightFt: number;
-  periodS: number;
+  /** The biggest estimate between sunrise and sunset, or null when none falls there. */
+  daylight: WaveReading | null;
+  /** The day's biggest estimate, present only when it is not the one above. */
+  allDay: WaveReading | null;
 };
 
 /** Past this, the buoy is far enough away that the reader is owed the number. */
@@ -209,9 +209,26 @@ export function WavesToday({
         <div className="mt-4">
           <StatGroup
             stats={[
-              { label: "Biggest at", value: peak.timeLabel },
-              { label: "Height", value: `${peak.heightFt.toFixed(1)} ft` },
-              { label: "Period", value: `${Math.round(peak.periodS)} s` },
+              ...(peak.daylight === null
+                ? []
+                : [
+                    { label: "Biggest at", value: peak.daylight.timeLabel },
+                    {
+                      label: "Height",
+                      value: `${peak.daylight.heightFt.toFixed(1)} ft`,
+                    },
+                    {
+                      label: "Period",
+                      value: `${Math.round(peak.daylight.periodS)} s`,
+                    },
+                  ]),
+              {
+                label: "Biggest all day",
+                value:
+                  peak.allDay === null
+                    ? "None bigger"
+                    : `${peak.allDay.timeLabel} · ${peak.allDay.heightFt.toFixed(1)} ft`,
+              },
             ]}
           />
           <ProvenanceLine

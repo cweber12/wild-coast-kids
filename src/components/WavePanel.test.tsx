@@ -25,9 +25,8 @@ const day = (localDate: string, isToday: boolean, timeLabel: string) => ({
   localDate,
   dayLabel: localDate,
   isToday,
-  timeLabel,
-  heightFt: 0.8,
-  periodS: 6.25,
+  daylight: { timeLabel, heightFt: 0.8, periodS: 6.25 },
+  allDay: { timeLabel: "2:00 AM", heightFt: 1.1, periodS: 5 },
 });
 
 beforeEach(() => {

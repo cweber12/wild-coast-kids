@@ -2,12 +2,18 @@
  * One day's biggest swell, as the week grid prints it.
  *
  * **The label names the selection, and that is not a stylistic choice.** A day
- * has fifty-six three-hourly estimates behind it and this cell shows one of
- * them; which one is a judgement, and on two of ten sampled days the day's
+ * has fifty-six three-hourly estimates behind it and this cell shows two of
+ * them; which two is a judgement, and on two of ten sampled days the day's
  * smallest and largest fell either side of one of `WavesToday`'s plain-language
- * bands. "Biggest swell" is the same contract `TideWeek`'s "Lowest tide" makes,
- * for the same reason: a superlative stated is a superlative a reader can
- * discount, and a bare number is one they cannot.
+ * bands. "Biggest daylight swell" is the same contract `TideWeek`'s label
+ * makes, for the same reason: a superlative stated is a superlative a reader
+ * can discount, and a bare number is one they cannot.
+ *
+ * **The daylight swell leads and the day's own follows it**, exactly as the
+ * tide cell does and for the same reason. On the seven days measured on
+ * 2026-08-26 the biggest estimate fell outside daylight on six of them -- four
+ * of those at 11 PM or 2 AM -- so a row printing the day's biggest full stop
+ * was answering a question nobody planning a trip had asked.
  *
  * **The time leads, the way it does in every other row of this grid.** An
  * earlier draft led with the height, on the argument that a swell is a decision
@@ -59,28 +65,56 @@
  * day-major, so a row is seven of these rather than one subtree.
  */
 
-import type { WaveWeekDay } from "@/lib/conditions";
+import type { WaveReading, WaveWeekDay } from "@/lib/conditions";
 
 /** What every day of this row shares: the words that name it. */
 export const WAVE_WEEK_ROW = {
-  label: "Biggest swell",
+  label: "Biggest daylight swell",
 } as const;
+
+/** `2:00 AM 1.1 ft`, which is the day's own estimate without its period. */
+function worded({ timeLabel, heightFt }: WaveReading): string {
+  return `${timeLabel} ${heightFt.toFixed(1)} ft`;
+}
 
 export function WaveWeek({
   day,
 }: {
-  day: Pick<WaveWeekDay, "timeLabel" | "heightFt" | "periodS">;
+  day: Pick<WaveWeekDay, "daylight" | "allDay">;
 }) {
   return (
     <>
       {/*
-        The space between the two spans stays, for the reason `DaylightWeek`
+        The space between the spans stays, for the reason `DaylightWeek`
         records: two blocks collapse it visually and it is still a text node,
         and without it the accessible text runs together as "2:00 PM0.8 ft".
       */}
-      <span className="font-extrabold lg:block">{day.timeLabel}</span>{" "}
-      <span className="text-fog lg:block">
-        {day.heightFt.toFixed(1)} ft · {Math.round(day.periodS)} s
+      {day.daylight === null ? (
+        // No estimate between sunrise and sunset, which a ragged forecast can
+        // produce. A named absence rather than a blank: the day's biggest is
+        // on the line below, so the cell still answers.
+        <span className="text-fog italic">None</span>
+      ) : (
+        <>
+          <span className="font-extrabold lg:block">
+            {day.daylight.timeLabel}
+          </span>{" "}
+          <span className="text-fog lg:block">
+            {day.daylight.heightFt.toFixed(1)} ft ·{" "}
+            {Math.round(day.daylight.periodS)} s
+          </span>
+        </>
+      )}
+
+      {/*
+        The period is not repeated here. It qualifies the swell a reader is
+        deciding about, and the day's own estimate is context for that decision
+        rather than a second one to weigh -- the same reason the tide cell's
+        second line carries no datum note.
+      */}
+      <span className="block text-fog">
+        <span className="lg:block">all day</span>{" "}
+        {day.allDay === null ? "none bigger" : worded(day.allDay)}
       </span>
     </>
   );

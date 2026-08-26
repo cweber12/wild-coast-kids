@@ -43,12 +43,7 @@ export async function WavePanel({ slug }: { slug: string }) {
   const peak: WaveForecastPeak | null =
     today === undefined || week.line === null
       ? null
-      : {
-          line: week.line,
-          timeLabel: today.timeLabel,
-          heightFt: today.heightFt,
-          periodS: today.periodS,
-        };
+      : { line: week.line, daylight: today.daylight, allDay: today.allDay };
 
   return <WavesToday {...view} peak={peak} />;
 }

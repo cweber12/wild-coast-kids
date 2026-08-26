@@ -132,11 +132,12 @@ test("each note is a term and its explanation, not a run of prose", () => {
   const details = container.querySelectorAll("dd");
 
   expect(terms.length).toBe(details.length);
-  // Four: three since the safety framing became a standing notice above the
-  // readings, and a fourth when the week gained a modelled wave height beside
-  // the measured one. The named-term assertions elsewhere in this file are what
-  // stop a note being dropped silently; this number only tracks them.
-  expect(terms.length).toBe(4);
+  // Five: three since the safety framing became a standing notice above the
+  // readings, a fourth when the week gained a modelled wave height beside the
+  // measured one, and a fifth when the rows began leading with what daylight
+  // reaches. The named-term assertions elsewhere in this file are what stop a
+  // note being dropped silently; this number only tracks them.
+  expect(terms.length).toBe(5);
 });
 
 test("it is a labelled region, so the notes are reachable as a landmark", () => {
@@ -200,4 +201,17 @@ test("the notes lay out in columns, each keeping its own measure", () => {
   for (const note of notes) {
     expect(note.className).toContain("max-w-130");
   }
+});
+
+test("the reader is told why the leading figure is not the day's lowest", () => {
+  // The cell says "Lowest daylight tide" and shows a higher number than the one
+  // beneath it. Without this, that reads as a fault -- see docs/adr/0017.
+  render(<ConditionsNotes entries={ENTRIES} reach={REACH} />);
+
+  expect(
+    screen.getByText(/because those are the ones you can be there for/),
+  ).toBeDefined();
+  expect(
+    screen.getByText(/nothing here is a judgement about when you should go/),
+  ).toBeDefined();
 });
