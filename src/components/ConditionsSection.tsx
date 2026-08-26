@@ -118,12 +118,21 @@ export function ConditionsSection({ slug }: { slug: string }) {
         </Suspense>
 
         {/*
-          The fallback names one station where the panel reads two, which is
-          issue #94 and not this slice's to fix.
+          Two stations, named, because the panel reads two: air for temperature
+          and wind, sky for cloud and visibility -- usually a different station
+          and much further away, which is what ADR-0010 turns on. A singular
+          line here promised a simpler answer than the card delivers.
+
+          "Stations" rather than "weather station" also keeps the loading copy
+          inside the glossary: CONTEXT.md's `Conditions` entry ends
+          `_Avoid_: weather, forecast, surf report`, and this was the last
+          rendered text on the page still using one of them.
         */}
         <Suspense
           fallback={
-            <p className="text-base text-fog">Reading the weather station…</p>
+            <p className="text-base text-fog">
+              Reading the air and sky stations…
+            </p>
           }
         >
           <WindPanel slug={slug} />
