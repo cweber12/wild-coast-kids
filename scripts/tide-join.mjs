@@ -69,7 +69,7 @@ const WATER_CLASS_OVERRIDES = {
       "typed Sound, Bay, or Inlet upstream; it is an ocean cove in La Jolla and its " +
       "water level is the ocean's. As bay it bound Mission Bay Campland at 7.84 km; " +
       "as open coast it binds Scripps at 2.93 km. It is also `sheltered` in " +
-      "wave-join.mjs, which is the half of its old classification that was right.",
+      "sheltered.mjs, which is the half of its old classification that was right.",
   },
 };
 
