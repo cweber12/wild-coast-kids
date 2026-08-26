@@ -264,5 +264,41 @@ Two properties this decomposition is meant to hold, and how to check them:
 
 ## Addenda
 
-_(none yet — amend with dated entries when the plan changes; never rewrite
-above this line)_
+_Dated entries only; never rewrite above this line._
+
+### 2026-08-26 — what changed in the thirteen days before this landed
+
+Written 13 Aug, committed to a branch, and left there. It lands now for the
+reasoning rather than the list: five of the eight PRDs are untouched, and the
+three below are not. Checked against `main` at `4fc0f7c`.
+
+- **PRD-6 is dead, and reversed rather than completed.** It planned to deploy
+  `socal-coastal-data` and embed or link it. Four days after this was written,
+  ADR-0009 decided the opposite — the conditions tool is built here, not
+  embedded — and it is now twenty-two modules in `src/components/conditions/`.
+  Correction 2 above, the largest of the three, is wrong as of 17 Aug: what
+  blocked the conditions section was a build, and the build happened. The
+  correction stays as written because it was true when written.
+
+- **PRD-4's premise broke, in the direction it warned about.** It said the
+  release form and the photo pipeline "must not be separated, because either
+  alone is useless." The nine photographs landed anyway — `public/gallery` is
+  populated and `galleryImages.ts` carries their crops — and no release form
+  exists. The PRD is more relevant now, not less, and the half that shipped is
+  the half that needed the other one first.
+
+- **PRD-5 is partly shipped.** `public/` is no longer empty:
+  `public/hero-art-class.jpg` and `public/gallery` are in. The logo and the
+  domain are not.
+
+- **PRD-1 is now issue #150**, filed the day this landed, with the current line
+  numbers and the note that the code's own comment understates the problem by
+  half. The issue is the thing to work from; this file records why the PRD was
+  shaped the way it was.
+
+- **Component paths throughout predate ADR-0018.** `QuoteStats.tsx`,
+  `ProgramCards.tsx`, `InterestListForm.tsx` and `GallerySection.tsx` are still
+  at `src/components/`; `Nav.tsx` is now in `layout/`, `Placeholder.tsx` in
+  `ui/`, and `Conditions.tsx` is `ConditionsTeaser.tsx`. PRD-4 names
+  `GallerySection.tsx` as "a hardcoded array of nine strings"; that array moved
+  to `galleryImages.ts` before this landed.
