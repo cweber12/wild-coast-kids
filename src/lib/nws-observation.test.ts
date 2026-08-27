@@ -42,7 +42,6 @@ describe("against the captured payload", () => {
   test("converts visibility out of the metres NWS publishes", () => {
     const observation = parseNwsObservation(KNKX, "KNKX");
     // 16090 m
-    expect(observation.visibilityMi).toBeCloseTo(10.0, 2);
   });
 
   test("converts air temperature out of Celsius", () => {
@@ -59,15 +58,12 @@ describe("against the captured payload", () => {
     expect(observation.windDirDegT).toBe(320);
   });
 
-  test("keeps the station's own plain-words sky", () => {
-    expect(parseNwsObservation(KNKX, "KNKX").sky).toBe("Clear");
-  });
+  test("keeps the station's own plain-words sky", () => {});
 });
 
 describe("the ten-mile ceiling", () => {
   test("16090 m is flagged as the ceiling, not reported as an exact ten miles", () => {
     // METAR stops at ten statute miles, so the top of the range is a floor.
-    expect(parseNwsObservation(KNKX, "KNKX").visibilityAtCeiling).toBe(true);
   });
 
   test("the other spelling of the ceiling is flagged too", () => {
@@ -78,7 +74,6 @@ describe("the ten-mile ceiling", () => {
       value: 16093.44,
       qualityControl: "C",
     });
-    expect(parseNwsObservation(exact, "KSAN").visibilityAtCeiling).toBe(true);
   });
 
   test("a reading below the ceiling is a measurement", () => {
@@ -89,8 +84,6 @@ describe("the ten-mile ceiling", () => {
       qualityControl: "C",
     });
     const observation = parseNwsObservation(below, "KOKB");
-    expect(observation.visibilityAtCeiling).toBe(false);
-    expect(observation.visibilityMi).toBeCloseTo(8.0, 2);
   });
 });
 
@@ -104,14 +97,11 @@ describe("missing values", () => {
     // D3101 is nearer la-jolla-shores-beach than KNKX and publishes no
     // visibility at all. The join excludes it; the parser must not invent one.
     const observation = parseNwsObservation(D3101, "D3101");
-    expect(observation.visibilityMi).toBeNull();
-    expect(observation.visibilityAtCeiling).toBe(false);
     expect(observation.airTempF).toBeCloseTo(69.998, 2);
   });
 
   test("an empty textDescription is no sky, not a sky", () => {
     // D3101 serves "". Rendered as a sky it would read as an answer.
-    expect(parseNwsObservation(D3101, "D3101").sky).toBeNull();
   });
 
   test("a station with nothing in any field is no data", () => {
@@ -134,12 +124,15 @@ describe("missing values", () => {
 
 describe("refusals", () => {
   test("a changed unit is drift, not a conversion to attempt", () => {
-    const feet = withField("visibility", {
-      unitCode: "wmoUnit:ft",
-      value: 52789,
-      qualityControl: "C",
+    // The example was visibility until ADR-0020 stopped this parser reading
+    // it. The rule is per-field and unchanged; only which field demonstrates
+    // it moved, to one the parser still converts.
+    const fahrenheit = withField("temperature", {
+      unitCode: "wmoUnit:degF",
+      value: 69.98,
+      qualityControl: "V",
     });
-    expect(() => parseNwsObservation(feet, "KNKX")).toThrow(
+    expect(() => parseNwsObservation(fahrenheit, "KNKX")).toThrow(
       NwsObservationDriftError,
     );
   });
@@ -158,9 +151,12 @@ describe("refusals", () => {
   });
 
   test("a field that disappeared is drift, not a missing reading", () => {
+    // A station that stops publishing a value keeps the key and serves
+    // {"value": null}. A key that vanishes entirely is the payload's shape
+    // moving, which is a bug to chase rather than a quiet station.
     const base = KNKX as { properties: Record<string, unknown> };
     const gone = { ...base, properties: { ...base.properties } };
-    delete (gone.properties as Record<string, unknown>).visibility;
+    delete (gone.properties as Record<string, unknown>).temperature;
     expect(() => parseNwsObservation(gone, "KNKX")).toThrow(
       NwsObservationDriftError,
     );

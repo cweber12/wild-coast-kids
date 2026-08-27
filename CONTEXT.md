@@ -124,8 +124,8 @@ _Avoid_: button, chip, badge (a badge is the smaller non-interactive pill on a
 program card)
 
 **Conditions**:
-The real-time surf, tide, wind and visibility tool for San Diego's coast, built
-in this repo (ADR-0009). Has a teaser on the landing page and a page of its own;
+The real-time surf, tide and wind tool for San Diego's coast, built in this
+repo (ADR-0009). Has a teaser on the landing page and a page of its own;
 the teaser still carries a reserved slot, which comes out in the slice that has
 something to put in its place. It shows readings and forecasts relayed from
 public sources, attributed and timestamped — never a judgement this site makes
@@ -144,20 +144,22 @@ renamed it was `weather-stations.json`, and the sky join beside it was
 those paths, and are left as the dated records they are.
 _Avoid_: weather station, met station
 
-**Sky station**:
-The observation station a beach reads for sky and visibility. Always an airport
-METAR, because in this county only airports publish those two values — so it is
-the furthest-away reading on the page, and the panel says so rather than
-letting it pass as a measurement at the shore.
-_Avoid_: weather station, the beach's weather
-
 **Air station**:
-The observation station a beach reads for air temperature and wind. Usually not
-the same station as its sky station, and much nearer: requiring one station to
-supply all four values let the scarcest of them, sky, decide where the
-temperature was measured, which put an inland reading on a coastal beach
-(ADR-0010).
-_Avoid_: weather station, wind station
+The observation station a beach reads for air temperature and wind — the only
+station its air card names. It was one of two until 2026-08-27: a _sky station_
+supplied cloud and visibility from an airport METAR, and that term is retired
+along with the reading (ADR-0020). Requiring one station to supply all four
+values had let the scarcest of them decide where the temperature was measured,
+which put an inland reading on a coastal beach (ADR-0010); this is the binding
+that split off, and it outlived the one it was protected from.
+_Avoid_: weather station, wind station, sky station
+
+**Grid cell**:
+The square of the National Weather Service's forecast map a beach falls in,
+about 2.5 km across, named `office/x,y`. It is where the week's cloud forecast
+comes from, and it has no distance beside it: every coordinate inside a cell is
+equally inside it, so there is nothing to be nearer by.
+_Avoid_: gridpoint, forecast point, weather square
 
 **MOP line**:
 One of the points in `src/data/mop-lines.json` — 1,210 of them along this

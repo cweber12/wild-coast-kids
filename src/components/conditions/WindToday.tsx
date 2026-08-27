@@ -1,43 +1,38 @@
 /**
- * Air temperature, wind, sky and visibility — from the two stations that
- * measure them.
+ * Air temperature and wind, from the station that measures them at the shore.
  *
  * Presentational and pure, like the two panels beside it.
  *
- * **Temperature leads.** Visibility held the primary slot and was the worst of
- * the four figures for it: METAR stops at ten statute miles and San Diego sits
- * at that ceiling most of the time, so the largest text on the panel usually
- * rendered a constant. The temperature is what a parent deciding what to bring
- * actually reads.
+ * **Temperature leads.** Visibility held the primary slot once and was the
+ * worst of the figures for it: METAR stops at ten statute miles and San Diego
+ * sits at that ceiling most of the time, so the largest text on the panel
+ * usually rendered a constant. The temperature is what a parent deciding what
+ * to bring actually reads.
  *
- * **Two provenances, named separately.** Temperature and wind come from the
- * nearest station standing in the marine layer at the shoreline — often a pier
- * on the NDBC network. Sky and visibility come from the nearest station
- * publishing them, which in this county is always an airport, because cloud and
- * visibility are METAR products. Requiring one station for all four is what
- * bound La Jolla Shores to Miramar ten kilometres inland, where the air read
- * 81 °F against the pier's 72 °F. See
- * docs/adr/0010-two-provenances-in-the-air-panel.md.
+ * **SKY AND VISIBILITY ARE GONE FROM THIS CARD, and they are not coming back
+ * here.** They came from the nearest station publishing them, which in this
+ * county is always an airport, at a median of 7.9 km and beyond 10 km for 20 of
+ * the 45 beaches served. `docs/reference/sensor-representativeness.md` §7 puts
+ * ceiling and visibility alone among the surface variables at not transferable,
+ * and its §12 names transferring an aerodrome's off-field as an anti-pattern to
+ * refuse. Cloud reaches the reader in the week grid instead, as a forecast for
+ * this beach's own grid cell, labelled a forecast. No visibility figure is
+ * published anywhere: the grid does not carry one. See
+ * docs/adr/0020-sky-leaves-the-card-for-the-week.md.
  *
- * The cost of that decision is a second attribution line, and it is deliberately
- * not hidden: a reader who cannot tell which station supplied which figure is
- * worse off than one who has to read two lines. Both lines stay here for that
- * reason. What left is the explanation of *why* the sky is an airport reading,
- * which is true of every beach on the site and now sits once in
- * `ConditionsNotes` instead of under one panel out of three.
+ * **ADR-0010 IS NOT REVERSED BY THAT.** Its argument was that requiring one
+ * station for all four values let the scarcest of them decide where the
+ * temperature was measured, which bound La Jolla Shores to Miramar ten
+ * kilometres inland where the air read 81 °F against the pier's 72 °F. Removing
+ * the sky binding keeps that property rather than undoing it -- the station
+ * this card names is still the shore station that ADR introduced, and it is now
+ * the only one it names.
  *
- * **Both distances are always shown**, which the single-station version did not
- * do — it hid anything under five kilometres. With two stations named, showing
- * one distance and hiding the other leaves them incomparable, and comparing them
- * is exactly what tells a reader why the sky is less local than the temperature.
- *
- * **The halves fail separately.** A missing sky never blanks the temperature and
- * a missing temperature never blanks the sky, because the two are separate
- * fetches to separate networks and a reader wants whichever arrived.
- *
- * **Ten miles is a ceiling, not a measurement.** METAR stops there, so the top
- * of the range is rendered "10 miles or more". Reading it as exactly ten would
- * be a precision upstream never claimed.
+ * **One provenance line, and it still shows its distance.** The reason for
+ * always showing it was that two stations named without distances are
+ * incomparable. With one station the comparison is gone, and the distance
+ * stays: it is what tells a reader how near the reading was taken, which is the
+ * claim this card is making.
  *
  * **The station names arrive ready to print.** `display_name` is hand-written in
  * the station table, so nothing here tries to turn a callsign into prose. This
@@ -85,26 +80,19 @@ function compassWords(degreesTrue: number): string {
   return COMPASS[Math.round(degreesTrue / 45) % 8];
 }
 
-/** Whole miles read better than a decimal that upstream did not measure to. */
-function visibilityWords(miles: number, atCeiling: boolean): string {
-  if (atCeiling) return "10 miles or more";
-  const rounded = miles < 1 ? miles.toFixed(1) : String(Math.round(miles));
-  return `${rounded} ${rounded === "1" ? "mile" : "miles"}`;
-}
-
 /**
  * How far the station is, in kilometres, rounded.
  *
- * A decimal under ten kilometres because that is the range these two bindings
- * differ across: an air station at 1.4 km and a sky station at 10.4 km is the
- * whole point, and rounding the first to "1 km" throws away the comparison.
+ * A decimal under ten kilometres because that is the range this binding lives
+ * in -- the air station runs 0.7 km to 7.4 km across the inventory -- and
+ * rounding 1.4 km to "1 km" throws away most of what the figure says.
  *
  * The number only. This panel used to append the unit and a reference point
  * too, and it wrote two different ones twenty lines apart -- "from this beach"
- * for the air station and "away" for the sky station, which on a beach whose
- * two halves bind to the same station printed the identical fact two ways on
- * one card. `ProvenanceLine` owns that wording now; the rounding stays here,
- * where the reason for it is.
+ * for the air station and "away" for the sky station it no longer has, which on
+ * a beach whose two halves bound to the same station printed the identical fact
+ * two ways on one card. `ProvenanceLine` owns that wording now; the rounding
+ * stays here, where the reason for it is.
  */
 function roundedKm(metres: number): string {
   const km = metres / 1000;
@@ -145,27 +133,6 @@ function windStats(air: Extract<AirView["air"], { kind: "reading" }>): Stat[] {
   if (air.gustMph !== null && !calm && air.windMph !== null) {
     stats.push({ label: "Gusting", value: `${Math.round(air.gustMph)} mph` });
   }
-  return stats;
-}
-
-/**
- * Sky and visibility, as figures from the airport.
- *
- * Same distinction, and the same two behaviours this panel already had: a
- * station publishing no sky simply goes unsaid, while an airport publishing no
- * visibility says so. The asymmetry is upstream's — a missing sky layer is not
- * a reading anyone attempted, and a missing visibility is.
- */
-function skyStats(sky: Extract<AirView["sky"], { kind: "reading" }>): Stat[] {
-  const stats: Stat[] = [];
-  if (sky.sky !== null) stats.push({ label: "Sky", value: sky.sky });
-  stats.push({
-    label: "Visibility",
-    value:
-      sky.visibilityMi === null
-        ? null
-        : visibilityWords(sky.visibilityMi, sky.visibilityAtCeiling),
-  });
   return stats;
 }
 
@@ -257,13 +224,7 @@ function plainWords(
   return `${wind[0].toUpperCase()}${wind.slice(1)}.`;
 }
 
-export function WindToday({
-  beachName,
-  airStation,
-  skyStation,
-  air,
-  sky,
-}: AirView) {
+export function WindToday({ beachName, airStation, air }: AirView) {
   const words = air.kind === "reading" ? plainWords(air) : null;
 
   return (
@@ -315,24 +276,6 @@ export function WindToday({
         />
       )}
 
-      {sky.kind === "reading" && (
-        <div className="mt-4">
-          <StatGroup stats={skyStats(sky)} />
-        </div>
-      )}
-
-      {skyStation !== null && (
-        <ProvenanceLine
-          label="Sky and visibility"
-          source={skyStation.name}
-          distanceKm={
-            skyStation.distanceM !== null
-              ? roundedKm(skyStation.distanceM)
-              : null
-          }
-        />
-      )}
-
       {air.kind === "no-station" && (
         <details className={`mb-4 text-sm ${CARD_PROSE}`}>
           <summary className={DISCLOSURE_TARGET}>
@@ -354,31 +297,6 @@ export function WindToday({
               is a bug here rather than a problem at the station.
             </p>
           )}
-        </details>
-      )}
-
-      {sky.kind === "unavailable" && (
-        <details className={`mb-4 text-sm ${CARD_PROSE}`}>
-          <summary className={DISCLOSURE_TARGET}>
-            Why there is no sky or visibility
-          </summary>
-          <p className="mt-2">{sky.detail}</p>
-          {sky.drift && (
-            <p className="mt-2">
-              The National Weather Service&apos;s payload was not the shape this
-              site pins, which is a bug here rather than a problem at the
-              station.
-            </p>
-          )}
-        </details>
-      )}
-
-      {sky.kind === "no-station" && (
-        <details className={`mb-4 text-sm ${CARD_PROSE}`}>
-          <summary className={DISCLOSURE_TARGET}>
-            Why there is no sky or visibility
-          </summary>
-          <p className="mt-2">{sky.reason}</p>
         </details>
       )}
     </ReadingCard>

@@ -1,5 +1,9 @@
 # Sky from the grid, and visibility gone
 
+> **Historical.** Planned 2026-08-26, shipped across PRs #156, #157 and this one
+> on 2026-08-27. It records what was intended then, not what the code does now,
+> and is not maintained. See [`README.md`](README.md).
+
 Closes the question ADR-0012 held open. The decision is
 [`docs/adr/0020-sky-leaves-the-card-for-the-week.md`](../adr/0020-sky-leaves-the-card-for-the-week.md);
 this plan is how it gets built. Issues #95 and #91.

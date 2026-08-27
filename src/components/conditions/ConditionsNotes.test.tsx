@@ -65,14 +65,26 @@ test("CDIP and Scripps are credited where the forecast is explained", () => {
   expect(screen.getByText(/Scripps Institution of Oceanography/)).toBeDefined();
 });
 
-test("the sky is named as an airport reading, and why it is one", () => {
+/**
+ * The clause this replaced asserted that the sky was "named as an airport
+ * reading, and why it is one" -- true while the card showed one. The reason
+ * survives the figures rather than going with them: a reader who wonders why a
+ * beach site has no cloud reading is owed the answer, and it is the same answer
+ * that justified the deletion.
+ */
+test("the airports are still named, as the reason there is no reading", () => {
   render(<ConditionsNotes entries={ENTRIES} reach={REACH} />);
 
-  expect(screen.getByText(/come from an airport/)).toBeDefined();
-  // The clause `WindToday.test.tsx` used to assert, kept verbatim so the
-  // property did not weaken when it changed component.
-  expect(screen.getByText(/only published by airports/)).toBeDefined();
-  expect(screen.getByText(/coastal fog is exactly what changes/)).toBeDefined();
+  expect(
+    screen.getByText(
+      /only stations in this county publishing either one are airports/,
+    ),
+  ).toBeDefined();
+  expect(
+    screen.getByText(
+      /describes its own field rather than a beach kilometres away/,
+    ),
+  ).toBeDefined();
 });
 
 /**
@@ -90,11 +102,10 @@ test("the safety framing is not repeated here, it is above the readings", () => 
   // figure -- which is what the heading above them promises.
   expect(screen.getByText("Tide heights")).toBeDefined();
   expect(screen.getByText("Wave heights")).toBeDefined();
-  // Four now, not three. The cloud row's entry joins the airport one rather
-  // than replacing it: ADR-0020 removes the card's sky in a later slice, and
-  // until it does BOTH are on the page and both are owed an explanation.
   expect(screen.getByText("Cloud by day")).toBeDefined();
-  expect(screen.getByText("Sky and visibility")).toBeDefined();
+  // The airport entry is gone with the figures it explained. A note about a
+  // reading the page no longer carries would be prose describing nothing.
+  expect(screen.queryByText("Sky and visibility")).toBeNull();
 });
 
 /**
@@ -106,7 +117,11 @@ test("the safety framing is not repeated here, it is above the readings", () => 
 test("it explains the page rather than claiming this beach has these readings", () => {
   render(<ConditionsNotes entries={ENTRIES} reach={REACH} />);
 
-  expect(screen.getByText(/Where they are shown/)).toBeDefined();
+  // No beach-specific claim: the block renders on beaches the cloud forecast
+  // reaches and beaches it does not.
+  expect(
+    screen.getByText(/rather than a reading taken anywhere/),
+  ).toBeDefined();
 });
 
 /**
@@ -123,9 +138,6 @@ test("the cloud row is explained as a forecast for a square of the map", () => {
   expect(
     screen.getByText(/rather than the cloudiest hour of it/),
   ).toBeDefined();
-  expect(
-    screen.queryByText(/no reading of what the sky is doing right now/),
-  ).toBeNull();
 });
 
 /**
@@ -155,15 +167,14 @@ test("each note is a term and its explanation, not a run of prose", () => {
   const details = container.querySelectorAll("dd");
 
   expect(terms.length).toBe(details.length);
-  // Six: three since the safety framing became a standing notice above the
+  // Five: three since the safety framing became a standing notice above the
   // readings, a fourth when the week gained a modelled wave height beside the
-  // measured one, a fifth when the rows began leading with what daylight
-  // reaches, and a sixth when the week gained the gridded cloud row. That last
-  // one is temporary at six -- ADR-0020 removes the airport entry beside it in
-  // the slice that takes sky off the card, and this returns to five. The
-  // named-term assertions elsewhere in this file are what stop a note being
+  // measured one, and a fifth when the rows began leading with what daylight
+  // reaches. The sixth was the gridded cloud row's entry, which stood beside
+  // the airport one for one PR and then replaced it when sky left the card.
+  // The named-term assertions elsewhere in this file are what stop a note being
   // dropped silently; this number only tracks them.
-  expect(terms.length).toBe(6);
+  expect(terms.length).toBe(5);
 });
 
 test("it is a labelled region, so the notes are reachable as a landmark", () => {

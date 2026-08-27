@@ -92,15 +92,10 @@ const NOTES = [
       "A forecast for this beach's own square of the National Weather Service's map, about " +
       "2.5 km across, rather than a reading taken anywhere. It averages the forecast hours " +
       "between sunrise and sunset, so it describes the day you would be there rather than " +
-      "the cloudiest hour of it, and it names fog on the days fog is expected.",
-  },
-  {
-    term: "Sky and visibility",
-    detail:
-      "Where they are shown, they come from an airport. Cloud and visibility are only " +
-      "published by airports in this county, so that reading is taken further from the " +
-      "water than the temperature beside it — and coastal fog is exactly what changes " +
-      "across that distance.",
+      "the cloudiest hour of it, and it names fog on the days fog is expected. There is no " +
+      "reading of what the sky is doing right now anywhere on this page, and no visibility " +
+      "figure at all: the only stations in this county publishing either one are airports, " +
+      "and an airport describes its own field rather than a beach kilometres away.",
   },
 ] as const;
 

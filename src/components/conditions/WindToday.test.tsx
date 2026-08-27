@@ -3,10 +3,8 @@ import { render, screen } from "@testing-library/react";
 import { WindToday } from "./WindToday";
 import { DISCLOSURE_TARGET } from "./disclosure";
 
-/** Scripps Pier: what La Jolla Shores now reads for temperature and wind. */
+/** Scripps Pier: the one station this card names, and the only one it reads. */
 const PIER = { name: "Scripps Pier", distanceM: 1_381 };
-/** Miramar: what it still reads for sky and visibility, ten kilometres inland. */
-const KNKX = { name: "Miramar", distanceM: 10_429 };
 
 const AIR = {
   kind: "reading" as const,
@@ -16,143 +14,96 @@ const AIR = {
   windDirDegT: 320,
 };
 
-const SKY = {
-  kind: "reading" as const,
-  visibilityMi: 10.0,
-  visibilityAtCeiling: true,
-  sky: "Clear",
-};
-
 const panel = (overrides = {}) => ({
   beachName: "La Jolla Shores Beach",
   airStation: PIER,
-  skyStation: KNKX,
   air: AIR,
-  sky: SKY,
   ...overrides,
 });
 
-test("the temperature is the panel's largest figure and visibility is not", () => {
-  // Visibility held this slot and sits at METAR's ten-mile ceiling most of the
-  // time, which made the largest text on the panel a near-constant describing
-  // an airport. See ADR 0010.
+test("the temperature is the panel's largest figure", () => {
+  // Visibility held this slot once and sat at METAR's ten-mile ceiling most of
+  // the time, which made the largest text on the panel a near-constant
+  // describing an airport. ADR-0010 demoted it; ADR-0020 removed it.
   render(<WindToday {...panel()} />);
 
   expect(screen.getByText("71°F").className).toContain("text-stat");
-  expect(screen.getByText("10 miles or more").className).not.toContain(
-    "text-stat",
-  );
 });
 
-test("wind, sky and visibility are figures beneath the temperature, not a sentence", () => {
-  // They were clauses in one paragraph, which meant learning the wind speed
-  // required reading a sentence. Each is a labelled figure now.
+test("wind is a figure beneath the temperature, not a sentence", () => {
+  // It was a clause in one paragraph, which meant learning the wind speed
+  // required reading a sentence. It is a labelled figure now.
   render(<WindToday {...panel()} />);
 
   expect(screen.getByText("Wind")).toBeDefined();
   expect(screen.getByText("8 mph from the north-west")).toBeDefined();
-  expect(screen.getByText("Sky")).toBeDefined();
-  expect(screen.getByText("Clear")).toBeDefined();
-  expect(screen.getByText("Visibility")).toBeDefined();
-  expect(screen.getByText("10 miles or more")).toBeDefined();
 });
 
 /**
- * ADR-0010's requirement, asserted structurally rather than by reading prose.
- * The four figures come from two stations at very different distances, and the
- * grouping is what lets a reader tell which supplied which. One group must
- * never span both.
+ * ADR-0020 took sky and visibility off this card. The figures were an airport
+ * METAR at a median 7.9 km, and `sensor-representativeness.md` §7 holds that
+ * ceiling and visibility do not transfer off an aerodrome at any distance.
+ * Cloud reaches the reader in the week grid instead, as a forecast for the
+ * beach's own cell; no visibility figure is published anywhere.
+ *
+ * Asserted as an absence because that is what shipped, and an absence nobody
+ * asserts is an absence somebody re-adds.
  */
-test("the figures are grouped by the station that supplied them", () => {
+test("no sky and no visibility appear on this card at all", () => {
+  render(<WindToday {...panel()} />);
+
+  expect(screen.queryByText("Sky")).toBeNull();
+  expect(screen.queryByText("Visibility")).toBeNull();
+  expect(screen.queryByText(/miles or more/)).toBeNull();
+  expect(screen.queryByText(/Miramar/)).toBeNull();
+});
+
+/**
+ * ADR-0010 required that one `StatGroup` never span two stations, because the
+ * grouping was what let a reader tell which supplied which. With one station
+ * left the rule has nothing to separate — and the structure it produced is
+ * still the assertion, because a second group appearing here would mean a
+ * second provenance arrived without the argument that ADR demands.
+ */
+test("one station means one group, and a second would need its own argument", () => {
   const { container } = render(<WindToday {...panel()} />);
 
   const groups = container.querySelectorAll("dl");
-  expect(groups.length).toBe(2);
-
-  const wind = groups[0].textContent ?? "";
-  expect(wind).toContain("Wind");
-  expect(wind).not.toContain("Visibility");
-
-  const sky = groups[1].textContent ?? "";
-  expect(sky).toContain("Visibility");
-  expect(sky).not.toContain("Wind");
+  expect(groups.length).toBe(1);
+  expect(groups[0].textContent).toContain("Wind");
 });
 
-test("both stations are named, each with its own distance", () => {
-  // The cost of the two-provenance decision, and deliberately not hidden: a
-  // reader who cannot tell which station supplied which figure is worse off
-  // than one who has to read two lines.
+test("the station is named, with its distance", () => {
+  // The distance stays now that there is nothing to compare it against. It is
+  // what tells a reader how near this reading was taken, which is the claim the
+  // card is making.
   render(<WindToday {...panel()} />);
 
   const air = screen.getByText(/Scripps Pier/).textContent ?? "";
   expect(air).toContain("Temperature and wind");
   expect(air).toContain("about 1.4 km from this beach");
-
-  const sky = screen.getByText(/Miramar/).textContent ?? "";
-  expect(sky).toContain("Sky and visibility");
-  expect(sky).toContain("about 10 km from this beach");
 });
 
 test("a near station keeps its distance rather than rounding it away", () => {
-  // The single-station panel hid anything under five kilometres. With two
-  // stations named that makes them incomparable, and comparing them is what
-  // tells a reader why the sky is less local than the temperature.
+  // An older single-station panel hid anything under five kilometres, which
+  // threw away most of what this figure says: the air station runs 0.7 km to
+  // 7.4 km across the inventory, so "under 5 km" covers nearly all of it.
   render(<WindToday {...panel()} />);
 
   expect(screen.getByText(/about 1\.4 km from this beach/)).toBeDefined();
 });
 
 /**
- * "Why the sky comes from an airport" moved to `ConditionsNotes`, and is
- * asserted there. It is true at every beach on the site, so it was collected
- * with the rest of the shared explanation rather than sitting under this one
- * panel. What this panel still owes the reader — both stations named, each with
- * its own distance — is asserted above.
+ * The four tests that stood here asserted how a visibility figure was worded --
+ * the ten-mile ceiling as a floor, a sub-mile reading keeping its decimal, the
+ * singular "1 mile". They are deleted rather than adapted: the card publishes
+ * no visibility, the site publishes none anywhere, and `visibilityWords` went
+ * with them. Wording rules for a figure nobody renders are the dead code
+ * CLAUDE.md says to delete and let git remember.
+ *
+ * What replaced them is the absence assertion above, plus `ConditionsNotes`'
+ * explanation of why there is no such figure to word.
  */
-
-test("the ten-mile ceiling reads as a floor, never as an exact measurement", () => {
-  render(<WindToday {...panel()} />);
-
-  expect(screen.getByText("10 miles or more")).toBeDefined();
-});
-
-test("a visibility below the ceiling is given as the measurement it is", () => {
-  render(
-    <WindToday
-      {...panel({
-        sky: { ...SKY, visibilityMi: 8.0, visibilityAtCeiling: false },
-      })}
-    />,
-  );
-
-  expect(screen.getByText("8 miles")).toBeDefined();
-});
-
-test("a visibility under a mile keeps its decimal, being the reading that matters", () => {
-  // Rounded to whole miles this would render "0 miles", which reads as an
-  // instrument fault rather than as thick fog.
-  render(
-    <WindToday
-      {...panel({
-        sky: { ...SKY, visibilityMi: 0.25, visibilityAtCeiling: false },
-      })}
-    />,
-  );
-
-  expect(screen.getByText("0.3 miles")).toBeDefined();
-});
-
-test("one mile is singular", () => {
-  render(
-    <WindToday
-      {...panel({
-        sky: { ...SKY, visibilityMi: 1.2, visibilityAtCeiling: false },
-      })}
-    />,
-  );
-
-  expect(screen.getByText("1 mile")).toBeDefined();
-});
 
 test("wind is given in plain words, from the direction it blows from", () => {
   // 320 degrees true. Naming it as the direction the wind blows *towards*
@@ -239,50 +190,14 @@ test("a missing temperature says so rather than leaving the panel headed by noth
   expect(screen.getByText("No temperature reading")).toBeDefined();
 });
 
-test("a station publishing no sky simply goes unsaid", () => {
-  render(<WindToday {...panel({ sky: { ...SKY, sky: null } })} />);
-
-  expect(screen.queryByText("Sky")).toBeNull();
-  // Visibility still renders: it is the other half of the same station.
-  expect(screen.getByText("10 miles or more")).toBeDefined();
-});
-
-test("an airport publishing no visibility says so rather than rendering blank", () => {
-  render(
-    <WindToday
-      {...panel({
-        sky: { ...SKY, visibilityMi: null, visibilityAtCeiling: false },
-      })}
-    />,
-  );
-
-  expect(screen.getByText("Visibility")).toBeDefined();
-  expect(screen.getByText("Not reported")).toBeDefined();
-});
-
-test("a failing sky never takes the temperature down with it", () => {
-  // The two halves are separate fetches to separate networks. Withholding a
-  // measured shore temperature because an airport missed a minute would trade
-  // the good reading for the irrelevant one.
-  render(
-    <WindToday
-      {...panel({
-        sky: {
-          kind: "unavailable",
-          detail: "NWS KNKX returns 404 for its latest observation.",
-          drift: false,
-        },
-      })}
-    />,
-  );
-
-  expect(screen.getByText("71°F")).toBeDefined();
-  expect(screen.getByText("8 mph from the north-west")).toBeDefined();
-  expect(screen.getByText(/returns 404/)).toBeDefined();
-  expect(screen.queryByText(/Visibility/)).toBeNull();
-});
-
-test("a failing temperature never takes the sky down with it", () => {
+/**
+ * Two tests stood here proving the halves failed apart: a failing sky left the
+ * temperature standing and a failing temperature left the sky standing. With
+ * one half left there is nothing to fail apart FROM, and the property that
+ * replaces them is simpler and stricter -- an unavailable air reading is now
+ * the only failure this card has.
+ */
+test("an unavailable reading says so and does not blank the card", () => {
   render(
     <WindToday
       {...panel({
@@ -295,10 +210,10 @@ test("a failing temperature never takes the sky down with it", () => {
     />,
   );
 
-  expect(screen.getByText("Clear")).toBeDefined();
-  expect(screen.getByText("10 miles or more")).toBeDefined();
   expect(screen.getByText("No temperature just now")).toBeDefined();
-  expect(screen.getByText(/returns 404/)).toBeDefined();
+  expect(screen.getByText(/Why there is no temperature or wind/)).toBeDefined();
+  // The card still names the beach and the station it could not reach.
+  expect(screen.getByText(/Scripps Pier/)).toBeDefined();
 });
 
 test("drift is disclosed as a bug here rather than a problem upstream", () => {
@@ -340,24 +255,6 @@ test("no air station is a permanent fact about the place, with its reason", () =
   expect(screen.queryByText(/Temperature and wind/)).toBeNull();
 });
 
-test("no sky station leaves the temperature standing on its own", () => {
-  render(
-    <WindToday
-      {...panel({
-        skyStation: null,
-        sky: {
-          kind: "no-station",
-          reason: "no station near this beach publishes a sky description",
-        },
-      })}
-    />,
-  );
-
-  expect(screen.getByText("71°F")).toBeDefined();
-  expect(screen.getByText(/publishes a sky description/)).toBeDefined();
-  expect(screen.queryByText(/Sky and visibility/)).toBeNull();
-});
-
 /**
  * ADR-0004's 44px floor, on the elements that were the last thing on this page
  * under it. A `<summary>` is background-less, so it takes the floor at every
@@ -370,19 +267,14 @@ test("no sky station leaves the temperature standing on its own", () => {
  * referenced, not that the box measures 44px. That stays a human check.
  */
 test("every disclosure this card can render composes the touch-target floor", () => {
-  // Four of the ten on this page are here, because the two halves fail
-  // separately and each has both a no-station and an unavailable disclosure.
+  // Two now, not four: the sky half had a no-station and an unavailable
+  // disclosure of its own, and both went with it.
   const renders = [
     render(
       <WindToday
         {...panel({
           airStation: null,
-          skyStation: null,
           air: { kind: "no-station", reason: "no station near enough" },
-          sky: {
-            kind: "no-station",
-            reason: "nothing near here publishes sky",
-          },
         })}
       />,
     ),
@@ -394,11 +286,6 @@ test("every disclosure this card can render composes the touch-target floor", ()
             detail: "NDBC LJAC1 returns 404 for realtime2.",
             drift: false,
           },
-          sky: {
-            kind: "unavailable",
-            detail: "NWS KNKX returns 404 for its latest observation.",
-            drift: false,
-          },
         })}
       />,
     ),
@@ -408,35 +295,24 @@ test("every disclosure this card can render composes the touch-target floor", ()
     ...r.container.querySelectorAll("summary"),
   ]);
 
-  expect(summaries).toHaveLength(4);
+  expect(summaries).toHaveLength(2);
   for (const summary of summaries) {
     expect(summary.className).toContain(DISCLOSURE_TARGET);
   }
 });
 
 /**
- * The finding as a reader met it. On `fiesta-island` both halves bind to the
- * same station, so one card printed "San Diego Airport · 4.7 km from this
- * beach" and "San Diego Airport · 4.7 km away" 80px apart: the identical fact,
- * phrased two ways, on one card. `ProvenanceLine` owns the wording now, so two
- * lines can only differ where the facts differ.
+ * A test stood here for the finding as a reader met it: on `fiesta-island` both
+ * halves of this card bound to the same station, so it printed "San Diego
+ * Airport · 4.7 km from this beach" and "San Diego Airport · 4.7 km away" 80px
+ * apart -- the identical fact, phrased two ways, on one card.
+ *
+ * The scenario cannot occur any more. This card has one binding, so it prints
+ * one provenance line and there is no second wording for it to disagree with.
+ * The wording rule itself did not go with it: `ProvenanceLine` owns it and its
+ * own tests assert it, which is what stops the drift returning the next time
+ * two call sites state one fact.
  */
-test("one station bound to both halves is worded the same way twice", () => {
-  const AIRPORT = { name: "San Diego Airport", distanceM: 4_700 };
-
-  render(
-    <WindToday {...panel({ airStation: AIRPORT, skyStation: AIRPORT })} />,
-  );
-
-  const lines = screen
-    .getAllByText(/San Diego Airport/)
-    .map((line) => line.textContent ?? "");
-
-  expect(lines).toHaveLength(2);
-  for (const line of lines) {
-    expect(line).toContain("San Diego Airport · about 4.7 km from this beach");
-  }
-});
 
 /**
  * The brief's card anatomy: "leads with one big number, says what it means in

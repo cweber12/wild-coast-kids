@@ -19,7 +19,6 @@ import {
   tideStationFor,
   waveBuoyFor,
   type ObservationStation,
-  skyStationFor,
 } from "./beaches";
 import { type Daylight, daylightOn, midpointOf } from "./daylight";
 import type { TideExtreme } from "./coops-predictions";
@@ -667,23 +666,6 @@ export type AirState =
   | { kind: "no-station"; reason: string }
   | { kind: "unavailable"; detail: string; drift: boolean };
 
-/**
- * The sky-and-visibility half, read at a different station and failing on its
- * own. Both fields come from one METAR, which is why they are one state: a
- * station publishes both or neither.
- */
-export type SkyState =
-  | {
-      kind: "reading";
-      /** Statute miles, or null when the bound station published none this hour. */
-      visibilityMi: number | null;
-      /** True when visibility is at METAR's ten-mile ceiling, so it is a floor. */
-      visibilityAtCeiling: boolean;
-      sky: string | null;
-    }
-  | { kind: "no-station"; reason: string }
-  | { kind: "unavailable"; detail: string; drift: boolean };
-
 export interface StationBinding {
   /** The station's display name: what the page calls it, never its callsign. */
   name: string;
@@ -694,27 +676,30 @@ export interface AirView {
   beachName: string;
   /** Where temperature and wind were measured. null exactly when `air` is `no-station`. */
   airStation: StationBinding | null;
-  /** Where sky and visibility were measured. null exactly when `sky` is `no-station`. */
-  skyStation: StationBinding | null;
   air: AirState;
-  sky: SkyState;
 }
 
 /**
- * Read the air at one beach, from the two stations that measure it.
+ * Read the air at one beach, from the station that measures it.
  *
- * TWO PROVENANCES, FETCHED AND FAILED SEPARATELY. Temperature and wind come from
- * the nearest station standing in the marine layer at the shoreline, which is
- * often on the NDBC network; sky and visibility come from the nearest station
- * publishing them, which in this county is always an airport. Requiring one
- * station for all four is what bound La Jolla Shores to Miramar, ten kilometres
- * inland, where the air read 81 °F against the pier's 72 °F. See
- * docs/adr/0010-two-provenances-in-the-air-panel.md.
+ * ONE PROVENANCE NOW, AND THAT IS THE POINT OF ADR-0020 RATHER THAN A
+ * SIMPLIFICATION. This read had two halves: temperature and wind from the
+ * nearest station standing in the marine layer at the shoreline, often on the
+ * NDBC network, and sky and visibility from the nearest station publishing
+ * them, which in this county is always an airport. The sky half is gone. Its
+ * figures were measured at a median of 7.9 km and beyond 10 km for 20 of the 45
+ * beaches, and `docs/reference/sensor-representativeness.md` §7 holds that
+ * ceiling and visibility do not transfer off an aerodrome at any distance.
+ * Cloud now reaches the reader as a forecast for the beach's own grid cell, in
+ * the week grid, where it is labelled a forecast.
  *
- * The two halves fail independently on purpose. Withholding a measured shore
- * temperature because an airport ten kilometres away missed a minute would trade
- * the good reading for the irrelevant one. They are fetched concurrently for the
- * same reason they are separate: neither waits on the other.
+ * WHAT ADR-0010 ARGUED IS NOT UNDONE BY THIS. Its point was that requiring one
+ * station for all four values let the scarcest of them decide where the
+ * temperature was measured -- which bound La Jolla Shores to Miramar, ten
+ * kilometres inland, where the air read 81 °F against the pier's 72 °F. The
+ * remedy was to stop the sky binding from dragging the air one, and dropping
+ * the sky binding entirely keeps that property rather than reversing it. The
+ * station this reads is still the shore station ADR-0010 introduced.
  *
  * Throws only when the slug is not in the inventory, which is a coding error
  * rather than a quiet feed.
@@ -731,12 +716,7 @@ export async function readLatestAir(
   }
 
   const airStation = airStationFor(beach);
-  const skyStation = skyStationFor(beach);
-
-  const [air, sky] = await Promise.all([
-    readAirHalf(beach, airStation, nowMs),
-    readSkyHalf(beach, skyStation, nowMs),
-  ]);
+  const air = await readAirHalf(beach, airStation, nowMs);
 
   return {
     beachName: beach.name,
@@ -747,15 +727,7 @@ export async function readLatestAir(
             name: airStation.display_name,
             distanceM: beach.air_station_distance_m,
           },
-    skyStation:
-      skyStation === null
-        ? null
-        : {
-            name: skyStation.display_name,
-            distanceM: beach.sky_station_distance_m,
-          },
     air,
-    sky,
   };
 }
 
@@ -809,35 +781,6 @@ async function readAirHalf(
     windMph: observation.windMph,
     gustMph: observation.gustMph,
     windDirDegT: observation.windDirDegT,
-  };
-}
-
-/** Sky and visibility, always from an NWS airport: no other station has them. */
-async function readSkyHalf(
-  beach: Beach,
-  station: (ObservationStation & { id: string }) | null,
-  nowMs: number,
-): Promise<SkyState> {
-  if (station === null) {
-    return {
-      kind: "no-station",
-      reason:
-        beach.sky_station_null_reason ??
-        "the join bound no observation station to this beach, and recorded no reason",
-    };
-  }
-
-  const result = await fetchLatestObservation(station.id, nowMs);
-  if (result.kind === "unavailable") {
-    return { kind: "unavailable", detail: result.reason, drift: result.drift };
-  }
-
-  const { observation } = result;
-  return {
-    kind: "reading",
-    visibilityMi: observation.visibilityMi,
-    visibilityAtCeiling: observation.visibilityAtCeiling,
-    sky: observation.sky,
   };
 }
 

@@ -259,7 +259,7 @@ describe("fetchLatestObservation", () => {
 
     expect(result.kind).toBe("ok");
     if (result.kind !== "ok") return;
-    expect(result.observation.visibilityMi).toBeCloseTo(10.0, 2);
+    expect(result.observation.airTempF).toBeCloseTo(69.98, 2);
     expect(result.ageMinutes).toBe(0);
   });
 
