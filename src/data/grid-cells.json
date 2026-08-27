@@ -1,0 +1,593 @@
+{
+  "version": "0.1.0",
+  "generated": "2026-08-26",
+  "_provenance": "Measured by scripts/probe-grid-cells.mjs against https://api.weather.gov; re-runnable and diffable with --check. Each beach segment end is resolved by /points, which is the National Weather Service's own mapping from a coordinate to a forecast cell and cannot be recomputed offline; each distinct cell is then read once from /gridpoints for its mean elevation and its published series. See https://www.weather.gov/documentation/services-web-api.",
+  "_what_was_measured": "21 distinct cells serve this inventory, of which 21 publish a sky cover series. 0 publish a visibility series -- a key present with an empty values array is not a published variable, and every cell declares visibility and ceilingHeight whether or not it fills them. That is why delivers counts entries.",
+  "_schema": {
+    "cells.<id>.office: ": "The forecast office, from /points gridId.",
+    "cells.<id>.x": "Grid column, from /points gridX.",
+    "cells.<id>.y": "Grid row, from /points gridY.",
+    "cells.<id>.elevation_m": "The cell's own mean elevation in metres, as /gridpoints publishes it. This is the cell's terrain rather than a statement about the forecast, and the join uses it to choose between a beach's two ends. See docs/adr/0020-sky-leaves-the-card-for-the-week.md.",
+    "cells.<id>.sky_cover_entries": "How many skyCover values the cell published when measured. Zero means the cell answers and does not forecast sky.",
+    "cells.<id>.visibility_entries": "How many visibility values the cell published. Measured zero everywhere; recorded rather than assumed, so a change upstream shows up as a diff.",
+    "cells.<id>.ceiling_entries": "The same count for ceilingHeight.",
+    "cells.<id>.delivers": "Whether the cell publishes sky cover. Derived from sky_cover_entries, never from the presence of the key.",
+    "resolutions.<slug>.<end>.cell": "The cell that segment end falls in, or null when the grid does not cover it.",
+    "resolutions.<slug>.<end>.reason": "Present only when cell is null. What /points said."
+  },
+  "cells": {
+    "SGX/53,19": {
+      "office": "SGX",
+      "x": 53,
+      "y": 19,
+      "elevation_m": 0,
+      "sky_cover_entries": 37,
+      "visibility_entries": 0,
+      "ceiling_entries": 0,
+      "delivers": true
+    },
+    "SGX/53,20": {
+      "office": "SGX",
+      "x": 53,
+      "y": 20,
+      "elevation_m": 0,
+      "sky_cover_entries": 37,
+      "visibility_entries": 0,
+      "ceiling_entries": 0,
+      "delivers": true
+    },
+    "SGX/54,14": {
+      "office": "SGX",
+      "x": 54,
+      "y": 14,
+      "elevation_m": 0,
+      "sky_cover_entries": 36,
+      "visibility_entries": 0,
+      "ceiling_entries": 0,
+      "delivers": true
+    },
+    "SGX/54,16": {
+      "office": "SGX",
+      "x": 54,
+      "y": 16,
+      "elevation_m": 3.048,
+      "sky_cover_entries": 35,
+      "visibility_entries": 0,
+      "ceiling_entries": 0,
+      "delivers": true
+    },
+    "SGX/54,17": {
+      "office": "SGX",
+      "x": 54,
+      "y": 17,
+      "elevation_m": 0.9144,
+      "sky_cover_entries": 35,
+      "visibility_entries": 0,
+      "ceiling_entries": 0,
+      "delivers": true
+    },
+    "SGX/54,18": {
+      "office": "SGX",
+      "x": 54,
+      "y": 18,
+      "elevation_m": 25.908,
+      "sky_cover_entries": 36,
+      "visibility_entries": 0,
+      "ceiling_entries": 0,
+      "delivers": true
+    },
+    "SGX/54,20": {
+      "office": "SGX",
+      "x": 54,
+      "y": 20,
+      "elevation_m": 106.0704,
+      "sky_cover_entries": 36,
+      "visibility_entries": 0,
+      "ceiling_entries": 0,
+      "delivers": true
+    },
+    "SGX/54,21": {
+      "office": "SGX",
+      "x": 54,
+      "y": 21,
+      "elevation_m": 0,
+      "sky_cover_entries": 37,
+      "visibility_entries": 0,
+      "ceiling_entries": 0,
+      "delivers": true
+    },
+    "SGX/55,14": {
+      "office": "SGX",
+      "x": 55,
+      "y": 14,
+      "elevation_m": 0.9144,
+      "sky_cover_entries": 36,
+      "visibility_entries": 0,
+      "ceiling_entries": 0,
+      "delivers": true
+    },
+    "SGX/55,15": {
+      "office": "SGX",
+      "x": 55,
+      "y": 15,
+      "elevation_m": 2.1336,
+      "sky_cover_entries": 37,
+      "visibility_entries": 0,
+      "ceiling_entries": 0,
+      "delivers": true
+    },
+    "SGX/55,16": {
+      "office": "SGX",
+      "x": 55,
+      "y": 16,
+      "elevation_m": 7.9248,
+      "sky_cover_entries": 34,
+      "visibility_entries": 0,
+      "ceiling_entries": 0,
+      "delivers": true
+    },
+    "SGX/55,17": {
+      "office": "SGX",
+      "x": 55,
+      "y": 17,
+      "elevation_m": 3.9624,
+      "sky_cover_entries": 37,
+      "visibility_entries": 0,
+      "ceiling_entries": 0,
+      "delivers": true
+    },
+    "SGX/55,18": {
+      "office": "SGX",
+      "x": 55,
+      "y": 18,
+      "elevation_m": 35.9664,
+      "sky_cover_entries": 35,
+      "visibility_entries": 0,
+      "ceiling_entries": 0,
+      "delivers": true
+    },
+    "SGX/55,22": {
+      "office": "SGX",
+      "x": 55,
+      "y": 22,
+      "elevation_m": 117.0432,
+      "sky_cover_entries": 36,
+      "visibility_entries": 0,
+      "ceiling_entries": 0,
+      "delivers": true
+    },
+    "SGX/55,25": {
+      "office": "SGX",
+      "x": 55,
+      "y": 25,
+      "elevation_m": 102.108,
+      "sky_cover_entries": 37,
+      "visibility_entries": 0,
+      "ceiling_entries": 0,
+      "delivers": true
+    },
+    "SGX/55,26": {
+      "office": "SGX",
+      "x": 55,
+      "y": 26,
+      "elevation_m": 21.9456,
+      "sky_cover_entries": 37,
+      "visibility_entries": 0,
+      "ceiling_entries": 0,
+      "delivers": true
+    },
+    "SGX/56,13": {
+      "office": "SGX",
+      "x": 56,
+      "y": 13,
+      "elevation_m": 0.9144,
+      "sky_cover_entries": 36,
+      "visibility_entries": 0,
+      "ceiling_entries": 0,
+      "delivers": true
+    },
+    "SGX/57,10": {
+      "office": "SGX",
+      "x": 57,
+      "y": 10,
+      "elevation_m": 2.1336,
+      "sky_cover_entries": 36,
+      "visibility_entries": 0,
+      "ceiling_entries": 0,
+      "delivers": true
+    },
+    "SGX/57,7": {
+      "office": "SGX",
+      "x": 57,
+      "y": 7,
+      "elevation_m": 4.8768,
+      "sky_cover_entries": 37,
+      "visibility_entries": 0,
+      "ceiling_entries": 0,
+      "delivers": true
+    },
+    "SGX/57,8": {
+      "office": "SGX",
+      "x": 57,
+      "y": 8,
+      "elevation_m": 0.9144,
+      "sky_cover_entries": 37,
+      "visibility_entries": 0,
+      "ceiling_entries": 0,
+      "delivers": true
+    },
+    "SGX/57,9": {
+      "office": "SGX",
+      "x": 57,
+      "y": 9,
+      "elevation_m": 10.0584,
+      "sky_cover_entries": 37,
+      "visibility_entries": 0,
+      "ceiling_entries": 0,
+      "delivers": true
+    }
+  },
+  "resolutions": {
+    "bird-rock-nr": {
+      "upper": {
+        "cell": "SGX/53,19"
+      },
+      "lower": {
+        "cell": "SGX/53,19"
+      }
+    },
+    "border-field-state-park": {
+      "upper": {
+        "cell": "SGX/57,7"
+      },
+      "lower": {
+        "cell": null,
+        "reason": "the National Weather Service grid does not cover 32.534367,-117.124197"
+      }
+    },
+    "childrens-pool": {
+      "upper": {
+        "cell": "SGX/53,20"
+      },
+      "lower": {
+        "cell": "SGX/53,20"
+      }
+    },
+    "coronado-cays-nr": {
+      "upper": {
+        "cell": "SGX/57,10"
+      },
+      "lower": {
+        "cell": "SGX/57,10"
+      }
+    },
+    "del-mar-city-beach": {
+      "upper": {
+        "cell": "SGX/55,26"
+      },
+      "lower": {
+        "cell": "SGX/55,25"
+      }
+    },
+    "fiesta-island": {
+      "upper": {
+        "cell": "SGX/55,17"
+      },
+      "lower": {
+        "cell": "SGX/55,17"
+      }
+    },
+    "imperial-beach-municipal-beach-other": {
+      "upper": {
+        "cell": "SGX/57,8"
+      },
+      "lower": {
+        "cell": "SGX/57,7"
+      }
+    },
+    "la-jolla-community-beach": {
+      "upper": {
+        "cell": "SGX/54,21"
+      },
+      "lower": {
+        "cell": "SGX/53,19"
+      }
+    },
+    "la-jolla-cove": {
+      "upper": {
+        "cell": "SGX/54,20"
+      },
+      "lower": {
+        "cell": "SGX/54,20"
+      }
+    },
+    "la-jolla-shores-beach": {
+      "upper": {
+        "cell": "SGX/55,22"
+      },
+      "lower": {
+        "cell": "SGX/54,21"
+      }
+    },
+    "marine-street-beach": {
+      "upper": {
+        "cell": "SGX/53,20"
+      },
+      "lower": {
+        "cell": "SGX/53,20"
+      }
+    },
+    "mission-bay": {
+      "upper": {
+        "cell": "SGX/54,16"
+      },
+      "lower": {
+        "cell": "SGX/54,16"
+      }
+    },
+    "mission-bay-bahia-point": {
+      "upper": {
+        "cell": "SGX/54,17"
+      },
+      "lower": {
+        "cell": "SGX/54,17"
+      }
+    },
+    "mission-bay-campland-on-the-bay": {
+      "upper": {
+        "cell": "SGX/55,18"
+      },
+      "lower": {
+        "cell": "SGX/55,18"
+      }
+    },
+    "mission-bay-crown-point-shores": {
+      "upper": {
+        "cell": "SGX/55,18"
+      },
+      "lower": {
+        "cell": "SGX/54,17"
+      }
+    },
+    "mission-bay-de-anza-cove": {
+      "upper": {
+        "cell": "SGX/55,18"
+      },
+      "lower": {
+        "cell": "SGX/55,18"
+      }
+    },
+    "mission-bay-fanuel-park": {
+      "upper": {
+        "cell": "SGX/54,18"
+      },
+      "lower": {
+        "cell": "SGX/54,17"
+      }
+    },
+    "mission-bay-leisure-lagoon": {
+      "upper": {
+        "cell": "SGX/55,17"
+      },
+      "lower": {
+        "cell": "SGX/55,17"
+      }
+    },
+    "mission-bay-mariners-basin": {
+      "upper": {
+        "cell": "SGX/54,16"
+      },
+      "lower": {
+        "cell": "SGX/54,17"
+      }
+    },
+    "mission-bay-north-pacific-passage": {
+      "upper": {
+        "cell": "SGX/55,17"
+      },
+      "lower": {
+        "cell": "SGX/55,17"
+      }
+    },
+    "mission-bay-quivera-basin": {
+      "upper": {
+        "cell": "SGX/54,16"
+      },
+      "lower": {
+        "cell": "SGX/54,16"
+      }
+    },
+    "mission-bay-riviera-shores": {
+      "upper": {
+        "cell": "SGX/54,17"
+      },
+      "lower": {
+        "cell": "SGX/54,17"
+      }
+    },
+    "mission-bay-sail-bay": {
+      "upper": {
+        "cell": "SGX/54,17"
+      },
+      "lower": {
+        "cell": "SGX/54,17"
+      }
+    },
+    "mission-bay-san-juan-cove": {
+      "upper": {
+        "cell": "SGX/54,17"
+      },
+      "lower": {
+        "cell": "SGX/54,17"
+      }
+    },
+    "mission-bay-santa-barbara-cove": {
+      "upper": {
+        "cell": "SGX/54,17"
+      },
+      "lower": {
+        "cell": "SGX/54,17"
+      }
+    },
+    "mission-bay-sea-world": {
+      "upper": {
+        "cell": "SGX/54,17"
+      },
+      "lower": {
+        "cell": "SGX/55,16"
+      }
+    },
+    "mission-bay-vacation-isle": {
+      "upper": {
+        "cell": "SGX/54,17"
+      },
+      "lower": {
+        "cell": "SGX/54,17"
+      }
+    },
+    "mission-bay-ventura-cove": {
+      "upper": {
+        "cell": "SGX/54,17"
+      },
+      "lower": {
+        "cell": "SGX/54,17"
+      }
+    },
+    "mission-bay-visitor-s-center": {
+      "upper": {
+        "cell": "SGX/55,18"
+      },
+      "lower": {
+        "cell": "SGX/55,17"
+      }
+    },
+    "mission-beach": {
+      "upper": {
+        "cell": "SGX/54,18"
+      },
+      "lower": {
+        "cell": "SGX/54,16"
+      }
+    },
+    "north-imperial-beach": {
+      "upper": {
+        "cell": "SGX/57,9"
+      },
+      "lower": {
+        "cell": "SGX/57,8"
+      }
+    },
+    "pacific-beach": {
+      "upper": {
+        "cell": "SGX/54,18"
+      },
+      "lower": {
+        "cell": "SGX/54,18"
+      }
+    },
+    "san-diego-bay": {
+      "upper": {
+        "cell": "SGX/54,14"
+      },
+      "lower": {
+        "cell": "SGX/56,13"
+      }
+    },
+    "shell-beach": {
+      "upper": {
+        "cell": "SGX/53,20"
+      },
+      "lower": {
+        "cell": "SGX/53,20"
+      }
+    },
+    "shoreline-park": {
+      "upper": {
+        "cell": "SGX/54,14"
+      },
+      "lower": {
+        "cell": "SGX/55,14"
+      }
+    },
+    "silver-strand-state-beach": {
+      "upper": {
+        "cell": "SGX/57,10"
+      },
+      "lower": {
+        "cell": "SGX/57,9"
+      }
+    },
+    "south-casa-beach-s-d": {
+      "upper": {
+        "cell": "SGX/53,20"
+      },
+      "lower": {
+        "cell": "SGX/53,20"
+      }
+    },
+    "spanish-landing-park": {
+      "upper": {
+        "cell": "SGX/55,15"
+      },
+      "lower": {
+        "cell": "SGX/55,15"
+      }
+    },
+    "tecolote-shores": {
+      "upper": {
+        "cell": "SGX/55,17"
+      },
+      "lower": {
+        "cell": "SGX/55,17"
+      }
+    },
+    "tijuana-slough-national-wildlife-refuge": {
+      "upper": {
+        "cell": "SGX/57,7"
+      },
+      "lower": {
+        "cell": "SGX/57,7"
+      }
+    },
+    "torrey-pines-city-beach": {
+      "upper": {
+        "cell": "SGX/55,22"
+      },
+      "lower": {
+        "cell": "SGX/55,22"
+      }
+    },
+    "torrey-pines-state-beach": {
+      "upper": {
+        "cell": "SGX/55,25"
+      },
+      "lower": {
+        "cell": "SGX/55,22"
+      }
+    },
+    "tourmaline-surfing-park": {
+      "upper": {
+        "cell": "SGX/53,19"
+      },
+      "lower": {
+        "cell": "SGX/54,18"
+      }
+    },
+    "whispering-sands-nicholson-pt": {
+      "upper": {
+        "cell": "SGX/53,20"
+      },
+      "lower": {
+        "cell": "SGX/53,20"
+      }
+    },
+    "windansea-beach": {
+      "upper": {
+        "cell": "SGX/53,20"
+      },
+      "lower": {
+        "cell": "SGX/53,19"
+      }
+    }
+  }
+}

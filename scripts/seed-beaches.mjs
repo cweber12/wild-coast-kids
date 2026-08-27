@@ -41,6 +41,7 @@ import { pathToFileURL } from "node:url";
 import { distanceMetres } from "./geo.mjs";
 import { generatedDate } from "./generated-date.mjs";
 import { bindAirStation } from "./air-join.mjs";
+import { bindGridCell } from "./grid-cell-join.mjs";
 import { bindMopLine } from "./mop-join.mjs";
 import { bindTideStation } from "./tide-join.mjs";
 import { bindWaveBuoy } from "./wave-join.mjs";
@@ -55,6 +56,7 @@ const MIRROR_RESOURCE = "fcbc9250-06e3-437d-b0c6-3cc5ddde93fc";
 const BEACHES_PATH = new URL("../src/data/beaches.json", import.meta.url);
 const BUOYS_PATH = new URL("../src/data/wave-buoys.json", import.meta.url);
 const MOP_LINES_PATH = new URL("../src/data/mop-lines.json", import.meta.url);
+const GRID_CELLS_PATH = new URL("../src/data/grid-cells.json", import.meta.url);
 const STATIONS_PATH = new URL(
   "../src/data/tide-stations.json",
   import.meta.url,
@@ -214,7 +216,14 @@ export function regionOf(waterClass, meanLat) {
   return "South County coast";
 }
 
-export function build(rows, stations, buoys, observationStations, mopLines) {
+export function build(
+  rows,
+  stations,
+  buoys,
+  observationStations,
+  mopLines,
+  gridCells,
+) {
   const seen = new Map();
 
   const joined = rows.map((row) => {
@@ -271,6 +280,14 @@ export function build(rows, stations, buoys, observationStations, mopLines) {
     const sky = fault
       ? { stationId: null, reason: fault }
       : bindSkyStation({ segment }, observationStations);
+    // Neither a distance nor a water class decides this one. A forecast cell is
+    // an area, so there is nothing to be nearer by; the end is chosen by which
+    // cell averages nearer sea level, which is where a beach is. It reads a
+    // resolution rather than computing one because /points owns the mapping
+    // from a coordinate to a cell -- see grid-cell-join.mjs and ADR-0020.
+    const grid = fault
+      ? { cellId: null, reason: fault }
+      : bindGridCell({ slug }, gridCells);
     const air = fault
       ? { stationId: null, reason: fault }
       : bindAirStation(
@@ -313,6 +330,10 @@ export function build(rows, stations, buoys, observationStations, mopLines) {
       sky_station_distance_m: sky.stationId ? Math.round(sky.distanceM) : null,
       sky_station_from_end: sky.stationId ? sky.fromEnd : null,
       sky_station_null_reason: sky.stationId ? undefined : sky.reason,
+      grid_cell: grid.cellId,
+      grid_cell_from_end: grid.cellId ? grid.fromEnd : null,
+      grid_cell_elevation_m: grid.cellId ? grid.elevationM : null,
+      grid_cell_null_reason: grid.cellId ? undefined : grid.reason,
       air_station: air.stationId,
       air_station_distance_m: air.stationId ? Math.round(air.distanceM) : null,
       air_station_from_end: air.stationId ? air.fromEnd : null,
@@ -691,6 +712,25 @@ export function document(built, now = new Date()) {
         "and buoy distances by nature: the ten stations that publish sky are all airports.",
       sky_station_from_end:
         "Which end of the segment supplied the distance, upper or lower.",
+      grid_cell:
+        "Joined, never typed: the National Weather Service forecast cell this beach falls in, " +
+        "as office/x,y. NOT a nearest-anything -- a cell is an area about 2.5 km square and " +
+        "every coordinate inside it is equally inside it, so there is no distance to be " +
+        "nearer by and this field has none beside it. The mapping from a coordinate to a cell " +
+        "belongs to the National Weather Service and cannot be recomputed offline, so it is " +
+        "measured into grid-cells.json and read from there. null means no cell answers, and " +
+        "grid_cell_null_reason says why -- which for an excluded beach is simply that the " +
+        "table records coordinates only for the beaches this site serves.",
+      grid_cell_from_end:
+        "Which end of the segment fell in the bound cell. Load-bearing rather than " +
+        "decoration: a beach is a segment and 17 of 45 straddle a cell boundary, so an end " +
+        "had to be chosen and this records which. The criterion is elevation, not distance.",
+      grid_cell_elevation_m:
+        "The bound cell's own mean elevation in metres. This is the cell's TERRAIN and not a " +
+        "statement about the forecast: it is what chose between the beach's two ends, on the " +
+        "grounds that a beach is at sea level and the lower cell is the one describing this " +
+        "shore. Three beaches have no low-lying end and read a cell averaging over 100 m; the " +
+        "page says so where it shows one. See docs/adr/0020-sky-leaves-the-card-for-the-week.md.",
       air_station:
         "Joined, never typed: the nearest station that answers, publishes air temperature AND " +
         "wind, and suits the beach's water class -- an open-coast beach binds a shore station, " +
@@ -792,6 +832,7 @@ async function main() {
   const stations = JSON.parse(readFileSync(STATIONS_PATH, "utf8")).stations;
   const buoys = JSON.parse(readFileSync(BUOYS_PATH, "utf8")).buoys;
   const mopLines = JSON.parse(readFileSync(MOP_LINES_PATH, "utf8")).lines;
+  const gridCells = JSON.parse(readFileSync(GRID_CELLS_PATH, "utf8"));
   const observationStations = JSON.parse(
     readFileSync(OBSERVATION_STATIONS_PATH, "utf8"),
   ).stations;
@@ -804,7 +845,7 @@ async function main() {
 
   const rows = await fetchRows();
   const built = document(
-    build(rows, stations, buoys, observationStations, mopLines),
+    build(rows, stations, buoys, observationStations, mopLines, gridCells),
   );
 
   // `generated` is the one field that moves on every run by design, so comparing
