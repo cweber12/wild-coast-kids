@@ -473,7 +473,11 @@ export function dropReplacedBuoy(
  * @param {number} [toleranceM]
  * @returns {string | null}
  */
-export function serviceFault(beach, toleranceM = SERVICE_TOLERANCE_M) {
+export function serviceFault(
+  beach,
+  toleranceM = SERVICE_TOLERANCE_M,
+  modelledM = MODELLED_SOURCE_TOLERANCE_M,
+) {
   if (beach.tide_station === null) {
     return `no tide station was bound to it at all: ${beach.tide_station_null_reason}`;
   }
@@ -485,7 +489,9 @@ export function serviceFault(beach, toleranceM = SERVICE_TOLERANCE_M) {
         `${kilometres(beach.tide_station_distance_m)} away`,
     );
   }
-  if (beach.wave_buoy !== null && beach.wave_buoy_distance_m > toleranceM) {
+  const buoyTooFar =
+    beach.wave_buoy !== null && beach.wave_buoy_distance_m > toleranceM;
+  if (buoyTooFar) {
     tooFar.push(
       `its wave buoy ${beach.wave_buoy} is ` +
         `${kilometres(beach.wave_buoy_distance_m)} away`,
@@ -493,9 +499,25 @@ export function serviceFault(beach, toleranceM = SERVICE_TOLERANCE_M) {
   }
   if (tooFar.length === 0) return null;
 
+  // ADR-0019 made this sentence incomplete on its own. A reader who finds
+  // Border Field State Park listed and Tijana River not, both refused for a
+  // buoy tens of kilometres away, has been told the same reason for two
+  // different outcomes. So where the buoy is what refused the beach and a line
+  // was near enough to have stood in but is not, say that too -- derived from
+  // the binding rather than written against a slug, so it explains any beach in
+  // that state and stops explaining one that leaves it.
+  const modelCouldNotStandIn =
+    buoyTooFar &&
+    beach.mop_line !== null &&
+    beach.mop_line_distance_m > modelledM
+      ? `. A model can answer for the waves where no buoy is in range, but not here: the ` +
+        `nearest MOP line is ${kilometres(beach.mop_line_distance_m)} away, and every beach ` +
+        `on this coast binds one inside ${kilometres(modelledM)}`
+      : "";
+
   return (
     `${tooFar.join(" and ")}, and this site does not publish a reading taken more than ` +
-    `${kilometres(toleranceM)} from the beach it is shown for`
+    `${kilometres(toleranceM)} from the beach it is shown for${modelCouldNotStandIn}`
   );
 }
 

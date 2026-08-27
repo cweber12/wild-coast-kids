@@ -555,6 +555,57 @@ describe("serviceFault", () => {
     expect(why).toContain("14.8 km");
   });
 
+  it("says when a model could have stood in for the buoy and could not", () => {
+    // The asymmetry ADR-0019 created. Border Field is listed and Tijana River
+    // is not, and before this clause both carried the same reason -- a buoy
+    // tens of kilometres away -- which told a reader the same thing about two
+    // opposite outcomes.
+    const why = serviceFault(
+      bound({
+        wave_buoy: "46232",
+        wave_buoy_distance_m: 34_159,
+        mop_line: "D0008",
+        mop_line_distance_m: 6_395,
+      }),
+    );
+
+    expect(why).toContain("34.2 km");
+    expect(why).toContain("6.4 km");
+    expect(why).toContain("1.0 km");
+  });
+
+  it("stays quiet about the model where a line was near enough", () => {
+    // Ocean Beach: the buoy is too far AND a line is 776 m away, so MOP is not
+    // what kept it out -- its tide station is. A clause here would name an
+    // innocent binding.
+    const why = serviceFault(
+      bound({
+        tide_station_distance_m: 12_300,
+        wave_buoy: "46254",
+        wave_buoy_distance_m: 12_500,
+        mop_line: "D0333",
+        mop_line_distance_m: 776,
+      }),
+    );
+
+    expect(why).not.toContain("MOP line");
+  });
+
+  it("stays quiet about the model where the buoy was not the problem", () => {
+    // San Onofre: out on tide alone, with a line 689 m away. Mentioning MOP
+    // would imply the waves were ever in question.
+    const why = serviceFault(
+      bound({
+        tide_station_distance_m: 56_557,
+        wave_buoy_distance_m: 1_000,
+        mop_line: "D1210",
+        mop_line_distance_m: 689,
+      }),
+    );
+
+    expect(why).not.toContain("MOP line");
+  });
+
   it("repeats the join's own reason when nothing was bound", () => {
     const why = serviceFault(
       bound({

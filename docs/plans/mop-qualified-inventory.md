@@ -240,3 +240,32 @@ which is strictly better than handling it by name.
 - Whether the now-card should ever lead with a modelled figure. ADR-0016 says it
   must not; slice 4 works within that and does not reopen it.
 - Runup and total water level, still out under ADR-0009 and ADR-0016.
+
+## Addendum — 2026-08-26, during slice 5
+
+**Slice 5 turned out to be neither of the two options it was written as.** It
+was posed as a choice between serving Tijana River with waves null and leaving
+it excluded. Serving it was already dead by the time the slice was reached:
+ADR-0019 admits a beach only where a modelled source _replaces_ the measurement,
+and Tijana River has no qualifying line, so serving it would mean a beach with
+no wave source at all — the per-variable suppression with a hole that ADR-0011
+refused and ADR-0019 explicitly declined to extend. Leaving it excluded is the
+decision.
+
+**But leaving it excluded is not the same as leaving it alone, and slice 3 is
+why.** Border Field State Park and Tijana River sit at the same river mouth.
+Before slice 3 both were absent for the same published reason — a wave buoy tens
+of kilometres away. After it, one is listed and the other is not, with that same
+sentence still explaining the second. A reader who knows the coastline would
+read it as arbitrary, and they would be right to: the sentence no longer
+contains the thing that separates them.
+
+So slice 5 is a clause in `serviceFault`, derived rather than written against a
+slug: where the buoy is what refused the beach and a line was near enough to
+have stood in but is not, the reason says so and gives both distances. Measured,
+it changes two entries — Tijana River and Tide Beach Park, which are the two
+beaches where a model could have helped and could not. Every other exclusion
+reason is untouched.
+
+This is a consequence of the earlier slice rather than a new idea, which is why
+it is recorded here rather than argued in the ADR.

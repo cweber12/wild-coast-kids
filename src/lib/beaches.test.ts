@@ -44,9 +44,18 @@ describe("the inventory", () => {
     // is 6,395 m, against 117-930 m for every beach actually on this coast. The
     // spelling is upstream's own and is not a typo to fix here.
     expect(beachBySlug("tijana-river")).toBeNull();
-    expect(
-      inventoryReach().excluded.find((b) => b.slug === "tijana-river")?.why,
-    ).toContain("wave buoy 46232");
+
+    // And its reason has to survive standing next to Border Field State Park,
+    // its neighbour at the same river mouth, which IS listed. Both were refused
+    // for a buoy tens of kilometres away; a reader owed the difference gets it
+    // from the second sentence rather than from knowing the coastline.
+    const why = inventoryReach().excluded.find(
+      (b) => b.slug === "tijana-river",
+    )?.why;
+
+    expect(why).toContain("wave buoy 46232");
+    expect(why).toContain("6.4 km");
+    expect(beachBySlug("border-field-state-park")).not.toBeNull();
   });
 
   test("a beach the county lists but no station reaches is not in it", () => {

@@ -2004,7 +2004,7 @@
     {
       "slug": "tide-beach-park",
       "name": "Tide Beach Park",
-      "why": "its tide station 9410120 is 12.5 km away and its wave buoy 46254 is 21.8 km away, and this site does not publish a reading taken more than 10.0 km from the beach it is shown for"
+      "why": "its tide station 9410120 is 12.5 km away and its wave buoy 46254 is 21.8 km away, and this site does not publish a reading taken more than 10.0 km from the beach it is shown for. A model can answer for the waves where no buoy is in range, but not here: the nearest MOP line is 2.6 km away, and every beach on this coast binds one inside 1.0 km"
     },
     {
       "slug": "coronado-north-beach",
@@ -2024,7 +2024,7 @@
     {
       "slug": "tijana-river",
       "name": "Tijana River",
-      "why": "its wave buoy 46232 is 34.2 km away, and this site does not publish a reading taken more than 10.0 km from the beach it is shown for"
+      "why": "its wave buoy 46232 is 34.2 km away, and this site does not publish a reading taken more than 10.0 km from the beach it is shown for. A model can answer for the waves where no buoy is in range, but not here: the nearest MOP line is 6.4 km away, and every beach on this coast binds one inside 1.0 km"
     },
     {
       "slug": "imperial-beach-pier-area",
