@@ -14,10 +14,48 @@ import {
 
 describe("the inventory", () => {
   test("holds only the beaches the station networks reach", () => {
-    // The county lists 73. The other 32 are in beaches.json's `_excluded`
+    // The county lists 73. The other 28 are in beaches.json's `_excluded`
     // block, each with the binding distance that removed it; see
     // docs/adr/0011-inventory-bounded-by-station-networks.md.
-    expect(allBeaches()).toHaveLength(41);
+    expect(allBeaches()).toHaveLength(45);
+  });
+
+  test("holds the four beaches no buoy reaches, which a model answers for", () => {
+    // 41 before ADR-0019. These four left when 46235 died in May 2026 and the
+    // wave join reached 28 km past it; each binds a MOP line under 650 m, and
+    // is served on that with no measured wave height at all. Named rather than
+    // counted, because the count alone would go green if four different
+    // beaches arrived.
+    for (const slug of [
+      "silver-strand-state-beach",
+      "north-imperial-beach",
+      "imperial-beach-municipal-beach-other",
+      "border-field-state-park",
+    ]) {
+      const beach = beachBySlug(slug);
+      expect(beach).not.toBeNull();
+      expect(beach!.wave_buoy).toBeNull();
+      expect(beach!.mop_line).not.toBeNull();
+    }
+  });
+
+  test("does not hold the river reach published six kilometres inland", () => {
+    // Tijana River fails on the same rule rather than by name: its nearest line
+    // is 6,395 m, against 117-930 m for every beach actually on this coast. The
+    // spelling is upstream's own and is not a typo to fix here.
+    expect(beachBySlug("tijana-river")).toBeNull();
+
+    // And its reason has to survive standing next to Border Field State Park,
+    // its neighbour at the same river mouth, which IS listed. Both were refused
+    // for a buoy tens of kilometres away; a reader owed the difference gets it
+    // from the second sentence rather than from knowing the coastline.
+    const why = inventoryReach().excluded.find(
+      (b) => b.slug === "tijana-river",
+    )?.why;
+
+    expect(why).toContain("wave buoy 46232");
+    expect(why).toContain("6.4 km");
+    expect(beachBySlug("border-field-state-park")).not.toBeNull();
   });
 
   test("a beach the county lists but no station reaches is not in it", () => {
@@ -239,13 +277,47 @@ describe("caveats", () => {
 });
 
 describe("the MOP line binding", () => {
-  test("every beach with a buoy also has a line, and the reverse", () => {
-    // Two separate joins over two tables, and they must agree about which
-    // water ocean swell reaches. If they ever disagree, one of the two wave
-    // numbers on the page is describing somewhere else.
+  test("every beach with a buoy also has a line, but not the reverse", () => {
+    // This used to be an equivalence: two joins over two tables, agreeing about
+    // which water ocean swell reaches. ADR-0019 broke the second direction on
+    // purpose -- four beaches carry a line and no buoy, because the buoy the
+    // join bound is further away than this site will publish. The first
+    // direction still holds and is the half that catches the two joins
+    // disagreeing about the water, which is what the equivalence was for: a
+    // buoy without a line would mean one of them let swell into a bay.
     for (const beach of allBeaches()) {
-      expect(beach.mop_line === null).toBe(beach.wave_buoy === null);
+      if (beach.wave_buoy !== null) expect(beach.mop_line).not.toBeNull();
     }
+  });
+
+  test("a beach a model answers for alone has a line inside the modelled bound", () => {
+    // The predicate ADR-0019 actually states, asserted over the file that
+    // ships. NOT "every bound line is within a kilometre" -- that is true today
+    // and the rule does not require it, so pinning it would fail a beach whose
+    // buoy is fine and whose line happens to sit further out.
+    const modelledOnly = allBeaches().filter(
+      (beach) => beach.wave_buoy === null && beach.mop_line !== null,
+    );
+    expect(modelledOnly).toHaveLength(4);
+
+    for (const beach of modelledOnly) {
+      expect(beach.mop_line_distance_m).toBeLessThanOrEqual(1_000);
+    }
+  });
+
+  test("a dropped buoy says both that it was refused and what replaced it", () => {
+    // Either half alone misleads. The distance without the replacement reads as
+    // a beach with no waves; the replacement without the distance hides that a
+    // measurement was refused. This is the reason the card and the caveats both
+    // relay, so it is the reason a reader ends up holding.
+    const beach = beachBySlug("border-field-state-park")!;
+
+    expect(beach.wave_buoy_null_reason).toContain("46232");
+    expect(beach.wave_buoy_null_reason).toContain("28.2 km");
+    expect(beach.wave_buoy_null_reason).toContain("D0001");
+    expect(beach.wave_buoy_null_reason).toContain(
+      "model rather than a measurement",
+    );
   });
 
   test("bound lines deliver, and the beach is open coast", () => {
@@ -274,8 +346,16 @@ describe("the MOP line binding", () => {
     // Not a claim that the forecast is a better reading of now -- it is model
     // output and the buoy is a measurement. It is why a forecast this close to
     // the shore is worth relaying at all.
-    for (const beach of allBeaches()) {
-      if (beach.mop_line === null) continue;
+    //
+    // Both bindings, not just the line: since ADR-0019 four beaches have a line
+    // and no buoy, and comparing against a null distance would compare against
+    // zero and pass by accident on a file where the line had moved anywhere.
+    const both = allBeaches().filter(
+      (beach) => beach.mop_line !== null && beach.wave_buoy !== null,
+    );
+    expect(both.length).toBeGreaterThan(0);
+
+    for (const beach of both) {
       expect(beach.mop_line_distance_m!).toBeLessThan(
         beach.wave_buoy_distance_m!,
       );

@@ -548,6 +548,29 @@ test("a bay beach is never asked about, because there is nothing to ask", async 
   expect(fetchLatestWave).not.toHaveBeenCalled();
   if (view.state.kind === "no-buoy") {
     expect(view.state.reason).toMatch(/does not reach into a bay/);
+    // Nothing answers for the waves here, so the card must not promise a
+    // modelled figure below a sentence saying none is coming.
+    expect(view.state.modelAnswersInstead).toBe(false);
+  }
+});
+
+test("a beach whose buoy was refused says a model answers instead", async () => {
+  // The other half of `no-buoy`, since ADR-0019. Read against the shipped
+  // inventory rather than a fixture: the guarantee this asserts is that the
+  // seed only ever drops a buoy where a line replaced it, and a fixture would
+  // assert that about itself.
+  const view = await readLatestWaves(
+    "border-field-state-park",
+    NOON_PACIFIC_20260817,
+  );
+
+  expect(view.state.kind).toBe("no-buoy");
+  expect(view.buoy).toBeNull();
+  // Still no request: the buoy is not read here, it is declined.
+  expect(fetchLatestWave).not.toHaveBeenCalled();
+  if (view.state.kind === "no-buoy") {
+    expect(view.state.modelAnswersInstead).toBe(true);
+    expect(view.state.reason).toMatch(/further than this site publishes/);
   }
 });
 

@@ -138,6 +138,7 @@ test("a bay beach is told this is expected, not a fault", () => {
         kind: "no-buoy",
         reason:
           "every wave buoy sits on the open coast, and ocean swell does not reach into a bay or lagoon, so no buoy describes the water here",
+        modelAnswersInstead: false,
       }}
     />,
   );
@@ -149,6 +150,93 @@ test("a bay beach is told this is expected, not a fault", () => {
   expect(screen.queryByText(/Try again shortly/)).toBeNull();
   expect(screen.queryByText(/Measured at NDBC buoy/)).toBeNull();
   expect(screen.getByText(/does not reach into a bay or lagoon/)).toBeDefined();
+});
+
+/**
+ * The disclosure ADR-0019 was accepted on, and the reason slice 4 of
+ * `docs/plans/mop-qualified-inventory.md` is not optional. Four beaches now
+ * carry a wave figure that was never measured anywhere, and the card is the
+ * only place a reader meets it before the number.
+ */
+const NO_BUOY_MODELLED = {
+  kind: "no-buoy",
+  reason:
+    "the nearest delivering buoy 46232 is 28.2 km away, further than this site publishes a reading from, so it is not read here; MOP line D0001 answers for the waves at 0.5 km, and it is a model rather than a measurement",
+  modelAnswersInstead: true,
+} as const;
+
+test("a beach no buoy reaches is told its wave heights are modelled", () => {
+  render(
+    <WavesToday
+      beachName="Border Field State Park"
+      buoy={null}
+      state={NO_BUOY_MODELLED}
+      peak={PEAK}
+    />,
+  );
+
+  expect(screen.getByText(/nothing here is measured/)).toBeDefined();
+  expect(screen.getByText(/come from a model of the swell/)).toBeDefined();
+  // The figures are still shown. Withholding them was never the alternative --
+  // the alternative was not listing the beach.
+  expect(screen.getByText("0.8 ft")).toBeDefined();
+});
+
+test("it does not tell an open-coast beach that swell does not reach it", () => {
+  // The sentence the bay branch shows was written for enclosed water. On these
+  // four it states the reason their beach is fine as the reason it is not, and
+  // it is the specific falsehood this slice exists to remove.
+  render(
+    <WavesToday
+      beachName="Border Field State Park"
+      buoy={null}
+      state={NO_BUOY_MODELLED}
+      peak={PEAK}
+    />,
+  );
+
+  expect(
+    screen.queryByText(/Every wave buoy sits out on the open coast/),
+  ).toBeNull();
+  expect(screen.queryByText(/what we expect rather than a fault/)).toBeNull();
+});
+
+test("it still says nothing was measured when the model cannot be reached", () => {
+  // CDIP having a bad day must not make the card fall back to the bay
+  // sentence, which is why `modelAnswersInstead` is a fact from the join
+  // rather than a reading of whether a forecast arrived.
+  render(
+    <WavesToday
+      beachName="Border Field State Park"
+      buoy={null}
+      state={NO_BUOY_MODELLED}
+      peak={null}
+    />,
+  );
+
+  expect(screen.getByText(/nothing here is measured/)).toBeDefined();
+  expect(screen.getByText(/could not be reached just now/)).toBeDefined();
+  expect(
+    screen.queryByText(/Every wave buoy sits out on the open coast/),
+  ).toBeNull();
+});
+
+test("the refused buoy and the line that replaced it both reach the reader", () => {
+  // Either half alone misleads, and this is the last place the pair can be
+  // dropped between `beaches.json` and a person.
+  render(
+    <WavesToday
+      beachName="Border Field State Park"
+      buoy={null}
+      state={NO_BUOY_MODELLED}
+      peak={PEAK}
+    />,
+  );
+
+  const why = screen.getByText(/nearest delivering buoy 46232/);
+  expect(why.textContent).toContain("28.2 km");
+  expect(why.textContent).toContain("D0001");
+  expect(why.textContent).toContain("model rather than a measurement");
 });
 
 test("an unavailable buoy is a sentence with the reason behind a disclosure", () => {
@@ -208,6 +296,7 @@ test("every disclosure this card can render composes the touch-target floor", ()
         state={{
           kind: "no-buoy",
           reason: "every wave buoy sits on the open coast",
+          modelAnswersInstead: false,
         }}
       />,
     ),

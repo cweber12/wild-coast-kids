@@ -145,9 +145,34 @@ export function WavesToday({
 
       {state.kind === "no-buoy" && (
         <>
+          {/*
+            Two beaches reach this branch for opposite reasons, and one sentence
+            cannot serve both. At a bay there is no wave figure and there never
+            will be. At the four beaches ADR-0019 admits, the coast is open, the
+            swell is real, and what is missing is the instrument -- so telling
+            that reader "every wave buoy sits out on the open coast" would state
+            the reason their beach is fine as the reason it is not.
+
+            The second sentence is the disclosure ADR-0019 was accepted on. It
+            leads rather than sitting in the attribution below, because the card
+            has no measured figure at all here and a reader who stops at the
+            plain-words line must still learn that nothing on it was measured.
+          */}
           <p className={`leading-relaxed mb-4 text-base ${CARD_PROSE}`}>
-            We cannot give a wave height here, and that is what we expect rather
-            than a fault. Every wave buoy sits out on the open coast.
+            {state.modelAnswersInstead ? (
+              <>
+                No wave buoy reaches this stretch of coast, so nothing here is
+                measured.{" "}
+                {peak !== null
+                  ? "The wave heights below come from a model of the swell, not from an instrument in the water."
+                  : "The model that answers here instead could not be reached just now."}
+              </>
+            ) : (
+              <>
+                We cannot give a wave height here, and that is what we expect
+                rather than a fault. Every wave buoy sits out on the open coast.
+              </>
+            )}
           </p>
           <details className={`mb-4 text-sm ${CARD_PROSE}`}>
             <summary className={DISCLOSURE_TARGET}>Why not</summary>
