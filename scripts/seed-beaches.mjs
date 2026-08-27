@@ -25,6 +25,15 @@
  * `servesBeach` below -- is judgement and says so, because it decides how far a
  * measurement may be taken from the place it is shown for. Every beach the
  * second refuses is written to `_excluded` with the distance that refused it.
+ *
+ * AND ONE TRANSFORM SITS BETWEEN THEM. `dropReplacedBuoy` removes a wave buoy
+ * this site would not publish where a MOP line stands near enough to answer for
+ * the beach instead, so four beaches are served with a modelled wave figure and
+ * no measured one. That is the one place in this file where something other
+ * than a measurement decides whether a beach exists, it is an amendment to
+ * ADR-0011 rather than a tweak to it, and the page carries a disclosure that is
+ * part of the same decision. See
+ * docs/adr/0019-a-modelled-source-may-qualify-a-beach.md.
  */
 
 import { readFileSync, writeFileSync } from "node:fs";
@@ -208,7 +217,7 @@ export function regionOf(waterClass, meanLat) {
 export function build(rows, stations, buoys, observationStations, mopLines) {
   const seen = new Map();
 
-  const beaches = rows.map((row) => {
+  const joined = rows.map((row) => {
     for (const column of COLUMNS) {
       if (!(column in row)) {
         throw new Error(
@@ -311,6 +320,12 @@ export function build(rows, stations, buoys, observationStations, mopLines) {
     };
   });
 
+  // After every join and before the predicate reads them: a buoy this site
+  // would not publish is dropped where a MOP line stands near enough to answer
+  // instead. Wrapped rather than passed by reference, because `map` would hand
+  // the index in as the tolerance. See `dropReplacedBuoy` and ADR-0019.
+  const beaches = joined.map((beach) => dropReplacedBuoy(beach));
+
   // North to south, then by slug, so the file's order is a property of the data
   // rather than of the order the portal happened to return rows in.
   beaches.sort((a, b) => {
@@ -336,7 +351,92 @@ export function build(rows, stations, buoys, observationStations, mopLines) {
  */
 export const SERVICE_TOLERANCE_M = 10_000;
 
+/**
+ * How near a MOP line must sit before the model may answer for a beach alone.
+ *
+ * A SECOND CONSTANT RATHER THAN A REUSE OF THE ONE ABOVE, because the two ask
+ * different questions and collapsing them makes the second unanswerable. That
+ * one bounds how far a *reading* may travel from the place it is shown for.
+ * This one asks whether the beach is on the coast the *model* describes at all
+ * -- which is the only thing a distance to a model can honestly test, since
+ * nothing was taken anywhere for it to have travelled from.
+ *
+ * Measured 2026-08-26 over all 73 upstream beaches: 45 bind a line, and 43 of
+ * them sit between 117 m and 930 m. The other two are `tide-beach-park` at
+ * 2,594 m and `tijana-river` at 6,395 m -- exactly the two ADR-0011 already
+ * records as published where their names are not, one 34 km from the city it
+ * names and one 6-7 km inland up a river. So this is not a threshold tuned to
+ * an outcome: at ~100 m alongshore spacing, a line kilometres away does not
+ * mean the model is coarse there, it means the nearest open coast is kilometres
+ * away and the segment is not on it.
+ *
+ * See docs/adr/0019-a-modelled-source-may-qualify-a-beach.md.
+ */
+export const MODELLED_SOURCE_TOLERANCE_M = 1_000;
+
 const kilometres = (metres) => `${(metres / 1000).toFixed(1)} km`;
+
+/**
+ * Drop a wave buoy this site would not publish, where the model replaces it.
+ *
+ * ADR-0019, and the whole of what makes it defensible rather than a loophole.
+ * A beach 28 km from the nearest delivering buoy is not served by publishing
+ * that buoy: the reading would look like every other number on the site and
+ * describe water most of the way to the next county. So the binding is dropped
+ * -- null, with the distance that refused it and the line that answers instead
+ * -- and the service predicate then passes the beach on its tide alone, exactly
+ * the way it already passes every bay.
+ *
+ * IT FIRES ONLY WHERE THE BUOY IS THE SOLE FAULT, and that guard is load-bearing
+ * rather than tidy. Without it the rule also fires on seven beaches excluded on
+ * tide -- Carlsbad Municipal, Ocean Beach, Dog Beach O.B., Sunset Cliffs and the
+ * three Coronado entries -- stripping the wave clause out of each one's
+ * `_excluded` reason. They stay excluded either way, so the entire effect would
+ * be that their exclusion record tells a reader less than it did. Measured, the
+ * guarded form moves four beaches and reworks no surviving entry.
+ *
+ * A TRANSFORM AND NOT A JOIN. `wave-join.mjs` binds the nearest delivering buoy
+ * and has no opinion about whether this site will publish it; that split is what
+ * lets `_excluded` say a buoy was refused rather than silently omitting one, and
+ * it is the shape that lost both Scripps Pier stations before #80 when it was
+ * not kept. So this runs after the joins, at the altitude of the predicate it
+ * feeds.
+ *
+ * @param {object} beach A built beach, with its bindings and their distances.
+ * @param {number} [toleranceM] How far a reading may travel.
+ * @param {number} [modelledM] How near the line must be to answer alone.
+ * @returns {object} The beach, or a copy of it with the buoy binding dropped.
+ */
+export function dropReplacedBuoy(
+  beach,
+  toleranceM = SERVICE_TOLERANCE_M,
+  modelledM = MODELLED_SOURCE_TOLERANCE_M,
+) {
+  // Sole fault: the tide reaches, the buoy does not, and a line stands near
+  // enough to answer in its place. Any other shape is left exactly as joined.
+  if (beach.tide_station === null || beach.tide_station_distance_m > toleranceM)
+    return beach;
+  if (beach.wave_buoy === null || beach.wave_buoy_distance_m <= toleranceM)
+    return beach;
+  if (beach.mop_line === null || beach.mop_line_distance_m > modelledM)
+    return beach;
+
+  return {
+    ...beach,
+    wave_buoy: null,
+    wave_buoy_distance_m: null,
+    wave_buoy_from_end: null,
+    // Both halves, because either alone misleads: the distance without the
+    // replacement reads as a beach with no waves at all, and the replacement
+    // without the distance hides that a measurement was refused.
+    wave_buoy_null_reason:
+      `the nearest delivering buoy ${beach.wave_buoy} is ` +
+      `${kilometres(beach.wave_buoy_distance_m)} away, further than this site publishes a ` +
+      `reading from, so it is not read here; MOP line ${beach.mop_line} answers for the ` +
+      `waves at ${kilometres(beach.mop_line_distance_m)}, and it is a model rather than a ` +
+      `measurement`,
+  };
+}
 
 /**
  * Why the station networks cannot serve this beach, or null when they can.
@@ -359,10 +459,15 @@ const kilometres = (metres) => `${(metres / 1000).toFixed(1)} km`;
  * Air is deliberately not a clause, and neither is the MOP line. Every bound
  * beach already reads air within 7.4 km and a MOP line within 1 km, so adding
  * either would exclude nobody while implying a filter doing work it is not
- * doing. The MOP omission is the load-bearing one: a wave source this close
- * WOULD readmit beaches the buoy clause excluded, which is a re-seed of the
- * inventory and an amendment to ADR-0011 rather than a side effect of filling a
- * row. It is #146. See docs/adr/0011-inventory-bounded-by-station-networks.md.
+ * doing.
+ *
+ * THE MOP LINE REACHES THIS PREDICATE ANYWAY, but through `dropReplacedBuoy`
+ * above rather than as a clause here. That is deliberate: a line near enough to
+ * answer alone does not *pass* a beach, it removes the buoy binding that was
+ * failing it, so the rule below still reads the way it always did and there is
+ * still exactly one thing that can refuse a beach on waves -- a binding it has
+ * that is too far. See docs/adr/0011-inventory-bounded-by-station-networks.md
+ * and docs/adr/0019-a-modelled-source-may-qualify-a-beach.md.
  *
  * @param {object} beach A built beach, with its bindings and their distances.
  * @param {number} [toleranceM]
@@ -484,8 +589,15 @@ export function document(built, now = new Date()) {
       `small-scale and local applications; no standard reporting radius exists, so the figure ` +
       `is defended rather than cited. What keeps it honest is that its inputs are measured: ` +
       `every distance came out of a join. Every beach it refuses is in _excluded below, with ` +
-      `the binding distance that refused it, so nothing leaves this inventory silently. See ` +
-      `docs/adr/0011-inventory-bounded-by-station-networks.md.`,
+      `the binding distance that refused it, so nothing leaves this inventory silently. ` +
+      `ONE THING IS NOT A MEASUREMENT, and it is the newer half: where the tide reaches a ` +
+      `beach but no buoy does, a CDIP MOP line within ` +
+      `${kilometres(MODELLED_SOURCE_TOLERANCE_M)} may answer for the waves instead, and the ` +
+      `buoy binding is dropped rather than published -- so those beaches carry wave_buoy null ` +
+      `with the distance that refused it, and their only wave figure is model output. The ` +
+      `page says so where it shows one. See ` +
+      `docs/adr/0011-inventory-bounded-by-station-networks.md and ` +
+      `docs/adr/0019-a-modelled-source-may-qualify-a-beach.md.`,
     _pinned: {
       field_name_with_a_space:
         "Upstream names one field 'Beach_ UpperLon', with an embedded space. That is the " +
@@ -514,16 +626,37 @@ export function document(built, now = new Date()) {
         "Great-circle metres from the nearer segment end to the station.",
       tide_station_from_end:
         "Which end of the segment supplied the distance, upper or lower.",
+      wave_buoy:
+        "Joined, never typed: the nearest delivering NDBC buoy that publishes waves, and the " +
+        "only measurement of the sea itself on this page. null carries TWO meanings and " +
+        "wave_buoy_null_reason always distinguishes them: the join declined to bind one -- " +
+        "every bay and lagoon, and the cove closed off by a breakwater -- or the join bound " +
+        "one and this site declined to publish it, because it sits further away than _served " +
+        "allows and a MOP line answers in its place. The second is the newer case, it names " +
+        "both the refused distance and the line that replaced it, and it means the beach's " +
+        "only wave figure is modelled. See docs/adr/0019-a-modelled-source-may-qualify-a-beach.md.",
+      wave_buoy_distance_m:
+        "Great-circle metres from the nearer segment end to the buoy. Always within _served's " +
+        "tolerance when it is present at all: a buoy further than that is dropped rather than " +
+        "recorded, so this field never carries a distance the site would not publish.",
+      wave_buoy_from_end:
+        "Which end of the segment supplied the distance, upper or lower.",
       mop_line:
         "Joined, never typed: the nearest delivering CDIP MOP line, subject to the same " +
         "water-class refusal as wave_buoy -- every line sits at 10 m depth on the open coast. " +
-        "A SECOND wave binding rather than a replacement: wave_buoy answers for now and this " +
-        "answers for the week ahead. null means the join could not bind one, and " +
-        "mop_line_null_reason says why. See mop-lines.json.",
+        "USUALLY a second wave binding rather than a replacement: wave_buoy answers for now " +
+        "and this answers for the week ahead. At the four beaches no buoy reaches it is the " +
+        "only wave source, which is a decision rather than a join result and is why _served " +
+        "names it. null means the join could not bind one, and mop_line_null_reason says why. " +
+        "See mop-lines.json.",
       mop_line_distance_m:
         "Great-circle metres from the nearer segment end to the line. Much smaller than " +
-        "wave_buoy_distance_m -- the lines are about 100 m apart -- which is why the refusal " +
-        "above is a rule about the water and not a distance.",
+        "wave_buoy_distance_m wherever both are present -- the lines are about 100 m apart -- " +
+        "which is why the water-class refusal above is a rule about the water and not a " +
+        "distance. A distance rule exists all the same, and answers a different question: a " +
+        "line beyond _served's modelled tolerance cannot answer for a beach ALONE, because at " +
+        "this spacing a line kilometres away means the nearest open coast is kilometres away " +
+        "rather than that the model is coarse there. It still binds, and still fills the week.",
       mop_line_from_end:
         "Which end of the segment supplied the distance, upper or lower.",
       sky_station:
@@ -569,22 +702,33 @@ export function document(built, now = new Date()) {
         `${farthest.name}'s, at ${kilometres(farthest.tide_station_distance_m)}. See ` +
         `tide-stations.json, whose own unresolved list records that the one open-coast station ` +
         `between La Jolla and Imperial Beach does not deliver predictions.`,
-      `${beaches.filter((b) => b.wave_buoy === null).length} of these beaches get no wave height at all. ` +
-        `Every NDBC wave buoy sits on the open coast, and ocean swell does not reach into a bay or ` +
-        `lagoon, so binding one to the nearest buoy would put an open-ocean number on enclosed water. ` +
-        `Their water temperature is missing for the same reason and is not yet filled from another source.`,
-      `The same ${beaches.filter((b) => b.mop_line === null).length} beaches get no wave forecast, ` +
-        `and the refusal costs more here than it does for the buoy: MOP lines sit about 100 m ` +
+      `${beaches.filter((b) => b.wave_buoy === null).length} of these beaches get no MEASURED wave ` +
+        `height, for two different reasons that their wave_buoy_null_reason tells apart. At ` +
+        `${beaches.filter((b) => b.wave_buoy === null && b.mop_line === null).length} of them the ` +
+        `join bound no buoy: every NDBC wave buoy sits on the open coast, and ocean swell does not ` +
+        `reach into a bay or lagoon, so binding one to the nearest buoy would put an open-ocean ` +
+        `number on enclosed water. Their water temperature is missing for the same reason and is ` +
+        `not yet filled from another source. At the other ` +
+        `${beaches.filter((b) => b.wave_buoy === null && b.mop_line !== null).length} the join DID ` +
+        `bind a buoy and this site declined to publish it, because the only one left is far past ` +
+        `${kilometres(SERVICE_TOLERANCE_M)} -- 46235 Imperial Beach Nearshore died in May 2026 and ` +
+        `was the only buoy south of Point Loma. Those beaches are open coast and do get a wave ` +
+        `figure, from a model rather than an instrument, and the page says which it is. See ` +
+        `docs/adr/0019-a-modelled-source-may-qualify-a-beach.md.`,
+      `${beaches.filter((b) => b.mop_line === null).length} beaches get no wave forecast, and ` +
+        `the refusal costs more here than it does for the buoy: MOP lines sit about 100 m ` +
         `apart, so the nearest one to an enclosed beach is close enough to look right. It would ` +
         `still be describing the open coast outside.` +
         (mopReach === null
           ? ""
           : ` The median bound beach reads a line ${mopReach.medianM} m away and the farthest ` +
             `reads one ${mopReach.farthest.mop_line_distance_m} m away, at ` +
-            `${mopReach.farthest.name}. Every one is inside a kilometre, which is why this ` +
-            `binding is NOT a clause of the service predicate above: admitting it would readmit ` +
-            `beaches the buoy clause excluded, and that is a re-seed of the inventory rather ` +
-            `than a consequence of adding a forecast.`),
+            `${mopReach.farthest.name}. Every one is inside a kilometre, and that closeness is ` +
+            `now load-bearing rather than merely reassuring: where no buoy is in range, a line ` +
+            `within ${kilometres(MODELLED_SOURCE_TOLERANCE_M)} answers for the beach on its own ` +
+            `and the beach is listed on the strength of it. A model deciding what this site ` +
+            `covers is a change of kind, and it is argued in ` +
+            `docs/adr/0019-a-modelled-source-may-qualify-a-beach.md rather than assumed here.`),
       "A tide prediction is for the station, not for the beach. It is the best published figure " +
         "for that stretch of shore and it is not a measurement taken there.",
       `Sky and visibility are read at an airport, because the ten stations in this county that ` +

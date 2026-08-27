@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 import {
   build,
   document,
+  dropReplacedBuoy,
+  MODELLED_SOURCE_TOLERANCE_M,
   regionOf,
   segmentFault,
   SERVICE_TOLERANCE_M,
@@ -34,6 +36,9 @@ const MOP_LINES = {
   D0001: { lat: 32.875, lon: -117.256, delivers: true },
   D0002: { lat: 32.88, lon: -117.25, delivers: false },
   D0003: { lat: 32.877, lon: -117.254, delivers: true },
+  // Thirty kilometres south of the rest, for NO_BUOY_ROW. Far enough from the
+  // La Jolla cluster that it changes no other beach's binding.
+  D0085: { lat: 32.60799, lon: -117.13976, delivers: true },
 };
 
 const STATIONS = {
@@ -44,6 +49,9 @@ const STATIONS = {
     delivers: true,
   },
   9410170: { lat: 32.7156, lon: -117.1767, water: "bay", delivers: true },
+  // Open coast, thirty kilometres south, and the reason NO_BUOY_ROW can have a
+  // tide station in range while its nearest buoy is not.
+  9410120: { lat: 32.5783, lon: -117.135, water: "open-coast", delivers: true },
 };
 
 /**
@@ -128,6 +136,32 @@ const FAR_ROW = row({
   "Beach_ UpperLon": "-117.40",
   Beach_LowerLat: "33.20",
   Beach_LowerLon: "-117.40",
+});
+
+/**
+ * The shape ADR-0019 admits, laid out the way the real south county is: a tide
+ * station and a MOP line close by, and the nearest delivering buoy thirty
+ * kilometres north. `9410120` and `D0085` above exist for this row alone --
+ * every other fixture beach sits in the La Jolla cluster, where the tide
+ * station and the buoy are 900 m apart and this case cannot be built.
+ */
+const NO_BUOY_ROW = row({
+  Beach_Name: "No Buoy Reaches Here",
+  Beach_UpperLat: "32.612",
+  "Beach_ UpperLon": "-117.135",
+  Beach_LowerLat: "32.604",
+  Beach_LowerLon: "-117.135",
+});
+
+/** Enclosed water: the joins decline a buoy AND a line, which is the other
+ * reason a served beach carries no measured wave height. */
+const BAY_ROW = row({
+  Beach_Name: "Quiet Bay",
+  WaterBodyType: "Sound, Bay, or Inlet",
+  Beach_UpperLat: "32.72",
+  "Beach_ UpperLon": "-117.18",
+  Beach_LowerLat: "32.71",
+  Beach_LowerLon: "-117.18",
 });
 
 describe("segmentFault", () => {
@@ -536,6 +570,100 @@ describe("serviceFault", () => {
   });
 });
 
+describe("dropReplacedBuoy", () => {
+  /** The shape ADR-0019 is about: tide reaches, buoy does not, line does. */
+  const replaceable = (overrides = {}) =>
+    bound({
+      tide_station_distance_m: 2_914,
+      wave_buoy: "46232",
+      wave_buoy_distance_m: 28_153,
+      wave_buoy_from_end: "lower",
+      mop_line: "D0001",
+      mop_line_distance_m: 466,
+      ...overrides,
+    });
+
+  it("is a one-kilometre rule by default, and says so in one place", () => {
+    // A second judgement, and a different question from SERVICE_TOLERANCE_M --
+    // not how far a reading may travel, but whether the beach is on the coast
+    // the model describes. Changing it must be a one-line edit like the other.
+    expect(MODELLED_SOURCE_TOLERANCE_M).toBe(1_000);
+  });
+
+  it("drops a buoy too far to publish when a line can answer instead", () => {
+    const beach = dropReplacedBuoy(replaceable());
+
+    expect(beach.wave_buoy).toBeNull();
+    expect(beach.wave_buoy_distance_m).toBeNull();
+    expect(beach.wave_buoy_from_end).toBeNull();
+    expect(beach.mop_line).toBe("D0001");
+  });
+
+  it("records the refused distance and the line that replaced it", () => {
+    // Either half alone misleads: the distance without the replacement reads as
+    // a beach with no waves, and the replacement without the distance hides
+    // that a measurement was refused.
+    const { wave_buoy_null_reason: why } = dropReplacedBuoy(replaceable());
+
+    expect(why).toContain("46232");
+    expect(why).toContain("28.2 km");
+    expect(why).toContain("D0001");
+    expect(why).toContain("0.5 km");
+    expect(why).toContain("model rather than a measurement");
+  });
+
+  it("leaves a beach whose buoy is inside the tolerance alone", () => {
+    const beach = replaceable({ wave_buoy_distance_m: 1_565 });
+    expect(dropReplacedBuoy(beach)).toBe(beach);
+  });
+
+  it("leaves a beach whose line is too far to answer alone", () => {
+    // Tijana River: published 6-7 km up the river, so its nearest line is
+    // 6,395 m. It fails on the rule rather than by name, and stays excluded.
+    const beach = replaceable({
+      mop_line: "D0008",
+      mop_line_distance_m: 6_395,
+    });
+    expect(dropReplacedBuoy(beach)).toBe(beach);
+  });
+
+  it("leaves a beach the tide also fails, so its reason keeps naming both", () => {
+    // The guard that makes this four beaches instead of eleven. Ocean Beach is
+    // out on tide either way; dropping its buoy would only make `_excluded`
+    // tell a reader less than it did.
+    const beach = replaceable({
+      tide_station_distance_m: 12_300,
+      wave_buoy: "46254",
+      wave_buoy_distance_m: 12_500,
+      mop_line_distance_m: 776,
+    });
+
+    expect(dropReplacedBuoy(beach)).toBe(beach);
+    expect(serviceFault(dropReplacedBuoy(beach))).toContain("46254");
+  });
+
+  it("leaves a beach the join bound no line to", () => {
+    // A bay: swell does not reach it, so nothing replaces anything. It has no
+    // buoy either, and this must not invent a reason for that.
+    const beach = replaceable({
+      wave_buoy: null,
+      wave_buoy_distance_m: null,
+      mop_line: null,
+      mop_line_distance_m: null,
+    });
+    expect(dropReplacedBuoy(beach)).toBe(beach);
+  });
+
+  it("turns the fault it clears into no fault at all", () => {
+    // The whole point, asserted end to end rather than through the fields: the
+    // beach was refused on its buoy, and after the transform it is served.
+    const beach = replaceable();
+
+    expect(serviceFault(beach)).toContain("46232");
+    expect(serviceFault(dropReplacedBuoy(beach))).toBeNull();
+  });
+});
+
 describe("document", () => {
   it("lists only the beaches whose stations reach them", () => {
     const doc = document(
@@ -576,6 +704,30 @@ describe("document", () => {
       ...doc._excluded.map((b) => b.slug),
     ];
     expect(listed.sort()).toEqual(built.map((b) => b.slug).sort());
+  });
+
+  it("tells the two reasons for a missing wave height apart, and counts each", () => {
+    // Both beaches carry `wave_buoy: null` and they do not mean the same thing:
+    // at the bay no buoy was ever bound, and at the other one was bound and
+    // refused. A caveat that merged them would tell a reader in Imperial Beach
+    // that swell does not reach their beach, which is the opposite of true.
+    const doc = document(
+      build(
+        [row(), NO_BUOY_ROW, BAY_ROW],
+        STATIONS,
+        BUOYS,
+        OBSERVATION_STATIONS,
+        MOP_LINES,
+      ),
+    );
+    const caveat = doc.unresolved.find((entry) =>
+      entry.includes("no MEASURED wave height"),
+    );
+
+    expect(caveat).toContain("2 of these beaches");
+    expect(caveat).toContain("At 1 of them the join bound no buoy");
+    expect(caveat).toContain("At the other 1 the join DID bind a buoy");
+    expect(caveat).toContain("46235");
   });
 
   it("records a beach nothing could be bound to, and repeats the join's reason", () => {

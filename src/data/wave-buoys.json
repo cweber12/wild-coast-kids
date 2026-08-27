@@ -124,7 +124,7 @@
     }
   },
   "unresolved": [
-    "46235 Imperial Beach Nearshore is the only buoy south of Point Loma and it does not deliver, so every south-county beach reads a buoy well to its north-west across water of different exposure. The join records the distance rather than hiding it. This is a gap in what NDBC publishes, not one this site can close.",
+    "46235 Imperial Beach Nearshore is the only buoy south of Point Loma and it does not deliver, so no south-county beach reads a measured wave height at all. The join still binds the nearest delivering buoy and still records the distance rather than hiding it -- 28 km, across water of different exposure -- and the seed then drops that binding rather than publishing it, listing those beaches on a CDIP MOP line instead. Their wave figure is model output, and the page says so. This is a gap in what NDBC publishes, not one this site can close; what changed is what the site does about it. See docs/adr/0019-a-modelled-source-may-qualify-a-beach.md.",
     "A buoy's significant wave height is not the height of the wave breaking at the shore. No shoaling or refraction transform is applied, and none is planned: the number shown is what the buoy reported, which is the only thing actually measured.",
     "46086 San Clemente Basin sits twenty-seven nautical miles offshore, outside the county, and no beach is bound to it. It publishes wind, water temperature, and wave height on 27 of the 48 newest rows -- its wave cycle is slower than its reporting cycle, so a third of its rows carry none. It is recorded here because it fell inside the box this table was filtered from and it delivers, and it is left out of the wave join by that distance rather than by what it measures."
   ]
