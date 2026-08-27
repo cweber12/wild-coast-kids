@@ -31,7 +31,9 @@ import {
 } from "./pacific-time";
 import { lowestLowBetween, lowestLowOn } from "./tide-day";
 import type { MopWaveRow } from "./mop-forecast";
+import type { SkyCoverHour, WeatherHour } from "./nws-gridpoint";
 import {
+  fetchGridForecast,
   fetchLatestNdbcAir,
   fetchLatestObservation,
   fetchLatestWave,
@@ -1059,6 +1061,163 @@ export async function readWaveWeek(
       daylight.get(frame.localDate)!,
     );
     return readings === null ? [] : [{ ...frame, ...readings }];
+  });
+
+  return { ...binding, state: { kind: "week", days } };
+}
+
+/* =========================================================================
+ * The week's cloud cover, from the beach's own forecast cell
+ * ========================================================================= */
+
+/** One day of the cloud row. */
+export interface SkyWeekDay extends WeekDayFrame {
+  /**
+   * Mean cloud cover across the day's daylight hours, 0 to 100, rounded.
+   *
+   * A mean rather than an extreme, which is a deliberate departure from
+   * ADR-0017 and the one place this row differs from the tide and swell rows
+   * above it. Those take the daylight extreme because a lowest low at 3:14 AM
+   * is a number nobody planning a trip with children can use -- the extreme is
+   * selected for *reachability*. Cloud cover has no unreachable hours: the
+   * daylight window is the trip. Measured over seven days at one cell, the
+   * daylight spread runs 20 to 41 points, and taking the cloudiest step would
+   * have reported 2026-08-30 at 62% against a daylight mean of 39%.
+   */
+  cloudPercent: number;
+  /**
+   * The phenomenon forecast for any daylight hour of this day, or null.
+   *
+   * This is what carries the "when" that ADR-0017's times carry for the rows
+   * above: a parent plans around fog rather than around a percentage. Null on
+   * most days, which is an ordinary day rather than a missing reading.
+   */
+  phenomenon: { weather: string; coverage: string | null } | null;
+}
+
+export interface SkyWeekView {
+  beachName: string;
+  /** null exactly when the state is `no-cell`. */
+  cell: { id: string; elevationM: number | null } | null;
+  state:
+    | { kind: "week"; days: SkyWeekDay[] }
+    | { kind: "no-cell"; reason: string }
+    | { kind: "unavailable"; detail: string; drift: boolean };
+}
+
+/**
+ * The daylight mean for one day, and the phenomenon if one was forecast.
+ *
+ * Returns null when no forecast hour falls in this day's daylight, which is
+ * what the far end of the week does as the product's reach runs out. A day with
+ * no hours is dropped rather than rendered as zero -- a zero here would read as
+ * a cloudless day.
+ */
+function skyReadingOn(
+  hours: readonly SkyCoverHour[],
+  weather: readonly WeatherHour[],
+  daylight: Daylight,
+): { cloudPercent: number; phenomenon: SkyWeekDay["phenomenon"] } | null {
+  const inDaylight = hours.filter(
+    (hour) => hour.atMs >= daylight.sunriseMs && hour.atMs <= daylight.sunsetMs,
+  );
+  if (inDaylight.length === 0) return null;
+
+  const total = inDaylight.reduce((sum, hour) => sum + hour.percent, 0);
+
+  // The first phenomenon of the daylight window rather than the most common
+  // one: "patchy fog" at 7 AM is the fact a parent is deciding on, and a day
+  // with fog in the morning and sun after lunch is a foggy morning rather than
+  // an average of the two.
+  const named = weather.find(
+    (hour) => hour.atMs >= daylight.sunriseMs && hour.atMs <= daylight.sunsetMs,
+  );
+
+  return {
+    cloudPercent: Math.round(total / inDaylight.length),
+    phenomenon:
+      named === undefined
+        ? null
+        : { weather: named.weather, coverage: named.coverage },
+  };
+}
+
+/**
+ * The week's cloud cover for one beach.
+ *
+ * `nowMs` is injected for the reason every read here injects it: day selection
+ * is asserted against fixed instants and no clock is read during a render.
+ */
+export async function readSkyWeek(
+  slug: string,
+  nowMs: number = Date.now(),
+): Promise<SkyWeekView> {
+  const beach = beachBySlug(slug);
+  if (!beach) {
+    throw new Error(
+      `readSkyWeek: no beach in the inventory with slug "${slug}".`,
+    );
+  }
+
+  if (beach.grid_cell === null) {
+    return {
+      beachName: beach.name,
+      cell: null,
+      state: {
+        kind: "no-cell",
+        reason:
+          beach.grid_cell_null_reason ??
+          "the join bound no forecast cell to this beach, and recorded no reason",
+      },
+    };
+  }
+
+  const binding = {
+    beachName: beach.name,
+    cell: { id: beach.grid_cell, elevationM: beach.grid_cell_elevation_m },
+  };
+
+  const result = await fetchGridForecast(beach.grid_cell);
+  if (result.kind === "unavailable") {
+    return {
+      ...binding,
+      state: {
+        kind: "unavailable",
+        detail: result.reason,
+        drift: result.drift,
+      },
+    };
+  }
+
+  const skyByDate = new Map<string, SkyCoverHour[]>();
+  for (const hour of result.forecast.skyCover) {
+    const localDate = localDateOf(hour.atMs);
+    const standing = skyByDate.get(localDate);
+    if (standing === undefined) skyByDate.set(localDate, [hour]);
+    else standing.push(hour);
+  }
+
+  const weatherByDate = new Map<string, WeatherHour[]>();
+  for (const hour of result.forecast.weather) {
+    const localDate = localDateOf(hour.atMs);
+    const standing = weatherByDate.get(localDate);
+    if (standing === undefined) weatherByDate.set(localDate, [hour]);
+    else standing.push(hour);
+  }
+
+  const daylight = daylightByDate(beach, nowMs);
+
+  // Built from `weekOfDays` rather than from the forecast's own hours, so this
+  // row cannot disagree with the tide, daylight and wave rows about which day
+  // is Tuesday. Ragged by construction: the product reaches about seven and a
+  // half days and the far column may have none.
+  const days = weekOfDays(nowMs).flatMap((frame) => {
+    const reading = skyReadingOn(
+      skyByDate.get(frame.localDate) ?? [],
+      weatherByDate.get(frame.localDate) ?? [],
+      daylight.get(frame.localDate)!,
+    );
+    return reading === null ? [] : [{ ...frame, ...reading }];
   });
 
   return { ...binding, state: { kind: "week", days } };

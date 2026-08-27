@@ -2,6 +2,8 @@ import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import {
+  fetchGridForecast,
+  GRID_FORECAST_REVALIDATE_SECONDS,
   fetchLatestNdbcAir,
   fetchLatestObservation,
   fetchLatestWave,
@@ -719,5 +721,133 @@ describe("fetchMopForecast", () => {
     expect(result.kind).toBe("unavailable");
     if (result.kind !== "unavailable") return;
     expect(result.reason).toContain("HTTP 503");
+  });
+});
+
+describe("fetchGridForecast", () => {
+  const CELL = "SGX/54,21";
+
+  const GRIDPOINT = JSON.parse(
+    readFileSync(
+      join(
+        process.cwd(),
+        "src/lib/__fixtures__/nws-gridpoint-sgx-54-21-20260827.json",
+      ),
+      "utf8",
+    ),
+  );
+
+  test("opts the request into caching, at the step the product moves on", async () => {
+    fetchMock.mockResolvedValue(jsonResponse(GRIDPOINT));
+
+    await fetchGridForecast(CELL);
+
+    const [url, init] = fetchMock.mock.calls[0];
+    expect(url).toBe("https://api.weather.gov/gridpoints/SGX/54,21");
+    expect(init.next.revalidate).toBe(GRID_FORECAST_REVALIDATE_SECONDS);
+    expect(init.headers["User-Agent"]).toMatch(/wild-coast-kids/);
+  });
+
+  test("reads a real payload into hours", async () => {
+    fetchMock.mockResolvedValue(jsonResponse(GRIDPOINT));
+
+    const result = await fetchGridForecast(CELL);
+
+    expect(result.kind).toBe("ok");
+    if (result.kind !== "ok") throw new Error("expected ok");
+    expect(result.forecast.cellId).toBe(CELL);
+    expect(result.forecast.skyCover.length).toBeGreaterThan(0);
+  });
+
+  test("a 404 means the binding is stale, not that the sky is unknown", async () => {
+    // The National Weather Service re-grids without notice, which ADR-0009
+    // names as one of the things this repo owns that rots. Telling a reader to
+    // come back later would be the wrong sentence and would hide a dead join.
+    fetchMock.mockResolvedValue(jsonResponse({}, 404));
+
+    const result = await fetchGridForecast(CELL);
+
+    expect(result.kind).toBe("unavailable");
+    if (result.kind !== "unavailable") throw new Error("expected unavailable");
+    expect(result.reason).toMatch(/needs re-probing/);
+    expect(result.drift).toBe(true);
+  });
+
+  test("another HTTP status is a bad day rather than drift", async () => {
+    fetchMock.mockResolvedValue(jsonResponse({}, 503));
+
+    const result = await fetchGridForecast(CELL);
+    if (result.kind !== "unavailable") throw new Error("expected unavailable");
+    expect(result.reason).toMatch(/HTTP 503/);
+    expect(result.drift).toBe(false);
+  });
+
+  test("never throws when the request itself fails", async () => {
+    fetchMock.mockRejectedValue(new Error("getaddrinfo ENOTFOUND"));
+
+    const result = await fetchGridForecast(CELL);
+    if (result.kind !== "unavailable") throw new Error("expected unavailable");
+    expect(result.reason).toMatch(/did not complete/);
+    expect(result.reason).toMatch(/ENOTFOUND/);
+  });
+
+  test("a body that is not JSON is reported rather than thrown", async () => {
+    fetchMock.mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => {
+        throw new Error("Unexpected token < in JSON");
+      },
+    });
+
+    const result = await fetchGridForecast(CELL);
+    if (result.kind !== "unavailable") throw new Error("expected unavailable");
+    expect(result.reason).toMatch(/was not JSON/);
+  });
+
+  test("a declared-and-empty series is a quiet cell, not drift", async () => {
+    // Exactly what visibility and ceilingHeight do at every cell. A reader is
+    // told the cell does not forecast this; nobody is sent to chase a bug.
+    fetchMock.mockResolvedValue(
+      jsonResponse({
+        properties: {
+          ...GRIDPOINT.properties,
+          skyCover: { uom: "wmoUnit:percent", values: [] },
+        },
+      }),
+    );
+
+    const result = await fetchGridForecast(CELL);
+    if (result.kind !== "unavailable") throw new Error("expected unavailable");
+    expect(result.reason).toMatch(/published no values/);
+    expect(result.drift).toBe(false);
+  });
+
+  test("a unit change is drift, which is a bug here rather than at the office", async () => {
+    fetchMock.mockResolvedValue(
+      jsonResponse({
+        properties: {
+          ...GRIDPOINT.properties,
+          skyCover: {
+            uom: "wmoUnit:one",
+            values: [
+              { validTime: "2026-08-26T12:00:00+00:00/PT3H", value: 0.66 },
+            ],
+          },
+        },
+      }),
+    );
+
+    const result = await fetchGridForecast(CELL);
+    if (result.kind !== "unavailable") throw new Error("expected unavailable");
+    expect(result.reason).toMatch(/pins wmoUnit:percent/);
+    expect(result.drift).toBe(true);
+  });
+
+  test("carries the URL, so a failure can be reproduced by hand", async () => {
+    fetchMock.mockResolvedValue(jsonResponse({}, 503));
+
+    const result = await fetchGridForecast(CELL);
+    expect(result.url).toBe("https://api.weather.gov/gridpoints/SGX/54,21");
   });
 });
