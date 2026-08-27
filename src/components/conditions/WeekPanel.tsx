@@ -45,8 +45,21 @@ import { WeekGrid, type ReservedRow, type WeekRow } from "./WeekGrid";
  * filled row would promise it twice.
  *
  * The gridded National Weather Service forecast is #95, which exists so that
- * sky and visibility can come from this beach's own grid cell instead of an
- * aerodrome. The surf zone forecast is zone-level and reaches about three days
+ * sky can come from this beach's own grid cell instead of an aerodrome.
+ *
+ * **It promises sky and nothing else, and both halves of that are measured.**
+ * Visibility cannot follow: the gridpoint declares `visibility` and
+ * `ceilingHeight` as keys and publishes no values for either -- measured
+ * 2026-08-26, zero entries at every one of the 21 cells covering this
+ * inventory, against 34-37 for `skyCover` -- so a row promising visibility
+ * would promise a product that does not exist. Temperature and wind must not
+ * follow: they come from the air
+ * station rather than an airport, measured at p50 3.7 km and max 7.4 km, and
+ * ADR-0012 records them as among the best-founded readings here. Moving those
+ * to a forecast is the displacement ADR-0019 declined to decide, and this row
+ * previously promised it.
+ *
+ * The surf zone forecast is zone-level and reaches about three days
  * out; it is the product the tide heights on this page were checked against.
  *
  * No issue numbers in the copy. A reader is owed what is coming, not our
@@ -57,7 +70,7 @@ const RESERVED: readonly ReservedRow[] = [
     emoji: "💨",
     headline: "A gridded forecast is coming.",
     detail:
-      "Temperature, wind and sky for this beach's own grid cell, instead of the nearest airport's reading.",
+      "Cloud cover for this beach's own grid cell, instead of the nearest airport's reading.",
   },
   {
     emoji: "🏖️",
