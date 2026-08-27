@@ -48,8 +48,8 @@ export default defineConfig({
       //   2. covered code was deleted, which pulls the whole-project ratio
       //      toward the 0% plumbing even though no test was lost.
       // Nothing is excluded to flatter the number: run-gates.mjs,
-      // run-vitest.mjs, check-built-css.mjs, check-db.mjs and
-      // check-adr-numbers.mjs sit at 0% on purpose, and all five drag these
+      // run-probes.mjs, run-vitest.mjs, check-built-css.mjs, check-db.mjs and
+      // check-adr-numbers.mjs sit at 0% on purpose, and all six drag these
       // figures down in plain sight rather than quietly.
       //
       // LOWERED 2026-08-26 under reason 1, when probe-grid-cells.mjs arrived.
@@ -93,11 +93,30 @@ export default defineConfig({
       // file. They stay uncovered for the reason probe-grid-cells.mjs's main()
       // does: covering them means either a gate row that needs the internet or
       // a seam around process.exit that would exist only for the test.
+      //
+      // LOWERED 2026-08-27 under reason 1, when the weekly probe runner
+      // arrived. This is the largest single drop the denominator has taken and
+      // it is one file: run-probes.mjs, 0% across lines 2-272, which is the
+      // process half of the ADR-0002 split -- spawning four probes, the
+      // reachability request, and the GitHub Issues calls. It joins run-gates.mjs
+      // in the list above for the same reason and is the same kind of file.
+      //
+      // Its pure half took the opposite path and is at 100% statements, 100%
+      // functions, 95.1% branches: the probe table, classify, shouldRetry,
+      // decide, marker, findOpenIssue, runUrlFrom, issueTitle, issueBody,
+      // commentBody, evaluate and formatRows all sit in probes.mjs and are
+      // called directly by 42 tests. Logic was moved OUT of the runner to get
+      // there -- findOpenIssue and runUrlFrom were inline in the plumbing
+      // first -- rather than the floor being dropped to cover for it.
+      //
+      // Covering what is left means faking spawn, fetch and the GitHub API at
+      // once, which costs more than it returns and is the trade ADR-0002 already
+      // made for run-gates.mjs.
       thresholds: {
-        statements: 88.98,
-        branches: 89.87,
-        functions: 94.41,
-        lines: 88.73,
+        statements: 86.14,
+        branches: 87.66,
+        functions: 92.64,
+        lines: 85.73,
       },
     },
   },
