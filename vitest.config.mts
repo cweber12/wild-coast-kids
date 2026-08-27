@@ -81,11 +81,23 @@ export default defineConfig({
       // Same event, second half: retiring the sky JOIN as well as the reading.
       // Three rose and branches fell again, still reason 2 -- sky-join.mjs was
       // at 100% and is deleted, along with the parser's visibility branches.
+      //
+      // LOWERED 2026-08-27 under reason 1, when probe-tide-stations.mjs
+      // arrived. The uncovered statements are lines 364-392 and 399 of that
+      // file and nothing else: main(), which reads the committed table, asks
+      // nine stations for predictions and calls process.exit, plus the
+      // `import.meta.url === pathToFileURL(argv[1])` guard below it. Everything
+      // with a rule in it is tested directly -- coopsPredictionsUrl,
+      // classifyPayload, predictionsWindow, verdict, formatRows, measureStation
+      // and measureAll, the last two against a stubbed fetch, at 81.8% of the
+      // file. They stay uncovered for the reason probe-grid-cells.mjs's main()
+      // does: covering them means either a gate row that needs the internet or
+      // a seam around process.exit that would exist only for the test.
       thresholds: {
-        statements: 89.3,
-        branches: 90.02,
-        functions: 94.9,
-        lines: 88.95,
+        statements: 88.98,
+        branches: 89.87,
+        functions: 94.41,
+        lines: 88.73,
       },
     },
   },
