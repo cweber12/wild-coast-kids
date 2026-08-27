@@ -4,10 +4,12 @@ import { render, screen } from "@testing-library/react";
 const readWeekOfLowestLows = vi.fn();
 const readDaylightWeek = vi.fn();
 const readWaveWeek = vi.fn();
+const readSkyWeek = vi.fn();
 vi.mock("@/lib/conditions", () => ({
   readWeekOfLowestLows,
   readDaylightWeek,
   readWaveWeek,
+  readSkyWeek,
 }));
 
 const { WeekPanel } = await import("./WeekPanel");
@@ -51,6 +53,31 @@ function cellLabels(container: HTMLElement): string[] {
 const countOf = (labels: string[], label: string) =>
   labels.filter((each) => each === label).length;
 
+/** The cell binding, carried through a failure the way the tide's station is. */
+const CELL = { id: "SGX/54,21", elevationM: 0 };
+
+function skyWeek(
+  days: {
+    index: number;
+    cloudPercent: number;
+    phenomenon?: { weather: string; coverage: string | null };
+  }[],
+  cell = CELL,
+) {
+  return {
+    beachName: BINDING.beachName,
+    cell,
+    state: {
+      kind: "week",
+      days: days.map(({ index, cloudPercent, phenomenon = null }) => ({
+        ...DATES[index],
+        cloudPercent,
+        phenomenon,
+      })),
+    },
+  };
+}
+
 /** The MOP binding, carried through a failure the way the tide's station is. */
 const LINE = { id: "D0498", distanceM: 325 };
 
@@ -91,6 +118,17 @@ beforeEach(() => {
   readWeekOfLowestLows.mockReset();
   readDaylightWeek.mockReset();
   readWaveWeek.mockReset();
+  readSkyWeek.mockReset();
+  readSkyWeek.mockResolvedValue(
+    skyWeek([
+      { index: 0, cloudPercent: 44 },
+      {
+        index: 1,
+        cloudPercent: 67,
+        phenomenon: { weather: "fog", coverage: "patchy" },
+      },
+    ]),
+  );
   readDaylightWeek.mockReturnValue(daylightWeek());
   readWaveWeek.mockResolvedValue(
     waveWeek([
@@ -134,24 +172,19 @@ test("the forecasts that are not built yet are named, and waves are no longer am
   // The wave slot came out in the same change that filled its row: a slot left
   // in beside a live row promises the same product twice.
   expect(screen.queryByText(/A wave forecast is coming/i)).toBeNull();
+  // The gridded slot went the same way in the change that filled its row.
+  expect(screen.queryByText(/A gridded forecast is coming/i)).toBeNull();
   expect(screen.getByText(/surf zone forecast/i)).toBeDefined();
-  expect(screen.getByText(/gridded forecast/i)).toBeDefined();
 });
 
 /**
- * A reserved slot is a promise, so what it does *not* say is as load-bearing as
- * what it does. This row once offered "Temperature, wind and sky" from the grid
- * cell, and two thirds of that could never ship: temperature and wind come from
- * the air station at p50 3.7 km rather than from an airport, ADR-0012 records
- * them as among the best-founded readings on the site, and replacing them with
- * a forecast is the displacement ADR-0019 declined to decide. Visibility is not
- * promised either — the gridpoint publishes no values for it at any cell
- * covering this inventory.
- *
- * Asserted on the rendered text rather than on the constant, because the defect
- * was a reader being told something untrue.
+ * The row that replaced the promise. Until 2026-08-27 this slot said a gridded
+ * forecast was coming and, briefly, over-promised temperature and wind with it.
+ * A slot and the row it stood in for must never both be on the page: that is
+ * the same rule the wave slot came out under, and it is why the removal is in
+ * the change that fills the row rather than a tidy-up after it.
  */
-test("the gridded row promises sky alone, not the readings that are already near", async () => {
+test("the gridded row is live, and the slot that promised it is gone", async () => {
   readWeekOfLowestLows.mockResolvedValue({
     ...BINDING,
     state: { kind: "week", days: [tideDay(0, "6:41 PM", 0.9)] },
@@ -159,13 +192,122 @@ test("the gridded row promises sky alone, not the readings that are already near
 
   render(await WeekPanel({ slug: "la-jolla-shores-beach" }));
 
-  const promise = screen.getByText(/grid cell/i).textContent ?? "";
+  expect(readSkyWeek).toHaveBeenCalledWith("la-jolla-shores-beach");
+  expect(screen.getAllByText("Cloud by day").length).toBeGreaterThan(0);
+  expect(screen.getByText("44%")).toBeDefined();
+  expect(screen.queryByText(/A gridded forecast is coming/i)).toBeNull();
+  expect(
+    screen.queryByText(/grid cell, instead of the nearest airport/i),
+  ).toBeNull();
+});
 
-  expect(promise).toMatch(/cloud cover/i);
-  // The three the row must not offer, each for its own reason.
-  expect(promise).not.toMatch(/temperature/i);
-  expect(promise).not.toMatch(/wind/i);
-  expect(promise).not.toMatch(/visibilit/i);
+/**
+ * These two notes carry more weight than the wave row's equivalents. After
+ * ADR-0020 this row is the only sky anywhere on the site, so a reader who came
+ * to find out whether it will be foggy is told nothing at all -- and a row that
+ * simply vanished would read as a clear week rather than as a missing forecast.
+ */
+test("a beach with no forecast cell says so, rather than dropping the row silently", async () => {
+  readWeekOfLowestLows.mockResolvedValue({
+    ...BINDING,
+    state: { kind: "week", days: [tideDay(0, "6:41 PM", 0.9)] },
+  });
+  readSkyWeek.mockResolvedValue({
+    beachName: BINDING.beachName,
+    cell: null,
+    state: { kind: "no-cell", reason: "the grid does not cover this beach" },
+  });
+
+  render(await WeekPanel({ slug: "la-jolla-shores-beach" }));
+
+  expect(screen.getByText(/no cloud forecast for this beach/i)).toBeDefined();
+  expect(screen.queryByText("Cloud by day")).toBeNull();
+});
+
+test("an outage at the National Weather Service says so, and names the reason", async () => {
+  readWeekOfLowestLows.mockResolvedValue({
+    ...BINDING,
+    state: { kind: "week", days: [tideDay(0, "6:41 PM", 0.9)] },
+  });
+  readSkyWeek.mockResolvedValue({
+    beachName: BINDING.beachName,
+    cell: CELL,
+    state: {
+      kind: "unavailable",
+      detail:
+        "The National Weather Service returned HTTP 503 for forecast cell SGX/54,21.",
+      drift: false,
+    },
+  });
+
+  render(await WeekPanel({ slug: "la-jolla-shores-beach" }));
+
+  expect(
+    screen.getByText(/could not get this week's cloud forecast/i),
+  ).toBeDefined();
+  expect(screen.getByText(/HTTP 503/)).toBeDefined();
+  // Not drift, so the sentence blaming this repo must not appear.
+  expect(screen.queryByText(/bug here rather than a problem/)).toBeNull();
+});
+
+test("drift says the bug is here, not at the National Weather Service", async () => {
+  readWeekOfLowestLows.mockResolvedValue({
+    ...BINDING,
+    state: { kind: "week", days: [tideDay(0, "6:41 PM", 0.9)] },
+  });
+  readSkyWeek.mockResolvedValue({
+    beachName: BINDING.beachName,
+    cell: CELL,
+    state: {
+      kind: "unavailable",
+      detail: 'SGX/54,21: skyCover is declared in "wmoUnit:one".',
+      drift: true,
+    },
+  });
+
+  render(await WeekPanel({ slug: "la-jolla-shores-beach" }));
+
+  expect(
+    screen.getByText(
+      /bug here rather than a problem at the National Weather Service/,
+    ),
+  ).toBeDefined();
+});
+
+test("a bluff cell says the square covers the cliff as well as the shore", async () => {
+  // Torrey Pines City Beach reads a cell averaging 117 m. ADR-0020 serves it
+  // and discloses rather than withholding, and this sentence is the half of
+  // that decision no gate can assert -- so a gate asserts it reaches the page.
+  readWeekOfLowestLows.mockResolvedValue({
+    ...BINDING,
+    state: { kind: "week", days: [tideDay(0, "6:41 PM", 0.9)] },
+  });
+  readSkyWeek.mockResolvedValue(
+    skyWeek([{ index: 0, cloudPercent: 44 }], {
+      id: "SGX/55,22",
+      elevationM: 117.0432,
+    }),
+  );
+
+  render(await WeekPanel({ slug: "la-jolla-shores-beach" }));
+
+  expect(screen.getByText(/covers the bluff above this beach/)).toBeDefined();
+});
+
+test("a shoreline cell adds no bluff sentence", async () => {
+  readWeekOfLowestLows.mockResolvedValue({
+    ...BINDING,
+    state: { kind: "week", days: [tideDay(0, "6:41 PM", 0.9)] },
+  });
+
+  render(await WeekPanel({ slug: "la-jolla-shores-beach" }));
+
+  expect(screen.queryByText(/covers the bluff/)).toBeNull();
+  // The clause that always stands, which is what separates this row from the
+  // readings on the cards above.
+  expect(
+    screen.getByText(/a forecast, not a reading taken at the beach/),
+  ).toBeDefined();
 });
 
 test("a NOAA outage costs the tide row, not the whole grid", async () => {
@@ -215,17 +357,13 @@ test("a failure to resolve the beach is not swallowed into a rendered nothing", 
 });
 
 /**
- * ADR-0015. The reserved row and the live card describe the same product from
- * different feeds, so they take the same glyph — the gridded forecast lands in
- * the air card, replacing its sky half, and marking it with the thermometer the
- * air card no longer uses would leave the page saying two things about one
- * product.
- *
- * Whether a row about cloud alone still wants the wind glyph is a question for
- * the slice that fills it: the vocabulary is ADR-0015's and changing it is a
- * design decision rather than a copy fix.
+ * ADR-0015 marked the gridded slot with the air card's glyph while it was a
+ * promise about that card. The slot is gone, so the glyph question goes with
+ * it: rows in this grid carry no glyph at all -- a full-colour emoji at 10px is
+ * a smudge rather than a mark -- and the only glyph left in this band belongs
+ * to the one slot still reserved.
  */
-test("the gridded forecast is marked like the air card whose sky it will replace", async () => {
+test("the filled row brings no glyph, and only the reserved slot still has one", async () => {
   readWeekOfLowestLows.mockResolvedValue({
     beachName: "La Jolla Shores Beach",
     station: { name: "La Jolla (Scripps Institution Wharf)", distanceM: 1369 },
@@ -239,8 +377,7 @@ test("the gridded forecast is marked like the air card whose sky it will replace
   const glyphs = [...container.querySelectorAll('[aria-hidden="true"]')].map(
     (node) => node.textContent,
   );
-  expect(glyphs).toContain("💨");
-  expect(glyphs).not.toContain("🌡️");
+  expect(glyphs).toEqual(["🏖️"]);
 });
 
 /* =========================================================================
@@ -435,10 +572,14 @@ test("the wave row sits under daylight, not between it and the tide", async () =
   const labels = [...container.querySelectorAll("li:first-child dt")].map(
     (node) => node.textContent,
   );
+  // Cloud last, and last for a reason: it is the only row with no time in it,
+  // so a reader scanning a column reads three "when"s and then the one figure
+  // about the whole day.
   expect(labels).toEqual([
     "Lowest daylight tide",
     "Daylight",
     "Biggest daylight swell",
+    "Cloud by day",
   ]);
 });
 

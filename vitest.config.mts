@@ -61,11 +61,21 @@ export default defineConfig({
       // probe-mop-lines.mjs (60.6%) and probe-observation-stations.mjs (82.8%)
       // sit here for the same reason. The join beside it, grid-cell-join.mjs,
       // is at 100% statements -- that is the half that decides anything.
+      //
+      // 2026-08-27, the gridded sky read. Three rose and one fell, and the one
+      // that fell is named rather than absorbed: fetchGridForecast ends with
+      // the same defensive `cause instanceof Error ? cause.message : String(cause)`
+      // fallthrough fetchMopForecast has, and its non-Error arm is unreachable
+      // through parseGridpointForecast's contract -- that parser throws only
+      // NwsGridpointDriftError and NwsGridpointNoDataError, both handled above
+      // it. Deleting the arm would be the alternative, and it would let a
+      // non-Error throw escape a function whose whole contract is that it never
+      // throws. So two branches were added that cannot be reached on purpose.
       thresholds: {
-        statements: 88.83,
-        branches: 90.49,
-        functions: 94.72,
-        lines: 88.41,
+        statements: 89.39,
+        branches: 90.35,
+        functions: 94.95,
+        lines: 89.03,
       },
     },
   },

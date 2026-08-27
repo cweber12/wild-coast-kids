@@ -90,6 +90,10 @@ test("the safety framing is not repeated here, it is above the readings", () => 
   // figure -- which is what the heading above them promises.
   expect(screen.getByText("Tide heights")).toBeDefined();
   expect(screen.getByText("Wave heights")).toBeDefined();
+  // Four now, not three. The cloud row's entry joins the airport one rather
+  // than replacing it: ADR-0020 removes the card's sky in a later slice, and
+  // until it does BOTH are on the page and both are owed an explanation.
+  expect(screen.getByText("Cloud by day")).toBeDefined();
   expect(screen.getByText("Sky and visibility")).toBeDefined();
 });
 
@@ -103,6 +107,25 @@ test("it explains the page rather than claiming this beach has these readings", 
   render(<ConditionsNotes entries={ENTRIES} reach={REACH} />);
 
   expect(screen.getByText(/Where they are shown/)).toBeDefined();
+});
+
+/**
+ * The week's forecast is a different kind of figure from the readings on the
+ * cards, and the block a reader goes to for "what does this number mean" has to
+ * say which. It must NOT yet claim the page carries no current sky reading: the
+ * air card still shows one until ADR-0020's deletion slice lands, and a note
+ * saying otherwise would be false while both are on screen.
+ */
+test("the cloud row is explained as a forecast for a square of the map", () => {
+  render(<ConditionsNotes entries={ENTRIES} reach={REACH} />);
+
+  expect(screen.getByText(/this beach's own square/)).toBeDefined();
+  expect(
+    screen.getByText(/rather than the cloudiest hour of it/),
+  ).toBeDefined();
+  expect(
+    screen.queryByText(/no reading of what the sky is doing right now/),
+  ).toBeNull();
 });
 
 /**
@@ -132,12 +155,15 @@ test("each note is a term and its explanation, not a run of prose", () => {
   const details = container.querySelectorAll("dd");
 
   expect(terms.length).toBe(details.length);
-  // Five: three since the safety framing became a standing notice above the
+  // Six: three since the safety framing became a standing notice above the
   // readings, a fourth when the week gained a modelled wave height beside the
-  // measured one, and a fifth when the rows began leading with what daylight
-  // reaches. The named-term assertions elsewhere in this file are what stop a
-  // note being dropped silently; this number only tracks them.
-  expect(terms.length).toBe(5);
+  // measured one, a fifth when the rows began leading with what daylight
+  // reaches, and a sixth when the week gained the gridded cloud row. That last
+  // one is temporary at six -- ADR-0020 removes the airport entry beside it in
+  // the slice that takes sky off the card, and this returns to five. The
+  // named-term assertions elsewhere in this file are what stop a note being
+  // dropped silently; this number only tracks them.
+  expect(terms.length).toBe(6);
 });
 
 test("it is a labelled region, so the notes are reachable as a landmark", () => {

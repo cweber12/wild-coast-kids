@@ -70,6 +70,13 @@ import {
   parseMopForecast,
 } from "./mop-forecast";
 import {
+  type GridpointForecast,
+  gridpointUrl,
+  NwsGridpointDriftError,
+  NwsGridpointNoDataError,
+  parseGridpointForecast,
+} from "./nws-gridpoint";
+import {
   NwsObservationDriftError,
   NwsObservationNoDataError,
   parseNwsObservation,
@@ -594,6 +601,101 @@ export async function fetchMopForecast(
   } catch (cause) {
     if (cause instanceof MopDriftError) return unavailable(cause.message, true);
     if (cause instanceof MopNoDataError) return unavailable(cause.message);
+    return unavailable(cause instanceof Error ? cause.message : String(cause));
+  }
+}
+
+/* =========================================================================
+ * NWS gridpoints: the cloud cover the week grid reads
+ * ========================================================================= */
+
+/**
+ * One hour, which is the finest step this product moves on.
+ *
+ * The forecast itself sits on three- and six-hour blocks and the office reruns
+ * it a few times a day, so an hour never serves a block that has been
+ * superseded for long, and asking more often cannot return a different value.
+ * Shorter than MOP's three hours because this feed's blocks are shorter and its
+ * near end is the day a reader is standing in; longer than the observations
+ * above because a forecast for a three-hour block does not change on the
+ * quarter hour the way a special observation does.
+ */
+export const GRID_FORECAST_REVALIDATE_SECONDS = 3600;
+
+export type GridForecastResult =
+  | { kind: "ok"; forecast: GridpointForecast; url: string }
+  | { kind: "unavailable"; reason: string; drift: boolean; url: string };
+
+/**
+ * Fetch one forecast cell's sky cover and present weather.
+ *
+ * Never throws.
+ *
+ * THE 404 HERE MEANS THE BINDING HAS GONE STALE, not that the sky is unknown.
+ * `/gridpoints` answers for a cell that exists, and the National Weather
+ * Service re-grids without notice -- ADR-0009 names a re-gridded forecast point
+ * as one of the things this repo owns that rots. So the reason says to re-probe
+ * rather than telling a reader to come back later.
+ */
+export async function fetchGridForecast(
+  cellId: string,
+): Promise<GridForecastResult> {
+  const url = gridpointUrl(cellId);
+
+  const unavailable = (reason: string, drift = false): GridForecastResult => ({
+    kind: "unavailable",
+    reason,
+    drift,
+    url,
+  });
+
+  let response: Response;
+  try {
+    response = await fetch(url, {
+      headers: { "User-Agent": USER_AGENT },
+      next: { revalidate: GRID_FORECAST_REVALIDATE_SECONDS },
+    });
+  } catch (cause) {
+    return unavailable(
+      `The request to the National Weather Service for forecast cell ${cellId} did not ` +
+        `complete: ${cause instanceof Error ? cause.message : String(cause)}`,
+    );
+  }
+
+  if (response.status === 404) {
+    return unavailable(
+      `The National Weather Service publishes no forecast for cell ${cellId}. The grid has ` +
+        `moved and the cell binding needs re-probing.`,
+      true,
+    );
+  }
+  if (!response.ok) {
+    return unavailable(
+      `The National Weather Service returned HTTP ${response.status} for forecast cell ${cellId}.`,
+    );
+  }
+
+  let payload: unknown;
+  try {
+    payload = await response.json();
+  } catch (cause) {
+    return unavailable(
+      `The National Weather Service's response for forecast cell ${cellId} was not JSON: ` +
+        `${cause instanceof Error ? cause.message : String(cause)}`,
+    );
+  }
+
+  try {
+    return {
+      kind: "ok",
+      forecast: parseGridpointForecast(payload, cellId),
+      url,
+    };
+  } catch (cause) {
+    if (cause instanceof NwsGridpointDriftError)
+      return unavailable(cause.message, true);
+    if (cause instanceof NwsGridpointNoDataError)
+      return unavailable(cause.message);
     return unavailable(cause instanceof Error ? cause.message : String(cause));
   }
 }

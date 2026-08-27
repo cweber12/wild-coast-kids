@@ -240,3 +240,44 @@ reader twice.
   because it was once about wind. Whether a cloud row wants a different glyph is
   a design decision in that ADR's vocabulary, and it is settled in slice 3 with
   a human looking at it rather than assumed here.
+
+## Addendum, 2026-08-27: the day's figure is the daylight mean
+
+**The open question was mis-scheduled above, and the schedule mattered.** The
+section headed "the one thing not yet decided" says it wants settling before
+slice 4, and that "if the answer is instead an extreme, the row label changes
+and nothing else does". Both are wrong. The daily figure is computed in
+`readSkyWeek`, which is slice 2, so the question blocked the next slice rather
+than a later one — and a mean is not a relabelled extreme, it is a different
+computation over a different number of steps.
+
+**Decided: the daylight mean, labelled "Cloud by day", with no secondary
+figure.**
+
+Measured at `SGX/54,21` on 2026-08-27, over the daylight steps of each of the
+seven days the forecast reaches:
+
+| day        | mean | min | max | spread |
+| ---------- | ---- | --- | --- | ------ |
+| 2026-08-26 | 44%  | 33% | 66% | 33     |
+| 2026-08-27 | 67%  | 53% | 73% | 20     |
+| 2026-08-28 | 55%  | 44% | 64% | 20     |
+| 2026-08-29 | 38%  | 20% | 47% | 27     |
+| 2026-08-30 | 39%  | 21% | 62% | 41     |
+| 2026-08-31 | 49%  | 35% | 70% | 35     |
+| 2026-09-01 | 62%  | 48% | 76% | 28     |
+
+So the choice moves the published figure by 20 to 41 points, which is the
+difference between a day reading as grey and reading as bright.
+
+**Why this departs from ADR-0017 rather than conforming to it.** That ADR's
+argument is reachability: a lowest low at 3:14 AM is a number nobody planning a
+trip with children can use, so the row leads with the extreme that falls between
+sunrise and sunset. Cloud cover has no unreachable hours — the daylight window
+_is_ the trip — so there is no unreachable extreme to route around, and taking
+one anyway would import ADR-0017's pessimism without its reason. On 2026-08-30
+the cloudiest daylight step is 62% against a mean of 39%, and the row would have
+told a reader the day was grey when most of it is not.
+
+The fog annotation carries the "when" that ADR-0017's times carry for the tide
+and swell rows, which is the part of the sky a reader plans around.

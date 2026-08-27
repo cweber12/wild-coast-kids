@@ -7,21 +7,26 @@
  * rather than in `lib/conditions.ts` because which glyph marks a row and what a
  * row is called are presentation.
  *
- * **Three reads, and only one of them cannot fail.** The tide comes from NOAA
- * and the wave forecast from CDIP; daylight is computed in this repo from the
- * beach's own coordinates. So the columns are taken from the daylight read: an
+ * **Four reads, and only one of them cannot fail.** The tide comes from NOAA,
+ * the wave forecast from CDIP and the cloud forecast from the National Weather
+ * Service; daylight is computed in this repo from the beach's own coordinates. So the columns are taken from the daylight read: an
  * outage then costs a row rather than the whole grid, and the week still
  * answers a question a parent came with. All three build their days from one
  * helper in `lib/conditions.ts`, which is what stops the rows disagreeing about
  * which day is Tuesday.
  *
- * **The two upstream reads are made concurrently and fail apart.** They share
+ * **The three upstream reads are made concurrently and fail apart.** They share
  * no publisher and no failure, and NOAA going quiet must not cost the week its
  * wave row -- the same argument `readLatestAir` makes for its two stations.
+ * The cloud read joins them under ADR-0020, which moved sky off the air card
+ * and into this grid: after that change this row is the only sky on the site,
+ * so an outage here is a whole variable missing rather than one row thinner,
+ * and it says so in the notes below the grid.
  */
 
 import {
   readDaylightWeek,
+  readSkyWeek,
   readWaveWeek,
   readWeekOfLowestLows,
 } from "@/lib/conditions";
@@ -32,6 +37,13 @@ import {
   mopLineDistanceKm,
   mopLineSource,
 } from "./mopLine";
+import {
+  GRID_MODEL_NOTE,
+  GRID_NETWORK,
+  GRID_SOURCE,
+  gridCellCaveat,
+} from "./gridCell";
+import { SkyWeek, SKY_WEEK_ROW } from "./SkyWeek";
 import { TideWeek, TIDE_WEEK_ROW } from "./TideWeek";
 import { WaveWeek, WAVE_WEEK_ROW } from "./WaveWeek";
 import { WeekGrid, type ReservedRow, type WeekRow } from "./WeekGrid";
@@ -44,8 +56,10 @@ import { WeekGrid, type ReservedRow, type WeekRow } from "./WeekGrid";
  * would leave the page promising less than it did, and a slot left in beside a
  * filled row would promise it twice.
  *
- * The gridded National Weather Service forecast is #95, which exists so that
- * sky can come from this beach's own grid cell instead of an aerodrome.
+ * **The gridded slot is gone**, because the row it stood in for exists. Same
+ * rule the wave slot came out under: a slot removed before its replacement
+ * would leave the page promising less than it did, and a slot left in beside a
+ * filled row would promise it twice.
  *
  * **It promises sky and nothing else, and both halves of that are measured.**
  * Visibility cannot follow: the gridpoint declares `visibility` and
@@ -67,12 +81,6 @@ import { WeekGrid, type ReservedRow, type WeekRow } from "./WeekGrid";
  */
 const RESERVED: readonly ReservedRow[] = [
   {
-    emoji: "💨",
-    headline: "A gridded forecast is coming.",
-    detail:
-      "Cloud cover for this beach's own grid cell, instead of the nearest airport's reading.",
-  },
-  {
     emoji: "🏖️",
     headline: "The surf zone forecast is coming.",
     detail:
@@ -83,9 +91,10 @@ const RESERVED: readonly ReservedRow[] = [
 export async function WeekPanel({ slug }: { slug: string }) {
   // Concurrently, and failing apart: NOAA and CDIP share no publisher and no
   // outage, so neither may hold up or take down the other's row.
-  const [view, waves] = await Promise.all([
+  const [view, waves, sky] = await Promise.all([
     readWeekOfLowestLows(slug),
     readWaveWeek(slug),
+    readSkyWeek(slug),
   ]);
   const daylight = readDaylightWeek(slug);
 
@@ -157,6 +166,41 @@ export async function WeekPanel({ slug }: { slug: string }) {
   }
 
   /*
+    Last of the four, under the wave row. The order down a day block is tide,
+    daylight, swell, cloud -- what the sea does, when the sun is up, what the
+    swell does, what the sky does. Cloud goes last because it is the only row
+    with no time in it: a reader scanning a column reads three "when"s and then
+    the one figure that is about the whole day, and putting it between two
+    timed rows would break that reading.
+
+    Ragged like the wave row, and for the same reason: the product reaches about
+    seven and a half days and the far column may have none.
+  */
+  if (sky.state.kind === "week" && sky.cell !== null) {
+    const cell = sky.cell;
+    rows.push({
+      ...SKY_WEEK_ROW,
+      cells: Object.fromEntries(
+        sky.state.days.map((day) => [
+          day.localDate,
+          <SkyWeek key={day.localDate} day={day} />,
+        ]),
+      ),
+      // Every word from `gridCell.ts`, for the reason `mopLine.ts` exists: two
+      // call sites wording one fact is how `ProvenanceLine` came to print the
+      // same station two ways on one card. The caveat is null at all but three
+      // beaches, where the cell averages over 100 m and covers the bluff.
+      provenance: {
+        source: GRID_SOURCE,
+        network: GRID_NETWORK,
+        note: [GRID_MODEL_NOTE, gridCellCaveat(cell.elevationM)]
+          .filter((part) => part !== null)
+          .join("; "),
+      },
+    });
+  }
+
+  /*
     One sentence, not seven. The upstream detail stays behind the disclosure on
     the tide card above, which shares this exact request and therefore fails at
     the same moment — repeating it here would be the same failure twice.
@@ -190,6 +234,31 @@ export async function WeekPanel({ slug }: { slug: string }) {
         "depth out on the open coast.",
     );
   }
+  /*
+    The cloud row's failures get their own sentences, and they carry more weight
+    than the wave row's. After ADR-0020 this row is the only sky on the site, so
+    a reader who came to find out whether it will be foggy is told nothing at
+    all rather than told it elsewhere -- and a silent gap would read as a clear
+    week.
+  */
+  if (sky.state.kind === "no-cell") {
+    notes.push(
+      "We have no cloud forecast for this beach. The National Weather Service " +
+        "publishes its forecasts for squares of the map, and this beach does not " +
+        "sit in one we can read.",
+    );
+  }
+  if (sky.state.kind === "unavailable") {
+    notes.push(
+      `We could not get this week's cloud forecast from the National Weather Service just ` +
+        `now. ${sky.state.detail}` +
+        (sky.state.drift
+          ? " The forecast's payload was not the shape this site pins, which is a bug here " +
+            "rather than a problem at the National Weather Service."
+          : ""),
+    );
+  }
+
   if (waves.state.kind === "unavailable") {
     notes.push(
       `We could not get this week's wave forecast from CDIP just now. ${waves.state.detail}` +

@@ -87,6 +87,14 @@ const NOTES = [
       "the sand. The lines naming each source say which is which.",
   },
   {
+    term: "Cloud by day",
+    detail:
+      "A forecast for this beach's own square of the National Weather Service's map, about " +
+      "2.5 km across, rather than a reading taken anywhere. It averages the forecast hours " +
+      "between sunrise and sunset, so it describes the day you would be there rather than " +
+      "the cloudiest hour of it, and it names fog on the days fog is expected.",
+  },
+  {
     term: "Sky and visibility",
     detail:
       "Where they are shown, they come from an airport. Cloud and visibility are only " +

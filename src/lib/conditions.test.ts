@@ -6,7 +6,9 @@ const fetchLatestWave = vi.fn();
 const fetchLatestObservation = vi.fn();
 const fetchLatestNdbcAir = vi.fn();
 const fetchMopForecast = vi.fn();
+const fetchGridForecast = vi.fn();
 vi.mock("./upstream", () => ({
+  fetchGridForecast,
   fetchTideExtremes,
   fetchLatestWave,
   fetchLatestObservation,
@@ -57,6 +59,10 @@ vi.mock("./beaches", async (importOriginal) => {
     sky_station_distance_m: null,
     sky_station_from_end: null,
     sky_station_null_reason: reason,
+    grid_cell: null,
+    grid_cell_from_end: null,
+    grid_cell_elevation_m: null,
+    grid_cell_null_reason: reason,
     air_station: null,
     air_station_distance_m: null,
     air_station_from_end: null,
@@ -76,6 +82,7 @@ const {
   readLatestWaves,
   readLatestAir,
   readWaveWeek,
+  readSkyWeek,
 } = await import("./conditions");
 
 /**
@@ -93,6 +100,7 @@ beforeEach(() => {
   fetchLatestObservation.mockReset();
   fetchLatestNdbcAir.mockReset();
   fetchMopForecast.mockReset();
+  fetchGridForecast.mockReset();
 });
 
 function ok(extremes: { atMs: number; feet: number; kind: "low" | "high" }[]) {
@@ -1053,5 +1061,201 @@ test("an unavailable forecast carries its reason and its drift flag through", as
 test("a slug that is not in the inventory is a coding error, not a quiet feed", async () => {
   await expect(
     readWaveWeek("no-such-beach", NOON_PACIFIC_20260817),
+  ).rejects.toThrow(/no beach in the inventory/);
+});
+
+/* =========================================================================
+ * readSkyWeek
+ * ========================================================================= */
+
+/**
+ * Sunrise and sunset at La Jolla Shores on 2026-08-17 are about 6:14 AM and
+ * 7:32 PM Pacific, so an hour stamped 14:00 UTC (7 AM Pacific) is in daylight
+ * and one stamped 09:00 UTC (2 AM Pacific) is not.
+ */
+const hourUtc = (day: number, utcHour: number) =>
+  Date.UTC(2026, 7, day, utcHour);
+
+function gridOk(
+  skyCover: { atMs: number; percent: number }[],
+  weather: { atMs: number; weather: string; coverage: string | null }[] = [],
+) {
+  fetchGridForecast.mockResolvedValue({
+    kind: "ok",
+    forecast: { cellId: "SGX/54,21", skyCover, weather },
+    url: "https://example.invalid",
+  });
+}
+
+test("a day's figure is the mean of its daylight hours, not of the whole day", async () => {
+  // THE DECISION THIS ROW TURNS ON. The night hours here are 0% and 100%; if
+  // either reached the mean the answer would not be 50. Daylight is 20 and 80.
+  gridOk([
+    { atMs: hourUtc(17, 9), percent: 0 },
+    { atMs: hourUtc(17, 15), percent: 20 },
+    { atMs: hourUtc(17, 23), percent: 80 },
+    { atMs: hourUtc(18, 8), percent: 100 },
+  ]);
+
+  const view = await readSkyWeek(BEACH, NOON_PACIFIC_20260817);
+
+  expect(view.state.kind).toBe("week");
+  if (view.state.kind !== "week") throw new Error("expected a week");
+  expect(view.state.days[0].cloudPercent).toBe(50);
+});
+
+test("the mean is not the cloudiest step, which is what ADR-0017 would have taken", async () => {
+  // Measured at SGX/54,21 for 2026-08-30: daylight steps spanning 21 to 62,
+  // mean 39. An extreme-selecting row would publish 62 for this day.
+  gridOk([
+    { atMs: hourUtc(17, 14), percent: 21 },
+    { atMs: hourUtc(17, 17), percent: 34 },
+    { atMs: hourUtc(17, 20), percent: 39 },
+    { atMs: hourUtc(17, 23), percent: 62 },
+  ]);
+
+  const view = await readSkyWeek(BEACH, NOON_PACIFIC_20260817);
+  if (view.state.kind !== "week") throw new Error("expected a week");
+
+  expect(view.state.days[0].cloudPercent).toBe(39);
+  expect(view.state.days[0].cloudPercent).not.toBe(62);
+});
+
+test("a day with fog in its daylight carries the phenomenon", async () => {
+  gridOk(
+    [{ atMs: hourUtc(17, 15), percent: 60 }],
+    [{ atMs: hourUtc(17, 15), weather: "fog", coverage: "patchy" }],
+  );
+
+  const view = await readSkyWeek(BEACH, NOON_PACIFIC_20260817);
+  if (view.state.kind !== "week") throw new Error("expected a week");
+
+  expect(view.state.days[0].phenomenon).toEqual({
+    weather: "fog",
+    coverage: "patchy",
+  });
+});
+
+test("fog outside daylight does not annotate the day", async () => {
+  // 09:00 UTC is 2 AM Pacific. Fog nobody will be at the beach for is not what
+  // the row is telling a parent about.
+  gridOk(
+    [{ atMs: hourUtc(17, 15), percent: 60 }],
+    [{ atMs: hourUtc(17, 9), weather: "fog", coverage: "patchy" }],
+  );
+
+  const view = await readSkyWeek(BEACH, NOON_PACIFIC_20260817);
+  if (view.state.kind !== "week") throw new Error("expected a week");
+
+  expect(view.state.days[0].phenomenon).toBeNull();
+});
+
+test("a day the forecast does not reach is dropped, not rendered as zero", async () => {
+  // A zero here would read as a cloudless day. The far column runs out as the
+  // product's reach does, and the grid draws no cell where a row has none.
+  gridOk([{ atMs: hourUtc(17, 15), percent: 60 }]);
+
+  const view = await readSkyWeek(BEACH, NOON_PACIFIC_20260817);
+  if (view.state.kind !== "week") throw new Error("expected a week");
+
+  expect(view.state.days).toHaveLength(1);
+  expect(view.state.days[0].localDate).toBe("2026-08-17");
+});
+
+test("the days it does reach agree with the other rows about which day is which", async () => {
+  gridOk([
+    { atMs: hourUtc(17, 15), percent: 10 },
+    { atMs: hourUtc(18, 15), percent: 20 },
+  ]);
+
+  const view = await readSkyWeek(BEACH, NOON_PACIFIC_20260817);
+  if (view.state.kind !== "week") throw new Error("expected a week");
+
+  expect(view.state.days.map((day) => day.localDate)).toEqual([
+    "2026-08-17",
+    "2026-08-18",
+  ]);
+  expect(view.state.days[0].isToday).toBe(true);
+  expect(view.state.days[1].isToday).toBe(false);
+});
+
+test("two phenomena on one day are grouped, not overwritten", async () => {
+  // Exercises the second-hour path of the by-date grouping. A day with fog in
+  // the morning and showers later must keep both hours behind one date, or the
+  // day's annotation would depend on which arrived last.
+  gridOk(
+    [
+      { atMs: hourUtc(17, 15), percent: 40 },
+      { atMs: hourUtc(17, 18), percent: 60 },
+    ],
+    [
+      { atMs: hourUtc(17, 15), weather: "fog", coverage: "patchy" },
+      { atMs: hourUtc(17, 18), weather: "rain_showers", coverage: "chance" },
+    ],
+  );
+
+  const view = await readSkyWeek(BEACH, NOON_PACIFIC_20260817);
+  if (view.state.kind !== "week") throw new Error("expected a week");
+
+  expect(view.state.days[0].cloudPercent).toBe(50);
+  // The first of the daylight window, which is the one a parent plans around.
+  expect(view.state.days[0].phenomenon?.weather).toBe("fog");
+});
+
+test("a beach with no forecast cell says so, and does not read as an outage", async () => {
+  const view = await readSkyWeek(UNBOUND_BEACH, NOON_PACIFIC_20260817);
+
+  expect(view.cell).toBeNull();
+  expect(view.state.kind).toBe("no-cell");
+  if (view.state.kind !== "no-cell") throw new Error("expected no-cell");
+  expect(view.state.reason).toMatch(/outside San Diego County/);
+  // A permanent fact about the place must not reach the network.
+  expect(fetchGridForecast).not.toHaveBeenCalled();
+});
+
+test("an upstream failure keeps the binding and carries the reason", async () => {
+  fetchGridForecast.mockResolvedValue({
+    kind: "unavailable",
+    reason:
+      "The National Weather Service returned HTTP 503 for forecast cell SGX/54,21.",
+    drift: false,
+    url: "https://example.invalid",
+  });
+
+  const view = await readSkyWeek(BEACH, NOON_PACIFIC_20260817);
+
+  expect(view.cell?.id).toBe("SGX/54,21");
+  if (view.state.kind !== "unavailable")
+    throw new Error("expected unavailable");
+  expect(view.state.detail).toMatch(/503/);
+  expect(view.state.drift).toBe(false);
+});
+
+test("drift is carried separately, because it is a bug here rather than a bad day", async () => {
+  fetchGridForecast.mockResolvedValue({
+    kind: "unavailable",
+    reason: 'SGX/54,21: skyCover is declared in "wmoUnit:one".',
+    drift: true,
+    url: "https://example.invalid",
+  });
+
+  const view = await readSkyWeek(BEACH, NOON_PACIFIC_20260817);
+  if (view.state.kind !== "unavailable")
+    throw new Error("expected unavailable");
+  expect(view.state.drift).toBe(true);
+});
+
+test("the bound cell's elevation reaches the view, for the bluff sentence", async () => {
+  gridOk([{ atMs: hourUtc(17, 15), percent: 60 }]);
+
+  const view = await readSkyWeek(BEACH, NOON_PACIFIC_20260817);
+
+  expect(view.cell?.id).toBe("SGX/54,21");
+  expect(view.cell?.elevationM).toBe(0);
+});
+
+test("a slug that is not in the inventory throws rather than rendering nothing", async () => {
+  await expect(
+    readSkyWeek("no-such-beach", NOON_PACIFIC_20260817),
   ).rejects.toThrow(/no beach in the inventory/);
 });
