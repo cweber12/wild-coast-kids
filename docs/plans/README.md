@@ -16,9 +16,8 @@ Each file carries a note under its title:
 > It records what was intended then, not what the code does now, and is not
 > maintained. See [`README.md`](README.md).
 
-A plan still being worked carries no such note. One plan is in flight —
-[`sky-from-the-grid.md`](sky-from-the-grid.md) — and every other file here is
-historical.
+A plan still being worked carries no such note. Today every plan here is
+historical; nothing is in flight.
 
 ## What that means in practice
 
