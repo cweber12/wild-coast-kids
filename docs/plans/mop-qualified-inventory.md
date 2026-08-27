@@ -1,9 +1,13 @@
 # A modelled wave source may qualify a beach
 
-Planned 2026-08-26 for #146. Slice 2's decision,
+> **Historical.** Planned 2026-08-26, shipped in PR #153 on 2026-08-26.
+> It records what was intended then, not what the code does now, and is not
+> maintained. See [`README.md`](README.md).
+
+Planned for #146. Slice 2's decision,
 [`docs/adr/0019-a-modelled-source-may-qualify-a-beach.md`](../adr/0019-a-modelled-source-may-qualify-a-beach.md),
-was accepted on 2026-08-26, so slices 3–5 are unblocked. In flight; not
-historical yet.
+was accepted on 2026-08-26 and is the part still kept current — ADRs are, and
+this file is not.
 
 ## The problem, from a reader's point of view
 
