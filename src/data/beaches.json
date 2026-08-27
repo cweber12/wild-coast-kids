@@ -1,6 +1,6 @@
 {
   "version": "0.2.0",
-  "generated": "2026-08-26",
+  "generated": "2026-08-27",
   "time_zone": "America/Los_Angeles",
   "_provenance": "Seeded from the Beach Detail Information resource of \"Beach Advisories (Postings and Closures) and Beach Water Quality Monitoring\", published by the California State Water Resources Control Board: https://data.cnra.ca.gov/dataset/beach-advisories-postings-and-closures-and-beach-water-quality-monitoring, resource cc674e59-036c-45c3-bec2-5d3d294e0e3d. The data.ca.gov copy (resource fcbc9250-06e3-437d-b0c6-3cc5ddde93fc) serves identical content and is the mirror. Rebuilt by scripts/seed-beaches.mjs; re-runnable and diffable with --check. Field values are reproduced as the resource serves them, including BeachType \"UNKNOWN\".",
   "_inclusion": "County San Diego, Status Active, BeachAccess PUBLIC, CountAsBeach 1. A predicate over published fields rather than a judgement about which beaches are worth listing.",
@@ -1516,6 +1516,90 @@
       "air_station_from_end": "lower"
     },
     {
+      "slug": "dog-beach-o-b",
+      "name": "Dog Beach, O.B.",
+      "region": "Point Loma and Ocean Beach",
+      "segment": {
+        "upper": {
+          "lat": 32.75617,
+          "lon": -117.252734
+        },
+        "lower": {
+          "lat": 32.747069,
+          "lon": -117.254253
+        }
+      },
+      "upstream": {
+        "usepa_id": "CA316627",
+        "agency": "County of San Diego Department of Environmental Health",
+        "water_body_name": "Pacific Ocean",
+        "water_body_type": "Open Coast",
+        "beach_type": "UNKNOWN",
+        "beach_access": "PUBLIC",
+        "status": "Active",
+        "nearest_city": "San Diego"
+      },
+      "tide_station": "TWC0405",
+      "tide_station_distance_m": 9149,
+      "tide_station_from_end": "lower",
+      "wave_buoy": null,
+      "wave_buoy_distance_m": null,
+      "wave_buoy_from_end": null,
+      "wave_buoy_null_reason": "the nearest delivering buoy 46254 is 12.5 km away, further than this site publishes a reading from, so it is not read here; MOP line D0347 answers for the waves at 0.9 km, and it is a model rather than a measurement",
+      "mop_line": "D0347",
+      "mop_line_distance_m": 870,
+      "mop_line_from_end": "lower",
+      "grid_cell": null,
+      "grid_cell_from_end": null,
+      "grid_cell_elevation_m": null,
+      "grid_cell_null_reason": "the forecast-cell table does not list dog-beach-o-b; it covers the beaches this site serves, because resolving a cell needs a coordinate and an excluded beach has none recorded",
+      "air_station": "E9951",
+      "air_station_distance_m": 4460,
+      "air_station_from_end": "lower"
+    },
+    {
+      "slug": "ocean-beach",
+      "name": "Ocean Beach",
+      "region": "Point Loma and Ocean Beach",
+      "segment": {
+        "upper": {
+          "lat": 32.756524,
+          "lon": -117.251911
+        },
+        "lower": {
+          "lat": 32.735192,
+          "lon": -117.255806
+        }
+      },
+      "upstream": {
+        "usepa_id": "CA799523",
+        "agency": "County of San Diego Department of Environmental Health",
+        "water_body_name": "Pacific Ocean",
+        "water_body_type": "Open Coast",
+        "beach_type": "UNKNOWN",
+        "beach_access": "PUBLIC",
+        "status": "Active",
+        "nearest_city": "San Diego"
+      },
+      "tide_station": "TWC0405",
+      "tide_station_distance_m": 7902,
+      "tide_station_from_end": "lower",
+      "wave_buoy": null,
+      "wave_buoy_distance_m": null,
+      "wave_buoy_from_end": null,
+      "wave_buoy_null_reason": "the nearest delivering buoy 46254 is 12.5 km away, further than this site publishes a reading from, so it is not read here; MOP line D0333 answers for the waves at 0.8 km, and it is a model rather than a measurement",
+      "mop_line": "D0333",
+      "mop_line_distance_m": 776,
+      "mop_line_from_end": "lower",
+      "grid_cell": null,
+      "grid_cell_from_end": null,
+      "grid_cell_elevation_m": null,
+      "grid_cell_null_reason": "the forecast-cell table does not list ocean-beach; it covers the beaches this site serves, because resolving a cell needs a coordinate and an excluded beach has none recorded",
+      "air_station": "E9951",
+      "air_station_distance_m": 3607,
+      "air_station_from_end": "lower"
+    },
+    {
       "slug": "spanish-landing-park",
       "name": "Spanish Landing Park",
       "region": "Bays, lagoons and inlets",
@@ -1555,6 +1639,48 @@
       "grid_cell_elevation_m": 2.1336,
       "air_station": "KSAN",
       "air_station_distance_m": 1615,
+      "air_station_from_end": "lower"
+    },
+    {
+      "slug": "sunset-cliffs-park",
+      "name": "Sunset Cliffs Park",
+      "region": "Point Loma and Ocean Beach",
+      "segment": {
+        "upper": {
+          "lat": 32.735192,
+          "lon": -117.255806
+        },
+        "lower": {
+          "lat": 32.713183,
+          "lon": -117.256222
+        }
+      },
+      "upstream": {
+        "usepa_id": "CA628494",
+        "agency": "County of San Diego Department of Environmental Health",
+        "water_body_name": "Pacific Ocean",
+        "water_body_type": "Open Coast",
+        "beach_type": "UNKNOWN",
+        "beach_access": "PUBLIC",
+        "status": "Active",
+        "nearest_city": "San Diego"
+      },
+      "tide_station": "TWC0405",
+      "tide_station_distance_m": 5596,
+      "tide_station_from_end": "lower",
+      "wave_buoy": null,
+      "wave_buoy_distance_m": null,
+      "wave_buoy_from_end": null,
+      "wave_buoy_null_reason": "the nearest delivering buoy 46254 is 14.8 km away, further than this site publishes a reading from, so it is not read here; MOP line D0333 answers for the waves at 0.8 km, and it is a model rather than a measurement",
+      "mop_line": "D0333",
+      "mop_line_distance_m": 776,
+      "mop_line_from_end": "upper",
+      "grid_cell": null,
+      "grid_cell_from_end": null,
+      "grid_cell_elevation_m": null,
+      "grid_cell_null_reason": "the forecast-cell table does not list sunset-cliffs-park; it covers the beaches this site serves, because resolving a cell needs a coordinate and an excluded beach has none recorded",
+      "air_station": "E9951",
+      "air_station_distance_m": 2866,
       "air_station_from_end": "lower"
     },
     {
@@ -1639,6 +1765,132 @@
       "grid_cell_elevation_m": 0,
       "air_station": "E9951",
       "air_station_distance_m": 1329,
+      "air_station_from_end": "upper"
+    },
+    {
+      "slug": "coronado-north-beach",
+      "name": "Coronado north beach",
+      "region": "Point Loma and Ocean Beach",
+      "segment": {
+        "upper": {
+          "lat": 32.683267,
+          "lon": -117.223496
+        },
+        "lower": {
+          "lat": 32.6864,
+          "lon": -117.194
+        }
+      },
+      "upstream": {
+        "usepa_id": "CA604254",
+        "agency": "County of San Diego Department of Environmental Health",
+        "water_body_name": "Pacific Ocean",
+        "water_body_type": "Open Coast",
+        "beach_type": "UNKNOWN",
+        "beach_access": "PUBLIC",
+        "status": "Active",
+        "nearest_city": "San Diego"
+      },
+      "tide_station": "TWC0405",
+      "tide_station_distance_m": 2058,
+      "tide_station_from_end": "upper",
+      "wave_buoy": null,
+      "wave_buoy_distance_m": null,
+      "wave_buoy_from_end": null,
+      "wave_buoy_null_reason": "the nearest delivering buoy 46254 is 20.9 km away, further than this site publishes a reading from, so it is not read here; MOP line D0228 answers for the waves at 0.6 km, and it is a model rather than a measurement",
+      "mop_line": "D0228",
+      "mop_line_distance_m": 635,
+      "mop_line_from_end": "upper",
+      "grid_cell": null,
+      "grid_cell_from_end": null,
+      "grid_cell_elevation_m": null,
+      "grid_cell_null_reason": "the forecast-cell table does not list coronado-north-beach; it covers the beaches this site serves, because resolving a cell needs a coordinate and an excluded beach has none recorded",
+      "air_station": "E9951",
+      "air_station_distance_m": 3531,
+      "air_station_from_end": "upper"
+    },
+    {
+      "slug": "coronado-central-beach",
+      "name": "Coronado, Central beach",
+      "region": "Point Loma and Ocean Beach",
+      "segment": {
+        "upper": {
+          "lat": 32.684744,
+          "lon": -117.19049
+        },
+        "lower": {
+          "lat": 32.680392,
+          "lon": -117.18199
+        }
+      },
+      "upstream": {
+        "usepa_id": "CA594160",
+        "agency": "County of San Diego Department of Environmental Health",
+        "water_body_name": "Pacific Ocean",
+        "water_body_type": "Open Coast",
+        "beach_type": "UNKNOWN",
+        "beach_access": "PUBLIC",
+        "status": "Active",
+        "nearest_city": "Coronado"
+      },
+      "tide_station": "TWC0405",
+      "tide_station_distance_m": 4481,
+      "tide_station_from_end": "upper",
+      "wave_buoy": null,
+      "wave_buoy_distance_m": null,
+      "wave_buoy_from_end": null,
+      "wave_buoy_null_reason": "the nearest delivering buoy 46254 is 21.6 km away, further than this site publishes a reading from, so it is not read here; MOP line D0177 answers for the waves at 0.9 km, and it is a model rather than a measurement",
+      "mop_line": "D0177",
+      "mop_line_distance_m": 930,
+      "mop_line_from_end": "lower",
+      "grid_cell": null,
+      "grid_cell_from_end": null,
+      "grid_cell_elevation_m": null,
+      "grid_cell_null_reason": "the forecast-cell table does not list coronado-central-beach; it covers the beaches this site serves, because resolving a cell needs a coordinate and an excluded beach has none recorded",
+      "air_station": "E9951",
+      "air_station_distance_m": 4704,
+      "air_station_from_end": "upper"
+    },
+    {
+      "slug": "coronado-city-beaches",
+      "name": "Coronado City beaches",
+      "region": "Point Loma and Ocean Beach",
+      "segment": {
+        "upper": {
+          "lat": 32.6867,
+          "lon": -117.1976
+        },
+        "lower": {
+          "lat": 32.6739,
+          "lon": -117.1721
+        }
+      },
+      "upstream": {
+        "usepa_id": "CA204955",
+        "agency": "County of San Diego Department of Environmental Health",
+        "water_body_name": "Pacific Ocean",
+        "water_body_type": "Open Coast",
+        "beach_type": "UNKNOWN",
+        "beach_access": "PUBLIC",
+        "status": "Active",
+        "nearest_city": "Coronado"
+      },
+      "tide_station": "TWC0405",
+      "tide_station_distance_m": 4014,
+      "tide_station_from_end": "upper",
+      "wave_buoy": null,
+      "wave_buoy_distance_m": null,
+      "wave_buoy_from_end": null,
+      "wave_buoy_null_reason": "the nearest delivering buoy 46254 is 21.2 km away, further than this site publishes a reading from, so it is not read here; MOP line D0167 answers for the waves at 0.8 km, and it is a model rather than a measurement",
+      "mop_line": "D0167",
+      "mop_line_distance_m": 833,
+      "mop_line_from_end": "lower",
+      "grid_cell": null,
+      "grid_cell_from_end": null,
+      "grid_cell_elevation_m": null,
+      "grid_cell_null_reason": "the forecast-cell table does not list coronado-city-beaches; it covers the beaches this site serves, because resolving a cell needs a coordinate and an excluded beach has none recorded",
+      "air_station": "E9951",
+      "air_station_distance_m": 4096,
       "air_station_from_end": "upper"
     },
     {
@@ -1987,39 +2239,9 @@
       "why": "its tide station 9410230 is 10.4 km away, and this site does not publish a reading taken more than 10.0 km from the beach it is shown for"
     },
     {
-      "slug": "dog-beach-o-b",
-      "name": "Dog Beach, O.B.",
-      "why": "its tide station 9410230 is 12.3 km away and its wave buoy 46254 is 12.5 km away, and this site does not publish a reading taken more than 10.0 km from the beach it is shown for"
-    },
-    {
-      "slug": "ocean-beach",
-      "name": "Ocean Beach",
-      "why": "its tide station 9410230 is 12.3 km away and its wave buoy 46254 is 12.5 km away, and this site does not publish a reading taken more than 10.0 km from the beach it is shown for"
-    },
-    {
-      "slug": "sunset-cliffs-park",
-      "name": "Sunset Cliffs Park",
-      "why": "its tide station 9410230 is 14.6 km away and its wave buoy 46254 is 14.8 km away, and this site does not publish a reading taken more than 10.0 km from the beach it is shown for"
-    },
-    {
       "slug": "tide-beach-park",
       "name": "Tide Beach Park",
-      "why": "its tide station 9410120 is 12.5 km away and its wave buoy 46254 is 21.8 km away, and this site does not publish a reading taken more than 10.0 km from the beach it is shown for. A model can answer for the waves where no buoy is in range, but not here: the nearest MOP line is 2.6 km away, and every beach on this coast binds one inside 1.0 km"
-    },
-    {
-      "slug": "coronado-north-beach",
-      "name": "Coronado north beach",
-      "why": "its tide station 9410120 is 13.2 km away and its wave buoy 46254 is 20.9 km away, and this site does not publish a reading taken more than 10.0 km from the beach it is shown for"
-    },
-    {
-      "slug": "coronado-central-beach",
-      "name": "Coronado, Central beach",
-      "why": "its tide station 9410120 is 12.2 km away and its wave buoy 46254 is 21.6 km away, and this site does not publish a reading taken more than 10.0 km from the beach it is shown for"
-    },
-    {
-      "slug": "coronado-city-beaches",
-      "name": "Coronado City beaches",
-      "why": "its tide station 9410120 is 11.2 km away and its wave buoy 46254 is 21.2 km away, and this site does not publish a reading taken more than 10.0 km from the beach it is shown for"
+      "why": "its wave buoy 46254 is 21.8 km away, and this site does not publish a reading taken more than 10.0 km from the beach it is shown for. A model can answer for the waves where no buoy is in range, but not here: the nearest MOP line is 2.6 km away, and every beach on this coast binds one inside 1.0 km"
     },
     {
       "slug": "tijana-river",
@@ -2034,9 +2256,9 @@
   ],
   "unresolved": [
     "beach_type is UNKNOWN upstream for most of these beaches. That is a gap in the resource, not a shorthand for sand, and nothing may render it as a description of what the shore is made of.",
-    "The join binds by nearest station of matching water class, and a beach whose nearest is further than 10.0 km away is not listed here at all rather than listed with a reading from out of range. The farthest any listed beach reads is Del Mar City Beach's, at 9.2 km. See tide-stations.json, whose own unresolved list records that the one open-coast station between La Jolla and Imperial Beach does not deliver predictions.",
-    "30 of these beaches get no MEASURED wave height, for two different reasons that their wave_buoy_null_reason tells apart. At 26 of them the join bound no buoy: every NDBC wave buoy sits on the open coast, and ocean swell does not reach into a bay or lagoon, so binding one to the nearest buoy would put an open-ocean number on enclosed water. Their water temperature is missing for the same reason and is not yet filled from another source. At the other 4 the join DID bind a buoy and this site declined to publish it, because the only one left is far past 10.0 km -- 46235 Imperial Beach Nearshore died in May 2026 and was the only buoy south of Point Loma. Those beaches are open coast and do get a wave figure, from a model rather than an instrument, and the page says which it is. See docs/adr/0019-a-modelled-source-may-qualify-a-beach.md.",
-    "26 beaches get no wave forecast, and the refusal costs more here than it does for the buoy: MOP lines sit about 100 m apart, so the nearest one to an enclosed beach is close enough to look right. It would still be describing the open coast outside. The median bound beach reads a line 503 m away and the farthest reads one 910 m away, at Tourmaline Surfing Park. Every one is inside a kilometre, and that closeness is now load-bearing rather than merely reassuring: where no buoy is in range, a line within 1.0 km answers for the beach on its own and the beach is listed on the strength of it. A model deciding what this site covers is a change of kind, and it is argued in docs/adr/0019-a-modelled-source-may-qualify-a-beach.md rather than assumed here.",
+    "The join binds by nearest station of matching water class, and a beach whose nearest is further than 10.0 km away is not listed here at all rather than listed with a reading from out of range. The farthest any listed beach reads is Del Mar City Beach's, at 9.2 km. See tide-stations.json, whose own unresolved list records that the one open-coast station between La Jolla and Imperial Beach has failed once already and is now re-measured rather than assumed.",
+    "36 of these beaches get no MEASURED wave height, for two different reasons that their wave_buoy_null_reason tells apart. At 26 of them the join bound no buoy: every NDBC wave buoy sits on the open coast, and ocean swell does not reach into a bay or lagoon, so binding one to the nearest buoy would put an open-ocean number on enclosed water. Their water temperature is missing for the same reason and is not yet filled from another source. At the other 10 the join DID bind a buoy and this site declined to publish it, because the only one left is far past 10.0 km -- 46235 Imperial Beach Nearshore died in May 2026 and was the only buoy south of Point Loma. Those beaches are open coast and do get a wave figure, from a model rather than an instrument, and the page says which it is. See docs/adr/0019-a-modelled-source-may-qualify-a-beach.md.",
+    "26 beaches get no wave forecast, and the refusal costs more here than it does for the buoy: MOP lines sit about 100 m apart, so the nearest one to an enclosed beach is close enough to look right. It would still be describing the open coast outside. The median bound beach reads a line 644 m away and the farthest reads one 930 m away, at Coronado, Central beach. Every one is inside a kilometre, and that closeness is now load-bearing rather than merely reassuring: where no buoy is in range, a line within 1.0 km answers for the beach on its own and the beach is listed on the strength of it. A model deciding what this site covers is a change of kind, and it is argued in docs/adr/0019-a-modelled-source-may-qualify-a-beach.md rather than assumed here.",
     "A tide prediction is for the station, not for the beach. It is the best published figure for that stretch of shore and it is not a measurement taken there.",
     "Cloud comes from a forecast rather than a reading, and there is no visibility figure at all. The ten stations in this county publishing either one are airport METARs, and an aerodrome observation describes its own field: this site read one until 2026-08-27 and stopped. The week grid shows cloud forecast for each beach's own square of the National Weather Service's map instead. See docs/adr/0020-sky-leaves-the-card-for-the-week.md.",
     "Air temperature and wind come from the station nearest the shore, and the page names it with its distance. The median beach reads its air station 3.7 km away. That binding exists separately because requiring one station to supply sky as well meant the scarcest value decided where the temperature was measured, which put an inland reading on a coastal beach; the sky binding has since gone entirely and this one is what it was protecting. See docs/adr/0010-two-provenances-in-the-air-panel.md.",

@@ -5,7 +5,7 @@ import { REGION_HEADING } from "./headingRank";
 
 const ENTRIES = [
   "beach_type is UNKNOWN upstream for most of these beaches.",
-  "TWC0405 Point Loma does not deliver predictions.",
+  "TWC0405 Point Loma failed once and is now re-measured rather than assumed.",
 ];
 
 const REACH = {

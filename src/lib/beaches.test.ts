@@ -14,10 +14,12 @@ import {
 
 describe("the inventory", () => {
   test("holds only the beaches the station networks reach", () => {
-    // The county lists 73. The other 28 are in beaches.json's `_excluded`
+    // The county lists 73. The other 22 are in beaches.json's `_excluded`
     // block, each with the binding distance that removed it; see
-    // docs/adr/0011-inventory-bounded-by-station-networks.md.
-    expect(allBeaches()).toHaveLength(45);
+    // docs/adr/0011-inventory-bounded-by-station-networks.md. It was 45 and 28
+    // until TWC0405 Point Loma started answering again: six beaches around
+    // Point Loma and Coronado came inside tolerance without any rule moving.
+    expect(allBeaches()).toHaveLength(51);
   });
 
   test("holds the four beaches no buoy reaches, which a model answers for", () => {
@@ -280,7 +282,7 @@ describe("the MOP line binding", () => {
   test("every beach with a buoy also has a line, but not the reverse", () => {
     // This used to be an equivalence: two joins over two tables, agreeing about
     // which water ocean swell reaches. ADR-0019 broke the second direction on
-    // purpose -- four beaches carry a line and no buoy, because the buoy the
+    // purpose -- ten beaches carry a line and no buoy, because the buoy the
     // join bound is further away than this site will publish. The first
     // direction still holds and is the half that catches the two joins
     // disagreeing about the water, which is what the equivalence was for: a
@@ -298,7 +300,7 @@ describe("the MOP line binding", () => {
     const modelledOnly = allBeaches().filter(
       (beach) => beach.wave_buoy === null && beach.mop_line !== null,
     );
-    expect(modelledOnly).toHaveLength(4);
+    expect(modelledOnly).toHaveLength(10);
 
     for (const beach of modelledOnly) {
       expect(beach.mop_line_distance_m).toBeLessThanOrEqual(1_000);

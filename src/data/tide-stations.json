@@ -1,7 +1,7 @@
 {
   "version": "0.1.0",
-  "generated": "2026-08-18",
-  "_provenance": "Station ids, names and coordinates read from NOAA CO-OPS metadata, https://api.tidesandcurrents.noaa.gov/mdapi/prod/webapi/stations.json?type=tidepredictions, filtered to 32.5-33.4N and -117.5 to -117.0E, on 2026-08-18. Nine stations answered. Delivery was then measured one station at a time against the same predictions endpoint this site reads, rather than inferred from the station list: eight serve predictions and one does not.",
+  "generated": "2026-08-27",
+  "_provenance": "Station ids, names and coordinates read from NOAA CO-OPS metadata, https://api.tidesandcurrents.noaa.gov/mdapi/prod/webapi/stations.json?type=tidepredictions, filtered to 32.5-33.4N and -117.5 to -117.0E, on 2026-08-18. Nine stations answered. Delivery was then measured one station at a time against the same predictions endpoint this site reads, rather than inferred from the station list: eight served predictions and one did not. Re-measured on 2026-08-27 by scripts/probe-tide-stations.mjs, which asks every station the same question under the same contract: all nine serve predictions. TWC0405 Point Loma is the one that changed, and the nine days it took to notice are why the probe exists.",
   "_water_is_an_input_not_a_result": "The `water` field is hand-written, and that is deliberate in a file whose values otherwise come from upstream. NOAA publishes no open-coast/bay classification, so no authority can state it, and a join has to be told which stations are candidates for which beaches. It has the same standing as the scope field on a join rather than the standing of a joined value. What it prevents is concrete: an ocean-facing beach near the bay mouth is geometrically closer to a bay station than to any coastal one, and a bay tide curve at an ocean beach is a wrong number that looks entirely right.",
   "_measured_spread": "Station choice is not cosmetic. For the low tide around 02:4x GMT on 2026-08-18 the eight working stations predicted between 1.442 and 1.700 ft, across 13 minutes of timing. A quarter of a foot is the difference between a reef being out and not.",
   "_schema": {
@@ -84,12 +84,11 @@
       "lon": -117.2333,
       "kind": "S",
       "water": "open-coast",
-      "delivers": false,
-      "dead_note": "Asked for hilo predictions on 2026-08-18 it answered HTTP 200 carrying {\"error\":{\"message\":\"No Predictions data was found. Please make sure the Datum input is valid.\"}} -- a dead response wearing a success code, which is the failure this stack pins the parser against. It is listed in NOAA's tide-prediction station metadata all the same, so a join built from that list without measuring delivery would have bound the middle of the open coast to a station that never answers. Kept and marked rather than deleted: if it starts answering, that is a change a human should see."
+      "delivers": true
     }
   },
   "unresolved": [
-    "TWC0405 Point Loma is the only tide-prediction station on the open coast between La Jolla and Imperial Beach, and it does not deliver. So every open-coast beach from Point Loma through Ocean Beach and Pacific Beach binds to a station some distance away, and the join records that distance rather than hiding it. This is a gap in NOAA's published predictions, not one this site can close.",
+    "TWC0405 Point Loma is the only tide-prediction station on the open coast between La Jolla and Imperial Beach, and it is a station this site has already watched fail. Asked for predictions on 2026-08-18 it answered an error under a success code; asked the same question on 2026-08-27 it answered normally, and six beaches around Point Loma and Coronado are listed here because it did. Nine days passed between those two measurements with nothing checking, which is why scripts/probe-tide-stations.mjs now re-measures every station's delivery against what this file records. If it goes quiet again those beaches show an unavailable reading rather than a wrong one, and the probe is what says so.",
     "The open-coast/bay classification of each station is an author judgement, written by hand because no upstream authority publishes one. It has not been checked against a tidal-datum study, and the case it most affects is the bay mouth, where the two classes are closest together."
   ]
 }
