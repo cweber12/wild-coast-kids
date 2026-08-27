@@ -71,11 +71,18 @@ export default defineConfig({
       // it. Deleting the arm would be the alternative, and it would let a
       // non-Error throw escape a function whose whole contract is that it never
       // throws. So two branches were added that cannot be reached on purpose.
+      //
+      // 2026-08-27, sky leaving the air card. This one is REASON 2, and the
+      // distinction from reason 1 matters: nothing became untested. Well-covered
+      // code was deleted -- readSkyHalf, SkyState, skyStats, visibilityWords and
+      // the two sky disclosures, with the fifteen tests that covered them -- so
+      // the surviving denominator is weighted further toward the 0% entry
+      // plumbing that has always dragged these figures down in plain sight.
       thresholds: {
-        statements: 89.39,
-        branches: 90.35,
-        functions: 94.95,
-        lines: 89.03,
+        statements: 89.16,
+        branches: 90.19,
+        functions: 94.74,
+        lines: 88.85,
       },
     },
   },
