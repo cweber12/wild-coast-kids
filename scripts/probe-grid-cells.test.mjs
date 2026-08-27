@@ -3,6 +3,7 @@ import {
   buildTable,
   CELL_ID,
   document,
+  hasMoved,
   parseCell,
   parsePoint,
 } from "./probe-grid-cells.mjs";
@@ -200,5 +201,186 @@ describe("the document", () => {
       cell: null,
       reason: "the grid does not cover 32.53,-117.12",
     });
+  });
+});
+
+describe("hasMoved", () => {
+  const CELLS = {
+    "SGX/55,25": {
+      office: "SGX",
+      x: 55,
+      y: 25,
+      elevation_m: 102.108,
+      sky_cover_entries: 37,
+      visibility_entries: 0,
+      ceiling_entries: 0,
+      delivers: true,
+    },
+    "SGX/55,26": {
+      office: "SGX",
+      x: 55,
+      y: 26,
+      elevation_m: 21.9456,
+      sky_cover_entries: 37,
+      visibility_entries: 0,
+      ceiling_entries: 0,
+      delivers: true,
+    },
+  };
+
+  const RESOLUTIONS = {
+    "del-mar-city-beach": {
+      upper: { cell: "SGX/55,26" },
+      lower: { cell: "SGX/55,25" },
+    },
+  };
+
+  /**
+   * A whole document in the shape `document()` really produces, so the
+   * comparison is exercised against the thing it compares rather than a sketch.
+   */
+  const doc = (
+    cells,
+    { resolutions = RESOLUTIONS, now = new Date("2026-08-26T12:00:00Z") } = {},
+  ) => document(buildTable(resolutions, cells), now);
+
+  /** The same document with one cell edited, so each test states one change. */
+  const edited = (edit) => {
+    const cells = structuredClone(CELLS);
+    edit(cells);
+    return doc(cells);
+  };
+
+  it("compares a document with itself as unchanged", () => {
+    expect(hasMoved(doc(CELLS), doc(CELLS))).toBe(false);
+  });
+
+  it("ignores the generated date, which moves on every run", () => {
+    expect(
+      hasMoved(
+        doc(CELLS),
+        doc(CELLS, { now: new Date("2026-09-14T12:00:00Z") }),
+      ),
+    ).toBe(false);
+  });
+
+  it("does not report a forecast refresh, which moves the counts alone", () => {
+    // The regression. Measured 2026-08-27 against a file written 2026-08-26:
+    // sky_cover_entries went 34-37 to 39-41 at all 21 cells and nothing else
+    // moved, and --check failed on it (#162).
+    expect(
+      hasMoved(
+        doc(CELLS),
+        edited((cells) => {
+          cells["SGX/55,25"].sky_cover_entries = 41;
+          cells["SGX/55,26"].sky_cover_entries = 39;
+        }),
+      ),
+    ).toBe(false);
+  });
+
+  it("does not report a count moving in a series already publishing", () => {
+    // Visibility measured zero everywhere in August. If it starts publishing,
+    // its count becomes as volatile as sky cover's and must not fire either --
+    // what is an event is that it started, not what it reads on a given day.
+    const publishing = structuredClone(CELLS);
+    publishing["SGX/55,25"].visibility_entries = 4;
+    publishing["SGX/55,25"].ceiling_entries = 6;
+    const later = structuredClone(publishing);
+    later["SGX/55,25"].visibility_entries = 9;
+    later["SGX/55,25"].ceiling_entries = 2;
+
+    expect(hasMoved(doc(publishing), doc(later))).toBe(false);
+  });
+
+  it("reports a cell that stops publishing sky cover", () => {
+    expect(
+      hasMoved(
+        doc(CELLS),
+        edited((cells) => {
+          cells["SGX/55,25"].sky_cover_entries = 0;
+        }),
+      ),
+    ).toBe(true);
+  });
+
+  it("reports a cell that starts publishing visibility", () => {
+    // The tripwire the field exists for: zero to any non-zero is the event.
+    expect(
+      hasMoved(
+        doc(CELLS),
+        edited((cells) => {
+          cells["SGX/55,25"].visibility_entries = 3;
+        }),
+      ),
+    ).toBe(true);
+  });
+
+  it("reports a cell that starts publishing a ceiling", () => {
+    expect(
+      hasMoved(
+        doc(CELLS),
+        edited((cells) => {
+          cells["SGX/55,25"].ceiling_entries = 3;
+        }),
+      ),
+    ).toBe(true);
+  });
+
+  it("reports a changed delivers value", () => {
+    expect(
+      hasMoved(
+        doc(CELLS),
+        edited((cells) => {
+          cells["SGX/55,25"].delivers = false;
+        }),
+      ),
+    ).toBe(true);
+  });
+
+  it("reports a cell whose elevation moved", () => {
+    expect(
+      hasMoved(
+        doc(CELLS),
+        edited((cells) => {
+          cells["SGX/55,25"].elevation_m = 3.048;
+        }),
+      ),
+    ).toBe(true);
+  });
+
+  it("reports a cell whose grid coordinate moved", () => {
+    expect(
+      hasMoved(
+        doc(CELLS),
+        edited((cells) => {
+          cells["SGX/55,25"].y = 24;
+        }),
+      ),
+    ).toBe(true);
+  });
+
+  it("reports a renamed cell id", () => {
+    const renamed = structuredClone(CELLS);
+    renamed["SGX/55,24"] = renamed["SGX/55,25"];
+    delete renamed["SGX/55,25"];
+
+    expect(hasMoved(doc(CELLS), doc(renamed))).toBe(true);
+  });
+
+  it("reports a beach resolving to a different cell", () => {
+    expect(
+      hasMoved(
+        doc(CELLS),
+        doc(CELLS, {
+          resolutions: {
+            "del-mar-city-beach": {
+              upper: { cell: "SGX/55,26" },
+              lower: { cell: "SGX/55,26" },
+            },
+          },
+        }),
+      ),
+    ).toBe(true);
   });
 });
