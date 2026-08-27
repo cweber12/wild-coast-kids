@@ -45,7 +45,6 @@ import { bindGridCell } from "./grid-cell-join.mjs";
 import { bindMopLine } from "./mop-join.mjs";
 import { bindTideStation } from "./tide-join.mjs";
 import { bindWaveBuoy } from "./wave-join.mjs";
-import { bindSkyStation } from "./sky-join.mjs";
 
 const PORTAL = "https://data.cnra.ca.gov";
 const RESOURCE = "cc674e59-036c-45c3-bec2-5d3d294e0e3d";
@@ -274,12 +273,6 @@ export function build(
           { slug, segment, waterBodyType: row.WaterBodyType },
           mopLines,
         );
-    // No water-class rule here, unlike the wave join: air reaches a lagoon.
-    // This binds sky and visibility only -- the airport. Temperature and wind
-    // come from the air join below, which does have a water-class rule.
-    const sky = fault
-      ? { stationId: null, reason: fault }
-      : bindSkyStation({ segment }, observationStations);
     // Neither a distance nor a water class decides this one. A forecast cell is
     // an area, so there is nothing to be nearer by; the end is chosen by which
     // cell averages nearer sea level, which is where a beach is. It reads a
@@ -326,10 +319,6 @@ export function build(
       mop_line_distance_m: mop.lineId ? Math.round(mop.distanceM) : null,
       mop_line_from_end: mop.lineId ? mop.fromEnd : null,
       mop_line_null_reason: mop.lineId ? undefined : mop.reason,
-      sky_station: sky.stationId,
-      sky_station_distance_m: sky.stationId ? Math.round(sky.distanceM) : null,
-      sky_station_from_end: sky.stationId ? sky.fromEnd : null,
-      sky_station_null_reason: sky.stationId ? undefined : sky.reason,
       grid_cell: grid.cellId,
       grid_cell_from_end: grid.cellId ? grid.fromEnd : null,
       grid_cell_elevation_m: grid.cellId ? grid.elevationM : null,
@@ -575,14 +564,6 @@ export function document(built, now = new Date()) {
     );
   }
 
-  const withSky = beaches.filter((b) => b.sky_station !== null);
-  const farthestSky = withSky.reduce((a, b) =>
-    b.sky_station_distance_m > a.sky_station_distance_m ? b : a,
-  );
-  const skyKm = withSky
-    .map((b) => b.sky_station_distance_m / 1000)
-    .sort((a, b) => a - b);
-  const medianSkyKm = skyKm[Math.floor(skyKm.length / 2)];
   const airKm = beaches
     .filter((b) => b.air_station !== null)
     .map((b) => b.air_station_distance_m / 1000)
@@ -702,16 +683,6 @@ export function document(built, now = new Date()) {
         "rather than that the model is coarse there. It still binds, and still fills the week.",
       mop_line_from_end:
         "Which end of the segment supplied the distance, upper or lower.",
-      sky_station:
-        "Joined, never typed: the nearest station that both answers and publishes sky. Supplies " +
-        "the panel's sky and visibility ONLY -- temperature and wind come from air_station. " +
-        "Unlike the wave buoy, every beach binds one -- air reaches a lagoon. null means the " +
-        "join could not bind one, and sky_station_null_reason says why.",
-      sky_station_distance_m:
-        "Great-circle metres from the nearer segment end to the station. Larger than the tide " +
-        "and buoy distances by nature: the ten stations that publish sky are all airports.",
-      sky_station_from_end:
-        "Which end of the segment supplied the distance, upper or lower.",
       grid_cell:
         "Joined, never typed: the National Weather Service forecast cell this beach falls in, " +
         "as office/x,y. NOT a nearest-anything -- a cell is an area about 2.5 km square and " +
@@ -735,12 +706,14 @@ export function document(built, now = new Date()) {
         "Joined, never typed: the nearest station that answers, publishes air temperature AND " +
         "wind, and suits the beach's water class -- an open-coast beach binds a shore station, " +
         "a bay or lagoon binds the nearest of any kind. Usually not the same station as " +
-        "sky_station, and may be on either network; see the `network` field in " +
+        "the sky station this table used to carry, and may be on either network; see the " +
+        "`network` field in " +
         "observation-stations.json. null means the join could not bind one, and " +
         "air_station_null_reason says why.",
       air_station_distance_m:
-        "Great-circle metres from the nearer segment end to the station. Much smaller than " +
-        "sky_station_distance_m, which is the point of the second binding.",
+        "Great-circle metres from the nearer segment end to the station. Much smaller than the " +
+        "sky station's was -- p50 3.7 km against 7.9 km -- which is what the second binding " +
+        "existed to protect and is why this one outlived it.",
       air_station_from_end:
         "Which end of the segment supplied the distance, upper or lower.",
     },
@@ -793,19 +766,19 @@ export function document(built, now = new Date()) {
             `docs/adr/0019-a-modelled-source-may-qualify-a-beach.md rather than assumed here.`),
       "A tide prediction is for the station, not for the beach. It is the best published figure " +
         "for that stretch of shore and it is not a measurement taken there.",
-      `Sky and visibility are read at an airport, because the ten stations in this county that ` +
-        `publish them are all airport METARs, and airports sit inland. The median beach reads ` +
-        `its sky station ${Math.round(medianSkyKm * 10) / 10} km away and the farthest ` +
-        `reads one ${(farthestSky.sky_station_distance_m / 1000).toFixed(1)} km away, ` +
-        `at ${farthestSky.name}. Coastal fog is precisely what changes over that distance, ` +
-        `so those two figures describe the airport and not the shoreline.`,
-      `Air temperature and wind come from a different station than sky and visibility, and the ` +
-        `page names both. The median beach reads its air station ` +
-        `${Math.round(medianAirKm * 10) / 10} km away against ` +
-        `${Math.round(medianSkyKm * 10) / 10} km for its sky station. Two provenances behind ` +
-        `one panel is a deliberate trade: requiring one station to supply all four values meant ` +
-        `the scarcest of them, sky, decided where the temperature was measured, which put an ` +
-        `inland reading on a coastal beach. See docs/adr/0010-two-provenances-in-the-air-panel.md.`,
+      "Cloud comes from a forecast rather than a reading, and there is no visibility figure " +
+        "at all. The ten stations in this county publishing either one are airport METARs, and " +
+        "an aerodrome observation describes its own field: this site read one until 2026-08-27 " +
+        "and stopped. The week grid shows cloud forecast for each beach's own square of the " +
+        "National Weather Service's map instead. See " +
+        "docs/adr/0020-sky-leaves-the-card-for-the-week.md.",
+      `Air temperature and wind come from the station nearest the shore, and the page names ` +
+        `it with its distance. The median beach reads its air station ` +
+        `${Math.round(medianAirKm * 10) / 10} km away. That binding exists separately because ` +
+        `requiring one station to supply sky as well meant the scarcest value decided where the ` +
+        `temperature was measured, which put an inland reading on a coastal beach; the sky ` +
+        `binding has since gone entirely and this one is what it was protecting. See ` +
+        `docs/adr/0010-two-provenances-in-the-air-panel.md.`,
       `An air station is still not the beach. It is the nearest measurement of the air the ` +
         `beach is in, chosen for exposure as well as distance -- an open-coast beach binds a ` +
         `station standing in the marine layer at the shoreline, a bay or lagoon binds the ` +

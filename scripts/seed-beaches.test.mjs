@@ -297,9 +297,6 @@ describe("build", () => {
     // So does the observation station, and it is the nearest one that
     // publishes sky rather than the nearest one full stop: D3101 is closer to
     // this row than KNKX and publishes none.
-    expect(beach.sky_station).toBe("KNKX");
-    expect(beach.sky_station_distance_m).toBeGreaterThan(0);
-    expect(["upper", "lower"]).toContain(beach.sky_station_from_end);
   });
 
   it("binds a forecast cell, and carries no distance beside it", () => {
@@ -356,11 +353,12 @@ describe("build", () => {
     expect(beach.grid_cell_null_reason).toMatch(/does not list unprobed-cove/);
   });
 
-  it("binds the air separately from the sky, and nearer", () => {
-    // The two provenances, produced by two joins over one table. The sky
-    // station is the nearest airport; the air station is the nearest station
-    // standing in the marine layer, and it is a different station and a much
-    // shorter distance. See docs/adr/0010-two-provenances-in-the-air-panel.md.
+  it("binds the air to the shore station, which is what outlived the split", () => {
+    // ADR-0010 produced two joins over one table: an airport for sky, and the
+    // nearest station standing in the marine layer for temperature and wind.
+    // ADR-0020 retired the airport join. This asserts the half that remains --
+    // the shore station, at a fraction of the airport's distance, which is the
+    // reading the split existed to protect.
     const [beach] = build(
       [row()],
       STATIONS,
@@ -371,10 +369,10 @@ describe("build", () => {
     );
 
     expect(beach.air_station).toBe("LJAC1");
-    expect(beach.sky_station).toBe("KNKX");
-    expect(beach.air_station_distance_m).toBeLessThan(
-      beach.sky_station_distance_m,
-    );
+    // Nearer than the airport it used to be compared against: KNKX is 10.4 km
+    // from this row and the pier is under two.
+    expect(beach.air_station_distance_m).toBeLessThan(2_000);
+    expect(beach).not.toHaveProperty("sky_station");
     expect(["upper", "lower"]).toContain(beach.air_station_from_end);
   });
 
@@ -417,7 +415,6 @@ describe("build", () => {
     // Air does reach into a bay, so this join is not asymmetric the way the
     // wave join is. Making the two symmetric would silently strip wind and
     // visibility from twenty-six beaches.
-    expect(beach.sky_station).not.toBeNull();
 
     expect(beach.air_station).not.toBeNull();
   });
@@ -492,8 +489,6 @@ describe("build", () => {
     expect(beach.tide_station_null_reason).toMatch(/outside San Diego County/);
     // The fault stops every join, not just the tide one. A coordinate nobody
     // can trust must not produce a confident airport reading either.
-    expect(beach.sky_station).toBeNull();
-    expect(beach.sky_station_null_reason).toMatch(/outside San Diego County/);
     expect(beach.air_station).toBeNull();
     expect(beach.air_station_null_reason).toMatch(/outside San Diego County/);
   });
@@ -974,7 +969,7 @@ describe("document", () => {
     expect(bound).not.toMatch(/distances are large/);
   });
 
-  it("tells a reader the sky figures are read at an airport", () => {
+  it("tells a reader there is no sky reading, and why", () => {
     const built = document(
       build(
         [row()],
@@ -985,56 +980,30 @@ describe("document", () => {
         GRID_CELLS,
       ),
     );
-    const airport = built.unresolved.find((entry) =>
-      entry.includes("read at an airport"),
+    const sky = built.unresolved.find((entry) =>
+      entry.includes("no visibility figure"),
     );
 
-    // The four values in that panel come from a station some kilometres
-    // inland, and coastal fog is precisely what changes over that distance.
-    // A reader who is not told that will read it as a beach measurement.
-    expect(airport).toBeDefined();
-    expect(airport).toMatch(/km away/);
+    // The caveat that replaced "sky and visibility are read at an airport".
+    // The figures went; the reason a beach site has no cloud reading did not,
+    // because a reader who wonders is owed the same answer that justified the
+    // deletion.
+    expect(sky).toBeDefined();
+    expect(sky).toMatch(/airport METARs/);
+    expect(sky).toMatch(/0020-sky-leaves-the-card/);
   });
 
-  it("names the farthest beach from its station, not merely the first", () => {
-    // Two beaches, so the reduce and the sort actually run. With one, the
-    // callbacks never fire and "farthest" is whatever happened to be there --
-    // which is how a single-row fixture can leave a real rule unasserted.
-    // Both are inside the service tolerance of the tide station and the buoy,
-    // and differ only in how far the airport is: a fixture the predicate cuts
-    // never reaches the reduce this test is about.
-    const near = row({
-      Beach_Name: "Near The Airport",
-      Beach_UpperLat: "32.88",
-      "Beach_ UpperLon": "-117.20",
-      Beach_LowerLat: "32.87",
-      Beach_LowerLon: "-117.20",
-    });
-    const far = row({
-      Beach_Name: "Far From The Airport",
-      Beach_UpperLat: "32.88",
-      "Beach_ UpperLon": "-117.34",
-      Beach_LowerLat: "32.87",
-      Beach_LowerLon: "-117.34",
-    });
-
-    const built = document(
-      build(
-        [near, far],
-        STATIONS,
-        BUOYS,
-        OBSERVATION_STATIONS,
-        MOP_LINES,
-        GRID_CELLS,
-      ),
-    );
-    const airport = built.unresolved.find((entry) =>
-      entry.includes("read at an airport"),
-    );
-
-    expect(airport).toContain("Far From The Airport");
-    expect(airport).not.toContain("at Near The Airport");
-  });
+  /**
+   * A test stood here asserting that the airport caveat named the FARTHEST
+   * beach from its sky station rather than whichever row came first -- the
+   * reduce and the sort only run with two beaches, so a single-row fixture had
+   * left the rule unasserted. Both the caveat and the reduce are gone with the
+   * sky binding.
+   *
+   * The equivalent rule survives for the air station's median, which
+   * "reports the median air distance over more than one beach" covers, and for
+   * the MOP line's farthest, which its own test covers.
+   */
 
   it("writes its caveats out in full, so two runs agree", () => {
     // Carrying entries forward from the file duplicated them on the second run,

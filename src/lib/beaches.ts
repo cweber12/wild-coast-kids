@@ -73,16 +73,6 @@ export interface Beach {
   mop_line_null_reason?: string;
   /** Joined, never typed. Unlike the buoy, every beach binds one: air reaches a lagoon. */
   /**
-   * Joined, never typed. Supplies sky and visibility only: it is the nearest
-   * station that publishes them, which in this county is always an airport.
-   * Temperature and wind come from `air_station`.
-   */
-  sky_station: string | null;
-  sky_station_distance_m: number | null;
-  sky_station_from_end: string | null;
-  /** Present exactly when sky_station is null, and required then. */
-  sky_station_null_reason?: string;
-  /**
    * Joined, never typed: the National Weather Service forecast cell this beach
    * falls in, as `office/x,y`. It carries no distance, and that absence is the
    * point -- a cell is an area about 2.5 km square and every coordinate inside
@@ -105,7 +95,8 @@ export interface Beach {
   /**
    * Joined, never typed. Supplies air temperature and wind: the nearest station
    * that publishes both and suits this beach's water class. Usually a different
-   * station from `sky_station`, and much nearer.
+   * station -- and much nearer than the sky station this table carried until
+   * 2026-08-27, which is what the split existed to protect.
    */
   air_station: string | null;
   air_station_distance_m: number | null;
@@ -365,32 +356,10 @@ export function mopLineFor(beach: Beach): (MopLine & { id: string }) | null {
 }
 
 /**
- * The station a beach reads for sky and visibility, or null when the join bound
- * none. Not the station it reads for temperature and wind -- see
- * `airStationFor` -- and the difference is the whole of ADR 0010.
- *
- * Throws when a beach names a station the table does not describe -- a broken
- * pair of data files, which should stop a build rather than render an
- * unlabelled number.
- */
-export function skyStationFor(
-  beach: Beach,
-): (ObservationStation & { id: string }) | null {
-  if (beach.sky_station === null) return null;
-
-  const station = OBSERVATION_STATIONS[beach.sky_station];
-  if (!station) {
-    throw new Error(
-      `beaches.json: ${beach.slug} names sky station ${beach.sky_station}, ` +
-        `which has no entry in observation-stations.json.`,
-    );
-  }
-  return { id: beach.sky_station, ...station };
-}
-
-/**
  * The station a beach reads for air temperature and wind, or null when the join
- * bound none. Same table as `skyStationFor`, different filter.
+ * bound none. It reads the same table the retired sky join read, with a
+ * different filter: 56 of the 62 rows publish temperature and wind, and only
+ * ten published sky.
  */
 export function airStationFor(
   beach: Beach,

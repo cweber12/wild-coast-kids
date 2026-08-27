@@ -36,21 +36,11 @@
 
 /** Unit codes this parser knows how to convert from, per field. */
 const EXPECTED_UNITS = {
-  visibility: "wmoUnit:m",
   temperature: "wmoUnit:degC",
   windSpeed: "wmoUnit:km_h-1",
   windGust: "wmoUnit:km_h-1",
   windDirection: "wmoUnit:degree_(angle)",
 } as const;
-
-/**
- * METAR's maximum reportable visibility, ten statute miles, in metres. Stations
- * publish it as 16093.44 (the exact conversion) or 16090 (rounded), so the test
- * is a threshold rather than an equality.
- */
-const VISIBILITY_CEILING_M = 16090;
-
-const METRES_PER_MILE = 1609.344;
 
 export class NwsObservationDriftError extends Error {
   constructor(message: string) {
@@ -69,10 +59,6 @@ export class NwsObservationNoDataError extends Error {
 export interface StationObservation {
   /** Instant of the observation, epoch milliseconds UTC. */
   atMs: number;
-  /** Visibility in statute miles, converted from metres, or null when unpublished. */
-  visibilityMi: number | null;
-  /** True when visibility sits at METAR's ten-mile ceiling, so the figure is a floor. */
-  visibilityAtCeiling: boolean;
   /** Air temperature in Fahrenheit, converted from Celsius, or null. */
   airTempF: number | null;
   /** Wind speed in miles per hour, converted from km/h, or null. */
@@ -81,8 +67,6 @@ export interface StationObservation {
   gustMph: number | null;
   /** Wind direction in degrees true, or null. */
   windDirDegT: number | null;
-  /** The station's own plain-words sky, e.g. "Clear". Empty string becomes null. */
-  sky: string | null;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -169,39 +153,23 @@ export function parseNwsObservation(
     );
   }
 
-  const visibilityM = measured(properties, "visibility", stationId);
   const airTempC = measured(properties, "temperature", stationId);
   const windKmh = measured(properties, "windSpeed", stationId);
   const gustKmh = measured(properties, "windGust", stationId);
   const windDirDegT = measured(properties, "windDirection", stationId);
 
-  const rawSky = properties.textDescription;
-  // Served as "" by stations that publish no sky, which is not a description of
-  // the sky. An empty string rendered as a sky would read as an answer.
-  const sky =
-    typeof rawSky === "string" && rawSky.trim() !== "" ? rawSky : null;
-
-  if (
-    visibilityM === null &&
-    airTempC === null &&
-    windKmh === null &&
-    sky === null
-  ) {
+  if (airTempC === null && windKmh === null) {
     throw new NwsObservationNoDataError(
-      `NWS ${stationId} answered with no visibility, no temperature, no wind and no sky. ` +
-        `That is a station which is not observing, not a clear calm day.`,
+      `NWS ${stationId} answered with no temperature and no wind. That is a station which is ` +
+        `not observing, not a calm day.`,
     );
   }
 
   return {
     atMs,
-    visibilityMi: visibilityM === null ? null : visibilityM / METRES_PER_MILE,
-    visibilityAtCeiling:
-      visibilityM !== null && visibilityM >= VISIBILITY_CEILING_M,
     airTempF: airTempC === null ? null : airTempC * 1.8 + 32,
     windMph: windKmh === null ? null : windKmh / 1.609344,
     gustMph: gustKmh === null ? null : gustKmh / 1.609344,
     windDirDegT,
-    sky,
   };
 }

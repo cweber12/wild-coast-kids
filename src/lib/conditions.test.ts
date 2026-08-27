@@ -55,10 +55,6 @@ vi.mock("./beaches", async (importOriginal) => {
     mop_line_distance_m: null,
     mop_line_from_end: null,
     mop_line_null_reason: reason,
-    sky_station: null,
-    sky_station_distance_m: null,
-    sky_station_from_end: null,
-    sky_station_null_reason: reason,
     grid_cell: null,
     grid_cell_from_end: null,
     grid_cell_elevation_m: null,
@@ -618,13 +614,10 @@ test("the clock is passed to the fetch, so freshness is judged not guessed", asy
 /** What KNKX served on 2026-08-18, as the parser hands it on. */
 const KNKX_OBSERVATION = {
   atMs: Date.UTC(2026, 7, 18, 4, 55),
-  visibilityMi: 10.0,
-  visibilityAtCeiling: true,
   airTempF: 69.98,
   windMph: 5.82,
   gustMph: null,
   windDirDegT: 320,
-  sky: "Clear",
 };
 
 /**

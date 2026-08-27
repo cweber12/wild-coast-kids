@@ -78,11 +78,14 @@ export default defineConfig({
       // the two sky disclosures, with the fifteen tests that covered them -- so
       // the surviving denominator is weighted further toward the 0% entry
       // plumbing that has always dragged these figures down in plain sight.
+      // Same event, second half: retiring the sky JOIN as well as the reading.
+      // Three rose and branches fell again, still reason 2 -- sky-join.mjs was
+      // at 100% and is deleted, along with the parser's visibility branches.
       thresholds: {
-        statements: 89.16,
-        branches: 90.19,
-        functions: 94.74,
-        lines: 88.85,
+        statements: 89.3,
+        branches: 90.02,
+        functions: 94.9,
+        lines: 88.95,
       },
     },
   },
