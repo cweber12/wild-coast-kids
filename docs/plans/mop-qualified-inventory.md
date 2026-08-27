@@ -1,8 +1,9 @@
 # A modelled wave source may qualify a beach
 
-Planned 2026-08-26 for #146. Blocked at slice 2 on the decision in
+Planned 2026-08-26 for #146. Slice 2's decision,
 [`docs/adr/0019-a-modelled-source-may-qualify-a-beach.md`](../adr/0019-a-modelled-source-may-qualify-a-beach.md),
-which is proposed rather than accepted.
+was accepted on 2026-08-26, so slices 3–5 are unblocked. In flight; not
+historical yet.
 
 ## The problem, from a reader's point of view
 

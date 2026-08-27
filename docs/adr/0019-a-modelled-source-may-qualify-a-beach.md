@@ -1,9 +1,16 @@
 # 0019 — A modelled wave source may qualify a beach
 
-Date: 2026-08-26. Status: **proposed.** This one is not settled by measurement
-and is not mine to accept; see _The decision_ and _The case against_ below.
+Date: 2026-08-26. Status: accepted, 2026-08-26, on the argument below rather
+than on the measurements — those were never the part in question.
 
 Amends ADR-0011's service predicate. Does not replace it.
+
+_The case against_ is kept in full below. It was not answered, it was outweighed,
+and the distinction matters to whoever revisits this: the objection that this
+makes "we do not publish a reading taken more than 10 km away" mean something
+weaker is **correct**, and the disclosure in `WavesToday` is the whole of what
+this decision offers in exchange. If that disclosure is ever removed or
+weakened, this decision goes with it.
 
 ## Context
 
@@ -170,9 +177,10 @@ choice to know less than the site can.
 
 **Keep them out.** No new category, no amendment, one rule that still means what
 it says, and the exclusion is already recorded with its distance so nothing is
-silent. This is the live alternative, and it is why the status above is
-_proposed_: it costs four beaches on a coast this site covers, and it is
-defensible.
+silent. This was the real alternative rather than a foil — it is defensible, and
+it was rejected for what it costs rather than for being wrong: four beaches on a
+coast this site covers, removed by one station's uptime, invisible to the reader
+it affects.
 
 ## Consequences
 
