@@ -217,3 +217,37 @@ it affects.
   historical, the four beaches stay out, and #146 closes with the measurement
   recorded — which is worth something on its own, because the next person to ask
   will otherwise re-measure it.
+
+### Note added 2026-08-27: the modelled-only population is four no longer
+
+**Every figure above is left exactly as it was measured on 2026-08-26.** They are
+what motivated this decision and rewriting them would rewrite history. This note
+is what stops the stated consequences drifting from the code instead.
+
+`TWC0405` Point Loma was recorded as not delivering when those figures were
+taken. It began answering again, and the change was measured on 2026-08-27 —
+nine days in which nothing in the repo noticed. Six beaches around Point Loma
+and Coronado came inside `SERVICE_TOLERANCE_M` as a result, and every one of
+them reaches its waves from a MOP line rather than a buoy, because the buoy that
+would serve them is the one this ADR already refused. So, as of that date:
+
+- the site answers for **51** beaches, not 45, and `_excluded` holds **22**, not
+  28;
+- **ten** beaches publish no measured wave height under this rule, not four.
+
+**The decision itself is unchanged, and this is an argument for it rather than
+against it.** The case for was stated here as:
+
+> one instrument's failure silently deletes a stretch of public coastline from a
+> site whose reach is meant to be a measurement of the networks rather than an
+> artifact of one station's uptime
+
+This is that same sentence a second time, running the other way: a station's
+uptime moved and six beaches appeared, under rules that did not move.
+`dropReplacedBuoy`, `SERVICE_TOLERANCE_M` and `MODELLED_SOURCE_TOLERANCE_M` are
+all untouched — the six qualify under this ADR exactly as written, which is the
+finding rather than a workaround.
+
+The uptime is now watched rather than assumed: `scripts/probe-tide-stations.mjs`
+(ADR-0021) re-measures every tide station's delivery against what the table
+records. See issues #159 and #161.
