@@ -218,11 +218,53 @@ export function document(table, now = new Date()) {
 }
 
 /**
+ * Each cell's three series reduced to whether it publishes them at all.
+ *
+ * The counts stay in the file -- they are the record of what was seen, and
+ * `visibility_entries` is there precisely so a change upstream shows as a diff.
+ * What the counts are not is a fact about the grid: they count rows in a live
+ * forecast response, so they move whenever the forecast refreshes.
+ *
+ * @param {Record<string, object>} cells
+ * @returns {Record<string, object>}
+ */
+function availability(cells) {
+  return Object.fromEntries(
+    Object.entries(cells).map(([id, cell]) => [
+      id,
+      {
+        ...cell,
+        sky_cover_entries: cell.sky_cover_entries > 0,
+        visibility_entries: cell.visibility_entries > 0,
+        ceiling_entries: cell.ceiling_entries > 0,
+      },
+    ]),
+  );
+}
+
+/**
  * Whether the committed table disagrees with what was just measured.
  *
  * `generated` moves on every run by design, so comparing it would make every
  * check fail and mean nothing -- the same exclusion `probe-mop-lines.mjs` and
  * `probe-observation-stations.mjs` already make, and spelled the same way.
+ *
+ * The series counts are excluded for the same reason and not the same way. They
+ * are a measurement worth keeping, so they stay in the file; it is comparing
+ * them by value that is wrong. Against a file written 2026-08-26 this check
+ * failed on 2026-08-27 over `sky_cover_entries` alone, 34-37 becoming 39-41 at
+ * all 21 cells, with no id, coordinate, elevation or `delivers` value moved
+ * (#162). A check that is expected to fail is a check nobody reads, which is
+ * how a real change -- a cell that stops publishing sky, a gridpoint that moves
+ * -- would arrive inside a diff nobody opens.
+ *
+ * So the comparison is over what the counts mean: whether each cell publishes
+ * each series at all. `0` to any non-zero is still an event and still fails,
+ * which is the whole reason `visibility_entries` is recorded. `37` to `41` is
+ * not. `probe-observation-stations.mjs` reached the same conclusion by keeping
+ * its counts out of its file entirely -- "a file whose --check fails from noise
+ * stops being read"; this table keeps its provenance and moves the judgement
+ * into the comparison instead.
  *
  * This was an inline regex over the serialised text inside `main()`. It is the
  * one piece of judgement in this script, and it was the one piece no test could
@@ -235,7 +277,11 @@ export function document(table, now = new Date()) {
  */
 export function hasMoved(committed, built) {
   const comparable = (doc) =>
-    JSON.stringify({ ...doc, generated: null }, null, 2);
+    JSON.stringify(
+      { ...doc, generated: null, cells: availability(doc.cells) },
+      null,
+      2,
+    );
   return comparable(committed) !== comparable(built);
 }
 
