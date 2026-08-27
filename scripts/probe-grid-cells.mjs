@@ -217,6 +217,28 @@ export function document(table, now = new Date()) {
   };
 }
 
+/**
+ * Whether the committed table disagrees with what was just measured.
+ *
+ * `generated` moves on every run by design, so comparing it would make every
+ * check fail and mean nothing -- the same exclusion `probe-mop-lines.mjs` and
+ * `probe-observation-stations.mjs` already make, and spelled the same way.
+ *
+ * This was an inline regex over the serialised text inside `main()`. It is the
+ * one piece of judgement in this script, and it was the one piece no test could
+ * reach; taking documents rather than text is what lets a test call it
+ * directly. See ADR-0002 for the split this follows.
+ *
+ * @param {object} committed  The table as read from disk.
+ * @param {object} built      The table as just measured.
+ * @returns {boolean}
+ */
+export function hasMoved(committed, built) {
+  const comparable = (doc) =>
+    JSON.stringify({ ...doc, generated: null }, null, 2);
+  return comparable(committed) !== comparable(built);
+}
+
 async function main() {
   const checkOnly = process.argv.includes("--check");
 
@@ -288,10 +310,9 @@ async function main() {
         "grid-cells.json is missing. Run without --check to write it.",
       );
     }
-    // The generated date moves on every run and is not a measurement, so it is
-    // excluded from the comparison the way probe-mop-lines.mjs excludes its own.
-    const strip = (text) => text.replace(/"generated": "[^"]*"/, "");
-    if (strip(committed) !== strip(serialised)) {
+    // A file that is present but not JSON raises here rather than being read as
+    // "missing", which would name the wrong repair.
+    if (hasMoved(JSON.parse(committed), built)) {
       throw new Error(
         "grid-cells.json has moved. Re-run without --check, read the diff, and say in the " +
           "commit message what changed upstream.",

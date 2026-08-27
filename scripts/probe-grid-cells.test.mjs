@@ -3,6 +3,7 @@ import {
   buildTable,
   CELL_ID,
   document,
+  hasMoved,
   parseCell,
   parsePoint,
 } from "./probe-grid-cells.mjs";
@@ -200,5 +201,92 @@ describe("the document", () => {
       cell: null,
       reason: "the grid does not cover 32.53,-117.12",
     });
+  });
+});
+
+describe("hasMoved", () => {
+  const CELLS = {
+    "SGX/55,25": {
+      office: "SGX",
+      x: 55,
+      y: 25,
+      elevation_m: 102.108,
+      sky_cover_entries: 37,
+      visibility_entries: 0,
+      ceiling_entries: 0,
+      delivers: true,
+    },
+    "SGX/55,26": {
+      office: "SGX",
+      x: 55,
+      y: 26,
+      elevation_m: 21.9456,
+      sky_cover_entries: 37,
+      visibility_entries: 0,
+      ceiling_entries: 0,
+      delivers: true,
+    },
+  };
+
+  /**
+   * A whole document in the shape `document()` really produces, so the
+   * comparison is exercised against the thing it compares rather than a sketch.
+   */
+  const doc = (cells, now = new Date("2026-08-26T12:00:00Z")) =>
+    document(
+      buildTable(
+        {
+          "del-mar-city-beach": {
+            upper: { cell: "SGX/55,26" },
+            lower: { cell: "SGX/55,25" },
+          },
+        },
+        cells,
+      ),
+      now,
+    );
+
+  /** The same document with one cell edited, so each test states one change. */
+  const edited = (edit) => {
+    const cells = structuredClone(CELLS);
+    edit(cells);
+    return doc(cells);
+  };
+
+  it("compares a document with itself as unchanged", () => {
+    expect(hasMoved(doc(CELLS), doc(CELLS))).toBe(false);
+  });
+
+  it("ignores the generated date, which moves on every run", () => {
+    expect(
+      hasMoved(doc(CELLS), doc(CELLS, new Date("2026-09-14T12:00:00Z"))),
+    ).toBe(false);
+  });
+
+  it("reports a cell whose elevation moved", () => {
+    expect(
+      hasMoved(
+        doc(CELLS),
+        edited((cells) => {
+          cells["SGX/55,25"].elevation_m = 3.048;
+        }),
+      ),
+    ).toBe(true);
+  });
+
+  it("today: a forecast refresh alone reads as movement -- issue #162", () => {
+    // The defect, pinned rather than described. `sky_cover_entries` counts rows
+    // in a live NWS forecast response, so it moves whenever the forecast
+    // refreshes and nothing upstream has rotted. Recorded here so that the next
+    // commit's change to this judgement is a visible diff in the test, not only
+    // in the script.
+    expect(
+      hasMoved(
+        doc(CELLS),
+        edited((cells) => {
+          cells["SGX/55,25"].sky_cover_entries = 41;
+        }),
+      ),
+    ).toBe(true);
   });
 });
