@@ -554,7 +554,22 @@ export type WavesState =
       directionDegT: number | null;
       waterTempF: number | null;
     }
-  | { kind: "no-buoy"; reason: string }
+  | {
+      kind: "no-buoy";
+      reason: string;
+      /**
+       * Whether a model answers for the waves here instead of a buoy.
+       *
+       * `no-buoy` used to mean one thing -- enclosed water, where swell does
+       * not reach and nothing describes the waves at all. Since ADR-0019 it
+       * means two, and they need opposite sentences: at a bay the card says no
+       * wave figure is coming, and at these four it says the figure below is
+       * modelled. Carried as a fact from the join rather than inferred from
+       * whether a forecast happened to arrive, because CDIP having a bad day
+       * must not make the card claim swell does not reach an open coast.
+       */
+      modelAnswersInstead: boolean;
+    }
   | { kind: "unavailable"; detail: string; drift: boolean };
 
 export interface WavesView {
@@ -592,6 +607,11 @@ export async function readLatestWaves(
         reason:
           beach.wave_buoy_null_reason ??
           "the join bound no wave buoy to this beach, and recorded no reason",
+        // A line bound to a beach with no buoy is the ADR-0019 case, and the
+        // seed guarantees the pairing: a buoy is only ever dropped where a
+        // qualifying line replaced it. Read from the binding rather than from
+        // the reason string, which is prose meant for a reader.
+        modelAnswersInstead: beach.mop_line !== null,
       },
     };
   }
