@@ -51,11 +51,21 @@ export default defineConfig({
       // run-vitest.mjs, check-built-css.mjs, check-db.mjs and
       // check-adr-numbers.mjs sit at 0% on purpose, and all five drag these
       // figures down in plain sight rather than quietly.
+      //
+      // LOWERED 2026-08-26 under reason 1, when probe-grid-cells.mjs arrived.
+      // Its pure half -- parsePoint, parseCell, buildTable, document -- is
+      // fully tested; its main() is 85 lines of fetch-and-write plumbing that
+      // resolves 90 coordinates against api.weather.gov, and testing it would
+      // mean either mocking the network at a seam this repo deliberately does
+      // not put one at, or making a gate row that needs the internet.
+      // probe-mop-lines.mjs (60.6%) and probe-observation-stations.mjs (82.8%)
+      // sit here for the same reason. The join beside it, grid-cell-join.mjs,
+      // is at 100% statements -- that is the half that decides anything.
       thresholds: {
-        statements: 90.72,
-        branches: 90.71,
-        functions: 95.26,
-        lines: 90.45,
+        statements: 88.83,
+        branches: 90.49,
+        functions: 94.72,
+        lines: 88.41,
       },
     },
   },

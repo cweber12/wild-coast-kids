@@ -28,6 +28,9 @@
     "sky_station": "Joined, never typed: the nearest station that both answers and publishes sky. Supplies the panel's sky and visibility ONLY -- temperature and wind come from air_station. Unlike the wave buoy, every beach binds one -- air reaches a lagoon. null means the join could not bind one, and sky_station_null_reason says why.",
     "sky_station_distance_m": "Great-circle metres from the nearer segment end to the station. Larger than the tide and buoy distances by nature: the ten stations that publish sky are all airports.",
     "sky_station_from_end": "Which end of the segment supplied the distance, upper or lower.",
+    "grid_cell": "Joined, never typed: the National Weather Service forecast cell this beach falls in, as office/x,y. NOT a nearest-anything -- a cell is an area about 2.5 km square and every coordinate inside it is equally inside it, so there is no distance to be nearer by and this field has none beside it. The mapping from a coordinate to a cell belongs to the National Weather Service and cannot be recomputed offline, so it is measured into grid-cells.json and read from there. null means no cell answers, and grid_cell_null_reason says why -- which for an excluded beach is simply that the table records coordinates only for the beaches this site serves.",
+    "grid_cell_from_end": "Which end of the segment fell in the bound cell. Load-bearing rather than decoration: a beach is a segment and 17 of 45 straddle a cell boundary, so an end had to be chosen and this records which. The criterion is elevation, not distance.",
+    "grid_cell_elevation_m": "The bound cell's own mean elevation in metres. This is the cell's TERRAIN and not a statement about the forecast: it is what chose between the beach's two ends, on the grounds that a beach is at sea level and the lower cell is the one describing this shore. Three beaches have no low-lying end and read a cell averaging over 100 m; the page says so where it shows one. See docs/adr/0020-sky-leaves-the-card-for-the-week.md.",
     "air_station": "Joined, never typed: the nearest station that answers, publishes air temperature AND wind, and suits the beach's water class -- an open-coast beach binds a shore station, a bay or lagoon binds the nearest of any kind. Usually not the same station as sky_station, and may be on either network; see the `network` field in observation-stations.json. null means the join could not bind one, and air_station_null_reason says why.",
     "air_station_distance_m": "Great-circle metres from the nearer segment end to the station. Much smaller than sky_station_distance_m, which is the point of the second binding.",
     "air_station_from_end": "Which end of the segment supplied the distance, upper or lower."
@@ -69,6 +72,9 @@
       "sky_station": "KNKX",
       "sky_station_distance_m": 14548,
       "sky_station_from_end": "lower",
+      "grid_cell": "SGX/55,26",
+      "grid_cell_from_end": "upper",
+      "grid_cell_elevation_m": 21.9456,
       "air_station": "SOBSD",
       "air_station_distance_m": 3026,
       "air_station_from_end": "upper"
@@ -109,6 +115,9 @@
       "sky_station": "KNKX",
       "sky_station_distance_m": 10797,
       "sky_station_from_end": "lower",
+      "grid_cell": "SGX/55,25",
+      "grid_cell_from_end": "upper",
+      "grid_cell_elevation_m": 102.108,
       "air_station": "LJAC1",
       "air_station_distance_m": 3217,
       "air_station_from_end": "lower"
@@ -149,6 +158,9 @@
       "sky_station": "KNKX",
       "sky_station_distance_m": 10429,
       "sky_station_from_end": "lower",
+      "grid_cell": "SGX/55,22",
+      "grid_cell_from_end": "lower",
+      "grid_cell_elevation_m": 117.0432,
       "air_station": "LJAC1",
       "air_station_distance_m": 1894,
       "air_station_from_end": "lower"
@@ -189,6 +201,9 @@
       "sky_station": "KNKX",
       "sky_station_distance_m": 10429,
       "sky_station_from_end": "upper",
+      "grid_cell": "SGX/54,21",
+      "grid_cell_from_end": "lower",
+      "grid_cell_elevation_m": 0,
       "air_station": "LJAC1",
       "air_station_distance_m": 1381,
       "air_station_from_end": "lower"
@@ -229,6 +244,9 @@
       "sky_station": "KNKX",
       "sky_station_distance_m": 12294,
       "sky_station_from_end": "upper",
+      "grid_cell": "SGX/54,20",
+      "grid_cell_from_end": "lower",
+      "grid_cell_elevation_m": 106.0704,
       "air_station": "LJAC1",
       "air_station_distance_m": 2340,
       "air_station_from_end": "lower"
@@ -269,6 +287,9 @@
       "sky_station": "KNKX",
       "sky_station_distance_m": 12524,
       "sky_station_from_end": "upper",
+      "grid_cell": "SGX/53,20",
+      "grid_cell_from_end": "lower",
+      "grid_cell_elevation_m": 0,
       "air_station": "LJAC1",
       "air_station_distance_m": 2514,
       "air_station_from_end": "upper"
@@ -311,6 +332,9 @@
       "sky_station": "KNKX",
       "sky_station_distance_m": 12887,
       "sky_station_from_end": "lower",
+      "grid_cell": "SGX/53,20",
+      "grid_cell_from_end": "lower",
+      "grid_cell_elevation_m": 0,
       "air_station": "LJAC1",
       "air_station_distance_m": 2944,
       "air_station_from_end": "upper"
@@ -351,6 +375,9 @@
       "sky_station": "KNKX",
       "sky_station_distance_m": 12952,
       "sky_station_from_end": "upper",
+      "grid_cell": "SGX/53,20",
+      "grid_cell_from_end": "lower",
+      "grid_cell_elevation_m": 0,
       "air_station": "LJAC1",
       "air_station_distance_m": 2996,
       "air_station_from_end": "upper"
@@ -391,6 +418,9 @@
       "sky_station": "KNKX",
       "sky_station_distance_m": 12991,
       "sky_station_from_end": "upper",
+      "grid_cell": "SGX/53,20",
+      "grid_cell_from_end": "lower",
+      "grid_cell_elevation_m": 0,
       "air_station": "LJAC1",
       "air_station_distance_m": 3120,
       "air_station_from_end": "upper"
@@ -431,6 +461,9 @@
       "sky_station": "KNKX",
       "sky_station_distance_m": 13449,
       "sky_station_from_end": "upper",
+      "grid_cell": "SGX/53,20",
+      "grid_cell_from_end": "lower",
+      "grid_cell_elevation_m": 0,
       "air_station": "LJAC1",
       "air_station_distance_m": 3866,
       "air_station_from_end": "upper"
@@ -471,6 +504,9 @@
       "sky_station": "KNKX",
       "sky_station_distance_m": 11003,
       "sky_station_from_end": "upper",
+      "grid_cell": "SGX/53,19",
+      "grid_cell_from_end": "lower",
+      "grid_cell_elevation_m": 0,
       "air_station": "LJAC1",
       "air_station_distance_m": 1381,
       "air_station_from_end": "upper"
@@ -511,6 +547,9 @@
       "sky_station": "KNKX",
       "sky_station_distance_m": 13458,
       "sky_station_from_end": "upper",
+      "grid_cell": "SGX/53,19",
+      "grid_cell_from_end": "lower",
+      "grid_cell_elevation_m": 0,
       "air_station": "LJAC1",
       "air_station_distance_m": 4076,
       "air_station_from_end": "upper"
@@ -551,6 +590,9 @@
       "sky_station": "KSAN",
       "sky_station_distance_m": 11702,
       "sky_station_from_end": "lower",
+      "grid_cell": "SGX/53,19",
+      "grid_cell_from_end": "lower",
+      "grid_cell_elevation_m": 0,
       "air_station": "LJAC1",
       "air_station_distance_m": 5944,
       "air_station_from_end": "upper"
@@ -591,6 +633,9 @@
       "sky_station": "KSAN",
       "sky_station_distance_m": 10333,
       "sky_station_from_end": "lower",
+      "grid_cell": "SGX/53,19",
+      "grid_cell_from_end": "upper",
+      "grid_cell_elevation_m": 0,
       "air_station": "LJAC1",
       "air_station_distance_m": 6628,
       "air_station_from_end": "upper"
@@ -631,6 +676,9 @@
       "sky_station": "KSAN",
       "sky_station_distance_m": 9523,
       "sky_station_from_end": "lower",
+      "grid_cell": "SGX/54,18",
+      "grid_cell_from_end": "lower",
+      "grid_cell_elevation_m": 25.908,
       "air_station": "LJAC1",
       "air_station_distance_m": 7365,
       "air_station_from_end": "upper"
@@ -673,6 +721,9 @@
       "sky_station": "KSAN",
       "sky_station_distance_m": 7748,
       "sky_station_from_end": "upper",
+      "grid_cell": "SGX/55,18",
+      "grid_cell_from_end": "lower",
+      "grid_cell_elevation_m": 35.9664,
       "air_station": "MSDSD",
       "air_station_distance_m": 2731,
       "air_station_from_end": "upper"
@@ -715,6 +766,9 @@
       "sky_station": "KSAN",
       "sky_station_distance_m": 7097,
       "sky_station_from_end": "lower",
+      "grid_cell": "SGX/55,18",
+      "grid_cell_from_end": "lower",
+      "grid_cell_elevation_m": 35.9664,
       "air_station": "MSDSD",
       "air_station_distance_m": 3539,
       "air_station_from_end": "upper"
@@ -757,6 +811,9 @@
       "sky_station": "KSAN",
       "sky_station_distance_m": 6588,
       "sky_station_from_end": "lower",
+      "grid_cell": "SGX/55,17",
+      "grid_cell_from_end": "lower",
+      "grid_cell_elevation_m": 3.9624,
       "air_station": "MSDSD",
       "air_station_distance_m": 3746,
       "air_station_from_end": "upper"
@@ -799,6 +856,9 @@
       "sky_station": "KSAN",
       "sky_station_distance_m": 7918,
       "sky_station_from_end": "lower",
+      "grid_cell": "SGX/54,17",
+      "grid_cell_from_end": "lower",
+      "grid_cell_elevation_m": 0.9144,
       "air_station": "MSDSD",
       "air_station_distance_m": 2654,
       "air_station_from_end": "upper"
@@ -841,6 +901,9 @@
       "sky_station": "KSAN",
       "sky_station_distance_m": 6193,
       "sky_station_from_end": "lower",
+      "grid_cell": "SGX/55,17",
+      "grid_cell_from_end": "lower",
+      "grid_cell_elevation_m": 3.9624,
       "air_station": "MSDSD",
       "air_station_distance_m": 4267,
       "air_station_from_end": "upper"
@@ -883,6 +946,9 @@
       "sky_station": "KSAN",
       "sky_station_distance_m": 7112,
       "sky_station_from_end": "lower",
+      "grid_cell": "SGX/54,17",
+      "grid_cell_from_end": "lower",
+      "grid_cell_elevation_m": 0.9144,
       "air_station": "MSDSD",
       "air_station_distance_m": 2977,
       "air_station_from_end": "upper"
@@ -925,6 +991,9 @@
       "sky_station": "KSAN",
       "sky_station_distance_m": 7125,
       "sky_station_from_end": "lower",
+      "grid_cell": "SGX/54,17",
+      "grid_cell_from_end": "lower",
+      "grid_cell_elevation_m": 0.9144,
       "air_station": "MSDSD",
       "air_station_distance_m": 3138,
       "air_station_from_end": "upper"
@@ -967,6 +1036,9 @@
       "sky_station": "KSAN",
       "sky_station_distance_m": 5536,
       "sky_station_from_end": "lower",
+      "grid_cell": "SGX/55,17",
+      "grid_cell_from_end": "lower",
+      "grid_cell_elevation_m": 3.9624,
       "air_station": "MSDSD",
       "air_station_distance_m": 4351,
       "air_station_from_end": "upper"
@@ -1009,6 +1081,9 @@
       "sky_station": "KSAN",
       "sky_station_distance_m": 7993,
       "sky_station_from_end": "lower",
+      "grid_cell": "SGX/54,17",
+      "grid_cell_from_end": "lower",
+      "grid_cell_elevation_m": 0.9144,
       "air_station": "MSDSD",
       "air_station_distance_m": 3730,
       "air_station_from_end": "upper"
@@ -1051,6 +1126,9 @@
       "sky_station": "KSAN",
       "sky_station_distance_m": 7740,
       "sky_station_from_end": "lower",
+      "grid_cell": "SGX/54,17",
+      "grid_cell_from_end": "lower",
+      "grid_cell_elevation_m": 0.9144,
       "air_station": "MSDSD",
       "air_station_distance_m": 3874,
       "air_station_from_end": "upper"
@@ -1093,6 +1171,9 @@
       "sky_station": "KSAN",
       "sky_station_distance_m": 7595,
       "sky_station_from_end": "lower",
+      "grid_cell": "SGX/54,17",
+      "grid_cell_from_end": "lower",
+      "grid_cell_elevation_m": 0.9144,
       "air_station": "MSDSD",
       "air_station_distance_m": 4115,
       "air_station_from_end": "upper"
@@ -1133,6 +1214,9 @@
       "sky_station": "KSAN",
       "sky_station_distance_m": 7225,
       "sky_station_from_end": "lower",
+      "grid_cell": "SGX/54,16",
+      "grid_cell_from_end": "lower",
+      "grid_cell_elevation_m": 3.048,
       "air_station": "E9951",
       "air_station_distance_m": 5594,
       "air_station_from_end": "lower"
@@ -1175,6 +1259,9 @@
       "sky_station": "KSAN",
       "sky_station_distance_m": 4871,
       "sky_station_from_end": "lower",
+      "grid_cell": "SGX/55,17",
+      "grid_cell_from_end": "lower",
+      "grid_cell_elevation_m": 3.9624,
       "air_station": "KSAN",
       "air_station_distance_m": 4871,
       "air_station_from_end": "lower"
@@ -1217,6 +1304,9 @@
       "sky_station": "KSAN",
       "sky_station_distance_m": 7259,
       "sky_station_from_end": "lower",
+      "grid_cell": "SGX/54,17",
+      "grid_cell_from_end": "lower",
+      "grid_cell_elevation_m": 0.9144,
       "air_station": "MSDSD",
       "air_station_distance_m": 4291,
       "air_station_from_end": "upper"
@@ -1259,6 +1349,9 @@
       "sky_station": "KSAN",
       "sky_station_distance_m": 6959,
       "sky_station_from_end": "upper",
+      "grid_cell": "SGX/54,17",
+      "grid_cell_from_end": "lower",
+      "grid_cell_elevation_m": 0.9144,
       "air_station": "MSDSD",
       "air_station_distance_m": 4502,
       "air_station_from_end": "upper"
@@ -1301,6 +1394,9 @@
       "sky_station": "KSAN",
       "sky_station_distance_m": 6990,
       "sky_station_from_end": "lower",
+      "grid_cell": "SGX/54,17",
+      "grid_cell_from_end": "lower",
+      "grid_cell_elevation_m": 0.9144,
       "air_station": "MSDSD",
       "air_station_distance_m": 4514,
       "air_station_from_end": "upper"
@@ -1343,6 +1439,9 @@
       "sky_station": "KSAN",
       "sky_station_distance_m": 4718,
       "sky_station_from_end": "lower",
+      "grid_cell": "SGX/55,17",
+      "grid_cell_from_end": "lower",
+      "grid_cell_elevation_m": 3.9624,
       "air_station": "KSAN",
       "air_station_distance_m": 4718,
       "air_station_from_end": "lower"
@@ -1385,6 +1484,9 @@
       "sky_station": "KSAN",
       "sky_station_distance_m": 5099,
       "sky_station_from_end": "lower",
+      "grid_cell": "SGX/54,17",
+      "grid_cell_from_end": "upper",
+      "grid_cell_elevation_m": 0.9144,
       "air_station": "MSDSD",
       "air_station_distance_m": 5012,
       "air_station_from_end": "upper"
@@ -1427,6 +1529,9 @@
       "sky_station": "KSAN",
       "sky_station_distance_m": 6682,
       "sky_station_from_end": "upper",
+      "grid_cell": "SGX/54,17",
+      "grid_cell_from_end": "lower",
+      "grid_cell_elevation_m": 0.9144,
       "air_station": "E9951",
       "air_station_distance_m": 5573,
       "air_station_from_end": "upper"
@@ -1469,6 +1574,9 @@
       "sky_station": "KSAN",
       "sky_station_distance_m": 6295,
       "sky_station_from_end": "lower",
+      "grid_cell": "SGX/54,16",
+      "grid_cell_from_end": "lower",
+      "grid_cell_elevation_m": 3.048,
       "air_station": "E9951",
       "air_station_distance_m": 5425,
       "air_station_from_end": "lower"
@@ -1511,6 +1619,9 @@
       "sky_station": "KSAN",
       "sky_station_distance_m": 6287,
       "sky_station_from_end": "lower",
+      "grid_cell": "SGX/54,16",
+      "grid_cell_from_end": "lower",
+      "grid_cell_elevation_m": 3.048,
       "air_station": "E9951",
       "air_station_distance_m": 5403,
       "air_station_from_end": "lower"
@@ -1553,6 +1664,9 @@
       "sky_station": "KSAN",
       "sky_station_distance_m": 1615,
       "sky_station_from_end": "lower",
+      "grid_cell": "SGX/55,15",
+      "grid_cell_from_end": "lower",
+      "grid_cell_elevation_m": 2.1336,
       "air_station": "KSAN",
       "air_station_distance_m": 1615,
       "air_station_from_end": "lower"
@@ -1595,6 +1709,9 @@
       "sky_station": "KSAN",
       "sky_station_distance_m": 3803,
       "sky_station_from_end": "lower",
+      "grid_cell": "SGX/54,14",
+      "grid_cell_from_end": "upper",
+      "grid_cell_elevation_m": 0,
       "air_station": "E9951",
       "air_station_distance_m": 732,
       "air_station_from_end": "lower"
@@ -1637,6 +1754,9 @@
       "sky_station": "KSAN",
       "sky_station_distance_m": 3400,
       "sky_station_from_end": "lower",
+      "grid_cell": "SGX/54,14",
+      "grid_cell_from_end": "upper",
+      "grid_cell_elevation_m": 0,
       "air_station": "E9951",
       "air_station_distance_m": 1329,
       "air_station_from_end": "upper"
@@ -1679,6 +1799,9 @@
       "sky_station": "KSAN",
       "sky_station_distance_m": 11444,
       "sky_station_from_end": "upper",
+      "grid_cell": "SGX/57,10",
+      "grid_cell_from_end": "lower",
+      "grid_cell_elevation_m": 2.1336,
       "air_station": "TIXC1",
       "air_station_distance_m": 6282,
       "air_station_from_end": "lower"
@@ -1720,6 +1843,9 @@
       "sky_station": "KSAN",
       "sky_station_distance_m": 11356,
       "sky_station_from_end": "upper",
+      "grid_cell": "SGX/57,10",
+      "grid_cell_from_end": "upper",
+      "grid_cell_elevation_m": 2.1336,
       "air_station": "TIXC1",
       "air_station_distance_m": 3843,
       "air_station_from_end": "lower"
@@ -1761,6 +1887,9 @@
       "sky_station": "KSDM",
       "sky_station_distance_m": 13144,
       "sky_station_from_end": "lower",
+      "grid_cell": "SGX/57,8",
+      "grid_cell_from_end": "lower",
+      "grid_cell_elevation_m": 0.9144,
       "air_station": "TIXC1",
       "air_station_distance_m": 1396,
       "air_station_from_end": "lower"
@@ -1802,6 +1931,9 @@
       "sky_station": "KSDM",
       "sky_station_distance_m": 13145,
       "sky_station_from_end": "upper",
+      "grid_cell": "SGX/57,8",
+      "grid_cell_from_end": "upper",
+      "grid_cell_elevation_m": 0.9144,
       "air_station": "TIXC1",
       "air_station_distance_m": 1127,
       "air_station_from_end": "lower"
@@ -1844,6 +1976,9 @@
       "sky_station": "KSDM",
       "sky_station_distance_m": 12852,
       "sky_station_from_end": "lower",
+      "grid_cell": "SGX/57,7",
+      "grid_cell_from_end": "lower",
+      "grid_cell_elevation_m": 4.8768,
       "air_station": "TIXC1",
       "air_station_distance_m": 1129,
       "air_station_from_end": "upper"
@@ -1885,6 +2020,9 @@
       "sky_station": "KSDM",
       "sky_station_distance_m": 12863,
       "sky_station_from_end": "upper",
+      "grid_cell": "SGX/57,7",
+      "grid_cell_from_end": "upper",
+      "grid_cell_elevation_m": 4.8768,
       "air_station": "TIXC1",
       "air_station_distance_m": 2467,
       "air_station_from_end": "upper"

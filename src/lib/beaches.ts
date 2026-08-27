@@ -83,6 +83,26 @@ export interface Beach {
   /** Present exactly when sky_station is null, and required then. */
   sky_station_null_reason?: string;
   /**
+   * Joined, never typed: the National Weather Service forecast cell this beach
+   * falls in, as `office/x,y`. It carries no distance, and that absence is the
+   * point -- a cell is an area about 2.5 km square and every coordinate inside
+   * it is equally inside it, so there is nothing to be nearer by.
+   */
+  grid_cell: string | null;
+  /**
+   * Which end of the segment fell in the bound cell. 17 of 45 beaches straddle
+   * a boundary, so an end had to be chosen; the criterion is elevation.
+   */
+  grid_cell_from_end: string | null;
+  /**
+   * The bound cell's own mean elevation in metres -- its TERRAIN, not a claim
+   * about the forecast. It is what chose between the two ends, and at three
+   * beaches it is above 100 m, which the page says rather than hides.
+   */
+  grid_cell_elevation_m: number | null;
+  /** Present exactly when grid_cell is null, and required then. */
+  grid_cell_null_reason?: string;
+  /**
    * Joined, never typed. Supplies air temperature and wind: the nearest station
    * that publishes both and suits this beach's water class. Usually a different
    * station from `sky_station`, and much nearer.

@@ -1,6 +1,6 @@
 # 0012 — Sky and visibility are kept knowingly, until a forecast can replace them
 
-Date: 2026-08-19. Status: accepted.
+Date: 2026-08-19. Status: superseded by ADR-0020, 2026-08-26.
 
 ## Context
 

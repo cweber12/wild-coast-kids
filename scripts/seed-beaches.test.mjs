@@ -41,6 +41,42 @@ const MOP_LINES = {
   D0085: { lat: 32.60799, lon: -117.13976, delivers: true },
 };
 
+/**
+ * Forecast cells for the slugs these rows produce. Both ends land in one cell
+ * for every fixture beach except `somewhere-beach`, which straddles two so the
+ * elevation criterion is exercised by the seed rather than only by the join's
+ * own test.
+ */
+const GRID_CELLS = {
+  cells: {
+    "SGX/54,21": { elevation_m: 0, delivers: true },
+    "SGX/55,22": { elevation_m: 117.0432, delivers: true },
+    "SGX/57,8": { elevation_m: 0.9144, delivers: true },
+  },
+  resolutions: {
+    "somewhere-beach": {
+      upper: { cell: "SGX/55,22" },
+      lower: { cell: "SGX/54,21" },
+    },
+    "far-from-any-station": {
+      upper: { cell: "SGX/54,21" },
+      lower: { cell: "SGX/54,21" },
+    },
+    "no-buoy-reaches-here": {
+      upper: { cell: "SGX/57,8" },
+      lower: { cell: "SGX/57,8" },
+    },
+    "quiet-bay": {
+      upper: { cell: "SGX/54,21" },
+      lower: { cell: "SGX/54,21" },
+    },
+    "imperial-beach-pier-area": {
+      upper: { cell: "SGX/57,8" },
+      lower: { cell: "SGX/57,8" },
+    },
+  },
+};
+
 const STATIONS = {
   9410230: {
     lat: 32.8669,
@@ -233,6 +269,7 @@ describe("build", () => {
       BUOYS,
       OBSERVATION_STATIONS,
       MOP_LINES,
+      GRID_CELLS,
     );
 
     expect(beach.slug).toBe("somewhere-beach");
@@ -265,6 +302,60 @@ describe("build", () => {
     expect(["upper", "lower"]).toContain(beach.sky_station_from_end);
   });
 
+  it("binds a forecast cell, and carries no distance beside it", () => {
+    // The one binding on a beach with no *_distance_m, and the absence is the
+    // assertion: a cell is an area about 2.5 km square, so there is nothing to
+    // be nearer by and a distance here would be an invented precision.
+    const [beach] = build(
+      [row()],
+      STATIONS,
+      BUOYS,
+      OBSERVATION_STATIONS,
+      MOP_LINES,
+      GRID_CELLS,
+    );
+
+    expect(beach.grid_cell).toBe("SGX/54,21");
+    expect(beach).not.toHaveProperty("grid_cell_distance_m");
+    expect(beach.grid_cell_null_reason).toBeUndefined();
+  });
+
+  it("chooses the end whose cell averages nearer sea level", () => {
+    // somewhere-beach straddles two cells: its upper end falls on a 117 m
+    // bluff cell and its lower end at sea level. Every other binding on this
+    // row takes the *nearer* end; this one takes the *lower* one, and the two
+    // criteria disagree here on purpose.
+    const [beach] = build(
+      [row()],
+      STATIONS,
+      BUOYS,
+      OBSERVATION_STATIONS,
+      MOP_LINES,
+      GRID_CELLS,
+    );
+
+    expect(beach.grid_cell_from_end).toBe("lower");
+    expect(beach.grid_cell_elevation_m).toBe(0);
+  });
+
+  it("says why, when the table does not list the beach", () => {
+    // What every excluded beach hits, because resolving a cell needs a
+    // coordinate and an excluded beach records none. A null with no reason
+    // would be the silent failure this repo does not ship.
+    const [beach] = build(
+      [row({ Beach_Name: "Unprobed Cove" })],
+      STATIONS,
+      BUOYS,
+      OBSERVATION_STATIONS,
+      MOP_LINES,
+      GRID_CELLS,
+    );
+
+    expect(beach.grid_cell).toBeNull();
+    expect(beach.grid_cell_elevation_m).toBeNull();
+    expect(beach.grid_cell_null_reason).toMatch(/does not list unprobed-cove/);
+  });
+
   it("binds the air separately from the sky, and nearer", () => {
     // The two provenances, produced by two joins over one table. The sky
     // station is the nearest airport; the air station is the nearest station
@@ -276,6 +367,7 @@ describe("build", () => {
       BUOYS,
       OBSERVATION_STATIONS,
       MOP_LINES,
+      GRID_CELLS,
     );
 
     expect(beach.air_station).toBe("LJAC1");
@@ -295,6 +387,7 @@ describe("build", () => {
       BUOYS,
       OBSERVATION_STATIONS,
       MOP_LINES,
+      GRID_CELLS,
     );
 
     expect(beach.air_station).not.toBe("D3101");
@@ -307,6 +400,7 @@ describe("build", () => {
       BUOYS,
       OBSERVATION_STATIONS,
       MOP_LINES,
+      GRID_CELLS,
     );
 
     // Swell does not reach into a bay, and the tide certainly does.
@@ -347,6 +441,7 @@ describe("build", () => {
       BUOYS,
       OBSERVATION_STATIONS,
       MOP_LINES,
+      GRID_CELLS,
     );
 
     expect(beach.air_station).toBe("D3101");
@@ -369,6 +464,7 @@ describe("build", () => {
       BUOYS,
       OBSERVATION_STATIONS,
       MOP_LINES,
+      GRID_CELLS,
     );
 
     expect(beach.air_station).toBe("LJAC1");
@@ -389,6 +485,7 @@ describe("build", () => {
       BUOYS,
       OBSERVATION_STATIONS,
       MOP_LINES,
+      GRID_CELLS,
     );
 
     expect(beach.tide_station).toBeNull();
@@ -405,7 +502,14 @@ describe("build", () => {
     // A slug is a primary key. Making one unique automatically would make it
     // unstable, and data accumulates against it.
     expect(() =>
-      build([row(), row()], STATIONS, BUOYS, OBSERVATION_STATIONS, MOP_LINES),
+      build(
+        [row(), row()],
+        STATIONS,
+        BUOYS,
+        OBSERVATION_STATIONS,
+        MOP_LINES,
+        GRID_CELLS,
+      ),
     ).toThrow(/is claimed by both/);
   });
 
@@ -413,7 +517,14 @@ describe("build", () => {
     const missing = row();
     delete missing["Beach_ UpperLon"];
     expect(() =>
-      build([missing], STATIONS, BUOYS, OBSERVATION_STATIONS, MOP_LINES),
+      build(
+        [missing],
+        STATIONS,
+        BUOYS,
+        OBSERVATION_STATIONS,
+        MOP_LINES,
+        GRID_CELLS,
+      ),
     ).toThrow(/has drifted/);
   });
 
@@ -425,6 +536,7 @@ describe("build", () => {
         BUOYS,
         OBSERVATION_STATIONS,
         MOP_LINES,
+        GRID_CELLS,
       ),
     ).toThrow(/did not parse as numbers/);
   });
@@ -447,6 +559,7 @@ describe("build", () => {
       BUOYS,
       OBSERVATION_STATIONS,
       MOP_LINES,
+      GRID_CELLS,
     );
     expect(built.map((b) => b.slug)).toEqual(["north-one", "south-one"]);
   });
@@ -718,7 +831,14 @@ describe("dropReplacedBuoy", () => {
 describe("document", () => {
   it("lists only the beaches whose stations reach them", () => {
     const doc = document(
-      build([row(), FAR_ROW], STATIONS, BUOYS, OBSERVATION_STATIONS, MOP_LINES),
+      build(
+        [row(), FAR_ROW],
+        STATIONS,
+        BUOYS,
+        OBSERVATION_STATIONS,
+        MOP_LINES,
+        GRID_CELLS,
+      ),
     );
 
     expect(doc.beaches.map((b) => b.slug)).toEqual(["somewhere-beach"]);
@@ -726,7 +846,14 @@ describe("document", () => {
 
   it("records every beach it does not list, with the distance that cut it", () => {
     const doc = document(
-      build([row(), FAR_ROW], STATIONS, BUOYS, OBSERVATION_STATIONS, MOP_LINES),
+      build(
+        [row(), FAR_ROW],
+        STATIONS,
+        BUOYS,
+        OBSERVATION_STATIONS,
+        MOP_LINES,
+        GRID_CELLS,
+      ),
     );
 
     expect(doc._excluded).toEqual([
@@ -747,6 +874,7 @@ describe("document", () => {
       BUOYS,
       OBSERVATION_STATIONS,
       MOP_LINES,
+      GRID_CELLS,
     );
     const doc = document(built);
 
@@ -769,6 +897,7 @@ describe("document", () => {
         BUOYS,
         OBSERVATION_STATIONS,
         MOP_LINES,
+        GRID_CELLS,
       ),
     );
     const caveat = doc.unresolved.find((entry) =>
@@ -795,6 +924,7 @@ describe("document", () => {
         BUOYS,
         OBSERVATION_STATIONS,
         MOP_LINES,
+        GRID_CELLS,
       ),
     );
 
@@ -809,14 +939,28 @@ describe("document", () => {
     // would replace the whole inventory with a silence.
     expect(() =>
       document(
-        build([FAR_ROW], STATIONS, BUOYS, OBSERVATION_STATIONS, MOP_LINES),
+        build(
+          [FAR_ROW],
+          STATIONS,
+          BUOYS,
+          OBSERVATION_STATIONS,
+          MOP_LINES,
+          GRID_CELLS,
+        ),
       ),
     ).toThrow(/excluded all 1/);
   });
 
   it("tells a reader that a beach out of range is not listed at all", () => {
     const doc = document(
-      build([row()], STATIONS, BUOYS, OBSERVATION_STATIONS, MOP_LINES),
+      build(
+        [row()],
+        STATIONS,
+        BUOYS,
+        OBSERVATION_STATIONS,
+        MOP_LINES,
+        GRID_CELLS,
+      ),
     );
     const bound = doc.unresolved.find((entry) =>
       entry.includes("nearest station of matching water class"),
@@ -832,7 +976,14 @@ describe("document", () => {
 
   it("tells a reader the sky figures are read at an airport", () => {
     const built = document(
-      build([row()], STATIONS, BUOYS, OBSERVATION_STATIONS, MOP_LINES),
+      build(
+        [row()],
+        STATIONS,
+        BUOYS,
+        OBSERVATION_STATIONS,
+        MOP_LINES,
+        GRID_CELLS,
+      ),
     );
     const airport = built.unresolved.find((entry) =>
       entry.includes("read at an airport"),
@@ -868,7 +1019,14 @@ describe("document", () => {
     });
 
     const built = document(
-      build([near, far], STATIONS, BUOYS, OBSERVATION_STATIONS, MOP_LINES),
+      build(
+        [near, far],
+        STATIONS,
+        BUOYS,
+        OBSERVATION_STATIONS,
+        MOP_LINES,
+        GRID_CELLS,
+      ),
     );
     const airport = built.unresolved.find((entry) =>
       entry.includes("read at an airport"),
@@ -888,6 +1046,7 @@ describe("document", () => {
       BUOYS,
       OBSERVATION_STATIONS,
       MOP_LINES,
+      GRID_CELLS,
     );
     const first = document(built).unresolved;
     const second = document(built).unresolved;
@@ -908,6 +1067,7 @@ describe("document", () => {
       BUOYS,
       OBSERVATION_STATIONS,
       MOP_LINES,
+      GRID_CELLS,
     );
 
     expect(document(built, new Date("2026-08-19T01:59:22Z")).generated).toBe(
