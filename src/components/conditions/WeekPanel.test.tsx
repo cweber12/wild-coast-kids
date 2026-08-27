@@ -138,6 +138,36 @@ test("the forecasts that are not built yet are named, and waves are no longer am
   expect(screen.getByText(/gridded forecast/i)).toBeDefined();
 });
 
+/**
+ * A reserved slot is a promise, so what it does *not* say is as load-bearing as
+ * what it does. This row once offered "Temperature, wind and sky" from the grid
+ * cell, and two thirds of that could never ship: temperature and wind come from
+ * the air station at p50 3.7 km rather than from an airport, ADR-0012 records
+ * them as among the best-founded readings on the site, and replacing them with
+ * a forecast is the displacement ADR-0019 declined to decide. Visibility is not
+ * promised either — the gridpoint publishes no values for it at any cell
+ * covering this inventory.
+ *
+ * Asserted on the rendered text rather than on the constant, because the defect
+ * was a reader being told something untrue.
+ */
+test("the gridded row promises sky alone, not the readings that are already near", async () => {
+  readWeekOfLowestLows.mockResolvedValue({
+    ...BINDING,
+    state: { kind: "week", days: [tideDay(0, "6:41 PM", 0.9)] },
+  });
+
+  render(await WeekPanel({ slug: "la-jolla-shores-beach" }));
+
+  const promise = screen.getByText(/grid cell/i).textContent ?? "";
+
+  expect(promise).toMatch(/cloud cover/i);
+  // The three the row must not offer, each for its own reason.
+  expect(promise).not.toMatch(/temperature/i);
+  expect(promise).not.toMatch(/wind/i);
+  expect(promise).not.toMatch(/visibilit/i);
+});
+
 test("a NOAA outage costs the tide row, not the whole grid", async () => {
   readWeekOfLowestLows.mockResolvedValue({
     ...BINDING,
@@ -186,11 +216,16 @@ test("a failure to resolve the beach is not swallowed into a rendered nothing", 
 
 /**
  * ADR-0015. The reserved row and the live card describe the same product from
- * different feeds, so they take the same glyph — the gridded forecast is the
- * air card's replacement, and marking it with the thermometer the air card no
- * longer uses would leave the page saying two things about one product.
+ * different feeds, so they take the same glyph — the gridded forecast lands in
+ * the air card, replacing its sky half, and marking it with the thermometer the
+ * air card no longer uses would leave the page saying two things about one
+ * product.
+ *
+ * Whether a row about cloud alone still wants the wind glyph is a question for
+ * the slice that fills it: the vocabulary is ADR-0015's and changing it is a
+ * design decision rather than a copy fix.
  */
-test("the gridded forecast is marked like the air card it will replace", async () => {
+test("the gridded forecast is marked like the air card whose sky it will replace", async () => {
   readWeekOfLowestLows.mockResolvedValue({
     beachName: "La Jolla Shores Beach",
     station: { name: "La Jolla (Scripps Institution Wharf)", distanceM: 1369 },
