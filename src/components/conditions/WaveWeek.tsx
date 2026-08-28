@@ -2,14 +2,18 @@
  * One day's biggest swell inside the daylight window, as the week grid prints
  * it.
  *
- * **The label is "Swell", and the selection it names is stated in the day
- * header.** A day has fifty-six three-hourly estimates behind it and this cell
- * shows one of them; which one is a judgement, and on two of ten sampled days
- * the day's smallest and largest fell either side of one of `WavesToday`'s
- * plain-language bands. ADR-0017 put that judgement in the label — "Biggest
- * daylight swell" — and the label never fitted: 187px against 125px of cell at
- * 1280 and 161px at 1536. ADR-0023 moves the daylight half of it into the
- * header, where it is said once for all three rows.
+ * **The label is "Biggest swell", and the half of the selection it drops is
+ * stated in the day header.** A day has fifty-six three-hourly estimates behind
+ * it and this cell shows one of them; which one is a judgement, and on two of
+ * ten sampled days the day's smallest and largest fell either side of one of
+ * `WavesToday`'s plain-language bands. So the superlative has to be in the
+ * label: "Swell" over a single figure invites a reader to take it for the
+ * day's typical swell, which is the one thing it is not.
+ *
+ * What the label does not have to carry is the window, because the header
+ * states it. ADR-0017 put both in — "Biggest daylight swell" — and it rendered
+ * 187px against 133px of cell at 1280, so it wrapped at every width the grid
+ * has had. "Biggest swell" is 112px and fits.
  *
  * **The day's own biggest is no longer here.** On the seven days measured on
  * 2026-08-26 it fell outside daylight on six of them — four of those at 11 PM
@@ -67,7 +71,7 @@ import { SWELL_TONE } from "./weekTone";
 
 /** What every day of this row shares: the words that name it, and its colour. */
 export const WAVE_WEEK_ROW = {
-  label: "Swell",
+  label: "Biggest swell",
   tone: SWELL_TONE,
 } as const;
 

@@ -307,15 +307,19 @@ export function WeekGrid({
                       {/*
                         **Label beside the value below `lg`, above it from
                         `lg`.** A day is a full-width block at one and two
-                        columns -- 303px of content at 375, 328px at 768 -- and
+                        columns -- 301px of content at 375, 328px at 768 -- and
                         a 10px label alone on a line that wide is most of the
-                        line wasted. `LOW TIDE` is 70px, so a 76px column holds
-                        every label in the grid and leaves 217px at 375, which
-                        takes the longest value the cell has (`65% Slight chance
-                        rain showers`, 203px) without wrapping. Measured at
-                        375: a day goes 214px to 169px with this alone, and
-                        250px to 169px against what the grid shipped before
-                        ADR-0023 -- 1822px of week to 1256px.
+                        line wasted. The column is sized to the widest label the
+                        grid has: `BIGGEST SWELL` at 112px, against `CLOUD
+                        COVER` at 100px and `LOW TIDE` at 70px. 116px holds it
+                        with a little to spare and leaves 175px for the value at
+                        375, which takes every value in the cell except the
+                        longest cloud phenomenon (`68% Slight chance rain
+                        showers`, 204px, two days of seven) -- and that is the
+                        last row, so a wrap there pushes nothing out of line.
+                        Measured at 375: a day goes 214px to 169px with this
+                        alone, and 250px to 169px against what the grid shipped
+                        before ADR-0023.
 
                         This is not the `lg:block` the four cell components just
                         lost. Those forced a break *inside* one value to keep
@@ -331,7 +335,7 @@ export function WeekGrid({
                         which is what every label here used to be.
                       */}
                       <dt
-                        className={`text-2xs w-19 shrink-0 font-extrabold tracking-widest uppercase lg:w-auto ${
+                        className={`text-2xs w-29 shrink-0 font-extrabold tracking-widest uppercase lg:w-auto ${
                           row.tone ?? "text-fog"
                         }`}
                       >

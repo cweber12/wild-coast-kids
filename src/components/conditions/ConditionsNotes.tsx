@@ -88,7 +88,7 @@ const NOTES = [
       "the sand. The lines naming each source say which is which.",
   },
   {
-    term: "Clouds",
+    term: "Cloud cover",
     detail:
       "A forecast for this beach's own square of the National Weather Service's map, about " +
       "2.5 km across, rather than a reading taken anywhere. Unlike the tide and swell beside " +

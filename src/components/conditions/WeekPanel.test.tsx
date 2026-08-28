@@ -207,7 +207,7 @@ test("the gridded row is live, and the slot that promised it is gone", async () 
   render(await WeekPanel({ slug: "la-jolla-shores-beach" }));
 
   expect(readSkyWeek).toHaveBeenCalledWith("la-jolla-shores-beach");
-  expect(screen.getAllByText("Clouds").length).toBeGreaterThan(0);
+  expect(screen.getAllByText("Cloud cover").length).toBeGreaterThan(0);
   expect(screen.getByText("44%")).toBeDefined();
   expect(screen.queryByText(/A gridded forecast is coming/i)).toBeNull();
   expect(
@@ -235,7 +235,7 @@ test("a beach with no forecast cell says so, rather than dropping the row silent
   render(await WeekPanel({ slug: "la-jolla-shores-beach" }));
 
   expect(screen.getByText(/no cloud forecast for this beach/i)).toBeDefined();
-  expect(screen.queryByText("Clouds")).toBeNull();
+  expect(screen.queryByText("Cloud cover")).toBeNull();
 });
 
 test("an outage at the National Weather Service says so, and names the reason", async () => {
@@ -440,7 +440,7 @@ test("the row's label names the statistic, so the maximum is not hidden", async 
     await WeekPanel({ slug: "la-jolla-shores-beach" }),
   );
 
-  expect(countOf(cellLabels(container), "Swell")).toBe(2);
+  expect(countOf(cellLabels(container), "Biggest swell")).toBe(2);
 });
 
 test("the wave row is attributed once, beneath the grid, not seven times", async () => {
@@ -464,7 +464,7 @@ test("the wave row is attributed once, beneath the grid, not seven times", async
     "a model of the swell at 10 m depth, not a measurement",
   );
   // Labelled, because the grid may carry more than one of these.
-  expect(attributions[0].textContent).toContain("Swell");
+  expect(attributions[0].textContent).toContain("Biggest swell");
 });
 
 test("the row goes ragged where the forecast stops, rather than blank", async () => {
@@ -482,7 +482,7 @@ test("the row goes ragged where the forecast stops, rather than blank", async ()
 
   // One cell, one label. A label over a gap would read as an instrument that
   // failed rather than as a forecast that does not reach that far.
-  expect(countOf(cellLabels(container), "Swell")).toBe(1);
+  expect(countOf(cellLabels(container), "Biggest swell")).toBe(1);
   expect(daylightWindows()).toHaveLength(2);
 });
 
@@ -505,7 +505,7 @@ test("a beach with no MOP line says so, and keeps the rest of the grid", async (
   render(await WeekPanel({ slug: "mission-bay" }));
 
   expect(screen.getByText(/no wave forecast for this beach/i)).toBeDefined();
-  expect(screen.queryByText("Swell")).toBeNull();
+  expect(screen.queryByText("Biggest swell")).toBeNull();
   expect(screen.queryByText(/MOP line/)).toBeNull();
   expect(daylightWindows()).toHaveLength(2);
 });
@@ -535,7 +535,7 @@ test("a CDIP outage costs the wave row and nothing else", async () => {
   // Said in full here rather than pointed at a card, because CDIP is read here
   // and nowhere else on the page.
   expect(screen.getByText(/HTTP 503 for MOP line D0498/)).toBeDefined();
-  expect(screen.queryByText("Swell")).toBeNull();
+  expect(screen.queryByText("Biggest swell")).toBeNull();
   expect(countOf(cellLabels(container), "Low tide")).toBe(2);
   expect(daylightWindows()).toHaveLength(2);
 });
@@ -579,7 +579,7 @@ test("NOAA going quiet does not take the wave row with it", async () => {
   );
 
   expect(screen.queryByText("Low tide")).toBeNull();
-  expect(countOf(cellLabels(container), "Swell")).toBe(2);
+  expect(countOf(cellLabels(container), "Biggest swell")).toBe(2);
 });
 
 test("the rows run tide, swell, cloud, inside the window the header states", async () => {
@@ -602,7 +602,7 @@ test("the rows run tide, swell, cloud, inside the window the header states", asy
   // Cloud last, and last for a reason: it is the only row with no time in it,
   // so a reader scanning a column reads two "when"s and then the one figure
   // about the whole day.
-  expect(labels).toEqual(["Low tide", "Swell", "Clouds"]);
+  expect(labels).toEqual(["Low tide", "Biggest swell", "Cloud cover"]);
 });
 
 test("a line with no recorded distance is still named, without one", async () => {

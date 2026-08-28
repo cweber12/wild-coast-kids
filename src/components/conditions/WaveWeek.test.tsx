@@ -4,12 +4,16 @@ import { WaveWeek, WAVE_WEEK_ROW } from "./WaveWeek";
 
 const DAYLIGHT = { timeLabel: "2:00 PM", heightFt: 2.618, periodS: 13.333333 };
 
-test("the row is named in one word, since the header states the window", () => {
+test("the label keeps the superlative and drops only the window", () => {
   // ADR-0023. Fifty-six three-hourly estimates stand behind one cell and which
-  // one is shown is a judgement, which "Biggest daylight swell" named in the
-  // label -- at 187px against a 125px cell, so it wrapped at every width the
-  // grid has had. The day header says the window once for all three rows now.
-  expect(WAVE_WEEK_ROW.label).toBe("Swell");
+  // one is shown is a judgement, so "Biggest" has to stay: "Swell" over a
+  // single figure invites a reader to take it for the day's typical swell.
+  // What goes is "daylight", which the day header states for all three rows --
+  // "Biggest daylight swell" rendered 187px against a 133px cell and wrapped at
+  // every width the grid has had. This is 112px.
+  expect(WAVE_WEEK_ROW.label).toBe("Biggest swell");
+  expect(WAVE_WEEK_ROW.label).toMatch(/^Biggest/);
+  expect(WAVE_WEEK_ROW.label).not.toMatch(/daylight/i);
 });
 
 test("the daylight swell leads: time, then height and period", () => {

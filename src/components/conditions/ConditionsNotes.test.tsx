@@ -102,7 +102,7 @@ test("the safety framing is not repeated here, it is above the readings", () => 
   // figure -- which is what the heading above them promises.
   expect(screen.getByText("Tide heights")).toBeDefined();
   expect(screen.getByText("Wave heights")).toBeDefined();
-  expect(screen.getByText("Clouds")).toBeDefined();
+  expect(screen.getByText("Cloud cover")).toBeDefined();
   // The airport entry is gone with the figures it explained. A note about a
   // reading the page no longer carries would be prose describing nothing.
   expect(screen.queryByText("Sky and visibility")).toBeNull();

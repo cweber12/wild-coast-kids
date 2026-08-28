@@ -509,7 +509,7 @@ test("the label sits beside its value until there are columns to stack in", () =
   expect(pair.className).toContain("lg:block");
 
   const label = pair.querySelector("dt")!;
-  expect(label.className).toContain("w-19");
+  expect(label.className).toContain("w-29");
   expect(label.className).toContain("shrink-0");
   expect(label.className).toContain("lg:w-auto");
 });

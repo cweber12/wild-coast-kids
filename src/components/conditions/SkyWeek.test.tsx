@@ -20,8 +20,12 @@ test("the label claims no superlative, because this row is a mean", () => {
   // than a peak. ADR-0023 shortened those two, so the contrast is gone and
   // `ConditionsNotes` carries the distinction. What is still assertable here,
   // and still the risk, is that the label never claims an extreme.
-  expect(SKY_WEEK_ROW.label).toBe("Clouds");
+  expect(SKY_WEEK_ROW.label).toBe("Cloud cover");
   expect(SKY_WEEK_ROW.label).not.toMatch(/cloudiest|clearest|most|least/i);
+  // "Cover" rather than "coverage": the term the National Weather Service uses
+  // for this quantity, and 100px against 133px of cell where "cloud coverage"
+  // is 128px and leaves five.
+  expect(SKY_WEEK_ROW.label).not.toMatch(/coverage/i);
 });
 
 test("a day with fog forecast says so, under the figure", () => {

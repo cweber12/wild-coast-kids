@@ -1,8 +1,11 @@
 /**
  * One day's cloud cover, as the week grid prints it.
  *
- * **The label is "Clouds", and it names a different kind of selection from the
- * two rows above it.** `TideWeek` and `WaveWeek` each show one of a day's
+ * **The label is "Cloud cover", and it names a different kind of selection from
+ * the two rows above it.** "Cloud cover" rather than "cloud coverage": it is the
+ * term the National Weather Service uses for the quantity this reads, and at
+ * 100px it leaves a quarter of the 133px cell spare where "cloud coverage"
+ * would leave 5px. `TideWeek` and `WaveWeek` each show one of a day's
  * estimates, and which one is a judgement the day header now states for all
  * three. This shows all of them, averaged. That difference used to live in the
  * label — "Cloud by day" against two superlatives — and after ADR-0023 the
@@ -63,7 +66,7 @@ import { CLOUD_TONE } from "./weekTone";
 
 /** What every day of this row shares: the words that name it, and its colour. */
 export const SKY_WEEK_ROW = {
-  label: "Clouds",
+  label: "Cloud cover",
   tone: CLOUD_TONE,
 } as const;
 
