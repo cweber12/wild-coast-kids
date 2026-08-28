@@ -736,7 +736,8 @@ export function document(built, now = new Date()) {
         `than listed with a reading from out of range. The farthest any listed beach reads is ` +
         `${farthest.name}'s, at ${kilometres(farthest.tide_station_distance_m)}. See ` +
         `tide-stations.json, whose own unresolved list records that the one open-coast station ` +
-        `between La Jolla and Imperial Beach does not deliver predictions.`,
+        `between La Jolla and Imperial Beach has failed once already and is now re-measured ` +
+        `rather than assumed.`,
       `${beaches.filter((b) => b.wave_buoy === null).length} of these beaches get no MEASURED wave ` +
         `height, for two different reasons that their wave_buoy_null_reason tells apart. At ` +
         `${beaches.filter((b) => b.wave_buoy === null && b.mop_line === null).length} of them the ` +

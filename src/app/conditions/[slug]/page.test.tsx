@@ -39,6 +39,26 @@ test("a slug outside the inventory is a 404, not an apology page", async () => {
   expect(notFound).toHaveBeenCalled();
 });
 
+test("the six beaches TWC0405 brought back are reachable at their routes", async () => {
+  // Every one of these 404'd until Point Loma started answering again. No join
+  // rule moved: their tide station came inside SERVICE_TOLERANCE_M because the
+  // station revived, and ADR-0019 already covered the buoy being out of range.
+  // The route is what a reader actually has, so the route is what is asserted
+  // rather than the inventory the route reads.
+  for (const slug of [
+    "sunset-cliffs-park",
+    "ocean-beach",
+    "dog-beach-o-b",
+    "coronado-north-beach",
+    "coronado-central-beach",
+    "coronado-city-beaches",
+  ]) {
+    const { unmount } = render(await BeachConditions(params(slug)));
+    expect(screen.getByText(`panel for ${slug}`)).toBeDefined();
+    unmount();
+  }
+});
+
 test("the title names the beach, so a shared link says where it is about", async () => {
   const metadata = await generateMetadata(params("torrey-pines-state-beach"));
   expect(metadata.title).toBe("Torrey Pines State Beach conditions");

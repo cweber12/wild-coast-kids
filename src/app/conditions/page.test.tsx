@@ -36,10 +36,11 @@ test("a reader can choose another beach from here", () => {
 
   const select = screen.getByLabelText("Choose a beach") as HTMLSelectElement;
   expect(select.value).toBe(DEFAULT_BEACH_SLUG);
-  // Every beach in the inventory is offered, not a curated subset. It is 45
+  // Every beach in the inventory is offered, not a curated subset. It is 51
   // rather than the county's 73 because the inventory itself is bounded by the
-  // stations that reach it, not because the chooser hides any of it.
-  expect(select.querySelectorAll("option").length).toBe(45);
+  // stations that reach it, not because the chooser hides any of it -- and it
+  // is 51 rather than 45 because one of those stations came back.
+  expect(select.querySelectorAll("option").length).toBe(51);
 });
 
 test("the page revalidates often enough that 'today' does not go stale", () => {
