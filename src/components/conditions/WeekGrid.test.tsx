@@ -120,7 +120,9 @@ test("the transpose is one property, so there is no hidden copy to keep in step"
   const { container } = renderGrid();
 
   const grid = container.querySelector("ol");
-  expect(grid?.className).toContain("lg:grid-cols-7");
+  expect(grid?.className).toContain("md:grid-cols-2");
+  expect(grid?.className).toContain("lg:grid-cols-4");
+  expect(grid?.className).toContain("xl:grid-cols-7");
   expect(container.innerHTML).not.toContain("lg:hidden");
 });
 
@@ -188,10 +190,10 @@ test("the reserved band says it belongs to the week above it", () => {
 test("the reserved band steps at the same width the days do", () => {
   renderGrid({ reserved: RESERVED });
 
-  // The day blocks are `lg:grid-cols-7`, so at `sm` the live week is stacked
-  // full-width. Three slots side by side from 640px gave roughly 26 characters
-  // over five ragged lines at 768 -- the page's own responsive logic
-  // disagreeing with itself in adjacent bands of the same section.
+  // `lg` is where the days above first go wider than two. Three slots side by
+  // side from 640px gave roughly 26 characters over five ragged lines at 768,
+  // while the live week was still stacked full-width -- the page's own
+  // responsive logic disagreeing with itself in adjacent bands of one section.
   const band = reservedSlot()?.parentElement;
   expect(band?.className).toContain("lg:grid-cols-3");
   expect(band?.className).not.toContain("sm:grid-cols-3");
@@ -253,17 +255,38 @@ test("a day cell takes the radius of a box its own size", () => {
 });
 
 /**
- * Regression, paired with the one in `DaylightWeek.test.tsx`. The reserved
- * header line keeps seven columns in step at `lg`. Below `lg` there is one
- * column and nothing to be in step with, and the header does not wrap at that
- * width either — so the reserve was pure height on a phone.
+ * Regression. `TODAY · THU, AUG 27` is 151px against 125px of cell at 1280, so
+ * the marked day wraps where the other six do not and every row beneath it
+ * sits a line lower than the same row beside it. The reserve buys that back.
+ *
+ * Scoped to `xl` because that is where seven columns start. Below it there are
+ * at most four, the header fits on one line, and an unscoped reserve was 35px
+ * a day across seven days — 242px of extra scroll on a phone, on a grid an
+ * earlier review had already called too tall there.
  */
-test("the header reserves its second line only where there are columns", () => {
+test("the header reserves its second line only where the cell is too narrow", () => {
   const { container } = renderGrid();
 
   const header = container.querySelector("ol > li h3");
-  expect(header?.className).toContain("lg:min-h-8");
+  expect(header?.className).toContain("xl:min-h-8");
   expect(header?.className.split(/\s+/)).not.toContain("min-h-8");
+  expect(header?.className.split(/\s+/)).not.toContain("lg:min-h-8");
+});
+
+/**
+ * The measurement the breakpoint step exists for. Seven columns at 1024 give a
+ * cell 120px wide and 88px of content — narrower than `THU, AUG 27` renders at
+ * 89px — which is what forced every hard-coded line break the four cell
+ * components used to carry. jsdom applies no stylesheets (ADR-0001), so what
+ * is assertable here is that seven columns wait for `xl` and that the widths
+ * between are filled rather than jumping straight from one.
+ */
+test("seven columns wait for the width that can hold them", () => {
+  const { container } = renderGrid();
+
+  const grid = container.querySelector("ol")!;
+  expect(grid.className).not.toContain("lg:grid-cols-7");
+  expect(grid.className).not.toContain("sm:grid-cols");
 });
 
 /* =========================================================================
@@ -320,4 +343,48 @@ test("a row with no source prints no line at all", () => {
   const { container } = renderGrid({ rows: [TIDE_ROW] });
 
   expect(container.querySelectorAll("p").length).toBe(0);
+});
+
+/* =========================================================================
+ * The daylight window: the day's header, not a row inside it
+ * ========================================================================= */
+
+/** The same three days, each carrying the window its figures are selected in. */
+const DAYS_WITH_DAYLIGHT: WeekDay[] = DAYS.map((day, i) => ({
+  ...day,
+  daylight: <p>{`6:2${i} AM to 7:2${i} PM`}</p>,
+}));
+
+test("the daylight window sits in the header, above every pair in the day", () => {
+  // Not a `WeekRow`: a row states a figure, and this states the scope the
+  // figures are selected within. That is what lets the labels below be "Low
+  // tide" rather than "Lowest daylight tide" -- see the plan.
+  const { container } = renderGrid({ days: DAYS_WITH_DAYLIGHT });
+
+  const window = screen.getByText("6:20 AM to 7:20 PM");
+  const day = container.querySelector("ol > li")!;
+  expect(day.contains(window)).toBe(true);
+  expect(day.querySelector("dl")!.contains(window)).toBe(false);
+
+  const heading = day.querySelector("h3")!;
+  expect(
+    heading.compareDocumentPosition(window) & Node.DOCUMENT_POSITION_FOLLOWING,
+  ).toBeTruthy();
+});
+
+test("every day carries its own window, since sunset moves across the week", () => {
+  renderGrid({ days: DAYS_WITH_DAYLIGHT });
+
+  expect(screen.getByText("6:20 AM to 7:20 PM")).toBeDefined();
+  expect(screen.getByText("6:21 AM to 7:21 PM")).toBeDefined();
+  expect(screen.getByText("6:22 AM to 7:22 PM")).toBeDefined();
+});
+
+test("a day given no window renders a header of just its date", () => {
+  // The grid must not draw a gap where a line would be: `WeekPanel` computes
+  // daylight and cannot fail, but the grid is not the thing that knows that.
+  const { container } = renderGrid();
+
+  const header = container.querySelector("ol > li > div")!;
+  expect(header.textContent).toBe("Today · Mon, Aug 17");
 });

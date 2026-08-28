@@ -239,6 +239,19 @@ Dependencies are linear: 3 is only honest once 2 has put the window in the
 header, and 4 is styling the structure 2 and 3 build. 5 is independent of 4
 but wants 3's shorter strings to be worth measuring.
 
+### Addendum, 2026-08-27: slices 2 and 5 shipped as one
+
+**5 is not independent of 2 — it is a prerequisite.** The daylight line is
+`whitespace-nowrap`, because a clock range broken across two lines is two half
+times. Measured as shipped it is 109px, and at the old breakpoints the cell it
+lands in at 1024 has 88px of content: it would have overflowed rather than
+wrapped, for as long as the two slices were apart. A slice is supposed to leave
+the repo working, so they went in together.
+
+The plan said "5 is independent of 4", which is still true, and implied it was
+independent of 2, which the measurement disproved. Recorded rather than
+quietly reordered.
+
 ## Out of scope
 
 The reading cards and their `all day` stat pairs, the provenance lines beneath

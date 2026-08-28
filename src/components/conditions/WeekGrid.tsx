@@ -3,10 +3,20 @@
  *
  * **The DOM is day-major and identical at every width.** Each of the seven days
  * is one block holding that day's figures, and the only thing that moves
- * between breakpoints is `grid-template-columns`: one column below `lg`, seven
- * at `lg` and up. So the grid transposes without reparenting anything, which is
- * why ADR-0005's render-twice allowance is not invoked here and no hidden
- * second copy exists to drift out of step with the first.
+ * between breakpoints is `grid-template-columns`: one column, then two, four
+ * and seven at `md`, `lg` and `xl`. So the grid transposes without reparenting
+ * anything, which is why ADR-0005's render-twice allowance is not invoked here
+ * and no hidden second copy exists to drift out of step with the first.
+ *
+ * **Seven columns start at `xl`, and used to start at `lg`.** At 1024 seven
+ * columns give a cell 120px, of which 88px is content -- narrower than
+ * `THU, AUG 27` renders at 89px. Every hard-coded line break the four cell
+ * components used to carry was really describing that number, and the grid was
+ * 84px *taller* at 1024 than at 1536 because of them. Four columns there give
+ * 223px, and all seven days still stand on one screen as 4 + 3. The cost is
+ * that between 1024 and 1279 the week is two rows rather than one, which is a
+ * real loss for comparing across days and the reason this is a breakpoint
+ * rather than a rewrite. See `docs/plans/week-grid-legibility.md`.
  *
  * **It transposes rather than scrolling, and that departs from a stated
  * convention on purpose.** `globals.css` says small screens swipe and large
@@ -49,6 +59,20 @@ export type WeekDay = {
   dayLabel: string;
   /** True for the day the reader is standing in. Decided upstream, so this renders no clock. */
   isToday: boolean;
+  /**
+   * The window this day's figures fall inside, printed in the header.
+   *
+   * A slot on the day rather than a `WeekRow`, because a row is a `<dt>`/`<dd>`
+   * pair repeated inside every day block and this is one line above all of
+   * them. The distinction is the point: a row states a figure, and this states
+   * the scope the figures are selected within, which is what lets their labels
+   * be "Low tide" rather than "Lowest daylight tide". See
+   * `docs/plans/week-grid-legibility.md`.
+   *
+   * Optional, so a grid with nothing to scope renders a header of just the
+   * date rather than a gap where a line should be.
+   */
+  daylight?: ReactNode;
 };
 
 /**
@@ -150,9 +174,10 @@ export function WeekGrid({
       ))}
 
       {/*
-        `grid` alone is one column; `lg:grid-cols-7` is seven. That single
-        property is the whole transpose — see this file's header for why it has
-        to be, and why nothing here is hidden at any width.
+        `grid` alone is one column; the three `grid-cols-*` steps are the rest.
+        That single property is the whole transpose — see this file's header for
+        why it has to be, why nothing here is hidden at any width, and why seven
+        columns wait for `xl`.
 
         No days at all is a real state rather than an oversight: a station that
         could not be reached has a note above and nothing to tabulate, and an
@@ -178,7 +203,7 @@ export function WeekGrid({
         because seven dark blocks under a dark band is a different page.
       */}
       {days.length > 0 && (
-        <ol className="mb-4 grid gap-3 lg:grid-cols-7">
+        <ol className="mb-4 grid gap-3 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7">
           {days.map((day) => (
             <li
               key={day.localDate}
@@ -188,12 +213,11 @@ export function WeekGrid({
             >
               {/*
                 `min-h-8` holds two lines whether or not this day needs them.
-                "Today · " is eight characters of a 10px `tracking-widest`
-                label in a 124px cell, so the marked day wraps where the other
-                six do not -- and every row beneath it in that column then sits
-                a line lower than the same row beside it. Reserving the line is
-                what keeps the seven columns readable across rather than only
-                down.
+                `TODAY · THU, AUG 27` renders 151px against 125px of cell at
+                1280, so the marked day wraps where the other six do not -- and
+                every row beneath it in that column then sits a line lower than
+                the same row beside it. Reserving the line is what keeps the
+                seven columns readable across rather than only down.
 
                 It costs one line. Together with the daylight cell's
                 deliberate break, the grid goes 146px to 163px at 1280 -- no
@@ -203,14 +227,14 @@ export function WeekGrid({
                 is worth it: a grid whose rows do not line up across is a table
                 pretending.
 
-                `lg:` because that price is only worth paying where there are
-                columns. Below `lg` the grid is one column, a day is a
-                full-width row, and this header does not wrap -- so reserving
-                the line there bought nothing and cost 35px a day across seven
-                days. It shipped unscoped and put 242px of extra scroll on a
-                phone, on a grid the 2026-08-24 review had already reported as
-                too tall there; it was measured at 1280 and 1536 and not at
-                375.
+                `xl:` because that price is only worth paying where the cell is
+                too narrow to hold the line. Below `xl` there are at most four
+                columns, the header fits on one line, and reserving a second
+                bought nothing while costing 35px a day across seven days. It
+                shipped unscoped once and put 242px of extra scroll on a phone,
+                on a grid the 2026-08-24 review had already called too tall
+                there; it was measured at 1280 and 1536 and not at 375. It
+                moved from `lg:` to `xl:` with the columns it exists to align.
 
                 Reserved rather than shortened. "Today" alone fits, and drops
                 the date from the one column a reader without the layout most
@@ -218,9 +242,18 @@ export function WeekGrid({
                 accessible one would need an `sr-only`, which this repo does
                 not use (`ReadingCard` records why).
               */}
-              <h3 className="text-2xs mb-2 font-extrabold tracking-widest text-ocean uppercase lg:min-h-8">
-                {day.isToday ? `Today · ${day.dayLabel}` : day.dayLabel}
-              </h3>
+              <div className="mb-2">
+                <h3 className="text-2xs font-extrabold tracking-widest text-ocean uppercase xl:min-h-8">
+                  {day.isToday ? `Today · ${day.dayLabel}` : day.dayLabel}
+                </h3>
+                {/*
+                  Inside the header rather than in the `<dl>` below, because it
+                  scopes every pair in that list rather than being one of them.
+                  That is what lets the labels below drop the word "daylight" —
+                  see `WeekDay.daylight` and `DaylightWeek`.
+                */}
+                {day.daylight}
+              </div>
 
               <dl>
                 {rows.map((row) => {
@@ -299,12 +332,13 @@ export function WeekGrid({
             Each of these will join the week above as a row of its own.
           </p>
           {/*
-            `lg:grid-cols-3`, matching the days above rather than stepping a
-            breakpoint earlier. The day blocks stay one column until `lg`, so
-            at `sm` the live week was stacked full-width while these three sat
-            side by side at 216px each -- roughly 26 characters over five
-            ragged lines. The week said 768 was narrow and the slots said it
-            was wide, in adjacent bands of the same section.
+            `lg:grid-cols-3`, which is where the days above first go wider
+            than two. These three once sat side by side from `sm` at 216px
+            each -- roughly 26 characters over five ragged lines -- while the
+            live week was still stacked full-width: the week said 768 was
+            narrow and the slots said it was wide, in adjacent bands of the
+            same section. Three across beside four days is close enough that
+            neither band contradicts the other.
           */}
           <div className="grid gap-3 lg:grid-cols-3">
             {reserved.map((slot) => (
