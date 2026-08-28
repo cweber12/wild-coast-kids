@@ -126,3 +126,30 @@ export function localDayLabel(localDate: string): string {
     day: "numeric",
   }).format(new Date(Date.UTC(year, month - 1, day)));
 }
+
+/**
+ * The same date without its weekday: `Aug 28`.
+ *
+ * For the one column that does not need a weekday. The week grid marks today
+ * with a chip reading "Today", and a weekday beside that chip is the most
+ * redundant token on the page -- nobody needs to be told which day today is.
+ * Dropping it is what makes the chip fit: at the 10px the grid's day headings
+ * are set in, `THU, AUG 28` is 89px and the chip is 54px against a 133px cell
+ * at 1280, where `AUG 28` is 51px and the pair fits with room.
+ *
+ * The month stays, on today's column and every other, so the row still shows
+ * the month turning over mid-week.
+ *
+ * Beside `localDayLabel` rather than inside it, because a caller wants one or
+ * the other and a boolean parameter would make every call site read
+ * `localDayLabel(date, false)` without saying what false means. Same UTC
+ * round-trip, for the reason that function records.
+ */
+export function localDateLabel(localDate: string): string {
+  const [year, month, day] = partsOf(localDate);
+  return new Intl.DateTimeFormat("en-US", {
+    timeZone: "UTC",
+    month: "short",
+    day: "numeric",
+  }).format(new Date(Date.UTC(year, month - 1, day)));
+}

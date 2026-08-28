@@ -57,6 +57,15 @@ export type WeekDay = {
   localDate: string;
   /** That date named for a reader, `Mon, Aug 17`. */
   dayLabel: string;
+  /**
+   * The same date without its weekday, `Aug 17`.
+   *
+   * Used only on today's column, which carries a chip reading "Today" beside
+   * it. A weekday next to that chip is the most redundant token in the grid,
+   * and dropping it is what lets the chip sit on the date's own line instead of
+   * reserving a line above it in all seven columns.
+   */
+  dateLabel: string;
   /** True for the day the reader is standing in. Decided upstream, so this renders no clock. */
   isToday: boolean;
   /**
@@ -251,38 +260,49 @@ export function WeekGrid({
                   }`}
                 >
                   {/*
-                    The chip's line is reserved on every day at `xl` and shared
-                    with the date below it. `TODAY · THU, AUG 27` renders 151px
-                    against 125px of cell at 1280, so the marked day wraps where
-                    the other six do not, and every row beneath it in that column
-                    then sits a line lower than the same row beside it. Reserving
-                    the line is what keeps seven columns readable across rather
-                    than only down.
+                    **The chip sits after the date, on the date's own line.**
+                    It had a reserved line above it, because `TODAY · THU, AUG
+                    28` is 151px against 133px of band at 1280 and would wrap
+                    on the marked day alone -- putting every row beneath it in
+                    that column a line lower than its neighbours. Reserving the
+                    line fixed the alignment and cost 22px of empty band at the
+                    top of the other six columns, which is what a reader
+                    actually saw.
 
-                    Only at `xl`, because only there is the cell too narrow to
-                    hold both: at 1024 the chip and the date measure about 141px
-                    against 221px, so they sit on one line and the reserve would
-                    be 22px a day for nothing. It shipped unscoped once and put
-                    242px of extra scroll on a phone.
+                    What makes the chip fit is `dateLabel`. Measured at 1280:
+                    the full `THU, AUG 28` is 89px and the chip is 54px, which
+                    with a space between them overruns a 133px band; `AUG 28` is
+                    51px and the pair comes to 111px. So today's column drops
+                    its weekday and nothing is reserved anywhere.
 
-                    Reserved rather than shortened. "Today" alone fits and drops
-                    the date from the one column a reader without the layout most
-                    needs it named in; splitting the visible text from the
-                    accessible one would need an `sr-only`, which this repo does
-                    not use (`ReadingCard` records why). What the band changes is
-                    how the empty line reads: on a tinted surface it is the
-                    band's padding rather than a line that failed to render.
+                    Dropping the weekday costs today's column the least useful
+                    token it has. The chip already says which day this is, and
+                    the month stays -- so the row still shows the month turning
+                    over mid-week, which was the objection to shortening this
+                    heading the first time.
+
+                    `leading-none` on the chip, so its padding fits inside the
+                    heading's own line box. Without it the chip is 16px against
+                    the other columns' 15px, and today's band renders a pixel
+                    taller than the six beside it -- which is the same
+                    misalignment in miniature that the reserved line was
+                    introduced to prevent.
+
+                    Inline rather than a flex row, and with a real space text
+                    node before the chip. Two flex items with nothing between
+                    them read aloud as "Aug 28Today", which is the
+                    concatenation `ReadingCard` records hitting in the
+                    accessible-name algorithm.
                   */}
-                  <span className="xl:mb-1 xl:block xl:min-h-4.5">
-                    {day.isToday && (
-                      <>
-                        <span className="rounded-pill bg-yellow px-1.5 py-0.5 tracking-wider text-dark">
-                          Today
-                        </span>{" "}
-                      </>
-                    )}
-                  </span>
-                  {day.dayLabel}
+                  {day.isToday ? day.dateLabel : day.dayLabel}
+                  {day.isToday && (
+                    <>
+                      {" "}
+                      <span className="leading-none rounded-pill bg-yellow px-1.5 py-0.5 align-[0.1em] text-dark">
+                        Today
+                      </span>
+                    </>
+                  )}
                 </h3>
                 {/*
                   Inside the header rather than in the `<dl>` below, because it

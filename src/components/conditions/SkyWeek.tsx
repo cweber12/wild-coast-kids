@@ -44,12 +44,14 @@
  * which is an ordinary day rather than a missing reading: the three figures
  * below still answer.
  *
- * **This is the row allowed to wrap, and it is last for that reason.** The
- * phenomenon is the only free text in the cell: "Patchy fog" is 101px and
- * "Slight chance rain showers" is 203px, against 133px in the narrowest
- * seven-column cell. Nothing follows this row, and the day blocks are grid
- * items that stay equal height regardless, so a second line here makes one
- * column's text taller and misaligns nothing.
+ * **Nothing here wraps, and the phenomenon is why that took work.** It is the
+ * only free text in the cell -- "Patchy fog" is 69px and "Slight chance rain
+ * showers" is 174px at the value register, against 133px of cell at 1280 and
+ * 169px at 1536. It wrapped at every seven-column width the grid has, and a
+ * cell one line taller than its neighbours puts its own rows out of line with
+ * theirs, which is the misalignment this grid exists to prevent. The line takes
+ * the subordinate size and truncates rather than reflowing; the words
+ * themselves cannot shorten, for the reason `phenomenonWords` records.
  *
  * **No visibility figure, and that is the point rather than an omission.** The
  * gridpoint declares `visibility` and publishes nothing for it at any cell
@@ -112,8 +114,28 @@ export function SkyWeek({
 }) {
   return (
     <>
+      {/*
+        **One line, always, and the words are not shortened to get there.**
+        `phenomenonWords` records why they cannot be: they are the National
+        Weather Service's own plain-language rendering, and rewording them
+        would be this site forming a forecaster's judgement rather than
+        relaying one -- ADR-0009's rule.
+
+        So the line takes the subordinate size and truncates. `Slight chance
+        rain showers` is the longest string this inventory publishes and
+        measures 174px at 13px, against 133px of cell at 1280 and 169px at
+        1536: it wrapped at every seven-column width, and a cell one line
+        taller than its neighbours is the misalignment this grid is built to
+        prevent. At 11px it is 147px and sets whole from about 1400 up.
+
+        `truncate` is the guarantee rather than the plan. Below roughly 1400
+        the longest phenomenon ends in an ellipsis, which is a visible signal
+        that there is more rather than a silent trim -- and the National
+        Weather Service's vocabulary is an open enumeration, so a combination
+        longer than anything measured here must degrade rather than reflow.
+      */}
       {day.phenomenon !== null && (
-        <span className="block text-fog">
+        <span className="text-xs block truncate text-fog">
           {phenomenonWords(day.phenomenon)}
         </span>
       )}

@@ -25,6 +25,7 @@ import type { TideExtreme } from "./coops-predictions";
 import {
   addLocalDays,
   localDateOf,
+  localDateLabel,
   localDayLabel,
   localTimeOf,
 } from "./pacific-time";
@@ -111,6 +112,8 @@ const WEEK_DAYS = 7;
 interface WeekDayFrame {
   localDate: string;
   dayLabel: string;
+  /** The same date with no weekday, for the column that carries a "Today" chip. */
+  dateLabel: string;
   isToday: boolean;
 }
 
@@ -146,6 +149,7 @@ function weekOfDays(nowMs: number): WeekDayFrame[] {
     return {
       localDate,
       dayLabel: localDayLabel(localDate),
+      dateLabel: localDateLabel(localDate),
       isToday: localDate === today,
     };
   });

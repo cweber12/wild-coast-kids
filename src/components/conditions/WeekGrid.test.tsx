@@ -4,9 +4,24 @@ import { REGION_HEADING } from "./headingRank";
 import { WeekGrid, type WeekDay, type WeekRow } from "./WeekGrid";
 
 const DAYS: WeekDay[] = [
-  { localDate: "2026-08-17", dayLabel: "Mon, Aug 17", isToday: true },
-  { localDate: "2026-08-18", dayLabel: "Tue, Aug 18", isToday: false },
-  { localDate: "2026-08-19", dayLabel: "Wed, Aug 19", isToday: false },
+  {
+    localDate: "2026-08-17",
+    dayLabel: "Mon, Aug 17",
+    dateLabel: "Aug 17",
+    isToday: true,
+  },
+  {
+    localDate: "2026-08-18",
+    dayLabel: "Tue, Aug 18",
+    dateLabel: "Aug 18",
+    isToday: false,
+  },
+  {
+    localDate: "2026-08-19",
+    dayLabel: "Wed, Aug 19",
+    dateLabel: "Aug 19",
+    isToday: false,
+  },
 ];
 
 /** Deliberately ragged: the 19th is missing, which is a row this product cannot fill that far out. */
@@ -44,12 +59,13 @@ test("names every day it was given, in the order it was given them", () => {
   const headings = [...container.querySelectorAll("h3")].map(
     (heading) => heading.textContent,
   );
-  // "Today" is a chip on its own line rather than a prefix joined by an
-  // interpunct, and the space between it and the date is a real text node: two
-  // block elements with nothing between them read aloud as "TodayMon, Aug 17",
-  // the concatenation `ReadingCard` records hitting in the accessible-name
-  // algorithm.
-  expect(headings).toEqual(["Today Mon, Aug 17", "Tue, Aug 18", "Wed, Aug 19"]);
+  // Today's column reads its date without a weekday, because the chip beside
+  // it already says which day this is -- and dropping that token is what lets
+  // the chip sit on the date's line instead of reserving a line above it in all
+  // seven columns. The space before "Today" is a real text node: two elements
+  // with nothing between them read aloud as "Aug 17Today", the concatenation
+  // `ReadingCard` records hitting in the accessible-name algorithm.
+  expect(headings).toEqual(["Aug 17 Today", "Tue, Aug 18", "Wed, Aug 19"]);
 });
 
 test("a day's values follow that day, so the reading order is day then value", () => {
@@ -61,7 +77,7 @@ test("a day's values follow that day, so the reading order is day then value", (
   // `[\s\S]*` rather than `.*` with the dotAll flag, which this TypeScript
   // target does not compile.
   expect(container.textContent).toMatch(
-    /Today Mon, Aug 17[\s\S]*Lowest tide[\s\S]*6:41 PM[\s\S]*Tue, Aug 18[\s\S]*Lowest tide[\s\S]*7:10 AM/,
+    /Aug 17 Today[\s\S]*Lowest tide[\s\S]*6:41 PM[\s\S]*Tue, Aug 18[\s\S]*Lowest tide[\s\S]*7:10 AM/,
   );
 });
 
@@ -80,7 +96,7 @@ test("today is named in words, not carried by a colour alone", () => {
   // Three things mark today -- an ocean edge, an ocean header band, a yellow
   // chip -- and the word is what survives if a reader sees none of them.
   const heading = container.querySelector("ol > li h3")!;
-  expect(heading.textContent).toBe("Today Mon, Aug 17");
+  expect(heading.textContent).toBe("Aug 17 Today");
   expect(screen.getByText("Today").className).toContain("bg-yellow");
 });
 
@@ -269,18 +285,41 @@ test("a day cell takes the radius of a box its own size", () => {
  * a day across seven days — 242px of extra scroll on a phone, on a grid an
  * earlier review had already called too tall there.
  */
-test("the chip's line is reserved only where the cell is too narrow", () => {
+/**
+ * Regression. The chip had a reserved line above it, because
+ * `TODAY · THU, AUG 28` is 151px against 133px of band at 1280 and wrapped on
+ * the marked day alone. Reserving fixed the alignment and cost 22px of empty
+ * band at the top of the other six columns, which is what a reader saw.
+ *
+ * `dateLabel` is what replaced it: `AUG 28` is 51px and the chip 54px, so the
+ * pair comes to 111px and fits. Nothing is reserved anywhere now, and the six
+ * days without a chip must not carry a slot for one.
+ */
+test("no column reserves a line for a chip it does not have", () => {
   const { container } = renderGrid();
 
-  // Reserved on every day, so the six without a chip do not sit a line higher
-  // than the one with it. Only at `xl`: at 1024 the chip and the date measure
-  // about 141px against 221px and share a line, where the reserve would be
-  // 22px a day for nothing.
-  const slot = container.querySelector("ol > li h3 > span")!;
-  expect(slot.className).toContain("xl:min-h-4.5");
-  expect(slot.className).toContain("xl:block");
-  expect(slot.className.split(/\s+/)).not.toContain("block");
-  expect(slot.className.split(/\s+/)).not.toContain("min-h-4.5");
+  const headings = [...container.querySelectorAll("ol > li h3")];
+  for (const heading of headings) {
+    expect(heading.className).not.toContain("min-h");
+    for (const span of heading.querySelectorAll("span")) {
+      expect(span.className).not.toContain("min-h");
+    }
+  }
+
+  // Only today has a child element in its heading at all: the chip.
+  expect(headings[0].querySelectorAll("span")).toHaveLength(1);
+  expect(headings[1].querySelectorAll("span")).toHaveLength(0);
+});
+
+test("the chip follows the date rather than sitting above it", () => {
+  const { container } = renderGrid();
+
+  const heading = container.querySelector("ol > li h3")!;
+  const chip = screen.getByText("Today");
+  expect(
+    chip.compareDocumentPosition(heading.firstChild!) &
+      Node.DOCUMENT_POSITION_PRECEDING,
+  ).toBeTruthy();
 });
 
 /**
@@ -396,7 +435,7 @@ test("a day given no window renders a header of just its date", () => {
   const { container } = renderGrid();
 
   const header = container.querySelector("ol > li > div")!;
-  expect(header.textContent).toBe("Today Mon, Aug 17");
+  expect(header.textContent).toBe("Aug 17 Today");
 });
 
 /* =========================================================================
