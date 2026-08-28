@@ -1,6 +1,8 @@
 import { describe, expect, test } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
+import { renderToStaticMarkup } from "react-dom/server";
 import { HourChart } from "./HourChart";
+import { TOUCH_TARGET } from "../ui/touchTarget";
 import type { SparkPoint } from "./DaySpark";
 import { localMidnightOf } from "@/lib/pacific-time";
 
@@ -481,5 +483,236 @@ describe("the hour scale at a phone's width", () => {
     expect(
       container.querySelector('[data-axis-hour="6"]')?.className,
     ).toContain("-translate-x-1/2");
+  });
+});
+
+describe("choosing an hour", () => {
+  test("reads out the hour, the value, the sky and whether the sun was up", () => {
+    // Every clause is a fact the page already holds. Nothing here says whether
+    // the hour is *good*, which is ADR-0009's line and the one an interactive
+    // readout is most likely to cross.
+    const { container } = render(
+      <HourChart
+        {...PROPS}
+        points={OVERNIGHT_DIP}
+        cloud={[{ atMs: START + 9 * HOUR, value: 62, published: true }]}
+      />,
+    );
+
+    fireEvent.click(container.querySelector('[data-hour-column="9"]')!);
+
+    const readout = container.querySelector("[data-hour-readout]")?.textContent;
+    expect(readout).toContain("9 AM");
+    expect(readout).toContain("4.6 ft");
+    expect(readout).toContain("62% cloud");
+    expect(readout).toContain("in daylight");
+  });
+
+  test("says an hour is outside daylight when it is", () => {
+    const { container } = render(
+      <HourChart {...PROPS} points={OVERNIGHT_DIP} />,
+    );
+
+    fireEvent.click(container.querySelector('[data-hour-column="3"]')!);
+
+    expect(
+      container.querySelector("[data-hour-readout]")?.textContent,
+    ).toContain("before sunrise or after sunset");
+  });
+
+  test("says so when the forecast published no cloud for that hour", () => {
+    // An hour nobody forecast is not a clear sky. The readout is the one place
+    // a reader could mistake silence for a reading, because a missing clause
+    // would simply look like a shorter sentence.
+    const { container } = render(
+      <HourChart
+        {...PROPS}
+        points={OVERNIGHT_DIP}
+        cloud={[{ atMs: START + 9 * HOUR, value: 62, published: true }]}
+      />,
+    );
+
+    fireEvent.click(container.querySelector('[data-hour-column="14"]')!);
+
+    expect(
+      container.querySelector("[data-hour-readout]")?.textContent,
+    ).toContain("no cloud forecast");
+  });
+
+  test("marks the chosen hour by size as well as by colour", () => {
+    // Colour is never the only channel separating two marks on this page.
+    const { container } = render(
+      <HourChart {...PROPS} points={OVERNIGHT_DIP} />,
+    );
+
+    expect(container.querySelector("[data-selected-mark]")).toBeNull();
+    fireEvent.click(container.querySelector('[data-hour-column="9"]')!);
+
+    const chosen = container.querySelector("[data-selected-mark]");
+    expect(chosen).not.toBeNull();
+    const ordinary = container.querySelector(
+      "circle:not([data-selected-mark])",
+    );
+    expect(Number(chosen?.getAttribute("r"))).toBeGreaterThan(
+      Number(ordinary?.getAttribute("r")),
+    );
+    expect(container.querySelector("[data-selected-guide]")).not.toBeNull();
+  });
+
+  test("the summary stays put, so nothing moved behind the interaction", () => {
+    // What the brief's no-affordance rule was protecting. The shape, the range
+    // and the day's extremes are all still there once an hour is chosen; what
+    // selection adds is detail the page never carried at all.
+    const { container } = render(
+      <HourChart {...PROPS} points={OVERNIGHT_DIP} />,
+    );
+
+    expect(screen.getByText(/Low 0\.2 ft/)).toBeDefined();
+    fireEvent.click(container.querySelector('[data-hour-column="9"]')!);
+    expect(screen.getByText(/Low 0\.2 ft/)).toBeDefined();
+    expect(container.querySelector("[data-curve]")).not.toBeNull();
+    expect(container.querySelectorAll("[data-night]")).toHaveLength(2);
+  });
+});
+
+describe("reaching the hours without a mouse", () => {
+  test("the arrow keys walk the day, and stop at both ends", () => {
+    const { container } = render(
+      <HourChart {...PROPS} points={OVERNIGHT_DIP} />,
+    );
+    const group = container.querySelector("[data-hour-columns]")!;
+
+    fireEvent.click(container.querySelector('[data-hour-column="0"]')!);
+    fireEvent.keyDown(group, { key: "ArrowRight" });
+    expect(
+      container.querySelector("[data-hour-readout]")?.textContent,
+    ).toContain("1 AM");
+
+    // Midnight is the left end and there is nothing before it. Wrapping to
+    // 11 PM would say the day is a loop, which a tide day is not.
+    fireEvent.keyDown(group, { key: "ArrowLeft" });
+    fireEvent.keyDown(group, { key: "ArrowLeft" });
+    expect(
+      container.querySelector("[data-hour-readout]")?.textContent,
+    ).toContain("12 AM");
+
+    fireEvent.keyDown(group, { key: "End" });
+    expect(
+      container.querySelector("[data-hour-readout]")?.textContent,
+    ).toContain("11 PM");
+    fireEvent.keyDown(group, { key: "Home" });
+    expect(
+      container.querySelector("[data-hour-readout]")?.textContent,
+    ).toContain("12 AM");
+  });
+
+  test("one tab stop for the group, not twenty-four", () => {
+    // A roving tabindex, the way a radio group behaves. Twenty-four stops would
+    // put the rest of the page a day's worth of tabs away.
+    const { container } = render(
+      <HourChart {...PROPS} points={OVERNIGHT_DIP} />,
+    );
+
+    const stops = [...container.querySelectorAll("[data-hour-column]")].filter(
+      (button) => button.getAttribute("tabindex") === "0",
+    );
+    expect(stops).toHaveLength(1);
+  });
+
+  test("each column names itself fully, not by its position", () => {
+    // A screen reader landing on a column gets the hour, the reading and the
+    // sky without moving to the readout to find out what it just selected.
+    const { container } = render(
+      <HourChart
+        {...PROPS}
+        points={OVERNIGHT_DIP}
+        cloud={[{ atMs: START + 9 * HOUR, value: 62, published: true }]}
+      />,
+    );
+
+    const column = container.querySelector('[data-hour-column="9"]');
+    expect(column?.textContent).toContain("9 AM");
+    expect(column?.textContent).toContain("4.6 ft");
+    expect(column?.textContent).toContain("62% cloud");
+  });
+
+  test("the stepper is a real control at the site's touch floor", () => {
+    // Twenty-four columns are 33.6px across an 806px plot and 11.8px across a
+    // 283px one, against ADR-0004's 44px. The columns are the enhancement; this
+    // pair is the guarantee.
+    const { container } = render(
+      <HourChart {...PROPS} points={OVERNIGHT_DIP} />,
+    );
+
+    for (const selector of ["[data-hour-prev]", "[data-hour-next]"]) {
+      const button = container.querySelector(selector);
+      expect(button?.tagName).toBe("BUTTON");
+      expect(button?.className).toContain(TOUCH_TARGET);
+    }
+  });
+
+  test("the stepper moves the readout and stops at the ends", () => {
+    const { container } = render(
+      <HourChart {...PROPS} points={OVERNIGHT_DIP} />,
+    );
+
+    fireEvent.click(container.querySelector("[data-hour-next]")!);
+    expect(
+      container.querySelector("[data-hour-readout]")?.textContent,
+    ).toContain("12 AM");
+
+    fireEvent.click(container.querySelector("[data-hour-next]")!);
+    expect(
+      container.querySelector("[data-hour-readout]")?.textContent,
+    ).toContain("1 AM");
+
+    fireEvent.click(container.querySelector('[data-hour-column="23"]')!);
+    expect(
+      container.querySelector("[data-hour-next]")?.hasAttribute("disabled"),
+    ).toBe(true);
+  });
+
+  test("the readout announces itself, since nobody is watching it", () => {
+    const { container } = render(
+      <HourChart {...PROPS} points={OVERNIGHT_DIP} />,
+    );
+
+    expect(
+      container.querySelector("[data-hour-readout]")?.getAttribute("aria-live"),
+    ).toBe("polite");
+  });
+});
+
+describe("what a reader without JavaScript gets", () => {
+  test("the whole chart, and not one control that cannot work", () => {
+    // Asserted against server-rendered markup, because that is the only thing a
+    // reader with a blocked script ever sees. ADR-0025 requires the plot itself
+    // to render here -- it is the page's primary content -- and
+    // `BeachSelector`'s docstring records the other half: a control that
+    // silently does nothing is worse than no control. There is nothing to fall
+    // back *to* for per-hour detail, since that detail is not on the page in
+    // any other form, so the honest fallback is no affordance at all.
+    const markup = renderToStaticMarkup(
+      <HourChart
+        {...PROPS}
+        points={OVERNIGHT_DIP}
+        cloud={[{ atMs: START + 9 * HOUR, value: 62, published: true }]}
+        nowMs={START + 14 * HOUR}
+      />,
+    );
+
+    // The chart is all there.
+    expect(markup).toContain("data-curve");
+    expect(markup).toContain("data-night");
+    expect(markup).toContain("data-cloud-percent");
+    expect(markup).toContain("data-now");
+    expect(markup).toContain("Low 0.2 ft");
+    expect(markup).toContain("12 AM");
+
+    // And not one dead button.
+    expect(markup).not.toContain("data-hour-column");
+    expect(markup).not.toContain("data-hour-prev");
+    expect(markup).not.toContain("data-hour-readout");
+    expect(markup).not.toContain("<button");
   });
 });

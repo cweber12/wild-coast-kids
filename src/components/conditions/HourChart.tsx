@@ -52,6 +52,31 @@
  * records that what makes colour a verdict is *differential* colour, and every
  * hour of every day here takes the same ocean.
  *
+ * **The hours are selectable, and that reverses a recorded decision.** The
+ * brief listed a hover tooltip under its anti-references and said the plot
+ * "carries no hover affordance at any width", on the argument that hover does
+ * not exist on touch and the audience is parents on phones. That argument is
+ * still right about *hover*, and none is used here: selection is by click, tap
+ * or key, the readout is a region of the page rather than a floating panel, and
+ * the affordance is announced rather than discovered. What the decision was
+ * protecting -- that nothing a reader needs is hidden behind an interaction --
+ * is kept by construction: the shape, the night, the cloud, the range and the
+ * day's extremes are all still drawn or written before anything is touched.
+ * What selection adds is per-hour detail the page never carried at all, so
+ * nothing has moved behind a gesture.
+ *
+ * **Two ways in, because one of them cannot meet the touch floor.** Twenty-four
+ * hour columns across an 806px plot are 33.6px each and across a 283px plot are
+ * 11.8px, against ADR-0004's 44px. So the columns are the enhancement and a
+ * prev/next pair is the guarantee: those are ordinary buttons at `TOUCH_TARGET`
+ * and they work at every width, with a keyboard, and with a screen reader.
+ *
+ * **The controls appear only once they can work.** They are mounted after
+ * hydration rather than rendered on the server, so a reader without JavaScript
+ * is never given a control that silently does nothing -- which is the failure
+ * `BeachSelector`'s `noscript` list exists to prevent. The chart itself still
+ * renders on the server, complete, which is what ADR-0025 requires.
+ *
  * **The "now" line appears on today and on no other day.** A vertical rule at
  * an instant is a claim about the present, and drawing one on Thursday would
  * say the reader is standing in Thursday. The instant comes from
@@ -59,8 +84,12 @@
  * clock -- never from `Date.now()` here, which would be impure during render.
  */
 
+"use client";
+
+import { useState, useSyncExternalStore } from "react";
 import { nightBands } from "./dayFrame";
 import type { SparkPoint } from "./DaySpark";
+import { TOUCH_TARGET } from "../ui/touchTarget";
 
 export type HourChartProps = {
   /** Local midnight this day begins on. The left edge. */
@@ -182,6 +211,16 @@ function cloudOpacity(percent: number): number {
   return 0.12 + 0.55 * (Math.min(100, Math.max(0, percent)) / 100);
 }
 
+/**
+ * The three halves of the "is this the client yet" store.
+ *
+ * Module scope so their identities are stable across renders, which is what
+ * `useSyncExternalStore` requires of `subscribe`.
+ */
+const neverChanges = () => () => {};
+const onClient = () => true;
+const onServer = () => false;
+
 /** `0` to "12 AM", `13` to "1 PM". The axis speaks the reader's clock. */
 function hourLabel(hour: number): string {
   if (hour === 0) return "12 AM";
@@ -203,6 +242,23 @@ export function HourChart({
   description,
   absence,
 }: HourChartProps) {
+  const [selected, setSelected] = useState<number | null>(null);
+
+  /*
+    The controls exist only once they can work. Rendered on the server they
+    would be dead buttons for a reader without JavaScript, which is the failure
+    `BeachSelector`'s `noscript` list exists to prevent -- and here there is
+    nothing to fall back *to*, because the detail they reveal is not on the page
+    in any other form. So the honest fallback is no control at all.
+
+    `useSyncExternalStore` rather than an effect that sets state: this repo's
+    lint rules refuse `setState` inside an effect, correctly, and this is what
+    React offers instead for a value that differs between the server render and
+    the client. The store never changes, so `subscribe` returns a no-op and the
+    two snapshots are constants.
+  */
+  const mounted = useSyncExternalStore(neverChanges, onClient, onServer);
+
   if (points.length === 0) {
     return <p className="leading-relaxed text-base text-fog">{absence}</p>;
   }
@@ -269,6 +325,66 @@ export function HourChart({
   /** The now line, only when this day is today and the instant is inside it. */
   const nowX =
     nowMs !== null && nowMs >= startMs && nowMs < endMs ? x(nowMs) : null;
+
+  /** Cloud by the hour it covers, so a readout can name the sky at that hour. */
+  const cloudByHour = new Map(
+    cloud.map((hour) => [
+      Math.round((hour.atMs - startMs) / HOUR_MS),
+      hour.value,
+    ]),
+  );
+
+  const selectedPoint = selected === null ? null : (points[selected] ?? null);
+  const selectedHour =
+    selectedPoint === null
+      ? null
+      : Math.round((selectedPoint.atMs - startMs) / HOUR_MS);
+
+  /**
+   * What one hour says when it is chosen.
+   *
+   * Every clause is a fact this page already holds: the hour, the value, the
+   * cloud the National Weather Service published for it, and whether the sun
+   * was up -- which is astronomy and cannot fail. Nothing is computed about
+   * whether the hour is *good*, which is ADR-0009's line and the one an
+   * interactive readout is most likely to cross.
+   */
+  const readout = (): string | null => {
+    if (selectedPoint === null || selectedHour === null) return null;
+    const cloudAt = cloudByHour.get(selectedHour);
+    const dark =
+      selectedPoint.atMs < sunriseMs || selectedPoint.atMs > sunsetMs;
+    return [
+      hourLabel(selectedHour),
+      `${selectedPoint.value.toFixed(1)} ${unitLabel}`,
+      cloudAt === undefined ? "no cloud forecast" : `${cloudAt}% cloud`,
+      dark ? "before sunrise or after sunset" : "in daylight",
+      selectedPoint.published ? null : "between published points",
+    ]
+      .filter((part): part is string => part !== null)
+      .join(" · ");
+  };
+
+  /** Move the selection, wrapping at neither end: a day has two ends and they hold. */
+  const step = (delta: number) => {
+    setSelected((current) => {
+      const next = current === null ? 0 : current + delta;
+      return Math.min(points.length - 1, Math.max(0, next));
+    });
+  };
+
+  const onColumnKeyDown = (event: React.KeyboardEvent) => {
+    const moves: Record<string, number> = { ArrowLeft: -1, ArrowRight: 1 };
+    if (event.key in moves) {
+      event.preventDefault();
+      step(moves[event.key]);
+      return;
+    }
+    if (event.key === "Home" || event.key === "End") {
+      event.preventDefault();
+      setSelected(event.key === "Home" ? 0 : points.length - 1);
+    }
+  };
 
   return (
     <div className="max-w-4xl overflow-hidden rounded-box border-[1.5px] border-ocean bg-white/60">
@@ -478,6 +594,37 @@ export function HourChart({
                 ))}
 
               {/*
+              The chosen hour: a guide down the plot and a bigger mark on the
+              curve, drawn after everything else so neither is buried. Two
+              channels rather than one -- the mark changes size as well as
+              weight, so the selection never rests on colour alone.
+            */}
+              {selectedPoint !== null && (
+                <>
+                  <line
+                    x1={x(selectedPoint.atMs)}
+                    x2={x(selectedPoint.atMs)}
+                    y1={0}
+                    y2={HEIGHT}
+                    className="stroke-ocean"
+                    strokeWidth={1}
+                    strokeOpacity={0.45}
+                    vectorEffect="non-scaling-stroke"
+                    data-selected-guide
+                  />
+                  <circle
+                    cx={x(selectedPoint.atMs)}
+                    cy={y(selectedPoint.value)}
+                    r={6}
+                    className="fill-ocean stroke-white"
+                    strokeWidth={2}
+                    vectorEffect="non-scaling-stroke"
+                    data-selected-mark
+                  />
+                </>
+              )}
+
+              {/*
               Now, and only on today. Dashed rather than solid so it reads as a
               marker on the plot rather than as another series, and
               distinguishable from the curve by more than its colour.
@@ -496,6 +643,53 @@ export function HourChart({
                 />
               )}
             </svg>
+
+            {/*
+            One column per hour, laid over the plot. Transparent: the plot is
+            already the picture, and a visible grid of hit areas would be the
+            gridlines the brief's anti-references name.
+
+            A roving tabindex rather than twenty-four tab stops -- one stop for
+            the group, then arrow keys, which is how a radio group behaves and
+            what a keyboard reader expects. The focus ring is the site's own,
+            inherited from `globals.css` rather than redefined here.
+          */}
+            {mounted && (
+              <div
+                role="group"
+                aria-label={`Hours of the day. Choose one to read its ${variableLabel.toLowerCase()}.`}
+                className="absolute inset-0 flex"
+                onKeyDown={onColumnKeyDown}
+                data-hour-columns
+              >
+                {points.map((point, index) => {
+                  const hour = Math.round((point.atMs - startMs) / HOUR_MS);
+                  const cloudAt = cloudByHour.get(hour);
+                  return (
+                    <button
+                      key={point.atMs}
+                      type="button"
+                      className="min-w-0 flex-1 cursor-pointer"
+                      tabIndex={index === (selected ?? 0) ? 0 : -1}
+                      aria-pressed={index === selected}
+                      onClick={() => setSelected(index)}
+                      data-hour-column={hour}
+                    >
+                      {/*
+                      The whole label, not a number: a screen reader landing on
+                      one of these gets the hour, the reading and the sky
+                      without having to move to the readout to find out what it
+                      has just selected.
+                    */}
+                      <span className="absolute -m-px h-px w-px overflow-hidden">
+                        {hourLabel(hour)}, {point.value.toFixed(1)} {unitLabel}
+                        {cloudAt === undefined ? "" : `, ${cloudAt}% cloud`}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
           </div>
         </div>
 
@@ -531,7 +725,53 @@ export function HourChart({
         reader would take off it is also stated -- for anyone who cannot see the
         curve, and for anyone whose images have not painted.
       */}
-        <p className="text-2xs leading-relaxed mt-4 text-fog">
+        {/*
+          The readout, and the summary under it.
+
+          **The summary never goes away.** It is the plot's text equivalent and
+          the thing a reader has without touching anything, so it stays put
+          whether or not an hour is chosen. The readout is additive: per-hour
+          detail this page did not carry at all before, which is why adding it
+          hides nothing.
+
+          `aria-live="polite"` because the change is the whole point and a
+          reader moving through the hours with the arrow keys is not looking at
+          this line. A reserved minimum height keeps the page from jumping when
+          the first hour is chosen.
+        */}
+        {mounted && (
+          <div className="mt-4 flex flex-wrap items-center gap-2">
+            <div className="flex gap-1.5">
+              <button
+                type="button"
+                onClick={() => step(-1)}
+                disabled={selected === 0}
+                className={`rounded-pill ${TOUCH_TARGET} md:min-h-0 border-[1.5px] border-lavender bg-white px-3 py-1 text-2xs font-extrabold tracking-widest text-ocean uppercase disabled:opacity-40`}
+                data-hour-prev
+              >
+                ← Earlier
+              </button>
+              <button
+                type="button"
+                onClick={() => step(1)}
+                disabled={selected === points.length - 1}
+                className={`rounded-pill ${TOUCH_TARGET} md:min-h-0 border-[1.5px] border-lavender bg-white px-3 py-1 text-2xs font-extrabold tracking-widest text-ocean uppercase disabled:opacity-40`}
+                data-hour-next
+              >
+                Later →
+              </button>
+            </div>
+            <p
+              className="text-2xs leading-relaxed min-h-4 flex-1 text-ocean"
+              aria-live="polite"
+              data-hour-readout
+            >
+              {readout() ?? "Pick an hour to read it."}
+            </p>
+          </div>
+        )}
+
+        <p className="text-2xs leading-relaxed mt-3 text-fog">
           Low {lowValue.toFixed(1)} {unitLabel}, high {highValue.toFixed(1)}{" "}
           {unitLabel} today. Night is shaded; cloud is the band above.
         </p>
