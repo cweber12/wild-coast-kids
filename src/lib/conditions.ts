@@ -665,6 +665,21 @@ export interface DaylightWeekDay extends WeekDayFrame {
  */
 export interface DaylightWeekView {
   beachName: string;
+  /**
+   * The instant these days were computed from -- "now", as the render saw it.
+   *
+   * Carried out rather than left for a consumer to ask a clock for, because a
+   * component that called `Date.now()` would be reading one during render:
+   * impure, refused by this repo's lint rules, and untestable without faking
+   * time. The day chart's "now" line is the only thing that wants it so far,
+   * and it wants exactly this instant -- the one the days themselves were
+   * derived from -- so that the line cannot land on a day the array does not
+   * think is today.
+   *
+   * It is this read that carries it because this is the read that cannot fail.
+   * A "now" that arrived with the tide would vanish when NOAA did.
+   */
+  atMs: number;
   days: DaylightWeekDay[];
 }
 
@@ -695,6 +710,7 @@ export function readDaylightWeek(
 
   return {
     beachName: beach.name,
+    atMs: nowMs,
     days: weekOfDays(nowMs).map((frame) => {
       const { sunriseMs, sunsetMs } = daylight.get(frame.localDate)!;
       return {

@@ -64,6 +64,8 @@
  * for its figures, one register down.
  */
 
+import { nightBands } from "./dayFrame";
+
 /** One point on a drawn series. */
 export type SparkPoint = {
   /** The instant, epoch milliseconds UTC. */
@@ -217,15 +219,9 @@ export function DaySpark({
       ? HEIGHT / 2
       : HEIGHT - PAD - ((value - lowValue) / spanValue) * (HEIGHT - 2 * PAD);
 
-  /** Clipped to the day, so a band starting before dawn does not run off the frame. */
-  const band = (fromMs: number, toMs: number) => {
-    const from = Math.max(x(fromMs), 0);
-    const to = Math.min(x(toMs), WIDTH);
-    return to <= from ? null : { x: from, width: to - from };
-  };
-
-  const beforeDawn = band(startMs, sunriseMs);
-  const afterDusk = band(sunsetMs, endMs);
+  // Shared with `HourChart` rather than repeated, so the two plots cannot come
+  // to disagree about where night is. See `dayFrame.ts` and ADR-0026.
+  const bands = nightBands({ startMs, endMs, sunriseMs, sunsetMs }, x, WIDTH);
 
   const path = points
     .map(
@@ -247,26 +243,17 @@ export function DaySpark({
         drop, and "it is at night" is the whole reason it was dropped. Two bands
         rather than one, because a day starts and ends in the dark.
       */}
-      {beforeDawn !== null && (
+      {bands.map((band) => (
         <rect
-          x={beforeDawn.x}
-          width={beforeDawn.width}
+          key={band.side}
+          x={band.x}
+          width={band.width}
           y={0}
           height={HEIGHT}
           className="fill-dark/12"
-          data-night="before-dawn"
+          data-night={band.side}
         />
-      )}
-      {afterDusk !== null && (
-        <rect
-          x={afterDusk.x}
-          width={afterDusk.width}
-          y={0}
-          height={HEIGHT}
-          className="fill-dark/12"
-          data-night="after-dusk"
-        />
-      )}
+      ))}
 
       {/*
         `TIDE_TONE`'s ocean, measured at 8.5:1 on this cell in `weekTone.ts` --

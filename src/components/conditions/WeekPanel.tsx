@@ -45,7 +45,8 @@ import {
   type TideHourlyDay,
 } from "@/lib/conditions";
 import { DaylightWeek } from "./DaylightWeek";
-import { DaySpark, type SparkPoint } from "./DaySpark";
+import { DaySpark } from "./DaySpark";
+import { tidePoints } from "./series";
 import {
   MOP_MODEL_NOTE,
   MOP_NETWORK,
@@ -151,15 +152,6 @@ function sparkDescription(
     `${high} ft at its highest. Night is shaded; the sun is up from ` +
     `${sunriseLabel} to ${sunsetLabel}.`
   );
-}
-
-/** Hourly heights as the shape draws them. Every hour is NOAA's own; none is interpolated. */
-function tidePoints(day: TideHourlyDay): SparkPoint[] {
-  return day.hours.map((hour) => ({
-    atMs: hour.atMs,
-    value: hour.feet,
-    published: true,
-  }));
 }
 
 export async function WeekPanel({ slug }: { slug: string }) {
