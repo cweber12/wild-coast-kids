@@ -9,12 +9,14 @@ import {
   fetchLatestObservation,
   fetchLatestWave,
   fetchMopForecast,
+  fetchSkyWording,
   fetchTideExtremes,
   MAX_OBSERVATION_AGE_MINUTES,
   MAX_WAVE_AGE_MINUTES,
   MOP_FORECAST_REVALIDATE_SECONDS,
   OBSERVATIONS_REVALIDATE_SECONDS,
   PREDICTIONS_REVALIDATE_SECONDS,
+  SKY_WORDING_REVALIDATE_SECONDS,
   WAVES_REVALIDATE_SECONDS,
 } from "./upstream";
 
@@ -942,5 +944,122 @@ describe("fetchGridForecast", () => {
 
     const result = await fetchGridForecast(CELL);
     expect(result.url).toBe("https://api.weather.gov/gridpoints/SGX/54,21");
+  });
+});
+
+describe("fetchSkyWording", () => {
+  const CELL = "SGX/54,21";
+
+  const FORECAST = JSON.parse(
+    readFileSync(
+      join(
+        process.cwd(),
+        "src/lib/__fixtures__/nws-forecast-sgx-54-21-20260828.json",
+      ),
+      "utf8",
+    ),
+  );
+
+  test("opts the request into caching, at the step the product moves on", async () => {
+    fetchMock.mockResolvedValue(jsonResponse(FORECAST));
+
+    await fetchSkyWording(CELL);
+
+    const [url, init] = fetchMock.mock.calls[0];
+    expect(url).toBe("https://api.weather.gov/gridpoints/SGX/54,21/forecast");
+    expect(init.next.revalidate).toBe(SKY_WORDING_REVALIDATE_SECONDS);
+    expect(init.headers["User-Agent"]).toMatch(/wild-coast-kids/);
+  });
+
+  test("is a second request, at a second URL, from the numbers beside it", async () => {
+    // ADR-0024 deferred this read because it is "a second request, a second
+    // failure mode, a second provenance line". The URL is where that starts:
+    // the numbers come from the cell and the words from the cell's forecast.
+    expect("https://api.weather.gov/gridpoints/SGX/54,21/forecast").not.toBe(
+      "https://api.weather.gov/gridpoints/SGX/54,21",
+    );
+  });
+
+  test("reads a real payload into periods", async () => {
+    fetchMock.mockResolvedValue(jsonResponse(FORECAST));
+
+    const result = await fetchSkyWording(CELL);
+
+    expect(result.kind).toBe("ok");
+    if (result.kind !== "ok") throw new Error("expected ok");
+    expect(result.forecast.cellId).toBe(CELL);
+    expect(result.forecast.periods.length).toBeGreaterThan(0);
+    expect(result.forecast.periods[0].shortForecast).not.toBe("");
+  });
+
+  test("a 404 means the binding is stale, not that the sky is unknown", async () => {
+    fetchMock.mockResolvedValue(jsonResponse({}, 404));
+
+    const result = await fetchSkyWording(CELL);
+
+    expect(result.kind).toBe("unavailable");
+    if (result.kind !== "unavailable") throw new Error("expected unavailable");
+    expect(result.reason).toMatch(/needs re-probing/);
+    expect(result.drift).toBe(true);
+  });
+
+  test("another HTTP status is a bad day rather than drift", async () => {
+    fetchMock.mockResolvedValue(jsonResponse({}, 503));
+
+    const result = await fetchSkyWording(CELL);
+    if (result.kind !== "unavailable") throw new Error("expected unavailable");
+    expect(result.reason).toMatch(/HTTP 503/);
+    expect(result.drift).toBe(false);
+  });
+
+  test("never throws when the request itself fails", async () => {
+    fetchMock.mockRejectedValue(new Error("getaddrinfo ENOTFOUND"));
+
+    const result = await fetchSkyWording(CELL);
+    if (result.kind !== "unavailable") throw new Error("expected unavailable");
+    expect(result.reason).toMatch(/did not complete/);
+    expect(result.reason).toMatch(/ENOTFOUND/);
+  });
+
+  test("a body that is not JSON is reported rather than thrown", async () => {
+    fetchMock.mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => {
+        throw new Error("Unexpected token < in JSON");
+      },
+    });
+
+    const result = await fetchSkyWording(CELL);
+    if (result.kind !== "unavailable") throw new Error("expected unavailable");
+    expect(result.reason).toMatch(/was not JSON/);
+  });
+
+  test("a cell with no periods is quiet rather than drifted", async () => {
+    fetchMock.mockResolvedValue(jsonResponse({ properties: { periods: [] } }));
+
+    const result = await fetchSkyWording(CELL);
+    if (result.kind !== "unavailable") throw new Error("expected unavailable");
+    expect(result.reason).toMatch(/no forecast periods/);
+    expect(result.drift).toBe(false);
+  });
+
+  test("a period with no words is drift, and is flagged as one", async () => {
+    // The one field this request exists for. A quiet feed is a bad day; a feed
+    // that answers without the product is a bug to chase.
+    const stripped = {
+      properties: {
+        ...FORECAST.properties,
+        periods: FORECAST.properties.periods.map(
+          (period: Record<string, unknown>, at: number) =>
+            at === 0 ? { ...period, shortForecast: null } : period,
+        ),
+      },
+    };
+    fetchMock.mockResolvedValue(jsonResponse(stripped));
+
+    const result = await fetchSkyWording(CELL);
+    if (result.kind !== "unavailable") throw new Error("expected unavailable");
+    expect(result.drift).toBe(true);
   });
 });

@@ -33,9 +33,11 @@ import {
 import { lowestLowBetween, lowestLowOn } from "./tide-day";
 import type { MopWaveRow } from "./mop-forecast";
 import type { SkyCoverHour, WeatherHour } from "./nws-gridpoint";
+import type { ForecastPeriod } from "./nws-forecast";
 import {
   fetchGridForecast,
   fetchHourlyTide,
+  fetchSkyWording,
   fetchLatestNdbcAir,
   fetchLatestObservation,
   fetchLatestWave,
@@ -1396,6 +1398,176 @@ export async function readSkyWeek(
       daylight.get(frame.localDate)!,
     );
     return reading === null ? [] : [{ ...frame, hours, ...reading }];
+  });
+
+  return { ...binding, state: { kind: "week", days } };
+}
+
+/** One day of the publisher's own wording for the sky. */
+export interface SkyWordingDay extends WeekDayFrame {
+  /**
+   * The publisher's own name for the period these words describe.
+   *
+   * Printed beside the words rather than dropped, because it is what makes the
+   * fallback below honest: on a day whose daytime half has already ended, the
+   * reader is told they are reading "Tonight" and not this afternoon.
+   */
+  periodName: string;
+  /** True when this is the daylight half of the publisher's own day. */
+  isDaytime: boolean;
+  /**
+   * The forecaster's own words, exactly as published.
+   *
+   * "Patchy Fog then Mostly Sunny". Never reworded, never banded, never
+   * shortened: ADR-0009 forbids this site forming a forecaster's judgement, and
+   * ADR-0024 measured a computed band word disagreeing with this very field on
+   * three days of six.
+   */
+  words: string;
+}
+
+/**
+ * What the day panel's sky line needs.
+ *
+ * The same three states the cloud row carries, meaning the same things, for the
+ * reason `SkyWeekView` gives: a cell that cannot be reached is one fact about
+ * the feed and not seven facts about seven days. It is a **separate** view from
+ * `SkyWeekView` rather than a field on it, because it comes from a separate
+ * request that fails separately -- which is the second outage path ADR-0024
+ * named as the cost of taking this read at all.
+ *
+ * **A union, rather than a `cell` that may be null beside any state.** The
+ * views beside this one carry "null exactly when the state is `no-cell`" as a
+ * comment and leave the compiler unable to help. A consumer then writes a null
+ * check for a case that cannot arise, and that unreachable branch is dead code
+ * the coverage floor is right to refuse -- which is exactly how this type came
+ * to be written this way. Saying it in the type costs nothing and deletes the
+ * check. The older views are left alone: moving them is a refactor with its own
+ * reasons, not a side effect of this one.
+ */
+export type SkyWordingView =
+  | {
+      beachName: string;
+      cell: { id: string; elevationM: number | null };
+      state:
+        | { kind: "week"; days: SkyWordingDay[] }
+        | { kind: "unavailable"; detail: string; drift: boolean };
+    }
+  | {
+      beachName: string;
+      cell: null;
+      state: { kind: "no-cell"; reason: string };
+    };
+
+/**
+ * The period whose words a day should be described by.
+ *
+ * **The daytime half, and the night half only when the daytime one has gone.**
+ * A day panel is about a trip, and a trip happens in the day. But the product
+ * does not run backwards: by evening, today's daytime period has dropped out of
+ * the payload and only "Tonight" remains. Returning nothing then would put a
+ * named absence on a day the National Weather Service has perfectly good words
+ * for; returning the night period silently would print "Patchy Fog" as though
+ * it described the afternoon. So the period is returned with its own name, and
+ * the panel prints that name.
+ *
+ * Null when no period covers the day at all, which is what the far end of the
+ * week does as the product's reach runs out.
+ */
+function wordingOn(periods: readonly ForecastPeriod[]): ForecastPeriod | null {
+  if (periods.length === 0) return null;
+  return periods.find((period) => period.isDaytime) ?? periods[0];
+}
+
+/**
+ * The week's forecast wording for one beach, from the publisher's own words.
+ *
+ * **This is ADR-0024's deferred read, taken where it said it should be.** That
+ * decision printed three cloud means and deliberately computed no band word,
+ * because banding the mean on the National Weather Service's own scale
+ * contradicted the National Weather Service on three days of six. It named
+ * `shortForecast` as the right answer and deferred it: "a day view is planned
+ * that will want that read anyway, and taking it once, in the shape that view
+ * needs, is better than taking it twice." This is that view and this is that
+ * shape.
+ *
+ * A second request to the same agency, and therefore a second outage. It fails
+ * apart from `readSkyWeek` on purpose: the numbers and the words are separate
+ * products, and a day when the office has issued one and not the other must
+ * show the one it has.
+ *
+ * `nowMs` is injected for the reason every read here injects it: day selection
+ * is asserted against fixed instants and no clock is read during a render.
+ */
+export async function readSkyWording(
+  slug: string,
+  nowMs: number = Date.now(),
+): Promise<SkyWordingView> {
+  const beach = beachBySlug(slug);
+  if (!beach) {
+    throw new Error(
+      `readSkyWording: no beach in the inventory with slug "${slug}".`,
+    );
+  }
+
+  if (beach.grid_cell === null) {
+    return {
+      beachName: beach.name,
+      cell: null,
+      state: {
+        kind: "no-cell",
+        reason:
+          beach.grid_cell_null_reason ??
+          "the join bound no forecast cell to this beach, and recorded no reason",
+      },
+    };
+  }
+
+  const binding = {
+    beachName: beach.name,
+    cell: { id: beach.grid_cell, elevationM: beach.grid_cell_elevation_m },
+  };
+
+  const result = await fetchSkyWording(beach.grid_cell);
+  if (result.kind === "unavailable") {
+    return {
+      ...binding,
+      state: {
+        kind: "unavailable",
+        detail: result.reason,
+        drift: result.drift,
+      },
+    };
+  }
+
+  // Bucketed by the Pacific date each period *starts* on, which is what puts
+  // "Saturday Night" on Saturday rather than on Sunday. A night period runs
+  // past midnight by construction, so bucketing by its end would move every
+  // one of them a day forward.
+  const byDate = new Map<string, ForecastPeriod[]>();
+  for (const period of result.forecast.periods) {
+    const localDate = localDateOf(period.startMs);
+    const standing = byDate.get(localDate);
+    if (standing === undefined) byDate.set(localDate, [period]);
+    else standing.push(period);
+  }
+
+  // Built from `weekOfDays` rather than from the payload's own periods, so this
+  // line cannot disagree with the rows above it about which day is Tuesday.
+  // Ragged like the cloud row: a day the product did not reach is dropped, and
+  // the panel says so rather than being handed an empty string to print.
+  const days = weekOfDays(nowMs).flatMap((frame) => {
+    const period = wordingOn(byDate.get(frame.localDate) ?? []);
+    return period === null
+      ? []
+      : [
+          {
+            ...frame,
+            periodName: period.name,
+            isDaytime: period.isDaytime,
+            words: period.shortForecast,
+          },
+        ];
   });
 
   return { ...binding, state: { kind: "week", days } };

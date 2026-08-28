@@ -9,8 +9,10 @@ const fetchLatestObservation = vi.fn();
 const fetchLatestNdbcAir = vi.fn();
 const fetchMopForecast = vi.fn();
 const fetchGridForecast = vi.fn();
+const fetchSkyWording = vi.fn();
 vi.mock("./upstream", () => ({
   fetchGridForecast,
+  fetchSkyWording,
   fetchHourlyTide,
   fetchTideExtremes,
   fetchLatestWave,
@@ -83,6 +85,7 @@ const {
   readLatestAir,
   readWaveWeek,
   readSkyWeek,
+  readSkyWording,
 } = await import("./conditions");
 
 /**
@@ -102,6 +105,7 @@ beforeEach(() => {
   fetchLatestNdbcAir.mockReset();
   fetchMopForecast.mockReset();
   fetchGridForecast.mockReset();
+  fetchSkyWording.mockReset();
 });
 
 function ok(extremes: { atMs: number; feet: number; kind: "low" | "high" }[]) {
@@ -1485,4 +1489,212 @@ test("an hour the forecast did not reach is absent rather than zero", async () =
   if (view.state.kind !== "week") throw new Error("expected a week");
 
   expect(view.state.days[0].hours).toHaveLength(2);
+});
+
+/* ==========================================================================
+ * readSkyWording
+ * ========================================================================= */
+
+/**
+ * A period, with instants written the way the National Weather Service writes
+ * them: local wall-clock plus an offset. -07:00 is Pacific daylight time, so
+ * 06:00-07:00 is 13:00 UTC.
+ */
+function period(
+  name: string,
+  isDaytime: boolean,
+  startIso: string,
+  endIso: string,
+  shortForecast: string,
+) {
+  return {
+    name,
+    isDaytime,
+    startMs: Date.parse(startIso),
+    endMs: Date.parse(endIso),
+    shortForecast,
+  };
+}
+
+function wordingOk(periods: ReturnType<typeof period>[]) {
+  fetchSkyWording.mockResolvedValue({
+    kind: "ok",
+    forecast: { cellId: "SGX/54,21", periods },
+    url: "https://example.invalid",
+  });
+}
+
+/** Aug 17 daytime and night, then Aug 18 daytime. */
+const MONDAY_DAY = period(
+  "Today",
+  true,
+  "2026-08-17T06:00:00-07:00",
+  "2026-08-17T18:00:00-07:00",
+  "Patchy Fog then Mostly Sunny",
+);
+const MONDAY_NIGHT = period(
+  "Tonight",
+  false,
+  "2026-08-17T18:00:00-07:00",
+  "2026-08-18T06:00:00-07:00",
+  "Patchy Fog",
+);
+const TUESDAY_DAY = period(
+  "Tuesday",
+  true,
+  "2026-08-18T06:00:00-07:00",
+  "2026-08-18T18:00:00-07:00",
+  "Mostly Sunny",
+);
+
+test("relays the publisher's words verbatim, for the day they describe", async () => {
+  // ADR-0009 forbids this site forming a forecaster's judgement, and ADR-0024
+  // measured a computed band word contradicting this very field on three days
+  // of six. The string that arrives is the string that leaves.
+  wordingOk([MONDAY_DAY, MONDAY_NIGHT, TUESDAY_DAY]);
+
+  const view = await readSkyWording(BEACH, NOON_PACIFIC_20260817);
+
+  expect(view.state.kind).toBe("week");
+  if (view.state.kind !== "week") throw new Error("expected a week");
+  expect(view.state.days[0].localDate).toBe("2026-08-17");
+  expect(view.state.days[0].words).toBe("Patchy Fog then Mostly Sunny");
+  expect(view.state.days[1].words).toBe("Mostly Sunny");
+});
+
+test("matches a period to its own day rather than taking the first one", async () => {
+  // THE FAILURE THIS READ IS MOST LIKELY TO HAVE. The payload does not run
+  // backwards, so its first period is whichever half of today has not finished
+  // -- an afternoon at 2 PM, a night at 9 PM. Taking periods[0] for today would
+  // print tonight's fog against this afternoon twice a day, and would put every
+  // other day's words on the wrong date.
+  wordingOk([MONDAY_NIGHT, TUESDAY_DAY]);
+
+  const view = await readSkyWording(BEACH, NOON_PACIFIC_20260817);
+
+  if (view.state.kind !== "week") throw new Error("expected a week");
+  // Tuesday's words are Tuesday's, not the first period's.
+  const tuesday = view.state.days.find((day) => day.localDate === "2026-08-18");
+  expect(tuesday?.words).toBe("Mostly Sunny");
+  expect(tuesday?.periodName).toBe("Tuesday");
+});
+
+test("prefers the daylight half of the day, which is when a trip happens", async () => {
+  wordingOk([MONDAY_NIGHT, MONDAY_DAY]);
+
+  const view = await readSkyWording(BEACH, NOON_PACIFIC_20260817);
+
+  if (view.state.kind !== "week") throw new Error("expected a week");
+  expect(view.state.days[0].periodName).toBe("Today");
+  expect(view.state.days[0].isDaytime).toBe(true);
+});
+
+test("falls back to the night period and names it, rather than saying nothing", async () => {
+  // By evening today's daytime period has dropped out of the payload. Returning
+  // nothing would put a named absence on a day the service has good words for;
+  // returning them silently would print "Patchy Fog" as though it described the
+  // afternoon. The period's own name is what makes the fallback honest.
+  wordingOk([MONDAY_NIGHT, TUESDAY_DAY]);
+
+  const view = await readSkyWording(BEACH, NOON_PACIFIC_20260817);
+
+  if (view.state.kind !== "week") throw new Error("expected a week");
+  expect(view.state.days[0].localDate).toBe("2026-08-17");
+  expect(view.state.days[0].periodName).toBe("Tonight");
+  expect(view.state.days[0].isDaytime).toBe(false);
+  expect(view.state.days[0].words).toBe("Patchy Fog");
+});
+
+test("puts a night period on the day it starts, not the day it ends in", async () => {
+  // "Tonight" runs 6 PM Monday to 6 AM Tuesday. Bucketed by its end it would
+  // land on Tuesday and displace Tuesday's own words.
+  wordingOk([MONDAY_NIGHT, TUESDAY_DAY]);
+
+  const view = await readSkyWording(BEACH, NOON_PACIFIC_20260817);
+
+  if (view.state.kind !== "week") throw new Error("expected a week");
+  expect(
+    view.state.days.find((day) => day.localDate === "2026-08-17")?.words,
+  ).toBe("Patchy Fog");
+  expect(
+    view.state.days.find((day) => day.localDate === "2026-08-18")?.words,
+  ).toBe("Mostly Sunny");
+});
+
+test("drops a day the forecast did not reach rather than inventing words", async () => {
+  wordingOk([MONDAY_DAY]);
+
+  const view = await readSkyWording(BEACH, NOON_PACIFIC_20260817);
+
+  if (view.state.kind !== "week") throw new Error("expected a week");
+  expect(view.state.days).toHaveLength(1);
+  expect(view.state.days[0].localDate).toBe("2026-08-17");
+});
+
+test("an outage says so, and never falls back to a computed word", async () => {
+  // The second failure path ADR-0024 named as the cost of this read. It must
+  // stay an outage: banding the cloud mean into a word is exactly what that
+  // decision measured as contradicting the publisher on half the sample.
+  fetchSkyWording.mockResolvedValue({
+    kind: "unavailable",
+    reason: "The National Weather Service returned HTTP 503",
+    drift: false,
+    url: "https://example.invalid",
+  });
+
+  const view = await readSkyWording(BEACH, NOON_PACIFIC_20260817);
+
+  expect(view.state.kind).toBe("unavailable");
+  if (view.state.kind !== "unavailable") throw new Error("expected an outage");
+  expect(view.state.detail).toContain("503");
+  expect(view.state.drift).toBe(false);
+  // The binding survives the outage, the way every other read here keeps its
+  // station: which cell could not answer is part of what the page owes.
+  expect(view.cell?.id).toBe("SGX/54,21");
+});
+
+test("carries drift through as drift, because that is a bug to chase", async () => {
+  fetchSkyWording.mockResolvedValue({
+    kind: "unavailable",
+    reason: "a period carried shortForecast null",
+    drift: true,
+    url: "https://example.invalid",
+  });
+
+  const view = await readSkyWording(BEACH, NOON_PACIFIC_20260817);
+
+  if (view.state.kind !== "unavailable") throw new Error("expected an outage");
+  expect(view.state.drift).toBe(true);
+});
+
+test("a beach with no cell is asked nothing at all", async () => {
+  const view = await readSkyWording(UNBOUND_BEACH, NOON_PACIFIC_20260817);
+
+  expect(view.state.kind).toBe("no-cell");
+  expect(view.cell).toBeNull();
+  expect(fetchSkyWording).not.toHaveBeenCalled();
+});
+
+test("this read fails apart from the cloud row's, being a separate product", async () => {
+  // ADR-0024 deferred this read partly because it is "a second request, a
+  // second failure mode, a second provenance line". A day when the office has
+  // issued the numbers and not the words must show the numbers.
+  gridOk([
+    { atMs: hourUtc(17, 15), percent: 20 },
+    { atMs: hourUtc(17, 23), percent: 80 },
+  ]);
+  fetchSkyWording.mockResolvedValue({
+    kind: "unavailable",
+    reason: "HTTP 503",
+    drift: false,
+    url: "https://example.invalid",
+  });
+
+  const [sky, wording] = await Promise.all([
+    readSkyWeek(BEACH, NOON_PACIFIC_20260817),
+    readSkyWording(BEACH, NOON_PACIFIC_20260817),
+  ]);
+
+  expect(sky.state.kind).toBe("week");
+  expect(wording.state.kind).toBe("unavailable");
 });

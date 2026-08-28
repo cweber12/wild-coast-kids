@@ -179,10 +179,18 @@ test("the air panel's loading line names both stations it is reading", () => {
 });
 
 /**
- * The rule the line above broke, checked across all three panels rather than
- * only the one that broke it. `CONTEXT.md`'s `Conditions` entry ends
+ * The rule the line above broke, checked across every panel rather than only
+ * the one that broke it. `CONTEXT.md`'s `Conditions` entry ends
  * `_Avoid_: weather, forecast, surf report`, and a loading line is the easiest
  * place on the page for one of those to reappear.
+ *
+ * It caught two more on the day panel, which is this check earning its keep on
+ * a region added long after it was written. "Reading today's forecast wording"
+ * broke it outright; "Reading what the National Weather Service says about the
+ * sky" broke it too, because the agency's own name contains the first banned
+ * word. That second catch is worth knowing about before writing a third line:
+ * a loading line here cannot name the publisher, which is why the one beside it
+ * says "the air and sky stations" and this one says "the sky in words".
  */
 test("no panel's loading line uses a word the glossary rejects", () => {
   const { container } = render(<ConditionsSection slug={SUSPEND} />);
@@ -191,9 +199,9 @@ test("no panel's loading line uses a word the glossary rejects", () => {
     .map((node) => node.textContent ?? "")
     .filter((text) => text.startsWith("Reading "));
 
-  // All three panels are suspended, so all three loading lines are on the
-  // page. Asserted so this cannot pass by finding none of them.
-  expect(loading.length).toBe(3);
+  // Four suspended regions -- the three cards, and the day panel below the
+  // week. Asserted so this cannot pass by finding none of them.
+  expect(loading.length).toBe(4);
   for (const line of loading) {
     expect(line.toLowerCase()).not.toContain("weather");
     expect(line.toLowerCase()).not.toContain("forecast");

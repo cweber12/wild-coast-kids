@@ -16,6 +16,7 @@ import {
 } from "@/lib/beaches";
 import { BeachSelector } from "./BeachSelector";
 import { ConditionsNotes } from "./ConditionsNotes";
+import { DayPanel } from "./DayPanel";
 import { ReservedSlot } from "../ui/ReservedSlot";
 import { TidePanel } from "./TidePanel";
 import { WavePanel } from "./WavePanel";
@@ -152,6 +153,32 @@ export function ConditionsSection({ slug }: { slug: string }) {
           }
         >
           <WeekPanel slug={slug} />
+        </Suspense>
+      </div>
+
+      {/*
+        The day opens under the week. Its own suspense boundary for the same
+        reason every region here has one: this is a second request to the
+        National Weather Service — the words, where the week's cloud row reads
+        the numbers — and the two fail apart. A quiet forecast endpoint must
+        cost this region and not the grid above it.
+
+        The loading line is "Reading the sky in words", which is the same
+        phrase the provenance line under the result uses, so the two states of
+        this region name the same thing. It got there the hard way: CONTEXT.md's
+        `Conditions` entry ends `_Avoid_: weather, forecast, surf report`, and
+        the test guarding that refused two earlier wordings — one for
+        "forecast", and one for naming the National Weather Service, whose own
+        name contains the first banned word. The line beside it dodges the same
+        edge by saying "the air and sky stations".
+      */}
+      <div className="mb-9">
+        <Suspense
+          fallback={
+            <p className="text-base text-fog">Reading the sky in words…</p>
+          }
+        >
+          <DayPanel slug={slug} />
         </Suspense>
       </div>
 
