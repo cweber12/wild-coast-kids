@@ -361,6 +361,55 @@ should show swell as well as tide — as a second shape, as a second line, or by
 following the day chart's selected tab — is decided in #172 alongside the tabs,
 because two of the three options only exist once the tabs do.
 
+## Addendum, 2026-08-28: what the day chart's review changed
+
+Dated rather than woven in. Three faults were found by rendering the chart
+rather than by reasoning about it, and one request reversed a recorded decision.
+
+**Cloud left the plot frame entirely, which is its third arrangement.** ADR-0026
+took the wash off the sparkline on the grounds that a 21px cell had no room for
+two grey fields. Built as a full-height wash on the day chart it had exactly the
+same fault, because the fault was never about height: night and cloud were two
+greys of similar weight over the same ground. Rebuilt as a strip inside the top
+of the frame it still crossed the night band, since night runs the plot's full
+height. Only a band _above_ the frame makes the two independent. It is labelled
+to the left and keyed with swatches against percentages — never words, because
+ADR-0024 measured a banded word contradicting the National Weather Service on
+three days of six, and since this PR the publisher's own wording prints directly
+above the chart, so the contradiction would now be visible in one glance.
+
+**Every axis label became markup.** An SVG `<text>` scales with the viewBox: a
+label reading 10px at 1536 renders about 4px at 375. Measured, and invisible to
+every test in the suite, because jsdom applies no stylesheets. The SVG now holds
+only geometry, which also keeps its scaling uniform so a mark stays a circle.
+
+**The chart wears the site's furniture**, which is where the brief says to
+answer "plain": the loud register belongs to the chrome and the plot stays
+quiet. It reuses the week grid's own today-cell treatment rather than inventing
+one. The single addition inside the frame is a fill under the curve, in the
+row's own colour — per product and never per value, which is what keeps it clear
+of ADR-0009.
+
+**The plot became interactive, and that reverses the brief.** See ADR-0027,
+which separates the two objections the original rule had bundled: hover is still
+refused, hiding is still refused, and interaction that only adds is now allowed
+under four stated conditions. **The rejection of scrubbed compass needles above
+still stands** — it survives on its own argument about meaning, not on the hover
+one, and #173 should read it as binding.
+
+**Measured on the built page**, 1536×639 and 375×812:
+
+|      | chart     | day region | labels | hour column |
+| ---- | --------- | ---------- | ------ | ----------- |
+| 1536 | 806 × 246 | 557        | 10px   | 33.6px      |
+| 375  | 283 × 87  | 434        | 10px   | 9.9px       |
+
+The chart's width is capped: uncapped it drew 440px tall at 1536, and a single
+curve does not want a third of a screen. The space that leaves on the right is
+where #173's map goes. **The 87px height at 375 is thin and is recorded rather
+than fixed** — one aspect ratio cannot serve 283px and 806px, and the tabs slice
+is where mobile behaviour is addressed.
+
 ## Out of scope
 
 The sighting layer (#121). Visibility, in any form. A rain tab. A

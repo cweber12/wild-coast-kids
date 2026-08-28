@@ -106,7 +106,7 @@ improvement on its own even if nothing after it is ever built.
 The chart, its tabs, the coupling, and the merged measurements. The largest of
 the three; split further at a slice boundary if it outgrows review.
 
-- [ ] **Gridpoint wind and temperature.** Extend `nws-gridpoint.ts` to read
+- [x] **Gridpoint wind and temperature.** Extend `nws-gridpoint.ts` to read
       `windSpeed`, `windDirection`, `windGust`, `temperature` and
       `apparentTemperature`, with the same unit pinning and expand-to-hourly
       treatment `skyCover` already gets. **Capture a new fixture** — the committed
@@ -119,7 +119,7 @@ the three; split further at a slice boundary if it outgrows review.
       still refused; three-hour and six-hour intervals still expand to hourly
       steps without gaps.
 
-- [ ] **The publisher's own sky wording.** Read
+- [x] **The publisher's own sky wording.** Read
       `/gridpoints/{cell}/forecast` — 14 day/night periods, 13 KB — for
       `shortForecast`, and render it above the plot. This discharges ADR-0024's
       deferred read, which its own text said belonged here. A second request means
@@ -130,7 +130,7 @@ the three; split further at a slice boundary if it outgrows review.
       than falling back to a computed word; the day/night period is matched to the
       selected day rather than assumed to be first.
 
-- [ ] **`HourChart`, tide only.** The plot frame: hours across, the value axis,
+- [x] **`HourChart`, tide only.** The plot frame: hours across, the value axis,
       night shading, cloud wash, published-point marks, and the "now" line on
       today. One tab, so it is shippable and reviewable before the other three
       exist. _New component. Shares its series shape and its two background layers
