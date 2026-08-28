@@ -59,10 +59,12 @@
 
 import type { SkyWeekDay } from "@/lib/conditions";
 import { phenomenonWords } from "./gridCell";
+import { CLOUD_TONE } from "./weekTone";
 
-/** What every day of this row shares: the words that name it. */
+/** What every day of this row shares: the words that name it, and its colour. */
 export const SKY_WEEK_ROW = {
   label: "Clouds",
+  tone: CLOUD_TONE,
 } as const;
 
 export function SkyWeek({

@@ -114,6 +114,16 @@ export type WeekRow = {
    */
   cells: Readonly<Record<string, ReactNode>>;
   /**
+   * The colour this row's label takes, in every day of the week.
+   *
+   * A text-colour utility rather than a token, and the set of them lives in
+   * `weekTone.ts` with the contrast figures and the argument that colour per
+   * product is not the verdict ADR-0009 forbids. Optional, and fog without it:
+   * a caller that has not thought about the key gets the colour every label in
+   * this grid had before there was one.
+   */
+  tone?: string;
+  /**
    * Where this row's figures came from, printed once beneath the grid.
    *
    * Optional because most rows do not need one. The tide row's station is
@@ -183,89 +193,151 @@ export function WeekGrid({
         could not be reached has a note above and nothing to tabulate, and an
         empty list announced as a list would be worse than no list.
 
-        Today is marked by a border and by the word "Today", never by a surface.
-        `bg-lavender` was tried and removed: fog on lavender is 4.29:1, under
-        the 4.5:1 this page holds itself to, and it would have reintroduced on
-        one column the exact failure `globals.css` records fog being darkened to
-        escape. A border is a boundary rather than text, and ocean clears 7:1 as
-        one. Every block carries the same border width so the marked day is not
-        wider than its neighbours -- what changes is only its colour.
+        Today is marked three ways and none of them is a bare fill behind
+        running text. Its edge is ocean where the others are lavender, its
+        header band is ocean where the others are mist, and it carries the word
+        "Today" on a yellow chip. `bg-lavender` behind the whole cell was tried
+        and removed once: fog on lavender is 4.29:1, under the 4.5:1 this page
+        holds itself to. The band escapes that because the text on it is white
+        rather than fog -- 8.5:1 for the day name on ocean, 6.7:1 for the window
+        beneath it at `white/85`.
 
-        `rounded-tile` with a `lavender` edge on `white/60`, which is the
-        treatment `SessionSchedule` and `/art` already use for a box this size,
-        rather than `rounded-card` on `bg-mist`. Two things were wrong with
-        that. The radius is a 520px hero card's, and on a 159x148 cell it is 15%
-        of the width -- the corner stops being a corner. And `mist` sits at
-        1.10:1 against the cream page, so the fill was never visible and the
-        corner arc was most of what the eye had to go on: a large radius on an
-        invisible surface is what reads as a blob. The reading cards escaped
-        this by going dark (ADR-0015); a cell this size takes the edge instead,
-        because seven dark blocks under a dark band is a different page.
+        Every cell carries the same border width so the marked day is not
+        narrower inside than its neighbours; only the colour changes.
+
+        **The header is a band rather than more text on the same surface**, and
+        that is what the reading below turns on. Four labelled pairs run
+        together on one white field was the shape the 2026-08-27 review called
+        undifferentiated, and it had no way to say which line was the day and
+        which was a figure. A filled band says "this is the day" without a word,
+        and the hairline rules inside the body say where one reading stops and
+        the next begins. Rules rather than boxes: the tile is already a box, and
+        three more nested inside a 157px cell is the mess this is escaping.
+
+        The band is ADR-0015's vocabulary one row down. That decision put the
+        reading cards on a saturated surface with a yellow eyebrow because the
+        page "does not look like the site it belongs to", left the week grid
+        pale, and said in as many words that if the difference ever read as an
+        oversight rather than a distinction, this is the decision it gets
+        converted against. It did. The grid keeps its own register -- a pale
+        tile with one filled band, not a dark card -- because "now" and
+        "planning" are still different things.
+
+        `rounded-tile` with `overflow-hidden`, so the band is clipped by the
+        corner rather than squaring it off. The radius is the one
+        `SessionSchedule` and `/art` already use for a box this size, rather
+        than the 520px hero card's `rounded-card`: on a 157px cell that is 15%
+        of the width and the corner stops being a corner.
       */}
       {days.length > 0 && (
         <ol className="mb-4 grid gap-3 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7">
           {days.map((day) => (
             <li
               key={day.localDate}
-              className={`rounded-tile border-[1.5px] bg-white/60 px-4 py-3 ${
+              className={`overflow-hidden rounded-tile border-[1.5px] bg-white/60 ${
                 day.isToday ? "border-ocean" : "border-lavender"
               }`}
             >
-              {/*
-                `min-h-8` holds two lines whether or not this day needs them.
-                `TODAY · THU, AUG 27` renders 151px against 125px of cell at
-                1280, so the marked day wraps where the other six do not -- and
-                every row beneath it in that column then sits a line lower than
-                the same row beside it. Reserving the line is what keeps the
-                seven columns readable across rather than only down.
+              <div
+                className={`border-b-[1.5px] px-3 py-2 ${
+                  day.isToday
+                    ? "border-ocean bg-ocean text-white/85"
+                    : "border-lavender bg-mist text-fog"
+                }`}
+              >
+                <h3
+                  className={`text-2xs font-extrabold tracking-widest uppercase ${
+                    day.isToday ? "text-white" : "text-ocean"
+                  }`}
+                >
+                  {/*
+                    The chip's line is reserved on every day at `xl` and shared
+                    with the date below it. `TODAY · THU, AUG 27` renders 151px
+                    against 125px of cell at 1280, so the marked day wraps where
+                    the other six do not, and every row beneath it in that column
+                    then sits a line lower than the same row beside it. Reserving
+                    the line is what keeps seven columns readable across rather
+                    than only down.
 
-                It costs one line. Together with the daylight cell's
-                deliberate break, the grid goes 146px to 163px at 1280 -- no
-                cell had both a two-line header and a two-line value before,
-                and now every cell has both. That is the price of the seven
-                columns being identical, paid once and below the fold, and it
-                is worth it: a grid whose rows do not line up across is a table
-                pretending.
+                    Only at `xl`, because only there is the cell too narrow to
+                    hold both: at 1024 the chip and the date measure about 141px
+                    against 221px, so they sit on one line and the reserve would
+                    be 22px a day for nothing. It shipped unscoped once and put
+                    242px of extra scroll on a phone.
 
-                `xl:` because that price is only worth paying where the cell is
-                too narrow to hold the line. Below `xl` there are at most four
-                columns, the header fits on one line, and reserving a second
-                bought nothing while costing 35px a day across seven days. It
-                shipped unscoped once and put 242px of extra scroll on a phone,
-                on a grid the 2026-08-24 review had already called too tall
-                there; it was measured at 1280 and 1536 and not at 375. It
-                moved from `lg:` to `xl:` with the columns it exists to align.
-
-                Reserved rather than shortened. "Today" alone fits, and drops
-                the date from the one column a reader without the layout most
-                needs it named in; splitting the visible text from the
-                accessible one would need an `sr-only`, which this repo does
-                not use (`ReadingCard` records why).
-              */}
-              <div className="mb-2">
-                <h3 className="text-2xs font-extrabold tracking-widest text-ocean uppercase xl:min-h-8">
-                  {day.isToday ? `Today · ${day.dayLabel}` : day.dayLabel}
+                    Reserved rather than shortened. "Today" alone fits and drops
+                    the date from the one column a reader without the layout most
+                    needs it named in; splitting the visible text from the
+                    accessible one would need an `sr-only`, which this repo does
+                    not use (`ReadingCard` records why). What the band changes is
+                    how the empty line reads: on a tinted surface it is the
+                    band's padding rather than a line that failed to render.
+                  */}
+                  <span className="xl:mb-1 xl:block xl:min-h-4.5">
+                    {day.isToday && (
+                      <>
+                        <span className="rounded-pill bg-yellow px-1.5 py-0.5 tracking-wider text-dark">
+                          Today
+                        </span>{" "}
+                      </>
+                    )}
+                  </span>
+                  {day.dayLabel}
                 </h3>
                 {/*
                   Inside the header rather than in the `<dl>` below, because it
                   scopes every pair in that list rather than being one of them.
                   That is what lets the labels below drop the word "daylight" —
-                  see `WeekDay.daylight` and `DaylightWeek`.
+                  see `WeekDay.daylight` and `DaylightWeek`. It takes its colour
+                  from this band, which is why it sets none of its own.
                 */}
                 {day.daylight}
               </div>
 
-              <dl>
+              <dl className="px-3 pb-2">
                 {rows.map((row) => {
                   const cell = row.cells[day.localDate];
                   if (cell === undefined) return null;
 
                   return (
-                    <div key={row.label} className="mb-2 last:mb-0">
-                      <dt className="text-2xs font-extrabold tracking-widest text-fog uppercase">
+                    <div
+                      key={row.label}
+                      className="flex items-baseline gap-2.5 border-t border-lavender py-2 first:border-t-0 lg:block"
+                    >
+                      {/*
+                        **Label beside the value below `lg`, above it from
+                        `lg`.** A day is a full-width block at one and two
+                        columns -- 303px of content at 375, 328px at 768 -- and
+                        a 10px label alone on a line that wide is most of the
+                        line wasted. `LOW TIDE` is 70px, so a 76px column holds
+                        every label in the grid and leaves 217px at 375, which
+                        takes the longest value the cell has (`65% Slight chance
+                        rain showers`, 203px) without wrapping. Measured at
+                        375: a day goes 214px to 169px with this alone, and
+                        250px to 169px against what the grid shipped before
+                        ADR-0023 -- 1822px of week to 1256px.
+
+                        This is not the `lg:block` the four cell components just
+                        lost. Those forced a break *inside* one value to keep
+                        seven narrow columns in step; this chooses where a label
+                        sits relative to its value, and it flips at `lg` because
+                        that is where four columns make the cell 221px and the
+                        76px column stops being affordable.
+
+                        The tone is the row's, and constant across all seven
+                        days — see `weekTone.ts` for the contrast measurements
+                        and for why colour per product is not the verdict
+                        ADR-0009 forbids. A row that brings none stays fog,
+                        which is what every label here used to be.
+                      */}
+                      <dt
+                        className={`text-2xs w-19 shrink-0 font-extrabold tracking-widest uppercase lg:w-auto ${
+                          row.tone ?? "text-fog"
+                        }`}
+                      >
                         {row.label}
                       </dt>
-                      <dd className="text-base text-dark">{cell}</dd>
+                      <dd className="min-w-0 text-base text-dark">{cell}</dd>
                     </div>
                   );
                 })}

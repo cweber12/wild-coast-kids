@@ -63,10 +63,12 @@
  */
 
 import type { WaveWeekDay } from "@/lib/conditions";
+import { SWELL_TONE } from "./weekTone";
 
-/** What every day of this row shares: the words that name it. */
+/** What every day of this row shares: the words that name it, and its colour. */
 export const WAVE_WEEK_ROW = {
   label: "Swell",
+  tone: SWELL_TONE,
 } as const;
 
 export function WaveWeek({ day }: { day: Pick<WaveWeekDay, "daylight"> }) {

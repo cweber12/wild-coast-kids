@@ -49,10 +49,12 @@
  */
 
 import type { TideWeekDay } from "@/lib/conditions";
+import { TIDE_TONE } from "./weekTone";
 
-/** What every day of this row shares: the words that name it. */
+/** What every day of this row shares: the words that name it, and its colour. */
 export const TIDE_WEEK_ROW = {
   label: "Low tide",
+  tone: TIDE_TONE,
 } as const;
 
 export function TideWeek({ state }: { state: TideWeekDay["state"] }) {
