@@ -101,7 +101,7 @@
       "lon": -117.274,
       "delivers": false,
       "publishes_waves": false,
-      "dead_note": "Listed in NDBC's active station list on 2026-08-18 and answered 404 on realtime2 the same day. Its entry carries met=n. Listed but not delivering is the same trap TWC0405 sets in the tide join, and the reason delivery is measured here rather than read off the list."
+      "dead_note": "Listed in NDBC's active station list on 2026-08-18 and answered 404 on realtime2 the same day. Its entry carries met=n. Listed but not delivering is the same trap TWC0405 set in the tide join when this was measured, and the reason delivery is measured here rather than read off the list."
     },
     "46235": {
       "name": "Imperial Beach Nearshore",
