@@ -2,6 +2,11 @@
 
 Planned 2026-08-27. Issue #169.
 
+> **Historical.** Planned 2026-08-27, shipped in PR #170 on 2026-08-27.
+> It records what was intended then, not what the code does now, and is not
+> maintained. The decision it turns on is ADR-0023, which is kept current.
+> See [`README.md`](README.md).
+
 ## The problem, from the reader's side
 
 A parent opens `/conditions/<beach>` to decide which afternoon this week is
