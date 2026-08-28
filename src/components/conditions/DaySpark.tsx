@@ -19,9 +19,11 @@
  * lets the same shape be drawn large in the day chart later without the two
  * drifting apart.
  *
- * **Hand-rolled SVG.** See the ADR this PR carries: three runtime dependencies
- * are a guarded budget, the largest series in this design is 196 points, and
- * this has to render on the server.
+ * **Hand-rolled SVG**, per ADR-0025: three runtime dependencies are a guarded
+ * budget, the largest series in this design is 196 points, and this has to
+ * render on the server. That ADR also states in as many words that the
+ * paragraph above is a fulfilment of ADR-0023 and not a reversal, because it
+ * is the first thing a reviewer will reach for.
  *
  * **The quiet register.** The brief puts the loud half of this site in the
  * chrome -- headings, chips, glyphs -- and asks the data to be drawn like a
