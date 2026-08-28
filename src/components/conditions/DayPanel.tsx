@@ -68,8 +68,29 @@ function chartDescription(
   const high = Math.max(...feet).toFixed(1);
   return (
     `Tide today, hour by hour from midnight to midnight: ${low} ft at its lowest hour, ` +
-    `${high} ft at its highest. Night is shaded and cloud runs along the top; the sun ` +
-    `is up from ${sunriseLabel} to ${sunsetLabel}.`
+    `${high} ft at its highest. Night is shaded; the sun is up from ${sunriseLabel} to ` +
+    `${sunsetLabel}.`
+  );
+}
+
+/**
+ * The spoken equivalent of the cloud band, which is its own graphic.
+ *
+ * Separate from the plot's because the two credit different publishers: the
+ * curve is NOAA's tide and the band is the National Weather Service's sky. It
+ * states the range in percentages and never in words -- ADR-0024 measured a
+ * banded word contradicting the very sentence this panel prints above the
+ * chart, and a screen reader hearing "mostly sunny" while the page said
+ * something else would be the same contradiction with no way to see it.
+ */
+function cloudBandDescription(
+  hours: readonly { percent: number }[],
+): string | undefined {
+  if (hours.length === 0) return undefined;
+  const values = hours.map((hour) => hour.percent);
+  return (
+    `Cloud cover through today, hour by hour: ${Math.min(...values)} to ` +
+    `${Math.max(...values)} per cent. Darker is more cloud.`
   );
 }
 
@@ -130,6 +151,7 @@ export async function DayPanel({ slug }: { slug: string }) {
             value: hour.percent,
             published: true,
           }))}
+          cloudDescription={cloudBandDescription(cloudHours)}
           nowMs={daylight.atMs}
           variableLabel="Tide"
           unitLabel="ft"

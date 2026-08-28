@@ -50,8 +50,12 @@ function plot(container: HTMLElement): SVGSVGElement {
 
 /** The `d` of the series path, as [x, y] pairs. */
 function pathPoints(container: HTMLElement): [number, number][] {
-  const path = container.querySelector("path");
-  if (path === null) throw new Error("expected a path");
+  // `[data-curve]` rather than the first `<path>`: the fill under the curve is
+  // a path too and it draws first, so a bare `path` query silently measured the
+  // fill -- a shape closed to the foot of the frame, which would have made
+  // several of these assertions meaningless.
+  const path = container.querySelector("[data-curve]");
+  if (path === null) throw new Error("expected a curve");
   return (path.getAttribute("d") ?? "")
     .split(/(?=[ML])/)
     .filter((step) => step.trim() !== "")
@@ -118,11 +122,13 @@ describe("the whole day, which is what discharges ADR-0023", () => {
     );
   });
 
-  test("cloud is a strip along the top and never covers the curve's ground", () => {
-    // The fault this chart was rebuilt for. Drawn as a full-height wash, cloud
-    // and night were two greys of similar weight over the same ground, and a
-    // reader had to separate them before the curve said anything. Position does
-    // that work now: sky along the top, sea below it, night crossing both.
+  test("cloud is a band outside the plot, sharing no pixel with the night shading", () => {
+    // The fault this chart was rebuilt for, twice. As a full-height wash, cloud
+    // and night were two greys of similar weight over the same ground. As a
+    // strip inside the frame it still crossed the night band, because night
+    // runs the plot's full height. Out of the frame entirely is what finally
+    // makes them independent: cloud is a band about the sky, the plot is a
+    // frame about the sea, and no pixel belongs to both.
     const { container } = render(
       <HourChart
         {...PROPS}
@@ -131,17 +137,53 @@ describe("the whole day, which is what discharges ADR-0023", () => {
       />,
     );
 
-    const wash = container.querySelector("[data-cloud-percent]");
-    const night = container.querySelector("[data-night]");
-    const washHeight = Number(wash?.getAttribute("height"));
-    const nightHeight = Number(night?.getAttribute("height"));
-
-    expect(washHeight).toBeLessThan(nightHeight / 4);
-    // And the curve is plotted clear of it, rather than under it.
-    const highest = pathPoints(container).reduce((a, b) =>
-      b[1] < a[1] ? b : a,
+    const svgs = [...container.querySelectorAll("svg")];
+    const cloudSvg = svgs.find(
+      (svg) => svg.querySelector("[data-cloud-percent]") !== null,
     );
-    expect(highest[1]).toBeGreaterThan(washHeight);
+    const plotSvg = svgs.find(
+      (svg) => svg.querySelector("[data-curve]") !== null,
+    );
+
+    expect(cloudSvg).toBeDefined();
+    expect(plotSvg).toBeDefined();
+    expect(cloudSvg).not.toBe(plotSvg);
+    expect(plotSvg?.querySelectorAll("[data-cloud-percent]")).toHaveLength(0);
+    expect(cloudSvg?.querySelectorAll("[data-night]")).toHaveLength(0);
+  });
+
+  test("the band is labelled, and keyed in percentages rather than in words", () => {
+    // NAMING THE BANDS WOULD REVERSE ADR-0024. That decision measured this site
+    // banding cloud cover on the National Weather Service's own scale and
+    // disagreeing with the National Weather Service on three days of six. The
+    // publisher's own wording now sits directly above this chart, so a banded
+    // word here would contradict a sentence the reader can see at the time.
+    const { container } = render(
+      <HourChart
+        {...PROPS}
+        points={OVERNIGHT_DIP}
+        cloud={[{ atMs: START + 8 * HOUR, value: 60, published: true }]}
+      />,
+    );
+
+    expect(screen.getByText("Cloud")).toBeDefined();
+
+    const key = container.querySelector("[data-cloud-key]");
+    expect(key).not.toBeNull();
+    expect(key?.textContent).toContain("0%");
+    expect(key?.textContent).toContain("100%");
+    for (const verdict of ["sunny", "cloudy", "clear", "overcast", "fair"]) {
+      expect(key?.textContent?.toLowerCase()).not.toContain(verdict);
+    }
+  });
+
+  test("no band and no key when the forecast said nothing about the sky", () => {
+    const { container } = render(
+      <HourChart {...PROPS} points={OVERNIGHT_DIP} />,
+    );
+
+    expect(container.querySelector("[data-cloud-key]")).toBeNull();
+    expect(container.querySelectorAll("[data-cloud-percent]")).toHaveLength(0);
   });
 });
 
@@ -189,12 +231,32 @@ describe("the now line", () => {
     const now = container.querySelector("[data-now]");
     expect(now?.getAttribute("stroke-dasharray")).toBeTruthy();
     expect(
-      container.querySelector("path")?.getAttribute("stroke-dasharray"),
+      container.querySelector("[data-curve]")?.getAttribute("stroke-dasharray"),
     ).toBeNull();
   });
 });
 
-describe("the cloud wash, which lives here rather than on the sparkline", () => {
+describe("the cloud band, which lives here rather than on the sparkline", () => {
+  test("names itself separately from the plot, crediting its own publisher", () => {
+    // The plot is NOAA's tide and the band is the National Weather Service's
+    // sky. One accessible name covering both would credit the wrong publisher
+    // for half of what it described.
+    const { container } = render(
+      <HourChart
+        {...PROPS}
+        points={OVERNIGHT_DIP}
+        cloud={[{ atMs: START + 8 * HOUR, value: 60, published: true }]}
+        cloudDescription="Cloud cover through Monday, 40 to 70 per cent."
+      />,
+    );
+
+    const labels = [...container.querySelectorAll("svg")].map((svg) =>
+      svg.getAttribute("aria-label"),
+    );
+    expect(labels).toContain("Cloud cover through Monday, 40 to 70 per cent.");
+    expect(labels).toContain(PROPS.description);
+  });
+
   test("a heavier hour washes darker than a lighter one", () => {
     const { container } = render(
       <HourChart
@@ -293,7 +355,7 @@ describe("reading a value off it", () => {
     // images have not painted.
     render(<HourChart {...PROPS} points={OVERNIGHT_DIP} />);
 
-    expect(screen.getByText(/low 0\.2 ft/)).toBeDefined();
+    expect(screen.getByText(/Low 0\.2 ft/)).toBeDefined();
     expect(screen.getByText(/high 4\.8 ft/)).toBeDefined();
   });
 
@@ -337,15 +399,12 @@ describe("reading a value off it", () => {
     expect(new Set(ys).size).toBe(1);
     // Midway between the top of the curve's area and the bottom of the frame,
     // which is where a day with no span honestly sits.
-    expect(ys[0]).toBe(
-      (CLOUD_H_FOR_TEST + PAD_FOR_TEST + (HEIGHT_FOR_TEST - PAD_FOR_TEST)) / 2,
-    );
+    expect(ys[0]).toBe((PAD_FOR_TEST + (HEIGHT_FOR_TEST - PAD_FOR_TEST)) / 2);
   });
 });
 
 /** Mirrors the component's own frame constants, which are private to it. */
 const HEIGHT_FOR_TEST = 220;
-const CLOUD_H_FOR_TEST = 18;
 const PAD_FOR_TEST = 8;
 
 describe("published points", () => {

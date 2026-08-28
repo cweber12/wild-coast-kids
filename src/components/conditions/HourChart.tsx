@@ -1,6 +1,7 @@
 /**
- * One day at reading size: twenty-four hours across, night shaded, cloud along
- * the top, and the model's own published points marked.
+ * One day at reading size: twenty-four hours across in the site's own tile,
+ * night shaded, cloud in a band above the frame, and the model's own published
+ * points marked.
  *
  * **The same instrument as `DaySpark`, at the other zoom level.** It takes the
  * same `SparkPoint` series and draws the same night band from the same shared
@@ -10,14 +11,22 @@
  * it enforceable: there is no library contract in between for the two to
  * satisfy differently.
  *
- * **Cloud is a strip along the top, not a wash behind the curve.** ADR-0026
- * moved the layer here on the grounds that a 21px cell had no room for two grey
- * fields. Drawn as a full-height wash at this size it had the same fault for
- * the same reason: night and cloud were two greys of similar weight covering
- * the same ground, and a reader had to work out which was which before the
- * curve said anything. A strip separates them by *position* rather than by
- * shade -- the sky along the top, the sea below it, night crossing both -- and
- * no reader has to tell two greys apart to find the dip.
+ * **Cloud is a band above the frame, not a layer inside it, and it took three
+ * tries to get there.** ADR-0026 moved the layer here on the grounds that a
+ * 21px cell had no room for two grey fields. Drawn as a full-height wash at
+ * this size it had exactly the same fault, because the fault was never about
+ * height: night and cloud were two greys of similar weight over the same
+ * ground. Drawn as a strip inside the top of the frame it still crossed the
+ * night band, since night runs the plot's full height. Only lifting it clear of
+ * the frame makes the two independent -- cloud is a band about the sky, the
+ * plot is a frame about the sea, and no pixel belongs to both.
+ *
+ * **The band is keyed in percentages and never in words.** ADR-0024 measured
+ * this site banding cloud on the National Weather Service's own scale and
+ * disagreeing with the National Weather Service on three days of six. The
+ * publisher's own wording now prints directly above this chart, so a banded
+ * word here would contradict a sentence the reader can see at the same moment.
+ * A key to an encoding is not a verdict about the sky.
  *
  * **It draws the whole day, midnight to midnight, and that is what discharges
  * ADR-0023.** That decision dropped the overnight extreme from six cells of
@@ -32,11 +41,16 @@
  * but geometry. That also keeps the scaling uniform, so a published-point mark
  * stays a circle at every width instead of stretching into an ellipse.
  *
- * **The quiet register.** No gridlines, no legend, no tooltip, no hover
- * affordance -- hover does not exist on a phone and the audience is parents on
- * phones. What the sparkline does without, and this has, is a scale: this plot
- * is meant to be read off rather than recognised, and a curve with no figures
- * beside it is a picture rather than a measurement.
+ * **The loud register is the frame; the quiet one is the data.** Reviewed on
+ * the page, the first build read as plain and as not belonging to the rest of
+ * the site. The brief says where to put that right -- "the loud register
+ * belongs to headings, tabs, chips and glyphs; inside the plot frame the page
+ * goes quiet" -- so the tile, the ocean band and the "now" chip carry the
+ * energy, and inside the frame there are still no gridlines and no legend box.
+ * The fill under the curve is the one addition to the data itself, and it is
+ * the row's own colour rather than a colour that means anything: `weekTone.ts`
+ * records that what makes colour a verdict is *differential* colour, and every
+ * hour of every day here takes the same ocean.
  *
  * **The "now" line appears on today and on no other day.** A vertical rule at
  * an instant is a claim about the present, and drawing one on Thursday would
@@ -82,6 +96,15 @@ export type HourChartProps = {
   unitLabel: string;
   /** The spoken equivalent of the whole plot. Composed by the caller. */
   description: string;
+  /**
+   * The spoken equivalent of the cloud band.
+   *
+   * Its own, because the band is its own graphic with its own source: the plot
+   * is NOAA's tide and the band is the National Weather Service's sky, and one
+   * accessible name covering both would credit the wrong publisher for half of
+   * what it described.
+   */
+  cloudDescription?: string;
   /** What to say instead of a plot when `points` is empty. */
   absence: string;
 };
@@ -99,13 +122,23 @@ const WIDTH = 720;
 const HEIGHT = 220;
 
 /**
- * The cloud strip, along the top.
+ * The cloud band, in its own frame above the plot.
  *
- * Deep enough to read as a band rather than a hairline, shallow enough that the
- * curve keeps the frame. The curve is plotted below it, so the two layers never
- * occupy the same ground -- which is the whole reason the wash became a strip.
+ * **Outside the plot rather than inside the top of it, and that is the third
+ * arrangement this layer has had.** It was a full-height wash, which put two
+ * greys of similar weight over the same ground. It then became a strip inside
+ * the frame, which fixed the weight and not the overlap: night runs the full
+ * height of the plot, so an hour of cloud drawn inside it still crossed the
+ * day/night boundary and a reader still had two shadings to separate at the
+ * top of the chart. Lifting it clear of the frame is what finally makes the two
+ * independent -- cloud is a band about the sky, the plot is a frame about the
+ * sea, and no pixel belongs to both.
+ *
+ * Its own viewBox rather than a rect in the plot's, so the two cannot drift out
+ * of alignment: both are 720 units wide and both map an instant through the
+ * same `x`.
  */
-const CLOUD_H = 18;
+const CLOUD_H = 14;
 
 /** Kept clear top and bottom so an extreme is inside the frame, not on its edge. */
 const PAD = 8;
@@ -125,6 +158,15 @@ const HOUR_MS = 3_600_000;
  */
 const LABELLED_HOURS = [0, 3, 6, 9, 12, 15, 18, 21];
 const QUARTER_DAY_HOURS = new Set([0, 6, 12, 18]);
+
+/**
+ * The percentages the key puts a swatch against.
+ *
+ * Three, not five: the band is a background layer and a reader needs to know
+ * roughly what a shade is worth, not to read a value off it. The hours
+ * themselves are what carry the figures.
+ */
+const CLOUD_KEY_STOPS: readonly number[] = [0, 50, 100];
 
 /**
  * Cloud opacity, floored.
@@ -154,6 +196,7 @@ export function HourChart({
   sunriseMs,
   sunsetMs,
   cloud = [],
+  cloudDescription = "Cloud cover through the day.",
   nowMs = null,
   variableLabel,
   unitLabel,
@@ -187,7 +230,7 @@ export function HourChart({
    * the bottom would say "as low as it gets", which the data does not claim.
    */
   const y = (value: number): number => {
-    const top = CLOUD_H + PAD;
+    const top = PAD;
     const bottom = HEIGHT - PAD;
     return spanValue === 0
       ? (top + bottom) / 2
@@ -203,129 +246,260 @@ export function HourChart({
     )
     .join(" ");
 
+  /**
+   * The same curve, closed to the foot of the frame.
+   *
+   * **Weight, not a second reading.** The line alone left the plot reading as an
+   * empty field with a thread across it, which is the "plain" the review
+   * objected to. A fill gives the series body and makes the shape legible at a
+   * glance rather than only on inspection.
+   *
+   * It is the row's own colour at a low opacity, which is what keeps it clear of
+   * ADR-0009: `weekTone.ts` records that what makes colour a verdict is
+   * *differential* colour, a green day beside a red one. Every hour of every day
+   * takes the same ocean whatever the tide is doing, so this asserts nothing
+   * about the water.
+   */
+  const areaPath =
+    points.length < 2
+      ? null
+      : `${path} L${x(points[points.length - 1].atMs).toFixed(2)} ${HEIGHT} ` +
+        `L${x(points[0].atMs).toFixed(2)} ${HEIGHT} Z`;
+
   /** The now line, only when this day is today and the instant is inside it. */
   const nowX =
     nowMs !== null && nowMs >= startMs && nowMs < endMs ? x(nowMs) : null;
 
   return (
-    <div className="max-w-4xl">
-      <div className="flex gap-2">
+    <div className="max-w-4xl overflow-hidden rounded-box border-[1.5px] border-ocean bg-white/60">
+      {/*
+        The furniture, and the reason it is here: reviewed on the page, the
+        chart read as plain and as not belonging to the rest of the site. The
+        brief's aesthetic direction is what says where to put that right --
+        "the loud register belongs to headings, tabs, chips and glyphs; inside
+        the plot frame the page goes quiet". So the energy goes into the frame
+        and the chrome, and the data stays a chart in a field guide.
+
+        This band is the week grid's own today-cell header reused rather than
+        invented: `border-ocean bg-ocean` with the label register in white,
+        already measured there. The day panel *is* today, so it takes today's
+        treatment and the two regions read as one instrument.
+
+        It is also where the four tabs will sit, which is why the variable is
+        named here rather than only in the sentence at the foot.
+      */}
+      <div className="border-b-[1.5px] border-ocean bg-ocean px-4 py-2">
+        <p className="text-2xs font-extrabold tracking-widest text-white uppercase">
+          {variableLabel}
+          <span className="text-white/70"> · {unitLabel}</span>
+        </p>
+      </div>
+
+      <div className="p-4">
         {/*
+        The cloud band, above the plot and outside it. Labelled to the left in
+        the same register the week grid labels its rows, so a reader meets the
+        word before the shading rather than after it.
+      */}
+        {cloud.length > 0 && (
+          <>
+            <div className="mb-1 flex items-center gap-2">
+              <span className="text-2xs w-12 shrink-0 text-right font-extrabold tracking-widest text-fog uppercase">
+                Cloud
+              </span>
+              <svg
+                role="img"
+                aria-label={cloudDescription}
+                viewBox={`0 0 ${WIDTH} ${CLOUD_H}`}
+                preserveAspectRatio="none"
+                className="block h-3 min-w-0 flex-1 rounded-sm"
+              >
+                {/*
+                One rect per forecast hour rather than one across the run. An
+                hour the forecast did not reach draws nothing, where a rect
+                stretched to the next point it *did* reach would claim cloud for
+                hours nobody published.
+
+                `preserveAspectRatio="none"` is safe here and nowhere else on
+                this page: the band holds only axis-aligned rectangles, which
+                stretch without distorting, where the plot below holds circles
+                that would become ellipses.
+              */}
+                {cloud.map((hour) => {
+                  const from = Math.max(x(hour.atMs), 0);
+                  const to = Math.min(x(hour.atMs + HOUR_MS), WIDTH);
+                  return to <= from ? null : (
+                    <rect
+                      key={hour.atMs}
+                      x={from}
+                      width={to - from}
+                      y={0}
+                      height={CLOUD_H}
+                      className="fill-fog"
+                      fillOpacity={cloudOpacity(hour.value)}
+                      data-cloud-percent={hour.value}
+                    />
+                  );
+                })}
+              </svg>
+            </div>
+
+            {/*
+            The key, and it states percentages rather than words.
+
+            **Naming the bands "sunny" and "cloudy" would reverse ADR-0024.**
+            That decision measured this site banding cloud cover on the National
+            Weather Service's own sky-condition scale and disagreeing with the
+            National Weather Service on three days of six -- "we would print
+            Partly cloudy; its forecast endpoint says Mostly Sunny". The
+            publisher's own wording is now printed directly above this chart, so
+            a banded word here would not merely risk contradicting a source: it
+            would contradict a sentence a reader can see at the same time.
+
+            A key to the encoding is a different thing from a verdict about the
+            sky, and this is the first. It says what a shade is worth, and the
+            words for the day stay the forecaster's.
+          */}
+            <div
+              className="text-2xs mb-3 ml-14 flex items-center gap-1.5 text-fog"
+              data-cloud-key
+            >
+              <span>Cloud cover</span>
+              {CLOUD_KEY_STOPS.map((percent) => (
+                <span key={percent} className="flex items-center gap-1">
+                  <span
+                    aria-hidden
+                    className="inline-block h-2.5 w-4 rounded-xs bg-fog"
+                    style={{ opacity: cloudOpacity(percent) }}
+                  />
+                  {percent}%
+                </span>
+              ))}
+            </div>
+          </>
+        )}
+
+        <div className="flex gap-2">
+          {/*
           The value scale, in markup rather than in the SVG, so it stays in the
           site's own type scale at every width. Top and bottom of the range and
           nothing between: gridlines were considered and left out, because the
           brief asks for a chart in a field guide and a reader taking a figure
           off this plot has it written beneath as well.
         */}
-        <div className="text-2xs flex w-9 shrink-0 flex-col justify-between py-px text-right text-fog">
-          <span data-axis="high">
-            {highValue.toFixed(1)} {unitLabel}
-          </span>
-          <span data-axis="low">
-            {lowValue.toFixed(1)} {unitLabel}
-          </span>
-        </div>
+          <div className="text-2xs flex w-12 shrink-0 flex-col justify-between py-px text-right text-fog">
+            <span data-axis="high">
+              {highValue.toFixed(1)} {unitLabel}
+            </span>
+            <span data-axis="low">
+              {lowValue.toFixed(1)} {unitLabel}
+            </span>
+          </div>
 
-        <div className="min-w-0 flex-1">
-          <svg
-            role="img"
-            aria-label={description}
-            viewBox={`0 0 ${WIDTH} ${HEIGHT}`}
-            className="block h-auto w-full"
-          >
+          <div className="relative min-w-0 flex-1">
             {/*
-              Night first and full height, so it reads as the ground the whole
-              day is drawn on. Cloud sits on top of it in its own strip: a
-              cloudy night is still night, and separating the two by position
-              means neither has to be told apart from the other by shade.
+            The "now" chip, which names the dashed rule rather than leaving a
+            reader to work out what a vertical line means. Chrome, so it takes
+            the loud register the brief reserves for chrome: a pill in the
+            site's own shape, not a label drawn inside the plot.
+          */}
+            {nowX !== null && (
+              <span
+                className="text-2xs absolute -top-1 z-10 -translate-x-1/2 rounded-pill bg-dark px-1.5 py-0.5 font-extrabold tracking-widest text-white uppercase"
+                style={{ left: `${(nowX / WIDTH) * 100}%` }}
+                data-now-chip
+              >
+                Now
+              </span>
+            )}
+            <svg
+              role="img"
+              aria-label={description}
+              viewBox={`0 0 ${WIDTH} ${HEIGHT}`}
+              className="block h-auto w-full"
+            >
+              {/*
+              Night, full height, the ground the whole day is drawn on. It is
+              the only shading inside this frame: cloud has its own band above,
+              so nothing here has to be told apart from anything else by shade.
             */}
-            {bands.map((band) => (
-              <rect
-                key={band.side}
-                x={band.x}
-                width={band.width}
-                y={0}
-                height={HEIGHT}
-                className="fill-dark/12"
-                data-night={band.side}
-              />
-            ))}
-
-            {/*
-              One rect per forecast hour rather than one across the run. An hour
-              the forecast did not reach draws nothing, where a rect stretched
-              to the next point it *did* reach would claim cloud for hours
-              nobody published.
-            */}
-            {cloud.map((hour) => {
-              const from = Math.max(x(hour.atMs), 0);
-              const to = Math.min(x(hour.atMs + HOUR_MS), WIDTH);
-              return to <= from ? null : (
+              {bands.map((band) => (
                 <rect
-                  key={hour.atMs}
-                  x={from}
-                  width={to - from}
+                  key={band.side}
+                  x={band.x}
+                  width={band.width}
                   y={0}
-                  height={CLOUD_H}
-                  className="fill-fog"
-                  fillOpacity={cloudOpacity(hour.value)}
-                  data-cloud-percent={hour.value}
+                  height={HEIGHT}
+                  className="fill-dark/12"
+                  data-night={band.side}
                 />
-              );
-            })}
+              ))}
 
-            <path
-              d={path}
-              fill="none"
-              className="stroke-ocean"
-              strokeWidth={2}
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              vectorEffect="non-scaling-stroke"
-            />
+              {areaPath !== null && (
+                <path
+                  d={areaPath}
+                  className="fill-ocean"
+                  fillOpacity={0.12}
+                  stroke="none"
+                  data-area
+                />
+              )}
 
-            {/*
+              <path
+                d={path}
+                fill="none"
+                className="stroke-ocean"
+                data-curve
+                strokeWidth={2}
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                vectorEffect="non-scaling-stroke"
+              />
+
+              {/*
               Marks on what the publisher issued, and nothing on what was drawn
               between. This is where the mechanism starts earning its keep: an
               hourly tide marks 24 points and a three-hourly swell marks 8, so
               the two models cannot look alike at this size the way they did at
               the sparkline's.
             */}
-            {points
-              .filter((point) => point.published)
-              .map((point) => (
-                <circle
-                  key={point.atMs}
-                  cx={x(point.atMs)}
-                  cy={y(point.value)}
-                  r={2.5}
-                  className="fill-ocean"
-                />
-              ))}
+              {points
+                .filter((point) => point.published)
+                .map((point) => (
+                  <circle
+                    key={point.atMs}
+                    cx={x(point.atMs)}
+                    cy={y(point.value)}
+                    r={3}
+                    className="fill-ocean stroke-white"
+                    strokeWidth={1.5}
+                    vectorEffect="non-scaling-stroke"
+                  />
+                ))}
 
-            {/*
+              {/*
               Now, and only on today. Dashed rather than solid so it reads as a
               marker on the plot rather than as another series, and
               distinguishable from the curve by more than its colour.
             */}
-            {nowX !== null && (
-              <line
-                x1={nowX}
-                x2={nowX}
-                y1={0}
-                y2={HEIGHT}
-                className="stroke-dark"
-                strokeWidth={1.5}
-                strokeDasharray="4 3"
-                vectorEffect="non-scaling-stroke"
-                data-now
-              />
-            )}
-          </svg>
+              {nowX !== null && (
+                <line
+                  x1={nowX}
+                  x2={nowX}
+                  y1={0}
+                  y2={HEIGHT}
+                  className="stroke-dark"
+                  strokeWidth={1.5}
+                  strokeDasharray="4 3"
+                  vectorEffect="non-scaling-stroke"
+                  data-now
+                />
+              )}
+            </svg>
+          </div>
         </div>
-      </div>
 
-      {/*
+        {/*
         The hour scale, positioned as a percentage of the plot so it stays in
         step with the curve above it at any width. Markup rather than SVG text,
         for the reason in the header: an SVG label that reads at 1536 is about
@@ -334,33 +508,34 @@ export function HourChart({
         Outside the row above rather than inside its right-hand column, so the
         value scale is as tall as the plot and no longer stretches down to sit
         level with these -- which put "-0.1 ft" on top of "12 AM". Indented by
-        the value column's own width plus the row's gap so the two still line up.
+        the left gutter's own width plus the row's gap so the three scales --
+        cloud, value and hour -- all line up on the same left edge.
       */}
-      <div className="relative mt-1 ml-11 h-4">
-        {LABELLED_HOURS.map((hour) => (
-          <span
-            key={hour}
-            className={`text-2xs absolute text-fog ${
-              hour === 0 ? "" : "-translate-x-1/2"
-            } ${QUARTER_DAY_HOURS.has(hour) ? "" : "hidden sm:inline"}`}
-            style={{ left: `${(hour / 24) * 100}%` }}
-            data-axis-hour={hour}
-          >
-            {hourLabel(hour)}
-          </span>
-        ))}
-      </div>
+        <div className="relative mt-1 ml-14 h-4">
+          {LABELLED_HOURS.map((hour) => (
+            <span
+              key={hour}
+              className={`text-2xs absolute text-fog ${
+                hour === 0 ? "" : "-translate-x-1/2"
+              } ${QUARTER_DAY_HOURS.has(hour) ? "" : "hidden sm:inline"}`}
+              style={{ left: `${(hour / 24) * 100}%` }}
+              data-axis-hour={hour}
+            >
+              {hourLabel(hour)}
+            </span>
+          ))}
+        </div>
 
-      {/*
+        {/*
         The figures, in text. The plot is data rather than decoration, so what a
         reader would take off it is also stated -- for anyone who cannot see the
         curve, and for anyone whose images have not painted.
       */}
-      <p className="text-2xs leading-relaxed mt-4 text-fog">
-        {variableLabel} today: low {lowValue.toFixed(1)} {unitLabel}, high{" "}
-        {highValue.toFixed(1)} {unitLabel}. Night is shaded; cloud runs along
-        the top.
-      </p>
+        <p className="text-2xs leading-relaxed mt-4 text-fog">
+          Low {lowValue.toFixed(1)} {unitLabel}, high {highValue.toFixed(1)}{" "}
+          {unitLabel} today. Night is shaded; cloud is the band above.
+        </p>
+      </div>
     </div>
   );
 }

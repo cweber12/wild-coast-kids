@@ -118,7 +118,7 @@ function wordingWeek(
 
 /** The chart's curve, scoped so no other SVG on the page is counted. */
 function curve(container: HTMLElement): Element | null {
-  return container.querySelector('svg[aria-label^="Tide today"] path');
+  return container.querySelector('svg[aria-label^="Tide today"] [data-curve]');
 }
 
 beforeEach(() => {
