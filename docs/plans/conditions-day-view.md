@@ -322,6 +322,45 @@ thickening of the line. The mechanism starts earning its keep at the swell's
 now carries the whole day's hours beside its daylight `thirds`, which is the
 read ADR-0024's successor will want.
 
+## Addendum, 2026-08-28: the wash leaves the week cell
+
+Dated rather than woven in, per this repo's rule that a plan in flight gains
+addenda and never has its history rewritten. This one **does** change a decision
+above, which the 2026-08-28 addendum before it did not, so it is worth being
+exact about which half moved.
+
+**Reviewed on the page, the cloud wash on the sparkline read as confusing.**
+Asked what the shape at the top of each day was, the first reading was that the
+curve _was_ the cloud. Two grey layers of similar weight in a 21px frame have to
+be separated before either says anything, and the fact a reader takes from seven
+of these — which day is calmer, and whether the dip is at night — is carried
+entirely by the curve and the night bands.
+
+**"Cloud and daylight are layers, not tabs" is unchanged.** That decision is
+about what _kind_ of thing cloud is, and cloud is still a layer and still not a
+tab. What it never settled is at what _size_ a layer earns its place, and the
+answer is now: the day chart, not the week cell.
+
+**What did change is ADR-0025's "the same two background layers".** One layer is
+shared and one is not. Night is drawn at both zoom levels; cloud only where
+there is height for it. That is a weaker guarantee than "the sparkline and the
+chart are legible as the same instrument because the backgrounds never change",
+and the weakening is recorded in ADR-0026 rather than absorbed. What still holds
+the two together is the shared `SparkPoint` type and the shared night band.
+
+**#171's width ladder had already found this and it was not read that way.**
+Every row of that table from 110px down is a sentence about two grey layers
+being hard to tell apart — recorded as a fact about width, and at least as much
+a fact about there being two of them. `MIN_USEFUL_SPARK_WIDTH_PX` stays at 110
+as a bound rather than a fitted threshold: removing a competing layer cannot make
+the remaining one harder to see, and the floor does not bind at a 133px cell
+anyway.
+
+**The swell question this raises is not answered here.** Whether the week cell
+should show swell as well as tide — as a second shape, as a second line, or by
+following the day chart's selected tab — is decided in #172 alongside the tabs,
+because two of the three options only exist once the tabs do.
+
 ## Out of scope
 
 The sighting layer (#121). Visibility, in any form. A rain tab. A

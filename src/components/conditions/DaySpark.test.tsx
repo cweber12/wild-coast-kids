@@ -150,87 +150,27 @@ describe("the night band", () => {
     const daylightHours = (SUNSET - SUNRISE) / HOUR;
     expect(240 - shaded).toBeCloseTo((daylightHours / 24) * 240, 1);
   });
-
-  test("night is drawn over the cloud wash, because a cloudy night is still night", () => {
-    const { container } = render(
-      <DaySpark
-        {...PROPS}
-        points={FLAT_DAY}
-        cloud={[{ atMs: START, value: 90, published: true }]}
-      />,
-    );
-
-    const rects = [...plot(container).querySelectorAll("rect")];
-    const cloudAt = rects.findIndex((r) =>
-      r.hasAttribute("data-cloud-percent"),
-    );
-    const nightAt = rects.findIndex((r) => r.hasAttribute("data-night"));
-    expect(cloudAt).toBeLessThan(nightAt);
-  });
 });
 
-describe("the cloud wash", () => {
-  test("a heavier hour washes darker than a lighter one", () => {
-    const { container } = render(
-      <DaySpark
-        {...PROPS}
-        points={FLAT_DAY}
-        cloud={[
-          { atMs: START + 8 * HOUR, value: 20, published: true },
-          { atMs: START + 9 * HOUR, value: 80, published: true },
-        ]}
-      />,
-    );
-
-    const [light, heavy] = [
-      ...container.querySelectorAll("[data-cloud-percent]"),
-    ];
-    expect(Number(light.getAttribute("fill-opacity"))).toBeLessThan(
-      Number(heavy.getAttribute("fill-opacity")),
-    );
-  });
-
-  test("a forecast 0% is visible, so a clear sky is not silence", () => {
-    // The two are different facts: one is a clear sky, the other is an hour
-    // nobody forecast. At zero opacity they would render identically, which is
-    // an absence passing for a reading.
-    const { container } = render(
-      <DaySpark
-        {...PROPS}
-        points={FLAT_DAY}
-        cloud={[{ atMs: START + 8 * HOUR, value: 0, published: true }]}
-      />,
-    );
-
-    const wash = container.querySelector("[data-cloud-percent]");
-    expect(Number(wash?.getAttribute("fill-opacity"))).toBeGreaterThan(0);
-  });
-
-  test("an hour the forecast never reached draws nothing at all", () => {
-    const { container } = render(
-      <DaySpark
-        {...PROPS}
-        points={FLAT_DAY}
-        cloud={[
-          { atMs: START + 8 * HOUR, value: 40, published: true },
-          // Nothing for 9:00. A wash stretched to the next point it did reach
-          // would claim cloud for an hour nobody published.
-          { atMs: START + 10 * HOUR, value: 40, published: true },
-        ]}
-      />,
-    );
-
-    const washes = [...container.querySelectorAll("[data-cloud-percent]")];
-    expect(washes).toHaveLength(2);
-    // One hour wide each: 240/24 user units, and no wider.
-    expect(washes.map((w) => Number(w.getAttribute("width")))).toEqual([
-      10, 10,
-    ]);
-  });
-
-  test("no cloud at all draws no wash, rather than a clear sky", () => {
+describe("the layers this shape does not draw", () => {
+  test("no cloud is washed across the frame, at any hour of the day", () => {
+    // The wash shipped here for one review and came off after it: at this
+    // height a grey wash and a grey night band are two grey things competing
+    // for one frame, and a reader has to separate them before the curve says
+    // anything. Cloud is legible at the day chart's size and is drawn there.
+    //
+    // Asserted rather than assumed, because the layer is easy to reintroduce:
+    // the day chart will draw one from the same `SkyWeekDay.hours` this grid's
+    // panel already reads, and the two components share a series shape.
     const { container } = render(<DaySpark {...PROPS} points={FLAT_DAY} />);
+
     expect(container.querySelectorAll("[data-cloud-percent]")).toHaveLength(0);
+    // Every rect in the plot is a night band and nothing else. A wash added
+    // without its data attribute would slip past the assertion above.
+    const rects = [...plot(container).querySelectorAll("rect")];
+    expect(rects.length).toBeGreaterThan(0);
+    for (const rect of rects)
+      expect(rect.hasAttribute("data-night")).toBe(true);
   });
 });
 

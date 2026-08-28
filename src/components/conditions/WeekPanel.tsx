@@ -194,15 +194,18 @@ export async function WeekPanel({ slug }: { slug: string }) {
     `docs/plans/week-grid-legibility.md`.
   */
   /*
-    The shapes, composed from three reads that each own a different layer: the
-    hourly heights from NOAA, the night from this repo's own astronomy, and the
-    cloud wash from the National Weather Service.
+    The shapes, composed from two reads that each own a different layer: the
+    hourly heights from NOAA, and the night from this repo's own astronomy.
 
-    The tide read decides whether there is a shape at all, and the other two
-    only ever subtract from it. Daylight cannot fail. Cloud can, and when it
-    does the wash is simply absent -- a day with no forecast draws no wash,
-    which is why `DaySpark` floors a published 0% above zero rather than letting
-    a clear sky and a silent feed render alike.
+    It was three. The cloud wash came off the shape after review -- at this
+    height a grey wash and a grey night band are two grey things competing for
+    one frame, and cloud is legible at the day chart's size rather than this
+    one. `sky` is still read here, because the cloud *row* below still prints
+    its thirds; what changed is that nothing paints them behind the curve.
+
+    The tide read decides whether there is a shape at all, and daylight only
+    ever subtracts from it. Daylight cannot fail, so a shape either exists with
+    its night drawn or does not exist at all.
 
     ADR-0023's figures are untouched by every line of this. The shape draws the
     hours the daylight figure was selected out of; nothing here changes which
@@ -211,11 +214,6 @@ export async function WeekPanel({ slug }: { slug: string }) {
   const hourlyByDate = new Map(
     hourly.state.kind === "week"
       ? hourly.state.days.map((day) => [day.localDate, day])
-      : [],
-  );
-  const cloudByDate = new Map(
-    sky.state.kind === "week"
-      ? sky.state.days.map((day) => [day.localDate, day.hours])
       : [],
   );
   const range =
@@ -245,11 +243,6 @@ export async function WeekPanel({ slug }: { slug: string }) {
             sunsetMs={day.sunsetMs}
             lowValue={range.low}
             highValue={range.high}
-            cloud={(cloudByDate.get(day.localDate) ?? []).map((hour) => ({
-              atMs: hour.atMs,
-              value: hour.percent,
-              published: true,
-            }))}
             description={sparkDescription(
               series,
               day.sunriseLabel,
