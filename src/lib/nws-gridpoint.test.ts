@@ -2,6 +2,8 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
+  type GridpointHour,
+  type GridpointSeries,
   gridpointUrl,
   NwsGridpointDriftError,
   NwsGridpointNoDataError,
@@ -9,10 +11,20 @@ import {
 } from "./nws-gridpoint";
 
 /**
- * A real response, captured from `api.weather.gov` on 2026-08-27 for the cell
+ * A real response, captured from `api.weather.gov` on 2026-08-28 for the cell
  * La Jolla Shores Beach binds. Captured rather than written, because the
  * assertion this parser most needs -- that a declared key can carry nothing --
  * is exactly the kind a hand-written fixture would be built to satisfy.
+ *
+ * **It replaces the 2026-08-27 capture, which could not exercise this file.**
+ * That one was trimmed to `skyCover`, `weather`, `visibility` and
+ * `ceilingHeight`, so the five series this parser now reads were simply not in
+ * it and every assertion about them would have been written against a fiction.
+ * This one is trimmed too -- 41 KB of the 205 KB served -- but the trim drops
+ * whole keys the parser never touches and keeps every entry of the nine it
+ * does, with their real instants, durations, units and values. It is not a
+ * byte-for-byte record: the kept subtree is re-serialised at two spaces to
+ * match its siblings.
  *
  * The path is resolved from the working directory rather than `import.meta.url`,
  * which is not a `file:` URL under this test environment.
@@ -24,7 +36,7 @@ const PAYLOAD = JSON.parse(
       "src",
       "lib",
       "__fixtures__",
-      "nws-gridpoint-sgx-54-21-20260827.json",
+      "nws-gridpoint-sgx-54-21-20260828.json",
     ),
     "utf8",
   ),
@@ -254,6 +266,229 @@ describe("what the parser refuses", () => {
       CELL,
     );
     expect(forecast.skyCover).toHaveLength(26);
+  });
+});
+
+describe("the wind and temperature series", () => {
+  /** Every series that arrives as `GridpointSeries`, with the key it is read from. */
+  const OPTIONAL = [
+    ["windMph", "windSpeed"],
+    ["gustMph", "windGust"],
+    ["windDirDegT", "windDirection"],
+    ["airTempF", "temperature"],
+    ["apparentTempF", "apparentTemperature"],
+  ] as const;
+
+  const published = (series: GridpointSeries): GridpointHour[] => {
+    if (series.kind !== "published") {
+      throw new Error(`expected a published series, got: ${series.reason}`);
+    }
+    return series.hours;
+  };
+
+  const replacing = (key: string, series: unknown) => ({
+    properties: { ...PAYLOAD.properties, [key]: series },
+  });
+
+  it("reads all five out of the captured payload", () => {
+    const forecast = parseGridpointForecast(PAYLOAD, CELL);
+    for (const [field] of OPTIONAL) {
+      expect(published(forecast[field]).length).toBeGreaterThan(0);
+    }
+  });
+
+  it("converts km/h to mph and Celsius to Fahrenheit, and leaves degrees alone", () => {
+    // The conversion is the reason the units are pinned at all: these four
+    // arrive in units the page does not show, and a silent switch upstream
+    // would put a plausible wrong number on it rather than an obvious one.
+    const forecast = parseGridpointForecast(PAYLOAD, CELL);
+    const props = PAYLOAD.properties;
+
+    expect(published(forecast.windMph)[0].value).toBeCloseTo(
+      props.windSpeed.values[0].value / 1.609344,
+      10,
+    );
+    expect(published(forecast.gustMph)[0].value).toBeCloseTo(
+      props.windGust.values[0].value / 1.609344,
+      10,
+    );
+    expect(published(forecast.airTempF)[0].value).toBeCloseTo(
+      props.temperature.values[0].value * 1.8 + 32,
+      10,
+    );
+    // A bearing is a bearing in both. Converting it would be the bug this
+    // assertion exists to catch, because 340 is a plausible mph too.
+    expect(published(forecast.windDirDegT)[0].value).toBe(
+      props.windDirection.values[0].value,
+    );
+  });
+
+  it("expands every block length the payload uses, hourly and gapless", () => {
+    // The captured payload carries blocks of one, two, three, four, five, six,
+    // seven, eight, nine, ten and fourteen hours across these series. A parser
+    // that assumed three would silently drop most of the week.
+    const forecast = parseGridpointForecast(PAYLOAD, CELL);
+
+    for (const [field, key] of OPTIONAL) {
+      const hours = published(forecast[field]);
+      const declared = PAYLOAD.properties[key].values.reduce(
+        (total: number, entry: { validTime: string }) => {
+          const match = /\/P(?:(\d+)D)?(?:T(?:(\d+)H)?)?$/.exec(
+            entry.validTime,
+          );
+          if (match === null) throw new Error(`unreadable: ${entry.validTime}`);
+          return (
+            total +
+            (match[1] === undefined ? 0 : Number(match[1]) * 24) +
+            (match[2] === undefined ? 0 : Number(match[2]))
+          );
+        },
+        0,
+      );
+
+      expect(hours).toHaveLength(declared);
+      expect(hours.length).toBeGreaterThan(
+        PAYLOAD.properties[key].values.length,
+      );
+      for (let i = 1; i < hours.length; i += 1) {
+        expect(hours[i].atMs - hours[i - 1].atMs).toBe(3_600_000);
+      }
+    }
+  });
+
+  it("pins each series' own unit, and says which one it pinned", () => {
+    // Read off the payload rather than assumed. Four different unit codes
+    // across five series, and getting one wrong is a wrong number rather than
+    // a visible failure.
+    const pinned: [string, string][] = [
+      ["windSpeed", "wmoUnit:km_h-1"],
+      ["windGust", "wmoUnit:km_h-1"],
+      ["windDirection", "wmoUnit:degree_\\(angle\\)"],
+      ["temperature", "wmoUnit:degC"],
+      ["apparentTemperature", "wmoUnit:degC"],
+    ];
+
+    for (const [key, unit] of pinned) {
+      const drifted = replacing(key, {
+        uom: "wmoUnit:someOtherThing",
+        values: [{ validTime: "2026-08-28T13:00:00+00:00/PT1H", value: 5 }],
+      });
+      expect(() => parseGridpointForecast(drifted, CELL)).toThrow(
+        NwsGridpointDriftError,
+      );
+      expect(() => parseGridpointForecast(drifted, CELL)).toThrow(
+        new RegExp(`pins ${unit}`),
+      );
+    }
+  });
+
+  it("names a declared-and-empty series as an absence rather than drawing it", () => {
+    // `assertPublished` counts entries rather than testing for a key, which is
+    // the whole reason it exists -- `visibility` proves on every request that a
+    // declared key can carry nothing. A tab handed an empty array would draw a
+    // flat line at zero and claim the wind dropped.
+    const forecast = parseGridpointForecast(
+      replacing("windSpeed", { uom: "wmoUnit:km_h-1", values: [] }),
+      CELL,
+    );
+
+    expect(forecast.windMph.kind).toBe("absent");
+    if (forecast.windMph.kind !== "absent") return;
+    expect(forecast.windMph.reason).toMatch(/published no values/);
+    expect(forecast.windMph.reason).toContain(CELL);
+  });
+
+  it("names a series whose every step is null as an absence too", () => {
+    const forecast = parseGridpointForecast(
+      replacing("windSpeed", {
+        uom: "wmoUnit:km_h-1",
+        values: [{ validTime: "2026-08-28T13:00:00+00:00/PT1H", value: null }],
+      }),
+      CELL,
+    );
+
+    expect(forecast.windMph.kind).toBe("absent");
+    if (forecast.windMph.kind !== "absent") return;
+    expect(forecast.windMph.reason).toMatch(/was\s+empty/);
+  });
+
+  it("lets a quiet series stay quiet without costing the other five", () => {
+    // The property that made these optional. Requiring all six would let the
+    // scarcest decide for the rest, which is the coupling ADR-0010 and ADR-0020
+    // each spent a decision undoing one layer up.
+    const forecast = parseGridpointForecast(
+      replacing("windSpeed", { uom: "wmoUnit:km_h-1", values: [] }),
+      CELL,
+    );
+
+    expect(forecast.windMph.kind).toBe("absent");
+    expect(forecast.skyCover.length).toBeGreaterThan(0);
+    expect(published(forecast.airTempF).length).toBeGreaterThan(0);
+    expect(published(forecast.gustMph).length).toBeGreaterThan(0);
+    expect(published(forecast.windDirDegT).length).toBeGreaterThan(0);
+  });
+
+  it("still refuses an offset-less instant, in the new series too", () => {
+    // ADR-0009's hazard does not become survivable by moving one series over.
+    // Read as local and tagged UTC, this ages every reading by seven hours.
+    expect(() =>
+      parseGridpointForecast(
+        replacing("temperature", {
+          uom: "wmoUnit:degC",
+          values: [{ validTime: "2026-08-28T13:00:00/PT1H", value: 22 }],
+        }),
+        CELL,
+      ),
+    ).toThrow(/offset stated/);
+  });
+
+  it("refuses a bearing outside the circle its unit describes", () => {
+    expect(() =>
+      parseGridpointForecast(
+        replacing("windDirection", {
+          uom: "wmoUnit:degree_(angle)",
+          values: [{ validTime: "2026-08-28T13:00:00+00:00/PT1H", value: 400 }],
+        }),
+        CELL,
+      ),
+    ).toThrow(/outside the 0 to 360/);
+  });
+
+  it("refuses a negative wind speed, which no unit makes meaningful", () => {
+    expect(() =>
+      parseGridpointForecast(
+        replacing("windSpeed", {
+          uom: "wmoUnit:km_h-1",
+          values: [{ validTime: "2026-08-28T13:00:00+00:00/PT1H", value: -3 }],
+        }),
+        CELL,
+      ),
+    ).toThrow(/below the 0/);
+  });
+
+  it("bounds temperature at neither end, because Celsius bounds it at neither", () => {
+    // Not an omission. A limit invented here would be this parser deciding what
+    // the weather may do, and the first cold morning past it would blank the
+    // row rather than report it.
+    const forecast = parseGridpointForecast(
+      replacing("temperature", {
+        uom: "wmoUnit:degC",
+        values: [{ validTime: "2026-08-28T13:00:00+00:00/PT1H", value: -40 }],
+      }),
+      CELL,
+    );
+    expect(published(forecast.airTempF)[0].value).toBe(-40);
+  });
+
+  it("treats a series that disappears entirely as drift, not as quiet", () => {
+    // The six arrive as one schema at every cell measured, so one of them going
+    // missing is the product changing rather than this cell having nothing to
+    // say. That distinction is why the absent case above is reachable at all.
+    const properties = { ...PAYLOAD.properties };
+    delete properties.windSpeed;
+    expect(() => parseGridpointForecast({ properties }, CELL)).toThrow(
+      NwsGridpointDriftError,
+    );
   });
 });
 

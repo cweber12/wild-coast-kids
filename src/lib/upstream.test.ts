@@ -824,7 +824,7 @@ describe("fetchGridForecast", () => {
     readFileSync(
       join(
         process.cwd(),
-        "src/lib/__fixtures__/nws-gridpoint-sgx-54-21-20260827.json",
+        "src/lib/__fixtures__/nws-gridpoint-sgx-54-21-20260828.json",
       ),
       "utf8",
     ),

@@ -13,6 +13,19 @@
  * `assertPublished` counts entries rather than testing for a key. See
  * `docs/adr/0020-sky-leaves-the-card-for-the-week.md`.
  *
+ * IT ALSO PUBLISHES THE WIND, WHICH THIS SITE HAS NEVER FORECAST. Until now the
+ * page knew the wind only as a measurement of this minute, from the air
+ * station. Captured 2026-08-28 from `SGX/54,21` and committed beside this file:
+ * `windSpeed`, `windDirection` and `windGust` each expand to 185 gapless hours,
+ * and `temperature` and `apparentTemperature` to 180. `visibility` and
+ * `ceilingHeight` were declared and empty again, so ADR-0020 stands unchanged
+ * and this module still offers no visibility.
+ *
+ * FOUR OF THE SIX ARRIVE IN UNITS THIS SITE DOES NOT SHOW -- km/h and Celsius
+ * against miles per hour and Fahrenheit. The unit is read off the payload and
+ * asserted rather than assumed, and the conversion happens here, once, so that
+ * no view can hold a number whose unit it has to guess at.
+ *
  * TIME ARRIVES AS AN INTERVAL, NOT AN INSTANT. Each entry's `validTime` is
  * `<ISO-8601 instant>/<ISO-8601 duration>` -- `2026-08-26T12:00:00+00:00/PT3H`
  * -- and one entry therefore covers three or six hours. The instants carry an
@@ -33,8 +46,76 @@
  * phenomenon and that is normal rather than missing.
  */
 
-/** What the payload must declare for the one number this module reads. */
-const SKY_COVER_UNIT = "wmoUnit:percent";
+/** Kilometres in a mile, so `km_h-1` becomes the miles per hour the page shows. */
+const KM_PER_MILE = 1.609344;
+
+/** How one series is read: what it must declare, what it may hold, what it becomes. */
+interface SeriesSpec {
+  /**
+   * The unit code the payload must declare.
+   *
+   * Read and asserted, never assumed. Four of the six differ from what this
+   * site displays -- km/h against mph, Celsius against Fahrenheit -- so a
+   * silent switch upstream would put a plausible wrong number on the page
+   * rather than an obviously wrong one. This is the same pinning
+   * `nws-observation.ts` does for the same agency's observations.
+   */
+  unit: string;
+  /**
+   * The range the declared unit makes a fact, or null where it makes none.
+   *
+   * A percentage runs 0 to 100 and a bearing 0 to 360 because their units say
+   * so, and a speed is not negative because a speed is not negative. Celsius
+   * forbids no figure this coast could produce, so temperature is bounded at
+   * neither end: a plausible-looking limit here would be this file deciding
+   * what the weather is allowed to do.
+   */
+  min: number | null;
+  max: number | null;
+  /** From the published unit into the one the page shows. Identity where they agree. */
+  toDisplay: (published: number) => number;
+}
+
+type SeriesKey =
+  | "skyCover"
+  | "windSpeed"
+  | "windGust"
+  | "windDirection"
+  | "temperature"
+  | "apparentTemperature";
+
+const identity = (published: number): number => published;
+const kmhToMph = (kmh: number): number => kmh / KM_PER_MILE;
+const degCToDegF = (degC: number): number => degC * 1.8 + 32;
+
+const SERIES: Record<SeriesKey, SeriesSpec> = {
+  skyCover: { unit: "wmoUnit:percent", min: 0, max: 100, toDisplay: identity },
+  windSpeed: {
+    unit: "wmoUnit:km_h-1",
+    min: 0,
+    max: null,
+    toDisplay: kmhToMph,
+  },
+  windGust: { unit: "wmoUnit:km_h-1", min: 0, max: null, toDisplay: kmhToMph },
+  windDirection: {
+    unit: "wmoUnit:degree_(angle)",
+    min: 0,
+    max: 360,
+    toDisplay: identity,
+  },
+  temperature: {
+    unit: "wmoUnit:degC",
+    min: null,
+    max: null,
+    toDisplay: degCToDegF,
+  },
+  apparentTemperature: {
+    unit: "wmoUnit:degC",
+    min: null,
+    max: null,
+    toDisplay: degCToDegF,
+  },
+};
 
 /** `2026-08-26T12:00:00+00:00/PT3H`. Offset-less would be ADR-0009's hazard. */
 const INTERVAL =
@@ -71,6 +152,37 @@ export interface WeatherHour {
   coverage: string | null;
 }
 
+/** One hour of a forecast series, expanded from the interval that covered it. */
+export interface GridpointHour {
+  /** Start of the hour, epoch milliseconds UTC. */
+  atMs: number;
+  /** The value, in the unit named by the field carrying this series. */
+  value: number;
+}
+
+/**
+ * A series the cell may or may not forecast.
+ *
+ * **An absence is named rather than empty.** The two facts a reader has to be
+ * able to tell apart are "the wind drops to nothing" and "we were not told",
+ * and a plot that drew a flat line at zero for the second would make the
+ * stronger claim of the two out of the weaker fact. So the absence carries a
+ * sentence, and the sentence is the parser's to write rather than a component's
+ * to invent: only here is it known whether the key was missing or was declared
+ * and empty.
+ *
+ * **This is a softer treatment than `skyCover` gets, deliberately.** An empty
+ * `skyCover` throws, taking the whole read down, and that strictness rests on a
+ * measurement -- 21 of 21 cells covering this inventory published it. No such
+ * measurement exists for these five, so refusing the cell over one of them
+ * would be asserting something nobody checked, and it would let the scarcest
+ * series decide for the other four. That is the coupling ADR-0010 and ADR-0020
+ * both spent a decision undoing, one layer up.
+ */
+export type GridpointSeries =
+  | { kind: "published"; hours: GridpointHour[] }
+  | { kind: "absent"; reason: string };
+
 export interface GridpointForecast {
   /** The cell this was read for, as `office/x,y`. */
   cellId: string;
@@ -78,6 +190,34 @@ export interface GridpointForecast {
   skyCover: SkyCoverHour[];
   /** Only the hours a phenomenon was named for, which is most days none. */
   weather: WeatherHour[];
+  /** Wind speed in miles per hour, converted from the published km/h. */
+  windMph: GridpointSeries;
+  /**
+   * Gust in miles per hour, converted from the published km/h.
+   *
+   * Its own series rather than a field on the wind one: the feed publishes the
+   * two on their own interval boundaries -- 64 gust entries against 61 of speed
+   * in the committed payload -- so pairing them here would mean inventing which
+   * gust belongs to which hour of wind.
+   */
+  gustMph: GridpointSeries;
+  /**
+   * Wind direction in degrees true, which is the direction the wind blows
+   * *from*. Unconverted: the feed publishes degrees and the page shows degrees.
+   */
+  windDirDegT: GridpointSeries;
+  /** Air temperature in Fahrenheit, converted from the published Celsius. */
+  airTempF: GridpointSeries;
+  /**
+   * What the air is forecast to feel like, in Fahrenheit.
+   *
+   * **Pinned before it is rendered**, which is `mop-forecast.ts`'s treatment of
+   * `waveDp` rather than a field nobody asked for: it arrives in the same
+   * response at no extra request, and unit-pinning it now means the day it is
+   * shown it is already known to be Celsius. It is not the temperature and must
+   * never be drawn as though it were.
+   */
+  apparentTempF: GridpointSeries;
 }
 
 /** Hours covered by an ISO-8601 duration of the shape this feed uses. */
@@ -175,7 +315,118 @@ function assertPublished(
 }
 
 /**
- * Read one cell's sky cover and present weather.
+ * One series, unit-checked and expanded to hourly steps.
+ *
+ * The expansion is here rather than in each caller because it is the same
+ * treatment for all six: the payload's duration is part of its contract, and a
+ * caller selecting the daylight hours of a day cannot do that against blocks
+ * of three, six or fourteen hours without inventing a rule for one that
+ * straddles sunrise. The committed payload carries ten distinct block lengths
+ * across the six series, which is why none of them may assume three.
+ *
+ * @throws {NwsGridpointDriftError} the shape, the unit or a value moved
+ * @throws {NwsGridpointNoDataError} the key is declared and carries nothing
+ */
+function expandToHours(
+  properties: Record<string, unknown>,
+  key: SeriesKey,
+  cellId: string,
+): GridpointHour[] {
+  const spec = SERIES[key];
+
+  // `assertPublished` first, and the order matters: it is what turns a key that
+  // is missing altogether into a stated drift error. Reaching for `uom` before
+  // it would throw a bare TypeError off `undefined` instead, which says nothing
+  // about the payload to whoever reads the log.
+  const values = assertPublished(properties, key, cellId);
+  const declared = (properties[key] as { uom?: unknown }).uom;
+
+  if (declared !== spec.unit) {
+    throw new NwsGridpointDriftError(
+      `${cellId}: ${key} is declared in ${JSON.stringify(declared)} where this site ` +
+        `pins ${spec.unit}. The payload states its own units and a silent change would ` +
+        `put a number converted on the old assumption onto the page.`,
+    );
+  }
+
+  const hours: GridpointHour[] = [];
+  for (const entry of values as { validTime?: unknown; value?: unknown }[]) {
+    const { startMs, hours: span } = intervalOf(entry.validTime, cellId, key);
+    // A null value inside a populated series is one gap rather than a dead
+    // cell: the service leaves them where it has not forecast that step, and
+    // dropping the step is right where refusing the whole read would not be.
+    if (entry.value === null || entry.value === undefined) continue;
+    if (typeof entry.value !== "number" || !Number.isFinite(entry.value)) {
+      throw new NwsGridpointDriftError(
+        `${cellId}: a ${key} entry carried value ${JSON.stringify(entry.value)}, which is ` +
+          `not a number.`,
+      );
+    }
+    if (spec.min !== null && spec.max !== null) {
+      if (entry.value < spec.min || entry.value > spec.max) {
+        throw new NwsGridpointDriftError(
+          `${cellId}: a ${key} entry carried ${entry.value}, outside the ${spec.min} to ` +
+            `${spec.max} its declared unit allows.`,
+        );
+      }
+    } else if (spec.min !== null && entry.value < spec.min) {
+      throw new NwsGridpointDriftError(
+        `${cellId}: a ${key} entry carried ${entry.value}, below the ${spec.min} its ` +
+          `declared unit allows.`,
+      );
+    }
+
+    const value = spec.toDisplay(entry.value);
+    for (let hour = 0; hour < span; hour += 1) {
+      hours.push({ atMs: startMs + hour * 3_600_000, value });
+    }
+  }
+
+  hours.sort((a, b) => a.atMs - b.atMs);
+  return hours;
+}
+
+/**
+ * One series that the cell is allowed not to forecast.
+ *
+ * Only `NwsGridpointNoDataError` becomes an absence. Drift still propagates and
+ * still takes the read down, because a unit that moved or a shape that changed
+ * is a fact about the product rather than about this cell -- and a wrong number
+ * is worse than no number, which is the whole argument for pinning the units at
+ * all.
+ *
+ * A key missing altogether is drift as well, not an absence: the six arrive as
+ * one schema at every cell, so one of them vanishing is the product changing
+ * rather than this cell going quiet. What is softened here is only the
+ * declared-and-empty case, which is the one `visibility` demonstrates on every
+ * single request.
+ */
+function readOptionalSeries(
+  properties: Record<string, unknown>,
+  key: SeriesKey,
+  cellId: string,
+): GridpointSeries {
+  try {
+    const hours = expandToHours(properties, key, cellId);
+    if (hours.length === 0) {
+      return {
+        kind: "absent",
+        reason:
+          `${cellId}: every ${key} entry the National Weather Service published was ` +
+          `empty, so there is nothing to draw.`,
+      };
+    }
+    return { kind: "published", hours };
+  } catch (cause) {
+    if (cause instanceof NwsGridpointNoDataError) {
+      return { kind: "absent", reason: cause.message };
+    }
+    throw cause;
+  }
+}
+
+/**
+ * Read one cell's sky cover, present weather, wind and temperature.
  *
  * @throws {NwsGridpointDriftError} the payload's shape or unit moved
  * @throws {NwsGridpointNoDataError} the cell published no sky cover
@@ -192,43 +443,17 @@ export function parseGridpointForecast(
     );
   }
 
-  const skyCoverSeries = properties.skyCover as { uom?: unknown };
-  const values = assertPublished(properties, "skyCover", cellId);
-
-  if (skyCoverSeries.uom !== SKY_COVER_UNIT) {
-    throw new NwsGridpointDriftError(
-      `${cellId}: skyCover is declared in ${JSON.stringify(skyCoverSeries.uom)} where this ` +
-        `site pins ${SKY_COVER_UNIT}. A silent unit change would put a fraction on the page ` +
-        `as a percentage.`,
-    );
-  }
-
-  const skyCover: SkyCoverHour[] = [];
-  for (const entry of values as { validTime?: unknown; value?: unknown }[]) {
-    const { startMs, hours } = intervalOf(entry.validTime, cellId, "skyCover");
-    // A null value inside a populated series is one gap rather than a dead
-    // cell: the service leaves them where it has not forecast that step, and
-    // dropping the step is right where refusing the whole read would not be.
-    if (entry.value === null || entry.value === undefined) continue;
-    if (typeof entry.value !== "number" || !Number.isFinite(entry.value)) {
-      throw new NwsGridpointDriftError(
-        `${cellId}: a skyCover entry carried value ${JSON.stringify(entry.value)}, which is ` +
-          `not a number.`,
-      );
-    }
-    if (entry.value < 0 || entry.value > 100) {
-      throw new NwsGridpointDriftError(
-        `${cellId}: a skyCover entry carried ${entry.value}, outside the 0 to 100 its ` +
-          `declared unit allows.`,
-      );
-    }
-    for (let hour = 0; hour < hours; hour += 1) {
-      skyCover.push({
-        atMs: startMs + hour * 3_600_000,
-        percent: entry.value,
-      });
-    }
-  }
+  /*
+    Sky cover stays the one series this read cannot do without, and it keeps
+    its own name for its own hours. `SkyCoverHour.percent` is what `readSkyWeek`
+    and `SkyWeekDay` are built on; renaming it to the generic `value` would be a
+    refactor of the cloud row wearing the clothes of a wind slice.
+  */
+  const skyCover: SkyCoverHour[] = expandToHours(
+    properties,
+    "skyCover",
+    cellId,
+  ).map((hour) => ({ atMs: hour.atMs, percent: hour.value }));
 
   if (skyCover.length === 0) {
     throw new NwsGridpointNoDataError(
@@ -264,10 +489,30 @@ export function parseGridpointForecast(
     }
   }
 
-  skyCover.sort((a, b) => a.atMs - b.atMs);
+  // Sky cover is already in order -- `expandToHours` sorts every series it
+  // returns. Present weather is built here and still needs its own.
   weather.sort((a, b) => a.atMs - b.atMs);
 
-  return { cellId, skyCover, weather };
+  /*
+    Four series the page has never had, and one it will not draw yet. Each is
+    read on its own so that a cell quiet about the wind still answers about the
+    temperature: the alternative is the coupling ADR-0010 spent a decision
+    undoing, where the scarcest variable decided for the rest.
+  */
+  return {
+    cellId,
+    skyCover,
+    weather,
+    windMph: readOptionalSeries(properties, "windSpeed", cellId),
+    gustMph: readOptionalSeries(properties, "windGust", cellId),
+    windDirDegT: readOptionalSeries(properties, "windDirection", cellId),
+    airTempF: readOptionalSeries(properties, "temperature", cellId),
+    apparentTempF: readOptionalSeries(
+      properties,
+      "apparentTemperature",
+      cellId,
+    ),
+  };
 }
 
 /** The URL one cell's forecast is read from. */
