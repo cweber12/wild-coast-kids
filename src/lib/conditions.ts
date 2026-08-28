@@ -21,12 +21,13 @@ import {
   type ObservationStation,
 } from "./beaches";
 import { type Daylight, daylightOn, midpointOf } from "./daylight";
-import type { TideExtreme } from "./coops-predictions";
+import type { TideExtreme, TideHeight } from "./coops-predictions";
 import {
   addLocalDays,
   localDateOf,
   localDateLabel,
   localDayLabel,
+  localMidnightOf,
   localTimeOf,
 } from "./pacific-time";
 import { lowestLowBetween, lowestLowOn } from "./tide-day";
@@ -34,6 +35,7 @@ import type { MopWaveRow } from "./mop-forecast";
 import type { SkyCoverHour, WeatherHour } from "./nws-gridpoint";
 import {
   fetchGridForecast,
+  fetchHourlyTide,
   fetchLatestNdbcAir,
   fetchLatestObservation,
   fetchLatestWave,
@@ -240,23 +242,24 @@ type TideWindowRead =
     });
 
 /**
- * Bind the beach to its tide station and ask NOAA once for the shared window.
+ * The beach, its tide station and the words for having neither.
  *
- * Shared by the day read and the week read, and the sharing is the point rather
- * than a saving in lines: two callers computing their own ranges would be two
- * URLs, Next dedupes on the URL, and the page would reach NOAA twice per beach
- * where it reaches it once. Keeping the window in one function makes that
- * structural instead of a convention two call sites have to remember.
+ * Split out from `readTideWindow` when a third read arrived that wants the same
+ * station and a different interval. Which station a beach reads, and what it
+ * means when the join bound none, is one fact about the place — three reads
+ * deciding it separately is three chances to word the same absence three ways,
+ * which is the drift `ProvenanceLine` and `mopLine.ts` already record.
  *
  * Throws only when the slug is not in the inventory, which is a coding error
  * rather than a quiet feed. `caller` names which read asked, because by the
  * time this throws the stack is the least useful part of the message.
  */
-async function readTideWindow(
+function bindTideStation(
   slug: string,
-  nowMs: number,
   caller: string,
-): Promise<TideWindowRead> {
+):
+  | { kind: "no-station"; beachName: string; reason: string }
+  | { kind: "bound"; beach: Beach; stationId: string; binding: TideBinding } {
   const beach = beachBySlug(slug);
   if (!beach) {
     throw new Error(
@@ -275,17 +278,48 @@ async function readTideWindow(
     };
   }
 
-  const binding: TideBinding = {
-    beachName: beach.name,
-    station: {
-      name: station.name,
-      water: station.water,
-      distanceM: beach.tide_station_distance_m,
+  return {
+    kind: "bound",
+    beach,
+    stationId: station.id,
+    binding: {
+      beachName: beach.name,
+      station: {
+        name: station.name,
+        water: station.water,
+        distanceM: beach.tide_station_distance_m,
+      },
     },
   };
+}
+
+/**
+ * Bind the beach to its tide station and ask NOAA once for the shared window.
+ *
+ * Shared by the day read and the week read, and the sharing is the point rather
+ * than a saving in lines: two callers computing their own ranges would be two
+ * URLs, Next dedupes on the URL, and the page would reach NOAA twice per beach
+ * where it reaches it once. Keeping the window in one function makes that
+ * structural instead of a convention two call sites have to remember.
+ *
+ * The hourly read next door is the one exception, and it is not a leak:
+ * `interval` is part of the URL, so a height on every hour cannot come back in
+ * the same response as the turning points however the window is arranged.
+ *
+ * Throws only when the slug is not in the inventory.
+ */
+async function readTideWindow(
+  slug: string,
+  nowMs: number,
+  caller: string,
+): Promise<TideWindowRead> {
+  const bound = bindTideStation(slug, caller);
+  if (bound.kind === "no-station") return bound;
+
+  const { beach, binding } = bound;
 
   const result = await fetchTideExtremes({
-    stationId: station.id,
+    stationId: bound.stationId,
     ...predictionsWindow(nowMs),
   });
 
@@ -468,6 +502,118 @@ export async function readWeekOfLowestLows(
       state: lows === null ? { kind: "no-low" } : { kind: "reading", ...lows },
     };
   });
+
+  return { ...binding, state: { kind: "week", days } };
+}
+
+/**
+ * One day's worth of hourly tide heights, and what that day spans.
+ *
+ * **The window is carried rather than derived**, and that is what keeps a curve
+ * honest. A consumer handed only the hours would have to take the first and the
+ * last as the ends of the day, which stretches a series that starts at 3 AM
+ * across the whole width and draws a morning that was never predicted. It also
+ * cannot be recovered by adding 24 hours to midnight: twice a year on this
+ * coast a day is twenty-three hours or twenty-five.
+ */
+export interface TideHourlyDay extends WeekDayFrame {
+  /** Local midnight this day begins on, epoch milliseconds UTC. */
+  startMs: number;
+  /** Local midnight the next day begins on, which is this day's end. */
+  endMs: number;
+  /**
+   * Every predicted hour falling on this Pacific date, oldest first.
+   *
+   * **Empty is a real state and never a flat day.** The far end of the week can
+   * fall outside the window this page asks NOAA for, and a consumer must render
+   * that as a named absence rather than as a line at zero — a drawn zero is a
+   * stronger claim than a missing figure, because a curve says the sea did
+   * something rather than that we did not ask.
+   */
+  hours: readonly TideHeight[];
+}
+
+/**
+ * What a drawn week of tide needs. The same three states the week's figures
+ * carry, meaning the same things, for the reason `TideWeekView` gives: a
+ * station that cannot be reached is one fact about the feed and not seven facts
+ * about seven days.
+ */
+export interface TideHourlyView {
+  beachName: string;
+  /** null exactly when the state is `no-station`. */
+  station: { name: string; water: string; distanceM: number | null } | null;
+  state:
+    | { kind: "week"; days: TideHourlyDay[] }
+    | { kind: "no-station"; reason: string }
+    | { kind: "unavailable"; detail: string; drift: boolean };
+}
+
+/**
+ * Read a week of hourly tide heights for one beach, starting today.
+ *
+ * The shape a curve is drawn from, where `readWeekOfLowestLows` is the shape a
+ * figure is printed from. Both exist because they answer different questions:
+ * the figure a week cell leads with is a turning point, and reading it off this
+ * series would round 3:13 PM to 3:00 PM and 1.6 ft to whatever the hour
+ * happened to be. **ADR-0023's selected figure is untouched by this read** —
+ * the hours are what the figure is selected out of, and are drawn behind it.
+ *
+ * All seven days are returned whether or not the window reached them, following
+ * `readWeekOfLowestLows`: a short array would let a grid draw six columns and
+ * say nothing at all about the seventh.
+ *
+ * Throws only when the slug is not in the inventory.
+ */
+export async function readHourlyTide(
+  slug: string,
+  nowMs: number = Date.now(),
+): Promise<TideHourlyView> {
+  const bound = bindTideStation(slug, "readHourlyTide");
+
+  if (bound.kind === "no-station") {
+    return {
+      beachName: bound.beachName,
+      station: null,
+      state: { kind: "no-station", reason: bound.reason },
+    };
+  }
+
+  const { binding } = bound;
+
+  const result = await fetchHourlyTide({
+    stationId: bound.stationId,
+    ...predictionsWindow(nowMs),
+  });
+
+  if (result.kind === "unavailable") {
+    return {
+      ...binding,
+      state: {
+        kind: "unavailable",
+        detail: result.reason,
+        drift: result.drift,
+      },
+    };
+  }
+
+  // Bucketed by the Pacific date each hour falls on, not by position. The
+  // request is made in GMT dates and answered in GMT instants, so the first
+  // seven rows are not the first seven hours of any day on this page.
+  const byDate = new Map<string, TideHeight[]>();
+  for (const height of result.heights) {
+    const localDate = localDateOf(height.atMs);
+    const standing = byDate.get(localDate);
+    if (standing === undefined) byDate.set(localDate, [height]);
+    else standing.push(height);
+  }
+
+  const days: TideHourlyDay[] = weekOfDays(nowMs).map((frame) => ({
+    ...frame,
+    startMs: localMidnightOf(frame.localDate),
+    endMs: localMidnightOf(addLocalDays(frame.localDate, 1)),
+    hours: byDate.get(frame.localDate) ?? [],
+  }));
 
   return { ...binding, state: { kind: "week", days } };
 }

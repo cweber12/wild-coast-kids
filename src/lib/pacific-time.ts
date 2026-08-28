@@ -110,6 +110,71 @@ export function addLocalDays(localDate: string, days: number): string {
 }
 
 /**
+ * How far ahead of UTC `timeZone` was at an instant, in milliseconds.
+ *
+ * Negative on this coast: -7 hours in summer, -8 in winter. Read out of `Intl`
+ * rather than tabulated, for the reason this module exists at all — the
+ * daylight-saving rules are the part nobody should hand-roll.
+ *
+ * `hour12: false` yields "24" for midnight on some ICU versions rather than
+ * "00", which would put the offset a day out. The modulo is that guard and not
+ * a rounding.
+ */
+function zoneOffsetMs(atMs: number, timeZone: string): number {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: false,
+  }).formatToParts(new Date(atMs));
+
+  const field = (type: string): number =>
+    Number(parts.find((part) => part.type === type)!.value);
+
+  const asIfUtc = Date.UTC(
+    field("year"),
+    field("month") - 1,
+    field("day"),
+    field("hour") % 24,
+    field("minute"),
+    field("second"),
+  );
+  return asIfUtc - atMs;
+}
+
+/**
+ * The instant local midnight begins on `localDate`, epoch milliseconds UTC.
+ *
+ * What a day *spans* rather than what it is called, which is the question a
+ * plot of one day has to answer before it can put an hour anywhere. Adding
+ * 24 hours to it is wrong twice a year on this coast — the day the clocks go
+ * forward is twenty-three hours long and the day they go back is twenty-five —
+ * so the end of a day is the next day's midnight, taken from this function
+ * again, rather than a duration added to its start.
+ *
+ * TWO PASSES, and the second is not belt and braces. The offset has to be read
+ * at an instant, and the only instant available before the answer is known is
+ * the wall-clock fields read as UTC, which is seven or eight hours off. On a
+ * transition day the offset in force there can be the other one, so the first
+ * pass is corrected using the offset actually in force at the instant it
+ * produced. Local midnight itself always exists in this zone — the spring
+ * transition is at 2 AM — so two passes settle it.
+ */
+export function localMidnightOf(
+  localDate: string,
+  timeZone: string = SITE_TIME_ZONE,
+): number {
+  const [year, month, day] = partsOf(localDate);
+  const wall = Date.UTC(year, month - 1, day);
+  const approximate = wall - zoneOffsetMs(wall, timeZone);
+  return wall - zoneOffsetMs(approximate, timeZone);
+}
+
+/**
  * A local date named for a reader, as `Mon, Aug 17`.
  *
  * Formatted in UTC, which is the one zone that cannot move it. A date string
