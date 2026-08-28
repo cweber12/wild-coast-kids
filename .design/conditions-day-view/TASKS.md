@@ -42,7 +42,7 @@ stale in this repo before. Take the next free number when the file is written.
 The sparkline, end to end, on the row the page already has. Merges as a visible
 improvement on its own even if nothing after it is ever built.
 
-- [ ] **Hourly tide series.** Add the `interval=h` request contract to
+- [x] **Hourly tide series.** Add the `interval=h` request contract to
       `coops-predictions.ts` beside the existing `hilo` one, with its parser, and
       `readHourlyTide` in `lib/conditions.ts`. Capture a fixture from station
       9410230 into `src/lib/__fixtures__/` under the existing date-stamped naming.
@@ -54,7 +54,7 @@ improvement on its own even if nothing after it is ever built.
       `datum=MLLW`); the `{"error":...}` under HTTP 200 path still raises; a
       malformed row is drift and raises rather than being skipped.
 
-- [ ] **`DaySpark`.** The sparkline: a 24-hour path with night shaded, cloud
+- [x] **`DaySpark`.** The sparkline: a 24-hour path with night shaded, cloud
       washed across it, and the model's published points marked. Presentational
       and pure — it takes a series and renders it, so every branch is assertable
       without a network. Hand-rolled SVG, no dependency. _New component. Establishes
@@ -66,7 +66,7 @@ improvement on its own even if nothing after it is ever built.
       interpolated ones are not; an empty series renders a named absence, never a
       flat line at zero — a drawn zero is a stronger lie than a blank figure.
 
-- [ ] **The week grid gains a sparkline slot.** `WeekGrid` accepts a spark per
+- [x] **The week grid gains a sparkline slot.** `WeekGrid` accepts a spark per
       day; `WeekPanel` composes it from the hourly tide read alongside the
       daylight and sky reads it already makes. ADR-0023's header window and
       daylight-selected figure are untouched — the spark draws _behind_ the
@@ -78,7 +78,7 @@ improvement on its own even if nothing after it is ever built.
       spark and not the grid, matching the existing rule that columns come from
       the daylight read because it cannot fail.
 
-- [ ] **Measure the minimum useful width.** The brief's first open
+- [x] **Measure the minimum useful width.** The brief's first open
       `TODO(verify)`. A sparkline narrower than roughly one pixel per published
       point is noise, and the cell is 125px at 1280 and 161px at 1536. Measure on
       the rendered page, encode the threshold as a named constant with the
@@ -88,13 +88,13 @@ improvement on its own even if nothing after it is ever built.
       `main` first — a height regression is only this work's if the base branch did
       not already have it.
 
-- [ ] **ADR: the chart carries no dependency.** `DaySpark` is the first
+- [x] **ADR: the chart carries no dependency.** `DaySpark` is the first
       hand-rolled SVG in the repo, so the decision is due now rather than at the
       chart. Context: three runtime dependencies, guarded; the largest series here
       is 196 points; the plot must render server-side. _One page. Flagged per
       CLAUDE.md's rule that a new library is an architecture decision._
 
-- [ ] **Coverage floor.** Re-run `npm run test:coverage` and move the three
+- [x] **Coverage floor.** Re-run `npm run test:coverage` and move the three
       thresholds in `vitest.config.mts` to the new figures, with a dated comment
       saying which files moved them and why — the convention that file already
       follows at length.

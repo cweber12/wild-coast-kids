@@ -268,6 +268,60 @@ and empty, so ADR-0020 stands unchanged.
 **The committed gridpoint fixture is trimmed to four keys** and cannot exercise
 the new series. #172 has to capture a new one.
 
+## Addendum, 2026-08-28: what #171 measured
+
+Dated rather than woven in, per this repo's rule that a plan in flight gains
+addenda and never has its history rewritten. Nothing below reverses a decision
+above; two open questions are answered and one parameter moved.
+
+**The brief's first `TODO(verify)` is answered: the floor is 110px.** The brief
+guessed a sparkline stops working "narrower than roughly one pixel per published
+point", which at 24 hourly points is 24px. That guess is about the curve and the
+answer is about the layers. Rendering the shipped markup down a ladder of widths
+on the built page: at 197, 169 and 133px everything reads; at 110px the night
+bands are still separable from the cloud wash; at 88px the curve survives and
+the bands merge; at 72px the second dip is gone; 56px is noise. What fails first
+is being able to see that the dip is _inside_ the night band — which is the
+whole figure ADR-0023 dropped — so the floor is where the shading stops reading,
+not where the line does.
+
+**It does not bind.** The narrowest cell this grid renders is 158.8px of block
+holding a 132.8px shape, at exactly 1280 where seven columns begin. Measured,
+and asserted, because ADR-0023 already had to move seven columns from `lg` to
+`xl` once when 88px of content proved narrower than the text in it.
+
+**The threshold is a container query, not a constant.** A viewport media query
+cannot express it: this grid is one, two, four and seven columns, so a 1024
+window gives a _wider_ cell than a 1280 one. `@container` on the day block and
+`@max-[134px]:hidden` on the shape. Three things hold it together because none
+is sufficient — a test pins the literal Tailwind needs written out, a test pins
+that the grid clears the floor, and an `AT_RULES` row in the stylesheet gate
+proves the class compiled, since an unregistered variant leaves the class in the
+markup where jsdom still finds it and the rule never fires at any width the grid
+has anyway.
+
+**The shape is 8:1, not 5:1, after review.** At 5:1 it rendered 34px and read as
+a second chart above the figures — which, with #172's day chart coming below the
+grid, is the duplication principle 1 exists to prevent. This was raised on the
+rendered artifact, which is why #171 is `needs-human`. At 8:1 it renders 21px
+and reads as an annotation on the row. The grid goes 288 to 275 at 1536 and 1926
+to 1753 at 375, against a `main` baseline of 245.8 measured first so the height
+is not misattributed. The cost is vertical resolution — 24 user units of swing
+where there were 42 — and it is the trade rather than an oversight: what a
+reader takes from seven of these is which day is calmer and whether the dip is
+at night.
+
+**One brief figure did not survive checking.** The brief says four interactive
+components in `src/` each ship a `noscript` equivalent. The repo has one,
+`BeachSelector`. ADR-0025 says one.
+
+**Two things #172 inherits.** The published-point marks are invisible at this
+size and correctly so: 24 hourly marks at about 1px radius read as a slight
+thickening of the line. The mechanism starts earning its keep at the swell's
+3-hourly cadence, eight marks a day, which is #172's to judge. And `SkyWeekDay`
+now carries the whole day's hours beside its daylight `thirds`, which is the
+read ADR-0024's successor will want.
+
 ## Out of scope
 
 The sighting layer (#121). Visibility, in any form. A rain tab. A
