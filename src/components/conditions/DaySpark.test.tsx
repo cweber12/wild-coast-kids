@@ -118,7 +118,7 @@ describe("the series", () => {
       <DaySpark {...PROPS} lowValue={3} highValue={3} points={FLAT_DAY} />,
     );
 
-    expect(pathPoints(container).every(([, y]) => y === 24)).toBe(true);
+    expect(pathPoints(container).every(([, y]) => y === 15)).toBe(true);
   });
 });
 

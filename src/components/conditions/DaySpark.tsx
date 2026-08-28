@@ -110,13 +110,31 @@ export type DaySparkProps = {
 };
 
 /**
- * The drawing space, in user units. 5:1, which puts the rendered height between
- * 25px in the narrowest cell the grid has (125px at 1280) and 44px at 1024's
- * four columns. Uniform scaling, so a mark stays a circle and the shape is
- * never stretched to fit a column width.
+ * The drawing space, in user units. Uniform scaling, so a mark stays a circle
+ * and the shape is never stretched to fit a column width.
+ *
+ * **8:1, and it was 5:1 for one review.** At 5:1 the shape rendered 34px tall
+ * in the review viewport and read as a second chart sitting above the figures
+ * -- which, with a full day chart coming below the grid, is a duplication the
+ * brief's first principle exists to avoid. 8:1 renders 21px there and reads as
+ * an annotation on the row instead: the same information, at the weight a
+ * sparkline is supposed to carry. Measured 2026-08-28 against the built page:
+ *
+ * | viewport | cell | shape        | grid height |
+ * | -------- | ---- | ------------ | ----------- |
+ * | 1536     | 168  | 169 x 21.2   | 275.0       |
+ * | 1280     | 132  | 133 x 16.6   | 270.4       |
+ * | 1024     | 196  | 197 x 24.6   | 568.9       |
+ * | 375      | 300  | 301 x 37.6   | 1753.1      |
+ *
+ * The vertical range costs real resolution -- 24 user units of swing where
+ * there were 42 -- and that is the trade, not an oversight. What a reader takes
+ * from seven of these is which day is calmer and whether the dip is at night,
+ * and both survive at this height. Reading a value off one was never possible
+ * and is the day chart's job.
  */
 const WIDTH = 240;
-const HEIGHT = 48;
+const HEIGHT = 30;
 
 /**
  * Kept clear at the top and bottom, so the day's own extremes are inside the
@@ -127,6 +145,37 @@ const PAD = 3;
 
 /** One hour, which is how wide a cloud hour's wash is drawn. */
 const HOUR_MS = 3_600_000;
+
+/**
+ * Narrower than this and the shape stops being a shape.
+ *
+ * **Measured on the built page 2026-08-28**, rendering the shipped markup at a
+ * ladder of widths. What has to survive is not the curve -- that reads a long
+ * way down -- but the *layers*: a reader has to be able to see that the dip is
+ * inside the night band, because that is the figure ADR-0023 dropped and this
+ * is what carries it.
+ *
+ * | width | px/hour | what survives                                    |
+ * | ----- | ------- | ------------------------------------------------ |
+ * | 197   | 8.2     | everything, cloud steps individually separable   |
+ * | 169   | 7.0     | everything                                       |
+ * | 133   | 5.5     | everything; both dips and both night bands clear |
+ * | 110   | 4.6     | night bands still separable from the cloud wash  |
+ * | 88    | 3.7     | curve survives, layers do not -- the bands merge |
+ * | 72    | 3.0     | one bump; the second dip is gone                 |
+ * | 56    | 2.3     | noise                                            |
+ *
+ * So 110, which is the last row where the shading still reads. The brief
+ * guessed the floor would be about one pixel per published point; at 24 hourly
+ * points that would be 24px, and the measurement says the layers fail at four
+ * times that. The guess was about the curve and the answer is about the bands.
+ *
+ * **It does not bind today**, and that is a measurement rather than a hope: the
+ * narrowest cell this grid renders is 133px, at exactly 1280 where seven
+ * columns begin. `WeekGrid` carries that figure and the rule that enforces
+ * this, because the breakpoints that could invalidate it are its.
+ */
+export const MIN_USEFUL_SPARK_WIDTH_PX = 110;
 
 /**
  * Cloud opacity, floored.

@@ -65,6 +65,10 @@ export const AT_RULES = [
     prelude: "@media (min-width:64rem) and (min-height:39rem)",
     why: "the `stops` variant gates the landing page's one-screen layout on it; 39rem is the trimmed height a stop needs plus the nav, and it has to stay under the 640px ceiling a 125%-scaled 1080p display imposes — see docs/plans/stop-height-threshold.md",
   },
+  {
+    prelude: "@container not (min-width:134px)",
+    why: "WeekGrid drops the day shape below the width it stops reading at, measured on the built page at 110px of shape plus the 24px of padding around it — the border is outside it because a container query resolves against the content box. The class name stays in the markup whether or not Tailwind registered the container variant, so jsdom cannot see this fail and only the emitted at-rule proves the rule exists. It does not fire today — the narrowest cell the grid renders is 158.8px -- which is exactly why nothing else would notice it going missing",
+  },
 ];
 
 /** Utilities that must appear *and* emit at least one declaration. */

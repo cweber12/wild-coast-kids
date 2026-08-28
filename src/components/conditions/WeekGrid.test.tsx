@@ -1,7 +1,13 @@
 import { expect, test } from "vitest";
 import { render, screen } from "@testing-library/react";
 import { REGION_HEADING } from "./headingRank";
-import { WeekGrid, type WeekDay, type WeekRow } from "./WeekGrid";
+import {
+  MIN_SPARK_BLOCK_PX,
+  NARROWEST_CELL_CLEARS_FLOOR,
+  WeekGrid,
+  type WeekDay,
+  type WeekRow,
+} from "./WeekGrid";
 
 const DAYS: WeekDay[] = [
   {
@@ -631,4 +637,31 @@ test("a day given no shape renders the cell it rendered before there were any", 
   const day = container.querySelector("ol > li")!;
   expect(day.children).toHaveLength(2);
   expect(day.children[1].tagName).toBe("DL");
+});
+
+/* =========================================================================
+ * The width the shape stops reading at
+ * ========================================================================= */
+
+test("the container threshold in the markup is the measured floor plus the cell's chrome", () => {
+  // Tailwind scans source text, so the class carries the literal `137` and
+  // cannot read this constant. This assertion is the other half of that pair:
+  // change the measured floor or the wrapper's padding and it fails here, naming
+  // the number the class has to become. The `stylesheet` gate asserts the other
+  // direction -- that the class compiled to a real rule rather than to nothing.
+  expect(MIN_SPARK_BLOCK_PX).toBe(134);
+});
+
+test("the narrowest cell this grid renders still clears the floor", () => {
+  // Measured on the built page: 158.8px of block at 1280, where `xl` turns
+  // four columns into seven, holding a 132.8px shape against a 110px floor. So
+  // the rule above never fires today.
+  //
+  // It is asserted rather than assumed because the breakpoints that decide it
+  // are twenty lines from the constant, and they have been wrong this way
+  // before: ADR-0023 moved seven columns from `lg` to `xl` because 88px of
+  // content at 1024 was narrower than the text standing in it. If that ever
+  // reverses, this fails and the shape silently disappearing becomes a
+  // decision somebody makes rather than one they discover.
+  expect(NARROWEST_CELL_CLEARS_FLOOR).toBe(true);
 });
