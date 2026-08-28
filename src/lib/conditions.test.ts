@@ -1068,12 +1068,17 @@ test("a day's figure is the mean of its daylight hours, not of the whole day", a
 
   expect(view.state.kind).toBe("week");
   if (view.state.kind !== "week") throw new Error("expected a week");
-  expect(view.state.days[0].cloudPercent).toBe(50);
+  // 08:00 and 16:00 Pacific are the two daylight steps, and they fall in the
+  // first and last thirds of a 6:20-to-7:25 window. The middle third has no
+  // step, which is a null rather than a zero.
+  expect(view.state.days[0].thirds).toEqual({ am: 20, mid: null, eve: 80 });
 });
 
-test("the mean is not the cloudiest step, which is what ADR-0017 would have taken", async () => {
-  // Measured at SGX/54,21 for 2026-08-30: daylight steps spanning 21 to 62,
-  // mean 39. An extreme-selecting row would publish 62 for this day.
+test("each third is a mean of its own hours, not the cloudiest of them", async () => {
+  // Measured at SGX/54,21 for 2026-08-30: daylight steps spanning 21 to 62.
+  // ADR-0017 selects extremes for reachability, and this row does not, for the
+  // reason `SkyWeekDay` records -- the daylight window is the trip, so there
+  // are no unreachable hours to route around.
   gridOk([
     { atMs: hourUtc(17, 14), percent: 21 },
     { atMs: hourUtc(17, 17), percent: 34 },
@@ -1084,8 +1089,9 @@ test("the mean is not the cloudiest step, which is what ADR-0017 would have take
   const view = await readSkyWeek(BEACH, NOON_PACIFIC_20260817);
   if (view.state.kind !== "week") throw new Error("expected a week");
 
-  expect(view.state.days[0].cloudPercent).toBe(39);
-  expect(view.state.days[0].cloudPercent).not.toBe(62);
+  // 07:00 and 10:00 Pacific share the first third and average to 28; 13:00 is
+  // the middle third alone and 16:00 the last.
+  expect(view.state.days[0].thirds).toEqual({ am: 28, mid: 39, eve: 62 });
 });
 
 test("a day with fog in its daylight carries the phenomenon", async () => {
@@ -1164,7 +1170,7 @@ test("two phenomena on one day are grouped, not overwritten", async () => {
   const view = await readSkyWeek(BEACH, NOON_PACIFIC_20260817);
   if (view.state.kind !== "week") throw new Error("expected a week");
 
-  expect(view.state.days[0].cloudPercent).toBe(50);
+  expect(view.state.days[0].thirds.am).toBe(40);
   // The first of the daylight window, which is the one a parent plans around.
   expect(view.state.days[0].phenomenon?.weather).toBe("fog");
 });

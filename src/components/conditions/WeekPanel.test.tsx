@@ -59,7 +59,10 @@ const CELL = { id: "SGX/54,21", elevationM: 0 };
 function skyWeek(
   days: {
     index: number;
-    cloudPercent: number;
+    /** The day's three thirds. A single number fills all three, for the cases
+     *  that are not about the shape of the day. */
+    cloud:
+      number | { am: number | null; mid: number | null; eve: number | null };
     phenomenon?: { weather: string; coverage: string | null };
   }[],
   cell = CELL,
@@ -69,9 +72,12 @@ function skyWeek(
     cell,
     state: {
       kind: "week",
-      days: days.map(({ index, cloudPercent, phenomenon = null }) => ({
+      days: days.map(({ index, cloud, phenomenon = null }) => ({
         ...DATES[index],
-        cloudPercent,
+        thirds:
+          typeof cloud === "number"
+            ? { am: cloud, mid: cloud, eve: cloud }
+            : cloud,
         phenomenon,
       })),
     },
@@ -103,6 +109,18 @@ function waveWeek(
   };
 }
 
+/**
+ * Every day's daylight window, found by the name only a screen reader hears.
+ *
+ * Daylight is the day's header rather than a `<dt>` label now, so counting
+ * `cellLabels` no longer finds it. The `aria-label` is the thing under test
+ * anyway: the visible line is two clock times and the word is what a reader
+ * who cannot see the sun mark is given.
+ */
+function daylightWindows() {
+  return screen.getAllByLabelText(/^Daylight, /);
+}
+
 /** Daylight always answers, which is what the panel leans on for its columns. */
 function daylightWeek() {
   return {
@@ -121,10 +139,10 @@ beforeEach(() => {
   readSkyWeek.mockReset();
   readSkyWeek.mockResolvedValue(
     skyWeek([
-      { index: 0, cloudPercent: 44 },
+      { index: 0, cloud: 44 },
       {
         index: 1,
-        cloudPercent: 67,
+        cloud: 67,
         phenomenon: { weather: "fog", coverage: "patchy" },
       },
     ]),
@@ -155,10 +173,12 @@ test("asks for the slug it was given and renders both live rows", async () => {
   expect(readDaylightWeek).toHaveBeenCalledWith("la-jolla-shores-beach");
   expect(screen.getByText("7:10 AM")).toBeDefined();
   expect(screen.getByText("-0.4 ft")).toBeDefined();
-  expect(screen.getByText("to 7:32 PM")).toBeDefined();
+  expect(daylightWindows()[0].getAttribute("aria-label")).toBe(
+    "Daylight, 6:14 AM to 7:32 PM",
+  );
   // Each row's own label, which is what stops a glyph carrying the meaning.
-  expect(countOf(cellLabels(container), "Lowest daylight tide")).toBe(2);
-  expect(screen.getAllByText("Daylight")).toHaveLength(2);
+  expect(countOf(cellLabels(container), "Low tide")).toBe(2);
+  expect(daylightWindows()).toHaveLength(2);
 });
 
 test("the forecasts that are not built yet are named, and waves are no longer among them", async () => {
@@ -193,8 +213,10 @@ test("the gridded row is live, and the slot that promised it is gone", async () 
   render(await WeekPanel({ slug: "la-jolla-shores-beach" }));
 
   expect(readSkyWeek).toHaveBeenCalledWith("la-jolla-shores-beach");
-  expect(screen.getAllByText("Cloud by day").length).toBeGreaterThan(0);
-  expect(screen.getByText("44%")).toBeDefined();
+  expect(screen.getAllByText("Cloud cover").length).toBeGreaterThan(0);
+  // Three figures, not one: the fixture gives this day 44% in all three
+  // thirds, so the row rendering the day's shape prints it three times.
+  expect(screen.getAllByText("44%")).toHaveLength(3);
   expect(screen.queryByText(/A gridded forecast is coming/i)).toBeNull();
   expect(
     screen.queryByText(/grid cell, instead of the nearest airport/i),
@@ -221,7 +243,7 @@ test("a beach with no forecast cell says so, rather than dropping the row silent
   render(await WeekPanel({ slug: "la-jolla-shores-beach" }));
 
   expect(screen.getByText(/no cloud forecast for this beach/i)).toBeDefined();
-  expect(screen.queryByText("Cloud by day")).toBeNull();
+  expect(screen.queryByText("Cloud cover")).toBeNull();
 });
 
 test("an outage at the National Weather Service says so, and names the reason", async () => {
@@ -283,7 +305,7 @@ test("a bluff cell says the square covers the cliff as well as the shore", async
     state: { kind: "week", days: [tideDay(0, "6:41 PM", 0.9)] },
   });
   readSkyWeek.mockResolvedValue(
-    skyWeek([{ index: 0, cloudPercent: 44 }], {
+    skyWeek([{ index: 0, cloud: 44 }], {
       id: "SGX/55,22",
       elevationM: 117.0432,
     }),
@@ -326,8 +348,8 @@ test("a NOAA outage costs the tide row, not the whole grid", async () => {
   // The reason the columns come from the daylight read: it is computed here and
   // cannot fail, so the week still stands and still answers a question.
   expect(screen.getByText("Tue, Aug 18")).toBeDefined();
-  expect(screen.getAllByText("Daylight")).toHaveLength(2);
-  expect(screen.queryByText("Lowest daylight tide")).toBeNull();
+  expect(daylightWindows()).toHaveLength(2);
+  expect(screen.queryByText("Low tide")).toBeNull();
 });
 
 test("a beach with no station keeps its daylight, and does not read as an outage", async () => {
@@ -343,7 +365,7 @@ test("a beach with no station keeps its daylight, and does not read as an outage
   expect(screen.queryByText(/try again/i)).toBeNull();
   // A permanent fact about the place takes the tide row and nothing else: the
   // sun still rises there.
-  expect(screen.getAllByText("Daylight")).toHaveLength(2);
+  expect(daylightWindows()).toHaveLength(2);
 });
 
 test("a failure to resolve the beach is not swallowed into a rendered nothing", async () => {
@@ -362,6 +384,11 @@ test("a failure to resolve the beach is not swallowed into a rendered nothing", 
  * it: rows in this grid carry no glyph at all -- a full-colour emoji at 10px is
  * a smudge rather than a mark -- and the only glyph left in this band belongs
  * to the one slot still reserved.
+ *
+ * The day headers now carry a decorative sun, which is why this counts *text*
+ * rather than every `aria-hidden` node. That mark is a stroked SVG on
+ * `currentColor` and contributes no characters, so it cannot be the smudge the
+ * rule is about; the assertion below is that it stays that way.
  */
 test("the filled row brings no glyph, and only the reserved slot still has one", async () => {
   readWeekOfLowestLows.mockResolvedValue({
@@ -374,10 +401,17 @@ test("the filled row brings no glyph, and only the reserved slot still has one",
     await WeekPanel({ slug: "la-jolla-shores-beach" }),
   );
 
-  const glyphs = [...container.querySelectorAll('[aria-hidden="true"]')].map(
-    (node) => node.textContent,
-  );
+  const glyphs = [...container.querySelectorAll('[aria-hidden="true"]')]
+    .map((node) => node.textContent)
+    .filter((text) => text !== "");
   expect(glyphs).toEqual(["🏖️"]);
+
+  // The header's mark draws rather than spells, so a day block contributes no
+  // glyph text of its own.
+  const day = container.querySelector("ol > li");
+  expect(day?.querySelector("svg")?.getAttribute("stroke")).toBe(
+    "currentColor",
+  );
 });
 
 /* =========================================================================
@@ -414,7 +448,7 @@ test("the row's label names the statistic, so the maximum is not hidden", async 
     await WeekPanel({ slug: "la-jolla-shores-beach" }),
   );
 
-  expect(countOf(cellLabels(container), "Biggest daylight swell")).toBe(2);
+  expect(countOf(cellLabels(container), "Biggest swell")).toBe(2);
 });
 
 test("the wave row is attributed once, beneath the grid, not seven times", async () => {
@@ -438,7 +472,7 @@ test("the wave row is attributed once, beneath the grid, not seven times", async
     "a model of the swell at 10 m depth, not a measurement",
   );
   // Labelled, because the grid may carry more than one of these.
-  expect(attributions[0].textContent).toContain("Biggest daylight swell");
+  expect(attributions[0].textContent).toContain("Biggest swell");
 });
 
 test("the row goes ragged where the forecast stops, rather than blank", async () => {
@@ -456,8 +490,8 @@ test("the row goes ragged where the forecast stops, rather than blank", async ()
 
   // One cell, one label. A label over a gap would read as an instrument that
   // failed rather than as a forecast that does not reach that far.
-  expect(countOf(cellLabels(container), "Biggest daylight swell")).toBe(1);
-  expect(countOf(cellLabels(container), "Daylight")).toBe(2);
+  expect(countOf(cellLabels(container), "Biggest swell")).toBe(1);
+  expect(daylightWindows()).toHaveLength(2);
 });
 
 test("a beach with no MOP line says so, and keeps the rest of the grid", async () => {
@@ -479,9 +513,9 @@ test("a beach with no MOP line says so, and keeps the rest of the grid", async (
   render(await WeekPanel({ slug: "mission-bay" }));
 
   expect(screen.getByText(/no wave forecast for this beach/i)).toBeDefined();
-  expect(screen.queryByText("Biggest daylight swell")).toBeNull();
+  expect(screen.queryByText("Biggest swell")).toBeNull();
   expect(screen.queryByText(/MOP line/)).toBeNull();
-  expect(screen.getAllByText("Daylight")).toHaveLength(2);
+  expect(daylightWindows()).toHaveLength(2);
 });
 
 test("a CDIP outage costs the wave row and nothing else", async () => {
@@ -509,9 +543,9 @@ test("a CDIP outage costs the wave row and nothing else", async () => {
   // Said in full here rather than pointed at a card, because CDIP is read here
   // and nowhere else on the page.
   expect(screen.getByText(/HTTP 503 for MOP line D0498/)).toBeDefined();
-  expect(screen.queryByText("Biggest daylight swell")).toBeNull();
-  expect(countOf(cellLabels(container), "Lowest daylight tide")).toBe(2);
-  expect(screen.getAllByText("Daylight")).toHaveLength(2);
+  expect(screen.queryByText("Biggest swell")).toBeNull();
+  expect(countOf(cellLabels(container), "Low tide")).toBe(2);
+  expect(daylightWindows()).toHaveLength(2);
 });
 
 test("a drifted CDIP payload says the bug is here, not at the model", async () => {
@@ -552,14 +586,15 @@ test("NOAA going quiet does not take the wave row with it", async () => {
     await WeekPanel({ slug: "la-jolla-shores-beach" }),
   );
 
-  expect(screen.queryByText("Lowest daylight tide")).toBeNull();
-  expect(countOf(cellLabels(container), "Biggest daylight swell")).toBe(2);
+  expect(screen.queryByText("Low tide")).toBeNull();
+  expect(countOf(cellLabels(container), "Biggest swell")).toBe(2);
 });
 
-test("the wave row sits under daylight, not between it and the tide", async () => {
-  // `DaylightWeek` is there to make the tide row mean something -- a lowest low
-  // at 2:23 is a different trip depending on AM or PM -- so a third product
-  // between them would take away the thing it is for.
+test("the rows run tide, swell, cloud, inside the window the header states", async () => {
+  // Daylight is no longer among them. It was between the tide and the swell so
+  // that a reader could tell a 2:23 AM low from a 2:23 PM one; the header does
+  // that for all three rows at once now, which is what lets these labels drop
+  // the word.
   readWeekOfLowestLows.mockResolvedValue({
     ...BINDING,
     state: { kind: "week", days: [tideDay(0, "6:41 PM", 0.9)] },
@@ -573,14 +608,9 @@ test("the wave row sits under daylight, not between it and the tide", async () =
     (node) => node.textContent,
   );
   // Cloud last, and last for a reason: it is the only row with no time in it,
-  // so a reader scanning a column reads three "when"s and then the one figure
+  // so a reader scanning a column reads two "when"s and then the one figure
   // about the whole day.
-  expect(labels).toEqual([
-    "Lowest daylight tide",
-    "Daylight",
-    "Biggest daylight swell",
-    "Cloud by day",
-  ]);
+  expect(labels).toEqual(["Low tide", "Biggest swell", "Cloud cover"]);
 });
 
 test("a line with no recorded distance is still named, without one", async () => {
@@ -603,4 +633,54 @@ test("a line with no recorded distance is still named, without one", async () =>
     "CDIP, Scripps Institution of Oceanography",
   );
   expect(line.textContent).not.toContain("km from this beach");
+});
+
+/**
+ * ADR-0023 dropped the day's own extremes from the week's cells, and this
+ * sentence is the condition it was allowed under. Without it a reader who saw a
+ * -0.2 ft at 3:38 AM last week finds it gone with nothing to explain the
+ * change -- the silent failure this repo is built to avoid.
+ *
+ * Asserted here rather than in `WeekGrid`, because the grid prints whatever
+ * notes it is handed and the decision to hand it this one is the panel's.
+ */
+test("the week says it shows only the daylight window, once", async () => {
+  readWeekOfLowestLows.mockResolvedValue({
+    ...BINDING,
+    state: { kind: "week", days: [tideDay(0, "6:41 PM", 0.9)] },
+  });
+
+  render(await WeekPanel({ slug: "la-jolla-shores-beach" }));
+
+  expect(
+    screen.getAllByText(/shows what falls between sunrise and sunset/i),
+  ).toHaveLength(1);
+  // And says where the missing figure went, rather than only that it is gone.
+  expect(screen.getByText(/today's are on the cards above/i)).toBeDefined();
+});
+
+test("the scope sentence stands whether or not a feed also failed", async () => {
+  // It qualifies every figure in the grid rather than reporting one feed's
+  // trouble, so an outage must not displace it -- and it leads, because a
+  // reader hits it before the figures it qualifies.
+  readWeekOfLowestLows.mockResolvedValue({
+    ...BINDING,
+    state: {
+      kind: "unavailable",
+      detail: "NOAA returned HTTP 503.",
+      drift: false,
+    },
+  });
+
+  const { container } = render(
+    await WeekPanel({ slug: "la-jolla-shores-beach" }),
+  );
+
+  const notes = [...container.querySelectorAll("section > p")].map(
+    (node) => node.textContent,
+  );
+  expect(notes[0]).toMatch(/shows what falls between sunrise and sunset/i);
+  expect(
+    notes.some((note) => /could not get this week/i.test(note ?? "")),
+  ).toBe(true);
 });

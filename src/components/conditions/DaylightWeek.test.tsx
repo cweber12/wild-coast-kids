@@ -3,14 +3,14 @@ import { render, screen } from "@testing-library/react";
 import { DaylightWeek } from "./DaylightWeek";
 
 test("names both ends of the day rather than its length", () => {
-  render(
+  const { container } = render(
     <DaylightWeek day={{ sunriseLabel: "6:14 AM", sunsetLabel: "7:32 PM" }} />,
   );
 
   // A duration would be the same information arranged so nobody can use it:
   // the reader is deciding when to leave the house.
-  expect(screen.getByText("6:14 AM")).toBeDefined();
-  expect(screen.getByText("to 7:32 PM")).toBeDefined();
+  expect(container.textContent).toContain("6:14 AM");
+  expect(container.textContent).toContain("7:32 PM");
 });
 
 test("sunrise leads, and sunset follows it in reading order", () => {
@@ -22,39 +22,72 @@ test("sunrise leads, and sunset follows it in reading order", () => {
 });
 
 /**
- * Regression. The two clock times were set on one line, which fitted six days
- * of the week and wrapped on the seventh, taking that column's rows out of line
- * with its neighbours. Breaking them deliberately fixed the grid and, on the
- * first attempt, silently joined the words: two `block` spans with no text node
- * between them read aloud as "6:48 AMto 4:47 PM". A line break a reader can see
- * must not become a word break a reader can hear.
+ * Regression. The two clock times were once set on two lines because at 13px
+ * they did not fit the 88px cell seven columns gave them at 1024. Both halves
+ * of that are gone -- the line is 11px and seven columns start at `xl` -- so a
+ * `block` here would be reintroducing a break nothing is asking for, and it
+ * would cost the height on every one of the seven days.
  */
-test("breaking the line does not join the words", () => {
+test("the window sets on one line, at every width", () => {
   const { container } = render(
     <DaylightWeek day={{ sunriseLabel: "6:48 AM", sunsetLabel: "4:47 PM" }} />,
   );
 
-  expect(container.textContent).toContain("6:48 AM to 4:47 PM");
+  const classes = [...container.querySelectorAll("span")].flatMap((span) =>
+    span.className.split(/\s+/),
+  );
+  expect(classes).not.toContain("block");
+  expect(classes).not.toContain("lg:block");
+  expect(classes).toContain("whitespace-nowrap");
+});
+
+/**
+ * Regression, and it outlived the break that caused it. Two `block` spans with
+ * no text node between them read aloud as "6:48 AMto 4:47 PM" -- the
+ * concatenation `ReadingCard` records hitting in the accessible-name
+ * algorithm. The `aria-label` below is the primary name now, but the fallback
+ * must still be a sentence.
+ */
+test("the visible text does not join the words", () => {
+  const { container } = render(
+    <DaylightWeek day={{ sunriseLabel: "6:48 AM", sunsetLabel: "4:47 PM" }} />,
+  );
+
   expect(container.textContent).not.toContain("AMto");
 });
 
 /**
- * Regression. The two lines exist so that seven columns line up across each
- * other at `lg`. Below `lg` the grid is one column and a day is a full-width
- * row, where nothing was wrapping and there is no neighbour to align with — so
- * the break there was pure cost: 35px per day, seven days, 242px of extra
- * scroll on a phone. Measured 968px to 1210px at 375 before this was scoped.
+ * The word "Daylight" is not printed -- it would not fit beside the times in a
+ * 125px cell -- so the line has to carry it some other way. `role="img"` with
+ * an `aria-label` is how `Placeholder` already names a thing whose visible
+ * content is not its name; a `title` tooltip was rejected because it does not
+ * appear on touch and is not keyboard-reachable.
  */
-test("the deliberate line break applies only where there are columns", () => {
-  const { container } = render(
-    <DaylightWeek day={{ sunriseLabel: "6:48 AM", sunsetLabel: "4:47 PM" }} />,
+test("a reader who cannot see the mark is still told what the window is", () => {
+  render(
+    <DaylightWeek day={{ sunriseLabel: "6:20 AM", sunsetLabel: "7:20 PM" }} />,
   );
 
-  const spans = [...container.querySelectorAll("span")];
-  expect(spans.length).toBe(2);
-  for (const span of spans) {
-    expect(span.className).toContain("lg:block");
-    // Inline below lg, so the two times sit on one line on a phone.
-    expect(span.className.split(/\s+/)).not.toContain("block");
-  }
+  expect(screen.getByRole("img").getAttribute("aria-label")).toBe(
+    "Daylight, 6:20 AM to 7:20 PM",
+  );
+});
+
+/**
+ * ADR-0015: a full-colour emoji at this size is a smudge rather than a mark,
+ * which is why no row in this grid carries one. A stroked SVG on
+ * `currentColor` is the thing that does work here, and it must stay decorative
+ * -- the `aria-label` above is the whole accessible name, and a second one
+ * inside it would be read twice.
+ */
+test("the sun is an SVG on currentColor, and it is decorative", () => {
+  const { container } = render(
+    <DaylightWeek day={{ sunriseLabel: "6:20 AM", sunsetLabel: "7:20 PM" }} />,
+  );
+
+  const svg = container.querySelector("svg");
+  expect(svg).not.toBeNull();
+  expect(svg?.getAttribute("stroke")).toBe("currentColor");
+  expect(svg?.getAttribute("aria-hidden")).toBe("true");
+  expect(container.textContent).not.toMatch(/[☀-➿]/);
 });

@@ -60,12 +60,12 @@ const NOTES = [
   {
     term: "Daylight first",
     detail:
-      "The tide and swell figures lead with the lowest and biggest that fall between " +
-      "sunrise and sunset, because those are the ones you can be there for. The day's own " +
-      "lowest and biggest sit beneath them, marked “all day” — on this coast they " +
-      "are usually in the small hours, which is why they are not what leads. Sunrise and " +
-      "sunset are computed for this beach; nothing here is a judgement about when you " +
-      "should go.",
+      "Every figure in the week is the lowest or biggest that falls between sunrise and " +
+      "sunset, which is why each day opens with the window itself. On this coast the " +
+      "day's own lowest tide and biggest swell are usually in the small hours — real, " +
+      "and not something you can plan a morning around — so the week leaves them out. " +
+      "Today's are on the cards above, marked “all day”. Sunrise and sunset are computed " +
+      "for this beach; nothing here is a judgement about when you should go.",
   },
   {
     term: "Wave heights",
@@ -81,18 +81,23 @@ const NOTES = [
       "Scripps Institution of Oceanography, computes it at 10 m depth close to this shore " +
       "from the directional spectra real buoys report and the way the islands shelter and " +
       "bend the swell on its way in. It steps every three hours, so the time shown is the " +
-      "three-hour step that carried the day's biggest swell rather than a peak located to " +
-      "the minute — unlike a tide time, which is a turning point. So a beach page carries " +
+      "three-hour step that carried the biggest swell of the daylight window rather than a " +
+      "peak located to the minute — unlike a tide time, which is a turning point. So a " +
+      "beach page carries " +
       "two wave numbers: one an instrument measured out at sea, one a model computed near " +
       "the sand. The lines naming each source say which is which.",
   },
   {
-    term: "Cloud by day",
+    term: "Cloud cover",
     detail:
       "A forecast for this beach's own square of the National Weather Service's map, about " +
-      "2.5 km across, rather than a reading taken anywhere. It averages the forecast hours " +
-      "between sunrise and sunset, so it describes the day you would be there rather than " +
-      "the cloudiest hour of it, and it names fog on the days fog is expected. There is no " +
+      "2.5 km across, rather than a reading taken anywhere. Unlike the tide and swell beside " +
+      "it, these are averages rather than extremes: the daylight window is split in three and " +
+      "each figure means the forecast hours in its own third, so the row describes the shape " +
+      "of the day rather than the cloudiest hour of it. On this coast that shape is usually a " +
+      "cloudy morning burning off, which one figure for the whole day hides. A dash means the " +
+      "forecast did not cover that part, which is normal for a morning already past. It names " +
+      "fog on the days fog is expected. There is no " +
       "reading of what the sky is doing right now anywhere on this page, and no visibility " +
       "figure at all: the only stations in this county publishing either one are airports, " +
       "and an airport describes its own field rather than a beach kilometres away.",

@@ -30,7 +30,7 @@ import {
   readWaveWeek,
   readWeekOfLowestLows,
 } from "@/lib/conditions";
-import { DaylightWeek, DAYLIGHT_WEEK_ROW } from "./DaylightWeek";
+import { DaylightWeek } from "./DaylightWeek";
 import {
   MOP_MODEL_NOTE,
   MOP_NETWORK,
@@ -104,8 +104,18 @@ export async function WeekPanel({ slug }: { slug: string }) {
     takes a row off the grid instead of taking the grid off the page. Both reads
     build their days from the same helper, so the two rows cannot disagree about
     which day is Tuesday.
+
+    It rides on the day rather than in `rows`, because it is the window the
+    other three rows' figures are selected inside rather than a fourth figure.
+    Putting it in the header is what lets those rows be called "Low tide" and
+    "Swell": the scope is stated once above them instead of three times in three
+    labels that never fitted the cell. See
+    `docs/plans/week-grid-legibility.md`.
   */
-  const days = daylight.days;
+  const days = daylight.days.map((day) => ({
+    ...day,
+    daylight: <DaylightWeek day={day} />,
+  }));
 
   const rows: WeekRow[] = [];
 
@@ -122,23 +132,12 @@ export async function WeekPanel({ slug }: { slug: string }) {
     });
   }
 
-  rows.push({
-    ...DAYLIGHT_WEEK_ROW,
-    cells: Object.fromEntries(
-      daylight.days.map((day) => [
-        day.localDate,
-        <DaylightWeek key={day.localDate} day={day} />,
-      ]),
-    ),
-  });
-
   /*
-    Last, under daylight rather than between it and the tide. `DaylightWeek`'s
-    whole argument is that it sits beside the tide row -- a lowest low at 2:23
-    is a different trip depending on whether it is AM or PM, and the daylight
-    row is what answers that -- so putting a third product between them would
-    take away the thing it is there for. It also puts the row that carries a
-    provenance line closest to the line itself.
+    Second of three, under the tide. The order down a day block is tide, swell,
+    cloud -- what the sea does, what the swell does, what the sky does -- inside
+    the window the header states. Daylight used to sit between the first two so
+    that a reader could tell a 2:23 AM low from a 2:23 PM one; it is in the
+    header now, where it does that for all three rows at once.
 
     Ragged by construction: only the days the forecast reached become cells, and
     the grid draws no pair where a row has none.
@@ -166,12 +165,12 @@ export async function WeekPanel({ slug }: { slug: string }) {
   }
 
   /*
-    Last of the four, under the wave row. The order down a day block is tide,
-    daylight, swell, cloud -- what the sea does, when the sun is up, what the
-    swell does, what the sky does. Cloud goes last because it is the only row
-    with no time in it: a reader scanning a column reads three "when"s and then
-    the one figure that is about the whole day, and putting it between two
-    timed rows would break that reading.
+    Last of the three, under the wave row. Cloud goes last because it is the
+    only row with no time in it: a reader scanning a column reads two "when"s
+    and then the one figure that is about the whole day, and putting it between
+    two timed rows would break that reading. It is also the row whose second
+    line varies most in length, and a variable line does least damage at the
+    bottom of the cell -- see `SkyWeek`.
 
     Ragged like the wave row, and for the same reason: the product reaches about
     seven and a half days and the far column may have none.
@@ -206,6 +205,26 @@ export async function WeekPanel({ slug }: { slug: string }) {
     the same moment — repeating it here would be the same failure twice.
   */
   const notes: string[] = [];
+
+  /*
+    First, because it qualifies every figure in the grid rather than reporting
+    one feed's trouble. ADR-0023 dropped the day's own extremes from these
+    cells -- a lowest low at 3:38 AM is a real prediction and a useless plan,
+    and the labels naming it never fitted -- and this sentence is the condition
+    that was allowed under. Without it a reader who saw a -0.2 ft here last
+    week finds it gone with nothing to explain the change, which is the silent
+    failure this repo is built to avoid.
+
+    Unconditional, and one sentence rather than seven: the scope is a fact
+    about the grid, the same shape as every other note here. It says where the
+    figure went as well as that it is missing, because "not shown" alone reads
+    as an omission rather than a decision.
+  */
+  notes.push(
+    "This week shows what falls between sunrise and sunset. Lows and swells " +
+      "overnight are real and often bigger — today's are on the cards above.",
+  );
+
   if (view.state.kind === "unavailable") {
     notes.push(
       "We could not get this week's tide predictions from NOAA just now. " +

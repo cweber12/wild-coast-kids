@@ -112,11 +112,33 @@ export default defineConfig({
       // Covering what is left means faking spawn, fetch and the GitHub API at
       // once, which costs more than it returns and is the trade ADR-0002 already
       // made for run-gates.mjs.
+      // LOWERED 2026-08-27, twice, by hundredths, and neither time because
+      // anything went uncovered. ADR-0023 **deleted covered code** from the
+      // week grid, and deleting covered code from a repo whose global ratio is
+      // 86% lowers that ratio.
+      //
+      // The arithmetic is the check, and it is available in the failure output
+      // rather than needing to be trusted:
+      //
+      // - lines 1726/2013 -> 1724/2011, the daylight window leaving
+      //   `WeekPanel`'s rows for the day header. Two lines removed, two of them
+      //   covered.
+      // - branches 1300/1483 -> 1296/1479 and functions 429/463 -> 427/461,
+      //   the `allDay` ternaries and the two `worded` helpers going with the
+      //   overnight figures. Four branches and two functions removed; the
+      //   numerator fell by exactly the same amount, which is what says every
+      //   one of them was covered.
+      //
+      // **Numerator and denominator falling together is the signature of this
+      // and not of a regression**, which drops the numerator alone. Check that
+      // before touching these numbers again: the failure message reads the same
+      // either way, and the ratchet will do this on every slice that removes
+      // tested code.
       thresholds: {
-        statements: 86.14,
-        branches: 87.66,
-        functions: 92.64,
-        lines: 85.73,
+        statements: 86.16,
+        branches: 87.62,
+        functions: 92.62,
+        lines: 85.74,
       },
     },
   },

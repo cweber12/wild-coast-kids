@@ -4,9 +4,24 @@ import { REGION_HEADING } from "./headingRank";
 import { WeekGrid, type WeekDay, type WeekRow } from "./WeekGrid";
 
 const DAYS: WeekDay[] = [
-  { localDate: "2026-08-17", dayLabel: "Mon, Aug 17", isToday: true },
-  { localDate: "2026-08-18", dayLabel: "Tue, Aug 18", isToday: false },
-  { localDate: "2026-08-19", dayLabel: "Wed, Aug 19", isToday: false },
+  {
+    localDate: "2026-08-17",
+    dayLabel: "Mon, Aug 17",
+    dateLabel: "Aug 17",
+    isToday: true,
+  },
+  {
+    localDate: "2026-08-18",
+    dayLabel: "Tue, Aug 18",
+    dateLabel: "Aug 18",
+    isToday: false,
+  },
+  {
+    localDate: "2026-08-19",
+    dayLabel: "Wed, Aug 19",
+    dateLabel: "Aug 19",
+    isToday: false,
+  },
 ];
 
 /** Deliberately ragged: the 19th is missing, which is a row this product cannot fill that far out. */
@@ -44,11 +59,13 @@ test("names every day it was given, in the order it was given them", () => {
   const headings = [...container.querySelectorAll("h3")].map(
     (heading) => heading.textContent,
   );
-  expect(headings).toEqual([
-    "Today · Mon, Aug 17",
-    "Tue, Aug 18",
-    "Wed, Aug 19",
-  ]);
+  // Today's column reads its date without a weekday, because the chip beside
+  // it already says which day this is -- and dropping that token is what lets
+  // the chip sit on the date's line instead of reserving a line above it in all
+  // seven columns. The space before "Today" is a real text node: two elements
+  // with nothing between them read aloud as "Aug 17Today", the concatenation
+  // `ReadingCard` records hitting in the accessible-name algorithm.
+  expect(headings).toEqual(["Aug 17 Today", "Tue, Aug 18", "Wed, Aug 19"]);
 });
 
 test("a day's values follow that day, so the reading order is day then value", () => {
@@ -60,7 +77,7 @@ test("a day's values follow that day, so the reading order is day then value", (
   // `[\s\S]*` rather than `.*` with the dotAll flag, which this TypeScript
   // target does not compile.
   expect(container.textContent).toMatch(
-    /Today · Mon, Aug 17[\s\S]*Lowest tide[\s\S]*6:41 PM[\s\S]*Tue, Aug 18[\s\S]*Lowest tide[\s\S]*7:10 AM/,
+    /Aug 17 Today[\s\S]*Lowest tide[\s\S]*6:41 PM[\s\S]*Tue, Aug 18[\s\S]*Lowest tide[\s\S]*7:10 AM/,
   );
 });
 
@@ -74,9 +91,13 @@ test("a day this row cannot fill gets no pair at all, rather than an empty one",
 });
 
 test("today is named in words, not carried by a colour alone", () => {
-  renderGrid();
+  const { container } = renderGrid();
 
-  expect(screen.getByText(/Today · Mon, Aug 17/)).toBeDefined();
+  // Three things mark today -- an ocean edge, an ocean header band, a yellow
+  // chip -- and the word is what survives if a reader sees none of them.
+  const heading = container.querySelector("ol > li h3")!;
+  expect(heading.textContent).toBe("Aug 17 Today");
+  expect(screen.getByText("Today").className).toContain("bg-yellow");
 });
 
 /**
@@ -120,7 +141,9 @@ test("the transpose is one property, so there is no hidden copy to keep in step"
   const { container } = renderGrid();
 
   const grid = container.querySelector("ol");
-  expect(grid?.className).toContain("lg:grid-cols-7");
+  expect(grid?.className).toContain("md:grid-cols-2");
+  expect(grid?.className).toContain("lg:grid-cols-4");
+  expect(grid?.className).toContain("xl:grid-cols-7");
   expect(container.innerHTML).not.toContain("lg:hidden");
 });
 
@@ -188,10 +211,10 @@ test("the reserved band says it belongs to the week above it", () => {
 test("the reserved band steps at the same width the days do", () => {
   renderGrid({ reserved: RESERVED });
 
-  // The day blocks are `lg:grid-cols-7`, so at `sm` the live week is stacked
-  // full-width. Three slots side by side from 640px gave roughly 26 characters
-  // over five ragged lines at 768 -- the page's own responsive logic
-  // disagreeing with itself in adjacent bands of the same section.
+  // `lg` is where the days above first go wider than two. Three slots side by
+  // side from 640px gave roughly 26 characters over five ragged lines at 768,
+  // while the live week was still stacked full-width -- the page's own
+  // responsive logic disagreeing with itself in adjacent bands of one section.
   const band = reservedSlot()?.parentElement;
   expect(band?.className).toContain("lg:grid-cols-3");
   expect(band?.className).not.toContain("sm:grid-cols-3");
@@ -253,17 +276,66 @@ test("a day cell takes the radius of a box its own size", () => {
 });
 
 /**
- * Regression, paired with the one in `DaylightWeek.test.tsx`. The reserved
- * header line keeps seven columns in step at `lg`. Below `lg` there is one
- * column and nothing to be in step with, and the header does not wrap at that
- * width either — so the reserve was pure height on a phone.
+ * Regression. `TODAY · THU, AUG 27` is 151px against 125px of cell at 1280, so
+ * the marked day wraps where the other six do not and every row beneath it
+ * sits a line lower than the same row beside it. The reserve buys that back.
+ *
+ * Scoped to `xl` because that is where seven columns start. Below it there are
+ * at most four, the header fits on one line, and an unscoped reserve was 35px
+ * a day across seven days — 242px of extra scroll on a phone, on a grid an
+ * earlier review had already called too tall there.
  */
-test("the header reserves its second line only where there are columns", () => {
+/**
+ * Regression. The chip had a reserved line above it, because
+ * `TODAY · THU, AUG 28` is 151px against 133px of band at 1280 and wrapped on
+ * the marked day alone. Reserving fixed the alignment and cost 22px of empty
+ * band at the top of the other six columns, which is what a reader saw.
+ *
+ * `dateLabel` is what replaced it: `AUG 28` is 51px and the chip 54px, so the
+ * pair comes to 111px and fits. Nothing is reserved anywhere now, and the six
+ * days without a chip must not carry a slot for one.
+ */
+test("no column reserves a line for a chip it does not have", () => {
   const { container } = renderGrid();
 
-  const header = container.querySelector("ol > li h3");
-  expect(header?.className).toContain("lg:min-h-8");
-  expect(header?.className.split(/\s+/)).not.toContain("min-h-8");
+  const headings = [...container.querySelectorAll("ol > li h3")];
+  for (const heading of headings) {
+    expect(heading.className).not.toContain("min-h");
+    for (const span of heading.querySelectorAll("span")) {
+      expect(span.className).not.toContain("min-h");
+    }
+  }
+
+  // Only today has a child element in its heading at all: the chip.
+  expect(headings[0].querySelectorAll("span")).toHaveLength(1);
+  expect(headings[1].querySelectorAll("span")).toHaveLength(0);
+});
+
+test("the chip follows the date rather than sitting above it", () => {
+  const { container } = renderGrid();
+
+  const heading = container.querySelector("ol > li h3")!;
+  const chip = screen.getByText("Today");
+  expect(
+    chip.compareDocumentPosition(heading.firstChild!) &
+      Node.DOCUMENT_POSITION_PRECEDING,
+  ).toBeTruthy();
+});
+
+/**
+ * The measurement the breakpoint step exists for. Seven columns at 1024 give a
+ * cell 120px wide and 88px of content — narrower than `THU, AUG 27` renders at
+ * 89px — which is what forced every hard-coded line break the four cell
+ * components used to carry. jsdom applies no stylesheets (ADR-0001), so what
+ * is assertable here is that seven columns wait for `xl` and that the widths
+ * between are filled rather than jumping straight from one.
+ */
+test("seven columns wait for the width that can hold them", () => {
+  const { container } = renderGrid();
+
+  const grid = container.querySelector("ol")!;
+  expect(grid.className).not.toContain("lg:grid-cols-7");
+  expect(grid.className).not.toContain("sm:grid-cols");
 });
 
 /* =========================================================================
@@ -320,4 +392,163 @@ test("a row with no source prints no line at all", () => {
   const { container } = renderGrid({ rows: [TIDE_ROW] });
 
   expect(container.querySelectorAll("p").length).toBe(0);
+});
+
+/* =========================================================================
+ * The daylight window: the day's header, not a row inside it
+ * ========================================================================= */
+
+/** The same three days, each carrying the window its figures are selected in. */
+const DAYS_WITH_DAYLIGHT: WeekDay[] = DAYS.map((day, i) => ({
+  ...day,
+  daylight: <p>{`6:2${i} AM to 7:2${i} PM`}</p>,
+}));
+
+test("the daylight window sits in the header, above every pair in the day", () => {
+  // Not a `WeekRow`: a row states a figure, and this states the scope the
+  // figures are selected within. That is what lets the labels below be "Low
+  // tide" rather than "Lowest daylight tide" -- see the plan.
+  const { container } = renderGrid({ days: DAYS_WITH_DAYLIGHT });
+
+  const window = screen.getByText("6:20 AM to 7:20 PM");
+  const day = container.querySelector("ol > li")!;
+  expect(day.contains(window)).toBe(true);
+  expect(day.querySelector("dl")!.contains(window)).toBe(false);
+
+  const heading = day.querySelector("h3")!;
+  expect(
+    heading.compareDocumentPosition(window) & Node.DOCUMENT_POSITION_FOLLOWING,
+  ).toBeTruthy();
+});
+
+test("every day carries its own window, since sunset moves across the week", () => {
+  renderGrid({ days: DAYS_WITH_DAYLIGHT });
+
+  expect(screen.getByText("6:20 AM to 7:20 PM")).toBeDefined();
+  expect(screen.getByText("6:21 AM to 7:21 PM")).toBeDefined();
+  expect(screen.getByText("6:22 AM to 7:22 PM")).toBeDefined();
+});
+
+test("a day given no window renders a header of just its date", () => {
+  // The grid must not draw a gap where a line would be: `WeekPanel` computes
+  // daylight and cannot fail, but the grid is not the thing that knows that.
+  const { container } = renderGrid();
+
+  const header = container.querySelector("ol > li > div")!;
+  expect(header.textContent).toBe("Aug 17 Today");
+});
+
+/* =========================================================================
+ * The band, the rules and the colour key
+ * ========================================================================= */
+
+/**
+ * The header is a filled band rather than more text on the same white field,
+ * which is what says "this is the day" without a word. Four labelled pairs run
+ * together on one surface was the shape the 2026-08-27 review called
+ * undifferentiated.
+ *
+ * jsdom applies no stylesheets (ADR-0001), so what is assertable is which
+ * classes compose. That ocean at 8.5:1 and mist at 5.0:1 read as intended is a
+ * human check at the review viewport -- the compromise ADR-0004 and ADR-0014
+ * already record.
+ */
+test("the day header is a band, and today's is the saturated one", () => {
+  const { container } = renderGrid();
+
+  const bands = [...container.querySelectorAll("ol > li > div:first-child")];
+  expect(bands).toHaveLength(3);
+
+  expect(bands[0].className).toContain("bg-ocean");
+  expect(bands[0].className).toContain("text-white/85");
+  expect(bands[1].className).toContain("bg-mist");
+  expect(bands[1].className).toContain("text-fog");
+
+  // Every band carries the same border width, so the marked day is not
+  // narrower inside than its neighbours -- the property the cell's own edge
+  // has always held and the band now has to hold too.
+  for (const band of bands) {
+    expect(band.className).toContain("border-b-[1.5px]");
+  }
+});
+
+test("the band is clipped by the tile's corner rather than squaring it off", () => {
+  const { container } = renderGrid();
+
+  const cell = container.querySelector("ol > li")!;
+  expect(cell.className).toContain("rounded-tile");
+  expect(cell.className).toContain("overflow-hidden");
+});
+
+test("a hairline separates the readings, and none sits above the first", () => {
+  const { container } = renderGrid({ rows: [TIDE_ROW, WAVE_ROW] });
+
+  const pairs = [...container.querySelectorAll("ol > li:first-child dl > div")];
+  expect(pairs).toHaveLength(2);
+  for (const pair of pairs) {
+    expect(pair.className).toContain("border-t");
+    expect(pair.className).toContain("border-lavender");
+  }
+  // `first:border-t-0` rather than a rule on all but the first, because rows
+  // are ragged: which reading comes first differs by day.
+  expect(pairs[0].className).toContain("first:border-t-0");
+});
+
+/**
+ * Colour per product and constant across all seven days, which is what keeps
+ * it clear of ADR-0009. A row that brings no tone keeps fog, the colour every
+ * label in this grid had before there was a key -- so a caller that has not
+ * thought about it cannot accidentally assert anything.
+ */
+test("a row's label takes the row's own colour, in every day", () => {
+  const { container } = renderGrid({
+    rows: [
+      { ...TIDE_ROW, tone: "text-ocean" },
+      { ...WAVE_ROW, tone: "text-purple" },
+    ],
+  });
+
+  const tide = [...container.querySelectorAll("dt")].filter(
+    (dt) => dt.textContent === "Lowest tide",
+  );
+  expect(tide).toHaveLength(2);
+  for (const dt of tide) {
+    expect(dt.className).toContain("text-ocean");
+  }
+
+  expect(
+    [...container.querySelectorAll("dt")]
+      .filter((dt) => dt.textContent === "Biggest swell")
+      .every((dt) => dt.className.includes("text-purple")),
+  ).toBe(true);
+});
+
+test("a row with no colour of its own stays fog", () => {
+  const { container } = renderGrid();
+
+  const label = container.querySelector("dt")!;
+  expect(label.className).toContain("text-fog");
+});
+
+/**
+ * A 10px label alone on a 303px line is most of the line wasted, and below
+ * `lg` a day is a full-width block. `LOW TIDE` is 70px, so a 76px column holds
+ * every label the grid has and leaves 217px at 375 — enough for the longest
+ * value in the cell. Measured: a day goes 214px to 169px at 375.
+ *
+ * Not the `lg:block` the four cell components lost. Those forced a break
+ * inside one value to keep seven narrow columns in step; this chooses where a
+ * label sits relative to its value.
+ */
+test("the label sits beside its value until there are columns to stack in", () => {
+  const { container } = renderGrid();
+
+  const pair = container.querySelector("ol > li dl > div")!;
+  expect(pair.className).toContain("flex");
+  expect(pair.className).toContain("lg:block");
+
+  const label = pair.querySelector("dt")!;
+  expect(label.className).toContain("w-29");
+  expect(label.className).toContain("shrink-0");
+  expect(label.className).toContain("lg:w-auto");
 });
