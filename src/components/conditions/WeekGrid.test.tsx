@@ -552,3 +552,83 @@ test("the label sits beside its value until there are columns to stack in", () =
   expect(label.className).toContain("shrink-0");
   expect(label.className).toContain("lg:w-auto");
 });
+
+/* =========================================================================
+ * The sparkline slot: a shape per day, above the figures
+ * ========================================================================= */
+
+/** The same three days, each carrying a shape and the window it is scoped by. */
+const DAYS_WITH_SPARK: WeekDay[] = DAYS_WITH_DAYLIGHT.map((day, i) => ({
+  ...day,
+  spark: <p>{`shape ${i}`}</p>,
+}));
+
+test("the shape sits between the header band and the figures", () => {
+  // Above the rows rather than below them, because the rows are ragged: a day
+  // whose wave forecast has run out carries one pair fewer, and anything
+  // anchored under the list would sit at a different height in each column.
+  // Seven shapes that do not line up are seven charts rather than one
+  // instrument.
+  const { container } = renderGrid({ days: DAYS_WITH_SPARK });
+
+  const day = container.querySelector("ol > li")!;
+  const shape = screen.getByText("shape 0");
+  const list = day.querySelector("dl")!;
+  const header = day.querySelector("h3")!;
+
+  expect(day.contains(shape)).toBe(true);
+  expect(list.contains(shape)).toBe(false);
+  expect(
+    header.compareDocumentPosition(shape) & Node.DOCUMENT_POSITION_FOLLOWING,
+  ).toBeTruthy();
+  expect(
+    shape.compareDocumentPosition(list) & Node.DOCUMENT_POSITION_FOLLOWING,
+  ).toBeTruthy();
+});
+
+test("every day carries its own shape", () => {
+  renderGrid({ days: DAYS_WITH_SPARK });
+
+  expect(screen.getByText("shape 0")).toBeDefined();
+  expect(screen.getByText("shape 1")).toBeDefined();
+  expect(screen.getByText("shape 2")).toBeDefined();
+});
+
+/**
+ * ADR-0023. The slot is the debt that decision recorded being paid, and this
+ * asserts the half a reviewer will look for: the header window and the figure
+ * beneath it are exactly what they were, and the shape restores no second
+ * figure to a cell whose measured width could not hold one.
+ */
+test("a shape changes neither the window above it nor the figure below", () => {
+  const withSpark = renderGrid({ days: DAYS_WITH_SPARK });
+  const dayWithSpark = withSpark.container.querySelector("ol > li")!;
+
+  expect(dayWithSpark.querySelector("div")!.textContent).toBe(
+    "Aug 17 Today6:20 AM to 7:20 PM",
+  );
+  expect(dayWithSpark.querySelector("dl")!.textContent).toBe(
+    "Lowest tide6:41 PM",
+  );
+
+  // And the same grid without one is unchanged in both, so the slot adds
+  // rather than displaces.
+  const without = renderGrid({ days: DAYS_WITH_DAYLIGHT });
+  const dayWithout = without.container.querySelector("ol > li")!;
+  expect(dayWithout.querySelector("div")!.textContent).toBe(
+    dayWithSpark.querySelector("div")!.textContent,
+  );
+  expect(dayWithout.querySelector("dl")!.textContent).toBe(
+    dayWithSpark.querySelector("dl")!.textContent,
+  );
+});
+
+test("a day given no shape renders the cell it rendered before there were any", () => {
+  // The grid must not draw an empty frame where a curve would be: a failed
+  // series costs the shape, and the sentence explaining it is the caller's.
+  const { container } = renderGrid({ days: DAYS_WITH_DAYLIGHT });
+
+  const day = container.querySelector("ol > li")!;
+  expect(day.children).toHaveLength(2);
+  expect(day.children[1].tagName).toBe("DL");
+});

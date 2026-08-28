@@ -1,6 +1,6 @@
 import { beforeEach, expect, test, vi } from "vitest";
 import type { TideWeekView } from "./conditions";
-import { localMidnightOf } from "./pacific-time";
+import { localDateOf, localMidnightOf, localTimeOf } from "./pacific-time";
 
 const fetchTideExtremes = vi.fn();
 const fetchHourlyTide = vi.fn();
@@ -1426,4 +1426,63 @@ test("a slug that is not in the inventory throws rather than rendering nothing",
   await expect(
     readHourlyTide("no-such-beach", NOON_PACIFIC_20260817),
   ).rejects.toThrow(/no beach in the inventory/);
+});
+
+/* =========================================================================
+ * The two background layers a drawn day needs
+ * ========================================================================= */
+
+test("the daylight row carries its instants as well as its labels", () => {
+  // The labels are rounded to the minute for printing; a shaded night wants
+  // the boundary where it was computed. Both come from one `daylightOn` call,
+  // so the printed sunrise and the shaded edge cannot disagree about when the
+  // sun came up.
+  const view = readDaylightWeek(BEACH, NOON_PACIFIC_20260817);
+  const today = view.days[0];
+
+  expect(localTimeOf(today.sunriseMs)).toMatch(/AM$/);
+  expect(localTimeOf(today.sunsetMs)).toMatch(/PM$/);
+  expect(today.sunriseMs).toBeLessThan(today.sunsetMs);
+  // Inside the day it belongs to, at both ends.
+  expect(localDateOf(today.sunriseMs)).toBe("2026-08-17");
+  expect(localDateOf(today.sunsetMs)).toBe("2026-08-17");
+  // The rounded label is the same instant to the minute, not a second reading.
+  expect(today.sunriseLabel).toBe(
+    localTimeOf(Math.round(today.sunriseMs / 60_000) * 60_000),
+  );
+});
+
+test("the cloud row carries the whole day's hours, not only the daylight ones", async () => {
+  // The thirds answer what the sky does while the trip is happening; the hours
+  // are a layer washed across a plot that spans midnight to midnight. A wash
+  // that stopped at sunrise would leave the shaded half of the frame claiming
+  // nothing was forecast there.
+  gridOk([
+    { atMs: hourUtc(17, 9), percent: 0 }, // 2 AM Pacific, before sunrise
+    { atMs: hourUtc(17, 15), percent: 20 }, // 8 AM
+    { atMs: hourUtc(17, 23), percent: 80 }, // 4 PM
+  ]);
+
+  const view = await readSkyWeek(BEACH, NOON_PACIFIC_20260817);
+  if (view.state.kind !== "week") throw new Error("expected a week");
+
+  const today = view.state.days[0];
+  expect(today.hours.map((hour) => hour.percent)).toEqual([0, 20, 80]);
+  // And the thirds are still the daylight two, unchanged by carrying the third.
+  expect(today.thirds.am).toBe(20);
+  expect(today.thirds.eve).toBe(80);
+});
+
+test("an hour the forecast did not reach is absent rather than zero", async () => {
+  // Ragged on purpose. A padded series would let a consumer draw a clear sky
+  // where there is silence, which is the failure the whole row exists to avoid.
+  gridOk([
+    { atMs: hourUtc(17, 15), percent: 20 },
+    { atMs: hourUtc(17, 17), percent: 40 },
+  ]);
+
+  const view = await readSkyWeek(BEACH, NOON_PACIFIC_20260817);
+  if (view.state.kind !== "week") throw new Error("expected a week");
+
+  expect(view.state.days[0].hours).toHaveLength(2);
 });

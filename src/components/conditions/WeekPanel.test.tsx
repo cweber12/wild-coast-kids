@@ -1,12 +1,15 @@
 import { beforeEach, expect, test, vi } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
+import { localMidnightOf } from "@/lib/pacific-time";
 
 const readWeekOfLowestLows = vi.fn();
+const readHourlyTide = vi.fn();
 const readDaylightWeek = vi.fn();
 const readWaveWeek = vi.fn();
 const readSkyWeek = vi.fn();
 vi.mock("@/lib/conditions", () => ({
   readWeekOfLowestLows,
+  readHourlyTide,
   readDaylightWeek,
   readWaveWeek,
   readSkyWeek,
@@ -78,6 +81,13 @@ function skyWeek(
           typeof cloud === "number"
             ? { am: cloud, mid: cloud, eve: cloud }
             : cloud,
+        // The whole day's hours, which is the layer the shape washes across.
+        // A flat 40% here, because what these tests are about is whether a
+        // wash appears and where -- not what the sky is doing.
+        hours: Array.from({ length: 24 }, (_, hour) => ({
+          atMs: localMidnightOf(DATES[index].localDate) + hour * HOUR_MS,
+          percent: 40,
+        })),
         phenomenon,
       })),
     },
@@ -125,15 +135,69 @@ function daylightWindows() {
 function daylightWeek() {
   return {
     beachName: BINDING.beachName,
-    days: [
-      { ...DATES[0], sunriseLabel: "6:14 AM", sunsetLabel: "7:32 PM" },
-      { ...DATES[1], sunriseLabel: "6:15 AM", sunsetLabel: "7:31 PM" },
-    ],
+    days: DATES.map((date, index) => ({
+      ...date,
+      sunriseLabel: index === 0 ? "6:14 AM" : "6:15 AM",
+      sunsetLabel: index === 0 ? "7:32 PM" : "7:31 PM",
+      // The unrounded instants the night band is drawn from, alongside the
+      // labels the header prints. Roughly 6:14 AM and 7:32 PM Pacific.
+      sunriseMs: localMidnightOf(date.localDate) + 6 * HOUR_MS + 14 * 60_000,
+      sunsetMs: localMidnightOf(date.localDate) + 19 * HOUR_MS + 32 * 60_000,
+    })),
   };
+}
+
+const HOUR_MS = 3_600_000;
+
+/**
+ * A week of hourly heights, one full day per named index.
+ *
+ * The values rise and fall across the day rather than being flat, so a shape
+ * drawn from them has somewhere to go -- a constant series would draw a
+ * straight line and pass a test that a broken y axis would also pass.
+ */
+function hourlyTide(indexes: readonly number[]) {
+  return {
+    ...BINDING,
+    state: {
+      kind: "week",
+      days: DATES.map((date, index) => ({
+        ...date,
+        startMs: localMidnightOf(date.localDate),
+        endMs: localMidnightOf(DATES[index + 1]?.localDate ?? "2026-08-19"),
+        hours: indexes.includes(index)
+          ? Array.from({ length: 24 }, (_, hour) => ({
+              atMs: localMidnightOf(date.localDate) + hour * HOUR_MS,
+              feet: 2.5 + 2 * Math.sin((hour / 24) * 2 * Math.PI),
+            }))
+          : [],
+      })),
+    },
+  };
+}
+
+/** Every day's drawn shape, found by the name only a screen reader hears. */
+function sparks() {
+  return screen.queryAllByLabelText(/^Tide through /);
+}
+
+/**
+ * The curves, scoped to the shapes.
+ *
+ * A bare `svg path` would also collect `DaylightWeek`'s sun mark, which is an
+ * SVG in every day header -- so a grid with no shapes at all still has two
+ * paths in it, and a test counting them would pass while asserting nothing.
+ */
+function sparkPaths(container: HTMLElement): Element[] {
+  return [
+    ...container.querySelectorAll('svg[aria-label^="Tide through"] path'),
+  ];
 }
 
 beforeEach(() => {
   readWeekOfLowestLows.mockReset();
+  readHourlyTide.mockReset();
+  readHourlyTide.mockResolvedValue(hourlyTide([0, 1]));
   readDaylightWeek.mockReset();
   readWaveWeek.mockReset();
   readSkyWeek.mockReset();
@@ -683,4 +747,227 @@ test("the scope sentence stands whether or not a feed also failed", async () => 
   expect(
     notes.some((note) => /could not get this week/i.test(note ?? "")),
   ).toBe(true);
+});
+
+/* =========================================================================
+ * The shape behind each day's figure
+ * ========================================================================= */
+
+function tideWeek(...days: ReturnType<typeof tideDay>[]) {
+  return { ...BINDING, state: { kind: "week", days } };
+}
+
+test("a shape is drawn for each day the series reaches", async () => {
+  readWeekOfLowestLows.mockResolvedValue(
+    tideWeek(tideDay(0, "6:41 PM", 0.9), tideDay(1, "7:10 AM", -0.42)),
+  );
+
+  render(await WeekPanel({ slug: "la-jolla-shores-beach" }));
+
+  expect(readHourlyTide).toHaveBeenCalledWith("la-jolla-shores-beach");
+  expect(sparks()).toHaveLength(2);
+  // The description names the day and the hourly extremes, and says they are
+  // hourly -- the real turning point falls between two of these, and it is the
+  // figure printed above rather than anything read off this series.
+  expect(sparks()[0].getAttribute("aria-label")).toBe(
+    "Tide through Mon, Aug 17, hour by hour: 0.5 ft at its lowest hour, " +
+      "4.5 ft at its highest. Night is shaded; the sun is up from 6:14 AM to 7:32 PM.",
+  );
+});
+
+test("a day the window did not reach says so rather than drawing a flat line", async () => {
+  readWeekOfLowestLows.mockResolvedValue(
+    tideWeek(tideDay(0, "6:41 PM", 0.9), tideDay(1, "7:10 AM", -0.42)),
+  );
+  // Only the first day has hours.
+  readHourlyTide.mockResolvedValue(hourlyTide([0]));
+
+  const { container } = render(
+    await WeekPanel({ slug: "la-jolla-shores-beach" }),
+  );
+
+  expect(sparks()).toHaveLength(1);
+  expect(screen.getByText("No hourly prediction for this day.")).toBeDefined();
+  // One curve on the page, not two: the second day drew no path at all.
+  expect(sparkPaths(container)).toHaveLength(1);
+});
+
+/**
+ * ADR-0023 IS FULFILLED HERE, NOT REVERSED. The decision dropped the day's own
+ * extreme from six cells of seven "until a day view carries them" and kept
+ * `allDay` in `lib/conditions.ts` so this would be cheap. The shape draws the
+ * hours the daylight figure was selected out of; the figure and the header
+ * window are exactly what they were.
+ */
+test("the figure and the window are unchanged by the shape above them", async () => {
+  readWeekOfLowestLows.mockResolvedValue(
+    tideWeek(tideDay(0, "6:41 PM", 0.9), tideDay(1, "7:10 AM", -0.42)),
+  );
+
+  const { container } = render(
+    await WeekPanel({ slug: "la-jolla-shores-beach" }),
+  );
+
+  // The daylight-selected figure, still leading its cell and still alone in it.
+  const tideCell = [...container.querySelectorAll("dl > div")].find((row) =>
+    row.querySelector("dt")?.textContent?.includes("Low tide"),
+  )!;
+  expect(tideCell.querySelector("dd")!.textContent).toBe("6:41 PM 0.9 ft");
+
+  // `allDay` is -1.1 ft at 3:14 AM in the fixture. It is in the data and must
+  // not be in the cell: the label that would distinguish it renders 170px
+  // against 125px, which is the measurement ADR-0023 turns on.
+  expect(container.textContent).not.toContain("3:14 AM");
+  expect(container.textContent).not.toContain("-1.1");
+
+  // The window still stated once, in the header.
+  expect(daylightWindows()[0].getAttribute("aria-label")).toBe(
+    "Daylight, 6:14 AM to 7:32 PM",
+  );
+
+  // And the sentence ADR-0023 allowed the drop under is still beneath the grid.
+  expect(screen.getByText(/overnight are real and often bigger/)).toBeDefined();
+});
+
+test("a failed hourly read costs the shape and not the grid", async () => {
+  readWeekOfLowestLows.mockResolvedValue(
+    tideWeek(tideDay(0, "6:41 PM", 0.9), tideDay(1, "7:10 AM", -0.42)),
+  );
+  readHourlyTide.mockResolvedValue({
+    ...BINDING,
+    state: {
+      kind: "unavailable",
+      detail: "NOAA returned HTTP 503 for station 9410230.",
+      drift: false,
+    },
+  });
+
+  const { container } = render(
+    await WeekPanel({ slug: "la-jolla-shores-beach" }),
+  );
+
+  // The week still stands: both figures, both windows, the rows beneath.
+  expect(screen.getByText("6:41 PM")).toBeDefined();
+  expect(screen.getByText("7:10 AM")).toBeDefined();
+  expect(daylightWindows()).toHaveLength(2);
+  // No shapes, and no empty frames either.
+  expect(sparks()).toHaveLength(0);
+  expect(sparkPaths(container)).toHaveLength(0);
+});
+
+test("a shape that went missing is said out loud, not left as a gap", async () => {
+  // The two are separate requests to one station, so the figures can arrive
+  // when the curve does not. A reader who saw the shapes last week would
+  // otherwise find them gone with nothing to explain it, and the tide card
+  // above cannot cover it because that card shares the other request.
+  readWeekOfLowestLows.mockResolvedValue(tideWeek(tideDay(0, "6:41 PM", 0.9)));
+  readHourlyTide.mockResolvedValue({
+    ...BINDING,
+    state: { kind: "unavailable", detail: "HTTP 503", drift: false },
+  });
+
+  render(await WeekPanel({ slug: "la-jolla-shores-beach" }));
+
+  expect(screen.getByText(/hour-by-hour shape behind each day/)).toBeDefined();
+});
+
+test("one outage is one sentence, even though two requests failed", async () => {
+  // Both reads go to the same station, so a station-level outage takes both.
+  // Two sentences would make one bad afternoon read as two separate faults.
+  readWeekOfLowestLows.mockResolvedValue({
+    ...BINDING,
+    state: { kind: "unavailable", detail: "HTTP 503", drift: false },
+  });
+  readHourlyTide.mockResolvedValue({
+    ...BINDING,
+    state: { kind: "unavailable", detail: "HTTP 503", drift: false },
+  });
+
+  render(await WeekPanel({ slug: "la-jolla-shores-beach" }));
+
+  expect(
+    screen.getByText(/could not get this week's tide predictions/),
+  ).toBeDefined();
+  expect(screen.queryByText(/hour-by-hour shape behind each day/)).toBeNull();
+});
+
+test("every day is drawn against one scale, so the week can be compared", async () => {
+  // THE SMALL-MULTIPLE RULE, asserted where the range is actually chosen. The
+  // second day here swings a quarter as far as the first, and must be drawn a
+  // quarter as tall. Under a per-day scale both would fill the frame and a
+  // quiet Tuesday would look exactly like a dramatic Monday.
+  readWeekOfLowestLows.mockResolvedValue(
+    tideWeek(tideDay(0, "6:41 PM", 0.9), tideDay(1, "7:10 AM", -0.42)),
+  );
+  const week = hourlyTide([0, 1]);
+  week.state.days[1].hours = week.state.days[1].hours.map((hour) => ({
+    ...hour,
+    feet: 3 + (hour.feet - 2.5) / 4,
+  }));
+  readHourlyTide.mockResolvedValue(week);
+
+  const { container } = render(
+    await WeekPanel({ slug: "la-jolla-shores-beach" }),
+  );
+
+  const [first, second] = sparkPaths(container).map((path) => {
+    const ys = (path.getAttribute("d") ?? "")
+      .split(/[ML]/)
+      .filter((step) => step.trim() !== "")
+      .map((step) => Number(step.trim().split(/\s+/)[1]));
+    return Math.max(...ys) - Math.min(...ys);
+  });
+
+  expect(second).toBeLessThan(first / 2);
+});
+
+test("the cloud wash comes from the sky read, and its absence draws nothing", async () => {
+  readWeekOfLowestLows.mockResolvedValue(tideWeek(tideDay(0, "6:41 PM", 0.9)));
+
+  const withCloud = render(await WeekPanel({ slug: "la-jolla-shores-beach" }));
+  expect(
+    withCloud.container.querySelectorAll("[data-cloud-percent]").length,
+  ).toBeGreaterThan(0);
+
+  readSkyWeek.mockResolvedValue({
+    beachName: BINDING.beachName,
+    cell: CELL,
+    state: { kind: "unavailable", detail: "HTTP 503", drift: false },
+  });
+
+  const without = render(await WeekPanel({ slug: "la-jolla-shores-beach" }));
+  // The shape is still drawn; only the layer the National Weather Service
+  // supplies is missing, and a missing wash is not a clear sky.
+  expect(
+    without.container.querySelectorAll("[data-cloud-percent]"),
+  ).toHaveLength(0);
+  // Both days still drawn: the columns come from the daylight read, which
+  // cannot fail, and the cloud outage takes only its own layer.
+  expect(
+    within(without.container).getAllByLabelText(/^Tide through /),
+  ).toHaveLength(2);
+});
+
+test("a beach with no tide station gets no shape and the reason it already had", async () => {
+  const noStation = {
+    beachName: BINDING.beachName,
+    station: null,
+    state: {
+      kind: "no-station",
+      reason: "no station could be joined to this beach",
+    },
+  };
+  readWeekOfLowestLows.mockResolvedValue(noStation);
+  readHourlyTide.mockResolvedValue(noStation);
+
+  const { container } = render(
+    await WeekPanel({ slug: "la-jolla-shores-beach" }),
+  );
+
+  expect(sparks()).toHaveLength(0);
+  expect(screen.getByText(/no tide station for this beach/)).toBeDefined();
+  // One sentence: the shape's absence is the same permanent fact about the
+  // place, not a second thing that went wrong.
+  expect(screen.queryByText(/hour-by-hour shape behind each day/)).toBeNull();
+  expect(sparkPaths(container)).toHaveLength(0);
 });

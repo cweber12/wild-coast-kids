@@ -154,7 +154,7 @@ export function DaySpark({
   absence,
 }: DaySparkProps) {
   if (points.length === 0) {
-    return <p className="mt-1 text-2xs text-fog italic">{absence}</p>;
+    return <p className="text-2xs text-fog italic">{absence}</p>;
   }
 
   const spanMs = endMs - startMs;
@@ -195,7 +195,7 @@ export function DaySpark({
       role="img"
       aria-label={description}
       viewBox={`0 0 ${WIDTH} ${HEIGHT}`}
-      className="mt-1 block h-auto w-full"
+      className="block h-auto w-full"
     >
       {/*
         Cloud first, night over it. A cloudy night is still night, so the shade

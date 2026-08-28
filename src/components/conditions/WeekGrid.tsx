@@ -82,6 +82,31 @@ export type WeekDay = {
    * date rather than a gap where a line should be.
    */
   daylight?: ReactNode;
+  /**
+   * This day drawn as a shape, beneath the header and above the figures.
+   *
+   * A slot on the day rather than a `WeekRow`, and for a different reason than
+   * `daylight` is. That one states the scope every row is selected within; this
+   * one is the *series* one row's figure was selected out of — the full
+   * twenty-four hours the header's window is a slice of. Seven of them are
+   * small multiples, so they have to sit at the same height in all seven
+   * columns, which a row cannot promise: rows are ragged by design and a day
+   * whose wave forecast has run out would carry its shape a line higher than
+   * its neighbours.
+   *
+   * **It restores no figure to this cell, which is what keeps ADR-0023
+   * intact.** That decision moved the daylight window into the header and left
+   * the rows carrying only the figures inside it, having measured that the
+   * labels an "all day" figure needs — "Lowest daylight tide", 170px against
+   * 125px of cell — do not fit at any width this grid has. A drawn overnight
+   * low needs no label at all. The header window and the figure beneath are
+   * untouched; this is the debt ADR-0023 recorded being paid, not that
+   * decision being reversed.
+   *
+   * Optional, so a grid whose series could not be read renders exactly as it
+   * did before there was one.
+   */
+  spark?: ReactNode;
 };
 
 /**
@@ -313,6 +338,26 @@ export function WeekGrid({
                 */}
                 {day.daylight}
               </div>
+
+              {/*
+                Between the band and the figures, and at the top of the body
+                rather than the foot of it. The rows below are ragged by
+                design — a day the wave forecast has not reached carries two
+                pairs where its neighbour carries three — so anything anchored
+                under them sits at a different height in each column, and seven
+                shapes that do not line up are seven charts rather than one
+                instrument. Under the band there is nothing above it but the
+                date, which is the same height in all seven.
+
+                It is also the line the shading is about: the window printed
+                directly above says where the light is, and the band drawn
+                directly below is where it is not.
+
+                Padded here rather than in the shape, so the plot is one
+                geometry with no margins of its own to keep in step with the
+                cell's.
+              */}
+              {day.spark && <div className="px-3 pt-2">{day.spark}</div>}
 
               <dl className="px-3 pb-2">
                 {rows.map((row) => {

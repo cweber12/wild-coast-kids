@@ -637,6 +637,18 @@ export interface DaylightWeekDay extends WeekDayFrame {
   sunriseLabel: string;
   /** Pacific wall-clock sunset, already worded and rounded. */
   sunsetLabel: string;
+  /**
+   * The same two instants, unrounded.
+   *
+   * The labels are for reading and these are for drawing: a plot that shaded
+   * night from a formatted string would have to parse it back, and the day
+   * spark needs the boundary to the millisecond it was computed at rather than
+   * to the minute it is printed at. Both come from one `daylightOn` call, so
+   * the shaded edge and the printed time cannot disagree about when the sun
+   * came up.
+   */
+  sunriseMs: number;
+  sunsetMs: number;
 }
 
 /**
@@ -687,6 +699,8 @@ export function readDaylightWeek(
         ...frame,
         sunriseLabel: localTimeOf(toNearestMinute(sunriseMs)),
         sunsetLabel: localTimeOf(toNearestMinute(sunsetMs)),
+        sunriseMs,
+        sunsetMs,
       };
     }),
   };
@@ -1208,6 +1222,20 @@ export interface SkyWeekDay extends WeekDayFrame {
    */
   thirds: SkyThirds;
   /**
+   * Every forecast hour falling on this day, daylight and dark alike.
+   *
+   * **The whole day, where `thirds` is the daylight window.** The thirds answer
+   * "what is the sky doing while the trip is happening"; these are a background
+   * layer washed across a plot that spans midnight to midnight, and a wash that
+   * stopped at sunrise would leave the shaded half of the frame claiming
+   * nothing was forecast there.
+   *
+   * Ragged rather than padded. An hour the forecast did not reach is simply
+   * absent, which is what lets a consumer draw silence differently from a clear
+   * sky.
+   */
+  hours: readonly SkyCoverHour[];
+  /**
    * The phenomenon forecast for any daylight hour of this day, or null.
    *
    * This is what carries the "when" that ADR-0017's times carry for the rows
@@ -1361,12 +1389,13 @@ export async function readSkyWeek(
   // is Tuesday. Ragged by construction: the product reaches about seven and a
   // half days and the far column may have none.
   const days = weekOfDays(nowMs).flatMap((frame) => {
+    const hours = skyByDate.get(frame.localDate) ?? [];
     const reading = skyReadingOn(
-      skyByDate.get(frame.localDate) ?? [],
+      hours,
       weatherByDate.get(frame.localDate) ?? [],
       daylight.get(frame.localDate)!,
     );
-    return reading === null ? [] : [{ ...frame, ...reading }];
+    return reading === null ? [] : [{ ...frame, hours, ...reading }];
   });
 
   return { ...binding, state: { kind: "week", days } };
