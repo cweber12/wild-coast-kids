@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import {
   fetchGridForecast,
+  fetchHourlyTide,
   GRID_FORECAST_REVALIDATE_SECONDS,
   fetchLatestNdbcAir,
   fetchLatestObservation,
@@ -222,6 +223,98 @@ describe("fetchTideExtremes", () => {
   test("a drifted payload is flagged as drift", async () => {
     fetchMock.mockResolvedValue(jsonResponse({ somethingElse: [] }));
     const result = await fetchTideExtremes(contract);
+    if (result.kind === "unavailable") expect(result.drift).toBe(true);
+  });
+});
+
+describe("fetchHourlyTide", () => {
+  const contract = {
+    stationId: "9410230",
+    beginDate: "20260827",
+    endDate: "20260905",
+  };
+
+  test("asks for the hourly interval, on the predictions cache", async () => {
+    fetchMock.mockResolvedValue(
+      jsonResponse({ predictions: [{ t: "2026-08-27 00:00", v: "3.157" }] }),
+    );
+
+    const result = await fetchHourlyTide(contract);
+
+    expect(
+      new URL(fetchMock.mock.calls[0][0]).searchParams.get("interval"),
+    ).toBe("h");
+    expect(fetchMock.mock.calls[0][1].next.revalidate).toBe(
+      PREDICTIONS_REVALIDATE_SECONDS,
+    );
+    expect(result.kind).toBe("ok");
+    if (result.kind === "ok") expect(result.heights[0].feet).toBe(3.157);
+  });
+
+  test("it is a second request rather than the same one", async () => {
+    // `interval` is part of the URL, so the hourly series cannot come back in
+    // the high/low response however the window is arranged. If these two ever
+    // build the same URL, one of the two reads is silently getting the other's
+    // shape out of Next's dedupe.
+    fetchMock.mockResolvedValue(
+      jsonResponse({
+        predictions: [{ t: "2026-08-27 00:00", v: "3.157", type: "L" }],
+      }),
+    );
+
+    await fetchHourlyTide(contract);
+    await fetchTideExtremes(contract);
+
+    expect(fetchMock.mock.calls[0][0]).not.toBe(fetchMock.mock.calls[1][0]);
+  });
+
+  test("an error under HTTP 200 is unavailable and not drift", async () => {
+    fetchMock.mockResolvedValue(
+      jsonResponse({ error: { message: "No Predictions data was found." } }),
+    );
+
+    const result = await fetchHourlyTide(contract);
+
+    expect(result.kind).toBe("unavailable");
+    if (result.kind === "unavailable") {
+      expect(result.reason).toMatch(/No Predictions data was found/);
+      expect(result.drift).toBe(false);
+    }
+  });
+
+  test("a body that is not JSON is reported as such", async () => {
+    fetchMock.mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => {
+        throw new Error("Unexpected token <");
+      },
+    });
+
+    const result = await fetchHourlyTide(contract);
+    if (result.kind === "unavailable")
+      expect(result.reason).toMatch(/was not JSON/);
+  });
+
+  test("a request that never completes names the station", async () => {
+    fetchMock.mockRejectedValue(new Error("socket hang up"));
+    const result = await fetchHourlyTide(contract);
+    expect(result.kind).toBe("unavailable");
+    if (result.kind === "unavailable") {
+      expect(result.reason).toMatch(/9410230/);
+      expect(result.reason).toMatch(/socket hang up/);
+    }
+  });
+
+  test("a bad status names the station", async () => {
+    fetchMock.mockResolvedValue(jsonResponse({}, 500));
+    const result = await fetchHourlyTide(contract);
+    if (result.kind === "unavailable") expect(result.reason).toMatch(/9410230/);
+  });
+
+  test("a drifted payload is flagged as drift", async () => {
+    fetchMock.mockResolvedValue(jsonResponse({ somethingElse: [] }));
+    const result = await fetchHourlyTide(contract);
     if (result.kind === "unavailable") expect(result.drift).toBe(true);
   });
 });

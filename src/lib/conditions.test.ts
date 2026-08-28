@@ -1,7 +1,9 @@
 import { beforeEach, expect, test, vi } from "vitest";
 import type { TideWeekView } from "./conditions";
+import { localDateOf, localMidnightOf, localTimeOf } from "./pacific-time";
 
 const fetchTideExtremes = vi.fn();
+const fetchHourlyTide = vi.fn();
 const fetchLatestWave = vi.fn();
 const fetchLatestObservation = vi.fn();
 const fetchLatestNdbcAir = vi.fn();
@@ -9,6 +11,7 @@ const fetchMopForecast = vi.fn();
 const fetchGridForecast = vi.fn();
 vi.mock("./upstream", () => ({
   fetchGridForecast,
+  fetchHourlyTide,
   fetchTideExtremes,
   fetchLatestWave,
   fetchLatestObservation,
@@ -74,6 +77,7 @@ vi.mock("./beaches", async (importOriginal) => {
 const {
   readTodaysLowestLow,
   readWeekOfLowestLows,
+  readHourlyTide,
   readDaylightWeek,
   readLatestWaves,
   readLatestAir,
@@ -92,6 +96,7 @@ const JUST_AFTER_MIDNIGHT_20260817 = Date.UTC(2026, 7, 17, 7, 30);
 
 beforeEach(() => {
   fetchTideExtremes.mockReset();
+  fetchHourlyTide.mockReset();
   fetchLatestWave.mockReset();
   fetchLatestObservation.mockReset();
   fetchLatestNdbcAir.mockReset();
@@ -1231,4 +1236,253 @@ test("a slug that is not in the inventory throws rather than rendering nothing",
   await expect(
     readSkyWeek("no-such-beach", NOON_PACIFIC_20260817),
   ).rejects.toThrow(/no beach in the inventory/);
+});
+
+/* =========================================================================
+ * readHourlyTide
+ * ========================================================================= */
+
+function hourlyOk(heights: { atMs: number; feet: number }[]) {
+  fetchHourlyTide.mockResolvedValue({
+    kind: "ok",
+    heights,
+    url: "https://example.invalid",
+  });
+}
+
+/** Every hour of one Pacific date, at a height that is never zero. */
+function wholeDay(
+  localDate: string,
+  from = 1,
+): { atMs: number; feet: number }[] {
+  const startMs = localMidnightOf(localDate);
+  return Array.from({ length: 24 }, (_, hour) => ({
+    atMs: startMs + hour * 3_600_000,
+    feet: from + hour * 0.1,
+  }));
+}
+
+test("the hourly read asks for the same window as the extremes, at a different interval", async () => {
+  hourlyOk(wholeDay("2026-08-17"));
+
+  await readHourlyTide(BEACH, NOON_PACIFIC_20260817);
+
+  // A day either side of the week, exactly as `predictionsWindow` builds it for
+  // the high/low request. Two windows would be two ranges for one station and
+  // the curve could reach a day the figure above it does not.
+  expect(fetchHourlyTide).toHaveBeenCalledWith({
+    stationId: "9410230",
+    beginDate: "20260816",
+    endDate: "20260825",
+  });
+});
+
+test("hours are filed under the Pacific date they fall on, not the GMT one", async () => {
+  // 07:00 UTC on the 18th is midnight Pacific on the 18th; 06:00 UTC is 11 PM
+  // on the 17th. Bucketing by the GMT date would file the second under the 18th
+  // and draw an eleven o'clock reading at the start of the next day.
+  hourlyOk([
+    { atMs: Date.UTC(2026, 7, 18, 6, 0), feet: 4.1 },
+    { atMs: Date.UTC(2026, 7, 18, 7, 0), feet: 4.2 },
+  ]);
+
+  const view = await readHourlyTide(BEACH, NOON_PACIFIC_20260817);
+  if (view.state.kind !== "week") throw new Error("expected a week");
+
+  const [today, tomorrow] = view.state.days;
+  expect(today.localDate).toBe("2026-08-17");
+  expect(today.hours.map((h) => h.feet)).toEqual([4.1]);
+  expect(tomorrow.localDate).toBe("2026-08-18");
+  expect(tomorrow.hours.map((h) => h.feet)).toEqual([4.2]);
+});
+
+test("a day carries what it spans, so a partial series is not stretched across it", async () => {
+  hourlyOk(wholeDay("2026-08-17"));
+
+  const view = await readHourlyTide(BEACH, NOON_PACIFIC_20260817);
+  if (view.state.kind !== "week") throw new Error("expected a week");
+
+  const today = view.state.days[0];
+  expect(today.startMs).toBe(localMidnightOf("2026-08-17"));
+  expect(today.endMs).toBe(localMidnightOf("2026-08-18"));
+  // Every hour returned falls inside the window that is drawn.
+  expect(today.hours.every((h) => h.atMs >= today.startMs)).toBe(true);
+  expect(today.hours.every((h) => h.atMs < today.endMs)).toBe(true);
+});
+
+test("all seven days come back, and a day the window missed is empty rather than absent", async () => {
+  // Only today. The other six are real days with nothing predicted for them,
+  // and a six-day array would let a grid say nothing at all about the seventh.
+  hourlyOk(wholeDay("2026-08-17"));
+
+  const view = await readHourlyTide(BEACH, NOON_PACIFIC_20260817);
+  if (view.state.kind !== "week") throw new Error("expected a week");
+
+  expect(view.state.days).toHaveLength(7);
+  expect(view.state.days[0].hours).toHaveLength(24);
+  expect(view.state.days.slice(1).every((day) => day.hours.length === 0)).toBe(
+    true,
+  );
+  // An empty day still knows what it spans, so a consumer renders a named
+  // absence rather than a flat line at zero.
+  expect(view.state.days[6].endMs - view.state.days[6].startMs).toBe(
+    24 * 3_600_000,
+  );
+});
+
+test("today is marked, so the curve reads no clock of its own", async () => {
+  hourlyOk(wholeDay("2026-08-17"));
+
+  const view = await readHourlyTide(BEACH, NOON_PACIFIC_20260817);
+  if (view.state.kind !== "week") throw new Error("expected a week");
+
+  expect(view.state.days.filter((day) => day.isToday)).toHaveLength(1);
+  expect(view.state.days[0].isToday).toBe(true);
+  expect(view.state.days[0].dayLabel).toBe("Mon, Aug 17");
+});
+
+test("negative heights survive the read, MLLW being what makes them mean something", async () => {
+  hourlyOk([
+    { atMs: Date.UTC(2026, 7, 17, 18, 0), feet: -0.147 },
+    { atMs: Date.UTC(2026, 7, 17, 19, 0), feet: 0.373 },
+  ]);
+
+  const view = await readHourlyTide(BEACH, NOON_PACIFIC_20260817);
+  if (view.state.kind !== "week") throw new Error("expected a week");
+  expect(view.state.days[0].hours.map((h) => h.feet)).toEqual([-0.147, 0.373]);
+});
+
+test("a beach with no tide station says so, and carries no station", async () => {
+  const view = await readHourlyTide(UNBOUND_BEACH, NOON_PACIFIC_20260817);
+
+  expect(view.station).toBeNull();
+  if (view.state.kind !== "no-station") throw new Error("expected no-station");
+  expect(view.state.reason).toMatch(/outside San Diego County/);
+  // A permanent fact about the place, so nothing was asked of NOAA.
+  expect(fetchHourlyTide).not.toHaveBeenCalled();
+});
+
+test("an outage keeps the station and says what went wrong", async () => {
+  fetchHourlyTide.mockResolvedValue({
+    kind: "unavailable",
+    reason: "NOAA returned HTTP 503 for station 9410230.",
+    drift: false,
+    url: "https://example.invalid",
+  });
+
+  const view = await readHourlyTide(BEACH, NOON_PACIFIC_20260817);
+
+  expect(view.station?.name).toBeTruthy();
+  if (view.state.kind !== "unavailable")
+    throw new Error("expected unavailable");
+  expect(view.state.detail).toMatch(/503/);
+  expect(view.state.drift).toBe(false);
+});
+
+test("drift is carried separately, because it is a bug here rather than a bad day", async () => {
+  fetchHourlyTide.mockResolvedValue({
+    kind: "unavailable",
+    reason: 'CO-OPS 9410230: a prediction\'s "v" was number, not a string.',
+    drift: true,
+    url: "https://example.invalid",
+  });
+
+  const view = await readHourlyTide(BEACH, NOON_PACIFIC_20260817);
+  if (view.state.kind !== "unavailable")
+    throw new Error("expected unavailable");
+  expect(view.state.drift).toBe(true);
+});
+
+test("the hourly read leaves the week's selected figure alone", async () => {
+  // ADR-0023 IS FULFILLED BY THIS READ, NOT REVERSED BY IT. The figure a week
+  // cell leads with is still the daylight extreme, selected by
+  // `readWeekOfLowestLows` from the turning points. The hours are what that
+  // figure is selected out of. If reading them ever changed the figure, the
+  // curve would be overwriting the decision it exists to illustrate.
+  ok([
+    { atMs: Date.UTC(2026, 7, 17, 20, 13), feet: 1.6, kind: "low" },
+    { atMs: Date.UTC(2026, 7, 17, 10, 41), feet: 0.2, kind: "low" },
+  ]);
+  hourlyOk(wholeDay("2026-08-17"));
+
+  const [week, hourly] = await Promise.all([
+    readWeekOfLowestLows(BEACH, NOON_PACIFIC_20260817),
+    readHourlyTide(BEACH, NOON_PACIFIC_20260817),
+  ]);
+
+  if (week.state.kind !== "week") throw new Error("expected a week");
+  const today = week.state.days[0];
+  if (today.state.kind !== "reading") throw new Error("expected a reading");
+
+  // 1:13 PM Pacific at 1.6 ft: the daylight low, not the 3:41 AM one at 0.2 ft
+  // and not any hour of the series above.
+  expect(today.state.daylight).toEqual({ timeLabel: "1:13 PM", feet: 1.6 });
+  expect(today.state.allDay).toEqual({ timeLabel: "3:41 AM", feet: 0.2 });
+  if (hourly.state.kind !== "week") throw new Error("expected a week");
+  expect(hourly.state.days[0].hours).toHaveLength(24);
+});
+
+test("a slug that is not in the inventory throws rather than rendering nothing", async () => {
+  await expect(
+    readHourlyTide("no-such-beach", NOON_PACIFIC_20260817),
+  ).rejects.toThrow(/no beach in the inventory/);
+});
+
+/* =========================================================================
+ * The two background layers a drawn day needs
+ * ========================================================================= */
+
+test("the daylight row carries its instants as well as its labels", () => {
+  // The labels are rounded to the minute for printing; a shaded night wants
+  // the boundary where it was computed. Both come from one `daylightOn` call,
+  // so the printed sunrise and the shaded edge cannot disagree about when the
+  // sun came up.
+  const view = readDaylightWeek(BEACH, NOON_PACIFIC_20260817);
+  const today = view.days[0];
+
+  expect(localTimeOf(today.sunriseMs)).toMatch(/AM$/);
+  expect(localTimeOf(today.sunsetMs)).toMatch(/PM$/);
+  expect(today.sunriseMs).toBeLessThan(today.sunsetMs);
+  // Inside the day it belongs to, at both ends.
+  expect(localDateOf(today.sunriseMs)).toBe("2026-08-17");
+  expect(localDateOf(today.sunsetMs)).toBe("2026-08-17");
+  // The rounded label is the same instant to the minute, not a second reading.
+  expect(today.sunriseLabel).toBe(
+    localTimeOf(Math.round(today.sunriseMs / 60_000) * 60_000),
+  );
+});
+
+test("the cloud row carries the whole day's hours, not only the daylight ones", async () => {
+  // The thirds answer what the sky does while the trip is happening; the hours
+  // are a layer washed across a plot that spans midnight to midnight. A wash
+  // that stopped at sunrise would leave the shaded half of the frame claiming
+  // nothing was forecast there.
+  gridOk([
+    { atMs: hourUtc(17, 9), percent: 0 }, // 2 AM Pacific, before sunrise
+    { atMs: hourUtc(17, 15), percent: 20 }, // 8 AM
+    { atMs: hourUtc(17, 23), percent: 80 }, // 4 PM
+  ]);
+
+  const view = await readSkyWeek(BEACH, NOON_PACIFIC_20260817);
+  if (view.state.kind !== "week") throw new Error("expected a week");
+
+  const today = view.state.days[0];
+  expect(today.hours.map((hour) => hour.percent)).toEqual([0, 20, 80]);
+  // And the thirds are still the daylight two, unchanged by carrying the third.
+  expect(today.thirds.am).toBe(20);
+  expect(today.thirds.eve).toBe(80);
+});
+
+test("an hour the forecast did not reach is absent rather than zero", async () => {
+  // Ragged on purpose. A padded series would let a consumer draw a clear sky
+  // where there is silence, which is the failure the whole row exists to avoid.
+  gridOk([
+    { atMs: hourUtc(17, 15), percent: 20 },
+    { atMs: hourUtc(17, 17), percent: 40 },
+  ]);
+
+  const view = await readSkyWeek(BEACH, NOON_PACIFIC_20260817);
+  if (view.state.kind !== "week") throw new Error("expected a week");
+
+  expect(view.state.days[0].hours).toHaveLength(2);
 });

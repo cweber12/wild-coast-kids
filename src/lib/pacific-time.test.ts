@@ -4,6 +4,7 @@ import {
   localDateOf,
   localDayLabel,
   localDayOf,
+  localMidnightOf,
   localTimeOf,
   SITE_TIME_ZONE,
 } from "./pacific-time";
@@ -70,6 +71,48 @@ describe("addLocalDays", () => {
   test("rolls the month and the year rather than overflowing them", () => {
     expect(addLocalDays("2026-12-31", 1)).toBe("2027-01-01");
     expect(addLocalDays("2026-01-31", 1)).toBe("2026-02-01");
+  });
+});
+
+describe("localMidnightOf", () => {
+  test("the instant it returns is midnight in this zone, not in UTC", () => {
+    const midnight = localMidnightOf("2026-08-17");
+    expect(localDateOf(midnight)).toBe("2026-08-17");
+    expect(localTimeOf(midnight)).toBe("12:00 AM");
+    // Daylight time: local midnight is 7 AM UTC, not midnight UTC. Reading a
+    // date string as an instant would give the second, which is 5 PM on the
+    // day before in California.
+    expect(midnight).toBe(Date.UTC(2026, 7, 17, 7, 0));
+  });
+
+  test("it follows the zone into standard time", () => {
+    const midnight = localMidnightOf("2026-01-15");
+    expect(localTimeOf(midnight)).toBe("12:00 AM");
+    expect(midnight).toBe(Date.UTC(2026, 0, 15, 8, 0));
+  });
+
+  test("the day the clocks go forward is twenty-three hours long", () => {
+    // California springs forward on 2026-03-08. A plot spanning that day with
+    // a hard-coded 24 hours would draw an hour that did not happen, and put
+    // every reading after 2 AM in the wrong place.
+    const span = localMidnightOf("2026-03-09") - localMidnightOf("2026-03-08");
+    expect(span).toBe(23 * 3_600_000);
+  });
+
+  test("the day the clocks go back is twenty-five", () => {
+    const span = localMidnightOf("2026-11-02") - localMidnightOf("2026-11-01");
+    expect(span).toBe(25 * 3_600_000);
+  });
+
+  test("an ordinary day is twenty-four", () => {
+    const span = localMidnightOf("2026-08-18") - localMidnightOf("2026-08-17");
+    expect(span).toBe(24 * 3_600_000);
+  });
+
+  test("it refuses a string that is not a local date rather than guessing", () => {
+    expect(() => localMidnightOf("2026-08-17T00:00:00Z")).toThrow(
+      /not a YYYY-MM-DD local date/,
+    );
   });
 });
 

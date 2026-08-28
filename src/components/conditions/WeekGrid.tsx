@@ -47,9 +47,73 @@
  */
 
 import type { ReactNode } from "react";
+import { MIN_USEFUL_SPARK_WIDTH_PX } from "./DaySpark";
 import { REGION_HEADING } from "./headingRank";
 import { ProvenanceLine } from "./ProvenanceLine";
 import { ReservedSlot } from "../ui/ReservedSlot";
+
+/**
+ * The narrowest a day block ever gets, in CSS pixels.
+ *
+ * Measured on the built page 2026-08-28 at 1280, which is where `xl` turns four
+ * columns into seven and is therefore the tightest the grid ever is: 158.8px of
+ * block holding a 132.8px shape. Wider at every other width — 195.4 at 1536,
+ * 223 at 1024's four columns, 327 at 375's one.
+ *
+ * Here rather than beside the shape it constrains, because the thing that could
+ * make it wrong is `xl:grid-cols-7` below. It has been wrong that way once
+ * already: ADR-0023 moved seven columns from `lg` to `xl` precisely because
+ * 88px of content at 1024 was narrower than the text standing in it.
+ */
+const NARROWEST_DAY_BLOCK_PX = 158.8;
+
+/**
+ * What a day block spends on chrome before its contents get any, as a container
+ * query sees it.
+ *
+ * **The padding only, and the border deliberately not.** `container-type:
+ * inline-size` resolves a query against the container's *content* box, so the
+ * 1.5px border is already outside the number being compared. Including it put
+ * the first version of this threshold three pixels high, which the probe caught
+ * by hiding a block at 138px that should have kept its shape.
+ *
+ * It is `px-3` on the wrapper, twice. Good to a pixel rather than exactly: a
+ * 1.5px border does not render as 1.5px, so the shape measures a pixel wider
+ * than the arithmetic says. That slop is far inside the resolution of the
+ * measurement it serves — the shape was judged legible at 110px and illegible
+ * at 88 — so it is recorded rather than chased.
+ */
+const DAY_BLOCK_PADDING_PX = 24;
+
+/**
+ * The container width at which a shape stops being worth drawing.
+ *
+ * `MIN_USEFUL_SPARK_WIDTH_PX` is measured on the shape itself, so the container
+ * threshold is that plus the padding around it. Derived rather than written, so
+ * the two cannot drift: a change to either the measured floor or the wrapper's
+ * padding moves this with it.
+ *
+ * Verified by putting the shipped markup in front of containers either side of
+ * it, since no viewport reaches a block this narrow through the real page — the
+ * grid goes to one column long before the cell does. The last block that draws
+ * a shape is 136px and it renders that shape at exactly 110px, which is the
+ * floor; 134px draws none. The figure and the header window are present at
+ * every width either side, which is the half of this that matters: below the
+ * threshold the cell reads as it did before there were shapes.
+ */
+export const MIN_SPARK_BLOCK_PX =
+  MIN_USEFUL_SPARK_WIDTH_PX + DAY_BLOCK_PADDING_PX;
+
+/**
+ * True when the grid's own narrowest cell still clears the floor.
+ *
+ * Exported for the test that asserts it. 132.8px of shape against a 110px
+ * floor today, so the rule below never fires — and if a future breakpoint
+ * change makes it fire, that is a decision someone should have to make on
+ * purpose rather than discover as seven blank strips.
+ */
+export const NARROWEST_CELL_CLEARS_FLOOR =
+  NARROWEST_DAY_BLOCK_PX - DAY_BLOCK_PADDING_PX >= MIN_SPARK_BLOCK_PX;
 
 /** One column of the week. */
 export type WeekDay = {
@@ -82,6 +146,31 @@ export type WeekDay = {
    * date rather than a gap where a line should be.
    */
   daylight?: ReactNode;
+  /**
+   * This day drawn as a shape, beneath the header and above the figures.
+   *
+   * A slot on the day rather than a `WeekRow`, and for a different reason than
+   * `daylight` is. That one states the scope every row is selected within; this
+   * one is the *series* one row's figure was selected out of — the full
+   * twenty-four hours the header's window is a slice of. Seven of them are
+   * small multiples, so they have to sit at the same height in all seven
+   * columns, which a row cannot promise: rows are ragged by design and a day
+   * whose wave forecast has run out would carry its shape a line higher than
+   * its neighbours.
+   *
+   * **It restores no figure to this cell, which is what keeps ADR-0023
+   * intact.** That decision moved the daylight window into the header and left
+   * the rows carrying only the figures inside it, having measured that the
+   * labels an "all day" figure needs — "Lowest daylight tide", 170px against
+   * 125px of cell — do not fit at any width this grid has. A drawn overnight
+   * low needs no label at all. The header window and the figure beneath are
+   * untouched; this is the debt ADR-0023 recorded being paid, not that
+   * decision being reversed.
+   *
+   * Optional, so a grid whose series could not be read renders exactly as it
+   * did before there was one.
+   */
+  spark?: ReactNode;
 };
 
 /**
@@ -243,7 +332,21 @@ export function WeekGrid({
           {days.map((day) => (
             <li
               key={day.localDate}
-              className={`overflow-hidden rounded-tile border-[1.5px] bg-white/60 ${
+              /*
+                `@container`, so the shape inside can be dropped on the width of
+                its own cell rather than on the width of the window. The two are
+                not the same question: this grid is one, two, four and seven
+                columns, so a 1024 window gives a *wider* cell than a 1280 one
+                and a viewport media query would have to encode the whole
+                progression to say one thing about a cell.
+
+                `inline-size` containment only, which is what `@container`
+                sets. The block's width already comes from the grid track and
+                its height still comes from its contents, so nothing here sizes
+                differently for it -- measured before and after: 195.4 x 275.0
+                at 1536, unchanged.
+              */
+              className={`@container overflow-hidden rounded-tile border-[1.5px] bg-white/60 ${
                 day.isToday ? "border-ocean" : "border-lavender"
               }`}
             >
@@ -313,6 +416,43 @@ export function WeekGrid({
                 */}
                 {day.daylight}
               </div>
+
+              {/*
+                Between the band and the figures, and at the top of the body
+                rather than the foot of it. The rows below are ragged by
+                design — a day the wave forecast has not reached carries two
+                pairs where its neighbour carries three — so anything anchored
+                under them sits at a different height in each column, and seven
+                shapes that do not line up are seven charts rather than one
+                instrument. Under the band there is nothing above it but the
+                date, which is the same height in all seven.
+
+                It is also the line the shading is about: the window printed
+                directly above says where the light is, and the band drawn
+                directly below is where it is not.
+
+                Padded here rather than in the shape, so the plot is one
+                geometry with no margins of its own to keep in step with the
+                cell's.
+              */}
+              {/*
+                134px is `MIN_SPARK_BLOCK_PX`, written out because Tailwind
+                scans source text and cannot read a constant. The pair is held
+                together from the other side: a test asserts the constant is
+                still 137, and the `stylesheet` gate asserts this class
+                compiled to a real rule. Neither alone is enough -- an
+                unregistered variant leaves the class in the markup where jsdom
+                still finds it, so the component tests cannot see it fail.
+
+                A container query rather than a viewport one, because the two
+                are not the same question here: this grid is one, two, four and
+                seven columns, so a 1024 window gives a *wider* cell than a 1280
+                one and a media query would have to encode the whole progression
+                to say one thing about a cell.
+              */}
+              {day.spark && (
+                <div className="@max-[134px]:hidden px-3 pt-2">{day.spark}</div>
+              )}
 
               <dl className="px-3 pb-2">
                 {rows.map((row) => {

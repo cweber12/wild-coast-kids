@@ -47,11 +47,14 @@
  */
 
 import {
+  coopsHourlyUrl,
   coopsPredictionsUrl,
   CoopsDriftError,
   parseCoopsHiLo,
+  parseCoopsHourly,
   type CoopsRequestContract,
   type TideExtreme,
+  type TideHeight,
 } from "./coops-predictions";
 import {
   NdbcDriftError,
@@ -101,6 +104,77 @@ export type PredictionsResult =
       url: string;
     };
 
+export type HourlyPredictionsResult =
+  | { kind: "ok"; heights: TideHeight[]; url: string }
+  | { kind: "unavailable"; reason: string; drift: boolean; url: string };
+
+/** A failure the two CO-OPS requests share, before either shapes its own result. */
+type CoopsFailure = { reason: string; drift: boolean };
+
+/**
+ * Everything the two CO-OPS intervals do identically: request, status, JSON,
+ * parse, and how each of those goes wrong.
+ *
+ * The one shared helper in this file, and the reason it is shared where the six
+ * feeds below are not: those differ in the parts that matter -- a 404 means a
+ * decommissioned buoy at NDBC and a stale grid binding at the National Weather
+ * Service, a 400 means two different things at CDIP, and three of them apply an
+ * age limit. The two requests here differ in one query parameter. Repeating
+ * forty lines for that would be two places to fix the next time NOAA's failure
+ * shape moves, and they would drift the way `ProvenanceLine`'s wording did.
+ *
+ * The parser is passed in rather than the interval, so this function needs no
+ * knowledge of what it is parsing. `parse` may throw -- both CO-OPS parsers do,
+ * including on HTTP 200, because CO-OPS serves `{"error":{…}}` with a 200 and
+ * the parser treats that as the dead response it is.
+ */
+async function readCoopsPredictions<T>(
+  url: string,
+  contract: CoopsRequestContract,
+  parse: (payload: unknown, contract: CoopsRequestContract) => T,
+): Promise<{ kind: "ok"; value: T } | ({ kind: "failed" } & CoopsFailure)> {
+  const failed = (reason: string, drift = false) =>
+    ({ kind: "failed", reason, drift }) as const;
+
+  let response: Response;
+  try {
+    response = await fetch(url, {
+      headers: { "User-Agent": USER_AGENT },
+      next: { revalidate: PREDICTIONS_REVALIDATE_SECONDS },
+    });
+  } catch (cause) {
+    return failed(
+      `The request to NOAA for station ${contract.stationId} did not complete: ` +
+        `${cause instanceof Error ? cause.message : String(cause)}`,
+    );
+  }
+
+  if (!response.ok) {
+    return failed(
+      `NOAA returned HTTP ${response.status} for station ${contract.stationId}.`,
+    );
+  }
+
+  let payload: unknown;
+  try {
+    payload = await response.json();
+  } catch (cause) {
+    return failed(
+      `NOAA's response for station ${contract.stationId} was not JSON: ` +
+        `${cause instanceof Error ? cause.message : String(cause)}`,
+    );
+  }
+
+  try {
+    return { kind: "ok", value: parse(payload, contract) };
+  } catch (cause) {
+    if (cause instanceof CoopsDriftError) {
+      return failed(cause.message, true);
+    }
+    return failed(cause instanceof Error ? cause.message : String(cause));
+  }
+}
+
 /**
  * Fetch a station's predicted high and low tides for a date range.
  *
@@ -110,53 +184,32 @@ export async function fetchTideExtremes(
   contract: CoopsRequestContract,
 ): Promise<PredictionsResult> {
   const url = coopsPredictionsUrl(contract);
+  const read = await readCoopsPredictions(url, contract, parseCoopsHiLo);
+  return read.kind === "ok"
+    ? { kind: "ok", extremes: read.value, url }
+    : { kind: "unavailable", reason: read.reason, drift: read.drift, url };
+}
 
-  const unavailable = (reason: string, drift = false): PredictionsResult => ({
-    kind: "unavailable",
-    reason,
-    drift,
-    url,
-  });
-
-  let response: Response;
-  try {
-    response = await fetch(url, {
-      headers: { "User-Agent": USER_AGENT },
-      next: { revalidate: PREDICTIONS_REVALIDATE_SECONDS },
-    });
-  } catch (cause) {
-    return unavailable(
-      `The request to NOAA for station ${contract.stationId} did not complete: ` +
-        `${cause instanceof Error ? cause.message : String(cause)}`,
-    );
-  }
-
-  if (!response.ok) {
-    return unavailable(
-      `NOAA returned HTTP ${response.status} for station ${contract.stationId}.`,
-    );
-  }
-
-  let payload: unknown;
-  try {
-    payload = await response.json();
-  } catch (cause) {
-    return unavailable(
-      `NOAA's response for station ${contract.stationId} was not JSON: ` +
-        `${cause instanceof Error ? cause.message : String(cause)}`,
-    );
-  }
-
-  try {
-    // This can throw on a 200: CO-OPS serves {"error":{...}} with HTTP 200, and
-    // the parser treats that as the dead response it is.
-    return { kind: "ok", extremes: parseCoopsHiLo(payload, contract), url };
-  } catch (cause) {
-    if (cause instanceof CoopsDriftError) {
-      return unavailable(cause.message, true);
-    }
-    return unavailable(cause instanceof Error ? cause.message : String(cause));
-  }
+/**
+ * Fetch a station's predicted height on every hour of a date range.
+ *
+ * Never throws.
+ *
+ * A SECOND REQUEST TO THE SAME STATION, and it has to be. `interval` is part of
+ * the URL, so the hourly series and the turning points cannot share a response
+ * however the window is arranged -- and Next dedupes on the URL, so this is one
+ * extra request per beach per six hours rather than one per render. It is the
+ * same product on the same cache: predictions are astronomical, and asking more
+ * often than `PREDICTIONS_REVALIDATE_SECONDS` cannot return a different number.
+ */
+export async function fetchHourlyTide(
+  contract: CoopsRequestContract,
+): Promise<HourlyPredictionsResult> {
+  const url = coopsHourlyUrl(contract);
+  const read = await readCoopsPredictions(url, contract, parseCoopsHourly);
+  return read.kind === "ok"
+    ? { kind: "ok", heights: read.value, url }
+    : { kind: "unavailable", reason: read.reason, drift: read.drift, url };
 }
 
 /* ===========================================================================

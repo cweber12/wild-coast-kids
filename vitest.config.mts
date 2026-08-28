@@ -134,11 +134,37 @@ export default defineConfig({
       // before touching these numbers again: the failure message reads the same
       // either way, and the ratchet will do this on every slice that removes
       // tested code.
+      // RAISED 2026-08-28, all four, by the day view's first slice (#171).
+      //
+      // This is the ordinary direction and the easy case, but it is written
+      // down because the paragraph above spends four entries explaining drops
+      // and none explaining a rise, which makes a rise look like something
+      // nobody checked.
+      //
+      // The hourly tide contract, `readHourlyTide`, `localMidnightOf`,
+      // `DaySpark` and the grid's sparkline slot are a large amount of new code
+      // and every commit carried its tests, so both halves of every ratio grew
+      // and the numerators grew faster:
+      //
+      //   statements 2020/2324  86.16 -> 86.91
+      //   branches   1362/1546  87.62 -> 88.09
+      //   functions   467/501   92.62 -> 93.21
+      //   lines                 85.74 -> 86.57
+      //
+      // **All four moving the same way is the signature of tested code
+      // arriving**, and it is worth knowing because the opposite -- the
+      // numerator alone falling -- reads identically in the failure message and
+      // is a regression. The four entries above record the third case, where
+      // both fall together because covered code was deleted.
+      //
+      // Nothing new is excluded and nothing was excluded to reach these. The
+      // six 0% entry-plumbing files named above still drag all four figures
+      // down in plain sight.
       thresholds: {
-        statements: 86.16,
-        branches: 87.62,
-        functions: 92.62,
-        lines: 85.74,
+        statements: 86.91,
+        branches: 88.09,
+        functions: 93.21,
+        lines: 86.57,
       },
     },
   },

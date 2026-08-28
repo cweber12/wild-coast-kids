@@ -7,30 +7,45 @@
  * rather than in `lib/conditions.ts` because which glyph marks a row and what a
  * row is called are presentation.
  *
- * **Four reads, and only one of them cannot fail.** The tide comes from NOAA,
- * the wave forecast from CDIP and the cloud forecast from the National Weather
- * Service; daylight is computed in this repo from the beach's own coordinates. So the columns are taken from the daylight read: an
- * outage then costs a row rather than the whole grid, and the week still
- * answers a question a parent came with. All three build their days from one
- * helper in `lib/conditions.ts`, which is what stops the rows disagreeing about
- * which day is Tuesday.
+ * **Five reads, and only one of them cannot fail.** The tide's figures and its
+ * hourly series come from NOAA, the wave forecast from CDIP and the cloud
+ * forecast from the National Weather Service; daylight is computed in this repo
+ * from the beach's own coordinates. So the columns are taken from the daylight
+ * read: an outage then costs a row rather than the whole grid, and the week
+ * still answers a question a parent came with. All of them build their days
+ * from one helper in `lib/conditions.ts`, which is what stops the rows
+ * disagreeing about which day is Tuesday.
  *
- * **The three upstream reads are made concurrently and fail apart.** They share
+ * **The four upstream reads are made concurrently and fail apart.** They share
  * no publisher and no failure, and NOAA going quiet must not cost the week its
  * wave row -- the same argument `readLatestAir` makes for its two stations.
  * The cloud read joins them under ADR-0020, which moved sky off the air card
  * and into this grid: after that change this row is the only sky on the site,
  * so an outage here is a whole variable missing rather than one row thinner,
  * and it says so in the notes below the grid.
+ *
+ * **The hourly tide is the fourth, and it is a second request to the station
+ * the first one already asked.** `interval` is part of CO-OPS' URL, so the
+ * curve and the turning points cannot arrive together. They therefore fail
+ * apart too: the shape can go missing while the figure it sits under is fine,
+ * which is a state the notes below say out loud rather than leaving as seven
+ * empty frames.
+ *
+ * **Composing the shapes is this file's job and not the grid's**, for the
+ * reason the row mapping is: three publishers' hours have to become one series
+ * plus two background layers, and `WeekGrid` must not know what a tide is.
  */
 
 import {
   readDaylightWeek,
+  readHourlyTide,
   readSkyWeek,
   readWaveWeek,
   readWeekOfLowestLows,
+  type TideHourlyDay,
 } from "@/lib/conditions";
 import { DaylightWeek } from "./DaylightWeek";
+import { DaySpark, type SparkPoint } from "./DaySpark";
 import {
   MOP_MODEL_NOTE,
   MOP_NETWORK,
@@ -88,11 +103,77 @@ const RESERVED: readonly ReservedRow[] = [
   },
 ];
 
+/** What a day says when the window this page asked NOAA for did not reach it. */
+const NO_SERIES = "No hourly prediction for this day.";
+
+/**
+ * One value range for every shape in the week.
+ *
+ * **Seven small multiples share one scale or they are seven charts.** A day
+ * scaled to its own range fills the frame whatever it did, so a flat Tuesday
+ * and a dramatic Wednesday draw the same picture and the comparison the grid
+ * exists for is destroyed. Derived across every hour of every day, which is
+ * also what guarantees no point falls outside the frame it is drawn in.
+ *
+ * Null when the week holds no hours at all, which is a week with nothing to
+ * draw rather than a week that is flat.
+ */
+function sharedRange(
+  days: readonly TideHourlyDay[],
+): { low: number; high: number } | null {
+  const feet = days.flatMap((day) => day.hours.map((hour) => hour.feet));
+  if (feet.length === 0) return null;
+  return { low: Math.min(...feet), high: Math.max(...feet) };
+}
+
+/**
+ * What a reader who cannot see the shape is told instead.
+ *
+ * **The extremes are named as the lowest and highest *hour*, not as the day's
+ * low and high.** They are hourly samples of a continuous curve, so the real
+ * turning point is lower than any of them and falls between two — which is
+ * exactly why this page asks NOAA for the turning points separately and prints
+ * that figure above. Wording this as "the day's lowest tide" would put a second
+ * figure in the cell that disagrees with the first by a few minutes and a few
+ * hundredths, which is worse than having no second figure at all.
+ */
+function sparkDescription(
+  day: TideHourlyDay,
+  sunriseLabel: string,
+  sunsetLabel: string,
+): string {
+  const feet = day.hours.map((hour) => hour.feet);
+  if (feet.length === 0) return NO_SERIES;
+  const low = Math.min(...feet).toFixed(1);
+  const high = Math.max(...feet).toFixed(1);
+  return (
+    `Tide through ${day.dayLabel}, hour by hour: ${low} ft at its lowest hour, ` +
+    `${high} ft at its highest. Night is shaded; the sun is up from ` +
+    `${sunriseLabel} to ${sunsetLabel}.`
+  );
+}
+
+/** Hourly heights as the shape draws them. Every hour is NOAA's own; none is interpolated. */
+function tidePoints(day: TideHourlyDay): SparkPoint[] {
+  return day.hours.map((hour) => ({
+    atMs: hour.atMs,
+    value: hour.feet,
+    published: true,
+  }));
+}
+
 export async function WeekPanel({ slug }: { slug: string }) {
   // Concurrently, and failing apart: NOAA and CDIP share no publisher and no
   // outage, so neither may hold up or take down the other's row.
-  const [view, waves, sky] = await Promise.all([
+  //
+  // The hourly read is a fourth request and a second one to NOAA -- `interval`
+  // is part of the URL, so the curve and the turning points cannot arrive in
+  // one response. It fails apart from the figures it sits under for the same
+  // reason the others do: an outage on the hourly series must cost the shape
+  // and not the week.
+  const [view, hourly, waves, sky] = await Promise.all([
     readWeekOfLowestLows(slug),
+    readHourlyTide(slug),
     readWaveWeek(slug),
     readSkyWeek(slug),
   ]);
@@ -112,10 +193,73 @@ export async function WeekPanel({ slug }: { slug: string }) {
     labels that never fitted the cell. See
     `docs/plans/week-grid-legibility.md`.
   */
-  const days = daylight.days.map((day) => ({
-    ...day,
-    daylight: <DaylightWeek day={day} />,
-  }));
+  /*
+    The shapes, composed from three reads that each own a different layer: the
+    hourly heights from NOAA, the night from this repo's own astronomy, and the
+    cloud wash from the National Weather Service.
+
+    The tide read decides whether there is a shape at all, and the other two
+    only ever subtract from it. Daylight cannot fail. Cloud can, and when it
+    does the wash is simply absent -- a day with no forecast draws no wash,
+    which is why `DaySpark` floors a published 0% above zero rather than letting
+    a clear sky and a silent feed render alike.
+
+    ADR-0023's figures are untouched by every line of this. The shape draws the
+    hours the daylight figure was selected out of; nothing here changes which
+    figure that is or puts a second one in the cell.
+  */
+  const hourlyByDate = new Map(
+    hourly.state.kind === "week"
+      ? hourly.state.days.map((day) => [day.localDate, day])
+      : [],
+  );
+  const cloudByDate = new Map(
+    sky.state.kind === "week"
+      ? sky.state.days.map((day) => [day.localDate, day.hours])
+      : [],
+  );
+  const range =
+    hourly.state.kind === "week" ? sharedRange(hourly.state.days) : null;
+
+  const days = daylight.days.map((day) => {
+    const series = hourlyByDate.get(day.localDate);
+
+    return {
+      ...day,
+      daylight: <DaylightWeek day={day} />,
+      /*
+        No shape at all when the tide read failed, rather than an empty frame
+        seven times over: the grid then renders exactly as it did before there
+        was a spark, and the sentence explaining the outage is already in the
+        notes below. A day the read reached but the window did not gets its
+        named absence instead, because that is one day missing rather than a
+        feed being down.
+      */
+      spark:
+        series === undefined || range === null ? undefined : (
+          <DaySpark
+            startMs={series.startMs}
+            endMs={series.endMs}
+            points={tidePoints(series)}
+            sunriseMs={day.sunriseMs}
+            sunsetMs={day.sunsetMs}
+            lowValue={range.low}
+            highValue={range.high}
+            cloud={(cloudByDate.get(day.localDate) ?? []).map((hour) => ({
+              atMs: hour.atMs,
+              value: hour.percent,
+              published: true,
+            }))}
+            description={sparkDescription(
+              series,
+              day.sunriseLabel,
+              day.sunsetLabel,
+            )}
+            absence={NO_SERIES}
+          />
+        ),
+    };
+  });
 
   const rows: WeekRow[] = [];
 
@@ -231,6 +375,24 @@ export async function WeekPanel({ slug }: { slug: string }) {
         "Nothing is wrong with the beach — the card above says what went wrong.",
     );
   }
+  /*
+    The shape and the figure are two requests to one station, so one can go
+    quiet while the other answers. A reader who saw the curves last week would
+    otherwise find them gone with nothing to explain it, which is the silent
+    failure this repo is built to avoid -- and the tide card's disclosure cannot
+    cover it, because that card shares the *other* request.
+
+    Only when the figures came through. When both failed the sentence above
+    already says so, and saying it twice would make one outage read as two.
+  */
+  if (view.state.kind === "week" && hourly.state.kind === "unavailable") {
+    notes.push(
+      "The hour-by-hour shape behind each day's figure is missing this time: " +
+        "NOAA answered for the day's high and low tides but not for the hourly " +
+        "heights in between. The figures themselves are unaffected.",
+    );
+  }
+
   if (view.state.kind === "no-station") {
     notes.push(
       "We have no tide station for this beach, so there is nothing to predict " +
