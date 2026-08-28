@@ -102,7 +102,7 @@ test("the safety framing is not repeated here, it is above the readings", () => 
   // figure -- which is what the heading above them promises.
   expect(screen.getByText("Tide heights")).toBeDefined();
   expect(screen.getByText("Wave heights")).toBeDefined();
-  expect(screen.getByText("Cloud by day")).toBeDefined();
+  expect(screen.getByText("Clouds")).toBeDefined();
   // The airport entry is gone with the figures it explained. A note about a
   // reading the page no longer carries would be prose describing nothing.
   expect(screen.queryByText("Sky and visibility")).toBeNull();
@@ -240,14 +240,16 @@ test("the notes lay out in columns, each keeping its own measure", () => {
   }
 });
 
-test("the reader is told why the leading figure is not the day's lowest", () => {
-  // The cell says "Lowest daylight tide" and shows a higher number than the one
-  // beneath it. Without this, that reads as a fault -- see docs/adr/0017.
+test("the reader is told why the week leaves the overnight extremes out", () => {
+  // ADR-0017 put the daylight extreme first and the day's own beneath it, and
+  // this entry explained the pair. ADR-0023 removed the second figure from the
+  // week, so what needs explaining changed: not why the leading number is the
+  // higher one, but where the lower one went. Left unsaid, a reader who saw a
+  // -0.2 ft last week finds it gone with nothing to account for it.
   render(<ConditionsNotes entries={ENTRIES} reach={REACH} />);
 
-  expect(
-    screen.getByText(/because those are the ones you can be there for/),
-  ).toBeDefined();
+  expect(screen.getByText(/so the week leaves them out/)).toBeDefined();
+  expect(screen.getByText(/on the cards above/)).toBeDefined();
   expect(
     screen.getByText(/nothing here is a judgement about when you should go/),
   ).toBeDefined();

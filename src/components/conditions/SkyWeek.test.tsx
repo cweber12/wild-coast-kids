@@ -14,11 +14,13 @@ test("the day's figure is a percentage, and it leads", () => {
   expect(container.querySelector(".font-extrabold")?.textContent).toBe("44%");
 });
 
-test("the label names an average, not a superlative", () => {
-  // `TideWeek` and `WaveWeek` say "Lowest" and "Biggest" because they show one
-  // of a day's estimates. This shows all of them, averaged, and a reader who
-  // read the label as a superlative would be wrong about the number.
-  expect(SKY_WEEK_ROW.label).toBe("Cloud by day");
+test("the label claims no superlative, because this row is a mean", () => {
+  // It used to say "Cloud by day" against two labels opening "Lowest" and
+  // "Biggest", and that contrast was what said this row is an average rather
+  // than a peak. ADR-0023 shortened those two, so the contrast is gone and
+  // `ConditionsNotes` carries the distinction. What is still assertable here,
+  // and still the risk, is that the label never claims an extreme.
+  expect(SKY_WEEK_ROW.label).toBe("Clouds");
   expect(SKY_WEEK_ROW.label).not.toMatch(/cloudiest|clearest|most|least/i);
 });
 

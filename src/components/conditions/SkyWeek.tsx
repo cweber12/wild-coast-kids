@@ -1,12 +1,17 @@
 /**
  * One day's cloud cover, as the week grid prints it.
  *
- * **The label names the selection, like every row above it, and names a
- * different kind of selection.** `TideWeek` and `WaveWeek` say "Lowest daylight
- * tide" and "Biggest daylight swell" because they show one of a day's estimates
- * and which one is a judgement. This shows all of them, averaged, and "Cloud by
- * day" says that — a reader who reads it as a superlative would be wrong about
- * the number in a way the tide and swell labels are built to prevent.
+ * **The label is "Clouds", and it names a different kind of selection from the
+ * two rows above it.** `TideWeek` and `WaveWeek` each show one of a day's
+ * estimates, and which one is a judgement the day header now states for all
+ * three. This shows all of them, averaged. That difference used to live in the
+ * label — "Cloud by day" against two superlatives — and after ADR-0023 the
+ * superlatives are gone from the labels too, so the distinction has nowhere to
+ * be drawn in three words. It is drawn in `ConditionsNotes` instead, which is
+ * where the page already explains that a tide time and a swell time are
+ * different kinds of figure. A reader who took this for a peak would be wrong
+ * about the number, and that is the risk this paragraph exists to flag to
+ * whoever changes the wording next.
  *
  * **Why an average where the rows above take an extreme.** ADR-0017 selects for
  * reachability: a lowest low at 3:14 AM is a number nobody planning a trip with
@@ -20,10 +25,19 @@
  * **The phenomenon carries the "when" the percentage cannot.** Every other row
  * in this grid leads with a time. This one has none to lead with, because a
  * mean is about a window rather than an instant — and a parent does not plan
- * around 44% cloud, they plan around fog. So the second line is the phenomenon
- * when one is forecast for a daylight hour, and absent when none is, which is
- * most days. An absent line is an ordinary day rather than a missing reading:
- * the percentage above it still answers.
+ * around 44% cloud, they plan around fog. So the phenomenon follows the
+ * percentage when one is forecast for a daylight hour, and is absent when none
+ * is, which is most days. An absent phenomenon is an ordinary day rather than a
+ * missing reading: the percentage still answers.
+ *
+ * **This is the row allowed to wrap, and it is last for that reason.** The
+ * phenomenon is the only free text in the cell: "Patchy fog" is 101px and
+ * "Slight chance rain showers" is 203px, against 125px in the narrowest
+ * seven-column cell. It used to be forced onto its own line at `lg` so the
+ * columns stayed in step, which cost the height on every day to protect rows
+ * that no longer exist beneath it. Nothing follows this row, the day blocks are
+ * grid items and stay equal height regardless, so a second line here makes one
+ * column's text taller and misaligns nothing.
  *
  * **No visibility figure, and that is the point rather than an omission.** The
  * gridpoint declares `visibility` and publishes nothing for it at any cell
@@ -48,7 +62,7 @@ import { phenomenonWords } from "./gridCell";
 
 /** What every day of this row shares: the words that name it. */
 export const SKY_WEEK_ROW = {
-  label: "Cloud by day",
+  label: "Clouds",
 } as const;
 
 export function SkyWeek({
@@ -59,15 +73,13 @@ export function SkyWeek({
   return (
     <>
       {/*
-        The space between the spans stays, for the reason `DaylightWeek`
-        records: two blocks collapse it visually and it is still a text node,
-        and without it the accessible text runs together as "44%Patchy fog".
+        The space between the spans stays a text node. Without it the
+        accessible text runs together as "44%Patchy fog" -- the concatenation
+        `ReadingCard` records hitting in the accessible-name algorithm.
       */}
-      <span className="font-extrabold lg:block">{day.cloudPercent}%</span>{" "}
+      <span className="font-extrabold">{day.cloudPercent}%</span>{" "}
       {day.phenomenon !== null && (
-        <span className="text-fog lg:block">
-          {phenomenonWords(day.phenomenon)}
-        </span>
+        <span className="text-fog">{phenomenonWords(day.phenomenon)}</span>
       )}
     </>
   );

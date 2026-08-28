@@ -205,6 +205,26 @@ export async function WeekPanel({ slug }: { slug: string }) {
     the same moment — repeating it here would be the same failure twice.
   */
   const notes: string[] = [];
+
+  /*
+    First, because it qualifies every figure in the grid rather than reporting
+    one feed's trouble. ADR-0023 dropped the day's own extremes from these
+    cells -- a lowest low at 3:38 AM is a real prediction and a useless plan,
+    and the labels naming it never fitted -- and this sentence is the condition
+    that was allowed under. Without it a reader who saw a -0.2 ft here last
+    week finds it gone with nothing to explain the change, which is the silent
+    failure this repo is built to avoid.
+
+    Unconditional, and one sentence rather than seven: the scope is a fact
+    about the grid, the same shape as every other note here. It says where the
+    figure went as well as that it is missing, because "not shown" alone reads
+    as an omission rather than a decision.
+  */
+  notes.push(
+    "This week shows what falls between sunrise and sunset. Lows and swells " +
+      "overnight are real and often bigger — today's are on the cards above.",
+  );
+
   if (view.state.kind === "unavailable") {
     notes.push(
       "We could not get this week's tide predictions from NOAA just now. " +

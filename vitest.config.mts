@@ -112,24 +112,33 @@ export default defineConfig({
       // Covering what is left means faking spawn, fetch and the GitHub API at
       // once, which costs more than it returns and is the trade ADR-0002 already
       // made for run-gates.mjs.
-      // LOWERED 2026-08-27, lines only, by one hundredth of a point: 85.73 to
-      // 85.72. Not reason 1 and not a file going uncovered. Moving the daylight
-      // window out of `WeekPanel`'s rows and into the day header **deleted two
-      // fully-covered lines**, and deleting covered code from a repo whose
-      // global ratio is 85.7% lowers that ratio -- 1726/2013 was 85.74%,
-      // 1724/2011 is 85.72%.
+      // LOWERED 2026-08-27, twice, by hundredths, and neither time because
+      // anything went uncovered. ADR-0023 **deleted covered code** from the
+      // week grid, and deleting covered code from a repo whose global ratio is
+      // 86% lowers that ratio.
       //
-      // Recorded because it is the first drop here that is not about coverage
-      // at all, and the ratchet will do it again: every slice that removes
-      // tested code costs a hundredth. All five files that changed sit at 100%
-      // lines, which is the thing worth checking before touching this block --
-      // a genuine regression and this arithmetic look identical from the
-      // failure message alone.
+      // The arithmetic is the check, and it is available in the failure output
+      // rather than needing to be trusted:
+      //
+      // - lines 1726/2013 -> 1724/2011, the daylight window leaving
+      //   `WeekPanel`'s rows for the day header. Two lines removed, two of them
+      //   covered.
+      // - branches 1300/1483 -> 1296/1479 and functions 429/463 -> 427/461,
+      //   the `allDay` ternaries and the two `worded` helpers going with the
+      //   overnight figures. Four branches and two functions removed; the
+      //   numerator fell by exactly the same amount, which is what says every
+      //   one of them was covered.
+      //
+      // **Numerator and denominator falling together is the signature of this
+      // and not of a regression**, which drops the numerator alone. Check that
+      // before touching these numbers again: the failure message reads the same
+      // either way, and the ratchet will do this on every slice that removes
+      // tested code.
       thresholds: {
-        statements: 86.14,
-        branches: 87.66,
-        functions: 92.64,
-        lines: 85.72,
+        statements: 86.16,
+        branches: 87.62,
+        functions: 92.62,
+        lines: 85.74,
       },
     },
   },
