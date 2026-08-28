@@ -1,0 +1,54 @@
+# Weekly check that the data this repo owns still matches what upstream
+# publishes. ADR-0009 promised this and nothing ran the probes; ADR-0022
+# records what it does when it finds something.
+#
+# Separate from gate.yml on purpose. Every gate is offline so a fresh clone
+# with no credentials can run it; every probe here reaches the network. Mixing
+# them would make the gate need the internet.
+name: probe
+
+on:
+  schedule:
+    # 07:00 UTC on Mondays — midnight Pacific in summer, 23:00 Sunday in winter.
+    # A weekly job whose exact minute matters is a job with a different problem.
+    - cron: "0 7 * * 1"
+  workflow_dispatch:
+
+# The repo's default workflow token is read-only, so an omitted block fails at
+# the API call rather than at parse time. `issues: write` covers both filing and
+# commenting. Nothing else is granted: this workflow commits nothing, pushes
+# nothing and opens no pull request.
+permissions:
+  contents: read
+  issues: write
+
+# One run at a time. Two overlapping runs would each see no open issue for a
+# moved probe and file two.
+concurrency:
+  group: probe
+  cancel-in-progress: false
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          # The same pin gate.yml carries. CLAUDE.md asks that CI and local
+          # share one runtime; two workflows disagreeing would be the same bug
+          # one step further out.
+          node-version: "22.18.0"
+          cache: npm
+
+      # ci, not install, for the reason gate.yml gives: it installs exactly the
+      # lockfile and fails if that has drifted from package.json.
+      - run: npm ci
+
+      - name: Run every probe and report what moved
+        run: node scripts/run-probes.mjs
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
