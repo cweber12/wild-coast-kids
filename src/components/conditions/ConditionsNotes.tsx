@@ -92,9 +92,12 @@ const NOTES = [
     detail:
       "A forecast for this beach's own square of the National Weather Service's map, about " +
       "2.5 km across, rather than a reading taken anywhere. Unlike the tide and swell beside " +
-      "it, this figure is an average rather than an extreme: it means the forecast hours " +
-      "between sunrise and sunset, so it describes the day you would be there rather than " +
-      "the cloudiest hour of it, and it names fog on the days fog is expected. There is no " +
+      "it, these are averages rather than extremes: the daylight window is split in three and " +
+      "each figure means the forecast hours in its own third, so the row describes the shape " +
+      "of the day rather than the cloudiest hour of it. On this coast that shape is usually a " +
+      "cloudy morning burning off, which one figure for the whole day hides. A dash means the " +
+      "forecast did not cover that part, which is normal for a morning already past. It names " +
+      "fog on the days fog is expected. There is no " +
       "reading of what the sky is doing right now anywhere on this page, and no visibility " +
       "figure at all: the only stations in this county publishing either one are airports, " +
       "and an airport describes its own field rather than a beach kilometres away.",

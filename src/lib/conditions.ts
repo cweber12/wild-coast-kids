@@ -1013,21 +1013,50 @@ export async function readWaveWeek(
  * The week's cloud cover, from the beach's own forecast cell
  * ========================================================================= */
 
+/**
+ * Mean cloud cover for each third of one day's daylight window, 0 to 100.
+ *
+ * **Thirds of the window, not named clock hours.** "Morning" is not a fact
+ * about the sky, and any boundary drawn at 11 AM would be this site inventing
+ * one; the window is already computed here from the beach's own coordinates,
+ * so dividing it is arithmetic rather than judgement. It also tracks the
+ * season: a 13-hour August window gives roughly 6:20-10:40, 10:40-3:00,
+ * 3:00-7:20, and a 10-hour December one narrows all three together.
+ *
+ * **A third can be null**, which is why these are not plain numbers. The
+ * forecast does not reach backwards: on the day the reader is standing in, the
+ * hours before now are gone and the first third is often empty. A null says
+ * "no forecast covered it", and rendering a zero there would say "cloudless".
+ */
+export interface SkyThirds {
+  /** The first third of the daylight window. */
+  am: number | null;
+  /** The middle third. */
+  mid: number | null;
+  /** The last third, ending at sunset. */
+  eve: number | null;
+}
+
 /** One day of the cloud row. */
 export interface SkyWeekDay extends WeekDayFrame {
   /**
-   * Mean cloud cover across the day's daylight hours, 0 to 100, rounded.
+   * Cloud cover across the day, in three parts.
    *
-   * A mean rather than an extreme, which is a deliberate departure from
-   * ADR-0017 and the one place this row differs from the tide and swell rows
+   * **Means rather than extremes, which is a deliberate departure from
+   * ADR-0017** and the one place this row differs from the tide and swell rows
    * above it. Those take the daylight extreme because a lowest low at 3:14 AM
    * is a number nobody planning a trip with children can use -- the extreme is
    * selected for *reachability*. Cloud cover has no unreachable hours: the
-   * daylight window is the trip. Measured over seven days at one cell, the
-   * daylight spread runs 20 to 41 points, and taking the cloudiest step would
-   * have reported 2026-08-30 at 62% against a daylight mean of 39%.
+   * daylight window is the trip.
+   *
+   * **Three parts rather than one, because on this coast one is misleading.**
+   * The row shipped a single daylight mean, and measured against the live cell
+   * on 2026-08-28 every one of seven days was a marine-layer burn-off: Sunday
+   * ran 65% / 32% / 31% and averaged to 46%, a figure that describes neither
+   * half of the day. A parent deciding whether to drive out after breakfast is
+   * asking exactly the question the mean destroys. See ADR-0024.
    */
-  cloudPercent: number;
+  thirds: SkyThirds;
   /**
    * The phenomenon forecast for any daylight hour of this day, or null.
    *
@@ -1048,25 +1077,44 @@ export interface SkyWeekView {
     | { kind: "unavailable"; detail: string; drift: boolean };
 }
 
+/** The mean of some hours, rounded, or null when there are none to average. */
+function meanPercent(hours: readonly SkyCoverHour[]): number | null {
+  if (hours.length === 0) return null;
+  const total = hours.reduce((sum, hour) => sum + hour.percent, 0);
+  return Math.round(total / hours.length);
+}
+
 /**
- * The daylight mean for one day, and the phenomenon if one was forecast.
+ * The day's cloud in three parts, and the phenomenon if one was forecast.
  *
- * Returns null when no forecast hour falls in this day's daylight, which is
- * what the far end of the week does as the product's reach runs out. A day with
- * no hours is dropped rather than rendered as zero -- a zero here would read as
- * a cloudless day.
+ * Returns null when no forecast hour falls in this day's daylight at all,
+ * which is what the far end of the week does as the product's reach runs out.
+ * A day with no hours is dropped rather than rendered as zeroes -- a zero here
+ * would read as a cloudless day, which is the specific failure this row exists
+ * to avoid.
+ *
+ * A day with *some* hours keeps them and nulls the thirds it cannot fill. That
+ * is the ordinary state of today's column: the forecast does not reach
+ * backwards, so the hours before now are gone.
+ *
+ * The boundaries are open at the top and closed at the bottom, so an hour
+ * landing exactly on a boundary belongs to the later third and no hour is
+ * counted twice. Sunset itself is included, which is why the last comparison
+ * is the only one that is not strict.
  */
 function skyReadingOn(
   hours: readonly SkyCoverHour[],
   weather: readonly WeatherHour[],
   daylight: Daylight,
-): { cloudPercent: number; phenomenon: SkyWeekDay["phenomenon"] } | null {
+): { thirds: SkyThirds; phenomenon: SkyWeekDay["phenomenon"] } | null {
   const inDaylight = hours.filter(
     (hour) => hour.atMs >= daylight.sunriseMs && hour.atMs <= daylight.sunsetMs,
   );
   if (inDaylight.length === 0) return null;
 
-  const total = inDaylight.reduce((sum, hour) => sum + hour.percent, 0);
+  const third = (daylight.sunsetMs - daylight.sunriseMs) / 3;
+  const firstEndsMs = daylight.sunriseMs + third;
+  const secondEndsMs = daylight.sunriseMs + third * 2;
 
   // The first phenomenon of the daylight window rather than the most common
   // one: "patchy fog" at 7 AM is the fact a parent is deciding on, and a day
@@ -1077,7 +1125,15 @@ function skyReadingOn(
   );
 
   return {
-    cloudPercent: Math.round(total / inDaylight.length),
+    thirds: {
+      am: meanPercent(inDaylight.filter((hour) => hour.atMs < firstEndsMs)),
+      mid: meanPercent(
+        inDaylight.filter(
+          (hour) => hour.atMs >= firstEndsMs && hour.atMs < secondEndsMs,
+        ),
+      ),
+      eve: meanPercent(inDaylight.filter((hour) => hour.atMs >= secondEndsMs)),
+    },
     phenomenon:
       named === undefined
         ? null

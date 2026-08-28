@@ -1,20 +1,121 @@
 import { expect, test } from "vitest";
 import { render, screen } from "@testing-library/react";
-import { SkyWeek, SKY_WEEK_ROW } from "./SkyWeek";
-import { gridCellCaveat, phenomenonWords } from "./gridCell";
+import { SKY_WEEK_ROW, SkyWeek } from "./SkyWeek";
 
-test("the day's figure is a percentage, and it leads", () => {
+/** A burn-off day: cloudy first third, clear after. The shape of every day measured. */
+const BURN_OFF = { am: 65, mid: 32, eve: 31 };
+
+test("the day is shown in three parts, in reading order", () => {
   const { container } = render(
-    <SkyWeek day={{ cloudPercent: 44, phenomenon: null }} />,
+    <SkyWeek day={{ thirds: BURN_OFF, phenomenon: null }} />,
   );
 
-  expect(screen.getByText("44%")).toBeDefined();
-  // The lead figure is the bold one, the way every other cell in this grid
-  // leads with its own first fact.
-  expect(container.querySelector(".font-extrabold")?.textContent).toBe("44%");
+  expect(container.textContent).toContain("AM");
+  expect(container.textContent).toContain("Mid");
+  expect(container.textContent).toContain("Eve");
+  expect(container.textContent).toMatch(
+    /AM[\s\S]*65%[\s\S]*Mid[\s\S]*32%[\s\S]*Eve[\s\S]*31%/,
+  );
 });
 
-test("the label claims no superlative, because this row is a mean", () => {
+/**
+ * ADR-0024, and the reason the row changed at all. The mean of this day is
+ * 43%, a figure that describes neither the foggy morning nor the clear
+ * afternoon. Measured against the live cell on 2026-08-28, all seven days of
+ * the week were this shape.
+ *
+ * Asserted as an absence because restoring the mean will look like restoring
+ * information.
+ */
+test("the daylight mean is not printed beside the parts", () => {
+  const { container } = render(
+    <SkyWeek day={{ thirds: BURN_OFF, phenomenon: null }} />,
+  );
+
+  expect(container.textContent).not.toContain("43%");
+  expect(container.textContent?.match(/%/g)).toHaveLength(3);
+});
+
+/**
+ * "46% Partly cloudy" was the obvious companion fix, and banding the mean on
+ * the National Weather Service's own sky-condition scale contradicts its own
+ * published wording on three of six measured days -- we would print "Partly
+ * cloudy" where its forecast endpoint says "Mostly Sunny". The words exist and
+ * they are the National Weather Service's to give, from a second endpoint this
+ * page does not yet read.
+ */
+test("no band word is computed here, on any figure", () => {
+  for (const thirds of [
+    { am: 5, mid: 4, eve: 3 },
+    { am: 30, mid: 28, eve: 25 },
+    { am: 46, mid: 50, eve: 44 },
+    { am: 95, mid: 92, eve: 90 },
+  ]) {
+    const { container } = render(
+      <SkyWeek day={{ thirds, phenomenon: null }} />,
+    );
+    expect(container.textContent).not.toMatch(/sunny|cloudy|overcast|clear/i);
+  }
+});
+
+test("a day with fog forecast says so, above the figures", () => {
+  const { container } = render(
+    <SkyWeek
+      day={{
+        thirds: BURN_OFF,
+        phenomenon: { weather: "fog", coverage: "patchy" },
+      }}
+    />,
+  );
+
+  // A parent plans around fog rather than around a percentage, so it leads.
+  expect(screen.getByText("Patchy fog")).toBeDefined();
+  expect(container.textContent).toMatch(/Patchy fog[\s\S]*AM/);
+});
+
+test("a day with no phenomenon prints no empty line for one", () => {
+  // Most days. An ordinary day rather than a missing reading: the figures
+  // still answer, and a blank line would read as something that failed.
+  const { container } = render(
+    <SkyWeek day={{ thirds: BURN_OFF, phenomenon: null }} />,
+  );
+
+  expect(container.textContent?.startsWith("AM")).toBe(true);
+});
+
+/**
+ * The forecast does not run backwards, so on the day the reader is standing in
+ * the first third is usually gone. A zero there would report a cloudless
+ * morning that nobody observed -- the exact failure a blank cell in this grid
+ * is built to avoid.
+ */
+test("a third the forecast did not reach is a dash, never a zero", () => {
+  const { container } = render(
+    <SkyWeek
+      day={{ thirds: { am: null, mid: 32, eve: 31 }, phenomenon: null }}
+    />,
+  );
+
+  expect(container.textContent).toContain("—");
+  expect(container.textContent).not.toContain("0%");
+  // The label stays, so the three columns still line up across the week.
+  expect(container.textContent).toContain("AM");
+});
+
+test("the three parts are equal columns, so the figures compare by eye", () => {
+  const { container } = render(
+    <SkyWeek day={{ thirds: BURN_OFF, phenomenon: null }} />,
+  );
+
+  const parts = [...container.querySelectorAll("span.flex > span")];
+  expect(parts).toHaveLength(3);
+  for (const part of parts) {
+    expect(part.className).toContain("flex-1");
+    expect(part.className).toContain("text-center");
+  }
+});
+
+test("the label claims no superlative, because these are means", () => {
   // It used to say "Cloud by day" against two labels opening "Lowest" and
   // "Biggest", and that contrast was what said this row is an average rather
   // than a peak. ADR-0023 shortened those two, so the contrast is gone and
@@ -28,83 +129,12 @@ test("the label claims no superlative, because this row is a mean", () => {
   expect(SKY_WEEK_ROW.label).not.toMatch(/coverage/i);
 });
 
-test("a day with fog forecast says so, under the figure", () => {
-  render(
-    <SkyWeek
-      day={{
-        cloudPercent: 67,
-        phenomenon: { weather: "fog", coverage: "patchy" },
-      }}
-    />,
-  );
-
-  expect(screen.getByText("Patchy fog")).toBeDefined();
-});
-
-test("a day with no phenomenon renders the figure alone, not an empty line", () => {
+test("no glyph rides along with the figures", () => {
+  // ADR-0015: at the 10px this grid's labels are set in, a full-colour emoji is
+  // a smudge rather than a mark. A row inside a panel is named in words.
   const { container } = render(
-    <SkyWeek day={{ cloudPercent: 30, phenomenon: null }} />,
-  );
-
-  // Most days name nothing. A blank second line would read as a reading that
-  // failed rather than as an ordinary day.
-  expect(container.textContent?.trim()).toBe("30%");
-});
-
-test("the accessible text does not run the two facts together", () => {
-  // The space between the spans is a real text node; two blocks collapse it
-  // visually but a screen reader still needs it, or this reads "67%Patchy fog".
-  const { container } = render(
-    <SkyWeek
-      day={{
-        cloudPercent: 67,
-        phenomenon: { weather: "fog", coverage: "patchy" },
-      }}
-    />,
-  );
-
-  expect(container.textContent).toContain("67% Patchy fog");
-});
-
-test("no glyph and no attribution inside the cell", () => {
-  const { container } = render(
-    <SkyWeek day={{ cloudPercent: 44, phenomenon: null }} />,
+    <SkyWeek day={{ thirds: BURN_OFF, phenomenon: null }} />,
   );
 
   expect(container.querySelector('[aria-hidden="true"]')).toBeNull();
-  expect(container.textContent).not.toMatch(/National Weather Service/);
-});
-
-/* =========================================================================
- * gridCell.ts
- * ========================================================================= */
-
-test("a phenomenon is relayed in the service's own words", () => {
-  // ADR-0009: this site relays a forecaster's judgement rather than forming
-  // one. The underscore and the capital are the only changes made.
-  expect(phenomenonWords({ weather: "fog", coverage: "patchy" })).toBe(
-    "Patchy fog",
-  );
-  expect(phenomenonWords({ weather: "rain_showers", coverage: "chance" })).toBe(
-    "Chance rain showers",
-  );
-});
-
-test("a phenomenon with no coverage still reads as a sentence fragment", () => {
-  expect(phenomenonWords({ weather: "fog", coverage: null })).toBe("Fog");
-});
-
-test("only a cell that covers the bluff carries the caveat", () => {
-  // Three beaches read one: Torrey Pines State at 102 m, Torrey Pines City at
-  // 117 m and La Jolla Cove at 106 m, against a median of 2.1 m across the
-  // inventory. ADR-0020 serves them and discloses rather than withholding, and
-  // this sentence is the half of that decision no gate can assert.
-  expect(gridCellCaveat(117.0432)).toMatch(/covers the bluff/);
-  expect(gridCellCaveat(117.0432)).toMatch(/117 m/);
-  expect(gridCellCaveat(2.1336)).toBeNull();
-  expect(gridCellCaveat(0)).toBeNull();
-});
-
-test("a cell with no published elevation makes no claim either way", () => {
-  expect(gridCellCaveat(null)).toBeNull();
 });

@@ -59,7 +59,10 @@ const CELL = { id: "SGX/54,21", elevationM: 0 };
 function skyWeek(
   days: {
     index: number;
-    cloudPercent: number;
+    /** The day's three thirds. A single number fills all three, for the cases
+     *  that are not about the shape of the day. */
+    cloud:
+      number | { am: number | null; mid: number | null; eve: number | null };
     phenomenon?: { weather: string; coverage: string | null };
   }[],
   cell = CELL,
@@ -69,9 +72,12 @@ function skyWeek(
     cell,
     state: {
       kind: "week",
-      days: days.map(({ index, cloudPercent, phenomenon = null }) => ({
+      days: days.map(({ index, cloud, phenomenon = null }) => ({
         ...DATES[index],
-        cloudPercent,
+        thirds:
+          typeof cloud === "number"
+            ? { am: cloud, mid: cloud, eve: cloud }
+            : cloud,
         phenomenon,
       })),
     },
@@ -133,10 +139,10 @@ beforeEach(() => {
   readSkyWeek.mockReset();
   readSkyWeek.mockResolvedValue(
     skyWeek([
-      { index: 0, cloudPercent: 44 },
+      { index: 0, cloud: 44 },
       {
         index: 1,
-        cloudPercent: 67,
+        cloud: 67,
         phenomenon: { weather: "fog", coverage: "patchy" },
       },
     ]),
@@ -208,7 +214,9 @@ test("the gridded row is live, and the slot that promised it is gone", async () 
 
   expect(readSkyWeek).toHaveBeenCalledWith("la-jolla-shores-beach");
   expect(screen.getAllByText("Cloud cover").length).toBeGreaterThan(0);
-  expect(screen.getByText("44%")).toBeDefined();
+  // Three figures, not one: the fixture gives this day 44% in all three
+  // thirds, so the row rendering the day's shape prints it three times.
+  expect(screen.getAllByText("44%")).toHaveLength(3);
   expect(screen.queryByText(/A gridded forecast is coming/i)).toBeNull();
   expect(
     screen.queryByText(/grid cell, instead of the nearest airport/i),
@@ -297,7 +305,7 @@ test("a bluff cell says the square covers the cliff as well as the shore", async
     state: { kind: "week", days: [tideDay(0, "6:41 PM", 0.9)] },
   });
   readSkyWeek.mockResolvedValue(
-    skyWeek([{ index: 0, cloudPercent: 44 }], {
+    skyWeek([{ index: 0, cloud: 44 }], {
       id: "SGX/55,22",
       elevationM: 117.0432,
     }),
