@@ -44,10 +44,24 @@
  * prediction beside a value computed in this repo, which is exactly the span
  * that contract forbids. Two components rather than one that quietly stopped
  * meaning what its docstring says.
+ *
+ * **It is a client component now, and it holds no data because of it.** Every
+ * figure in this grid still comes from `WeekPanel`, on the server, and arrives
+ * here as markup that was already rendered -- the rows, the windows, the
+ * shapes. What runs on the client is the choosing: which day the panel below is
+ * showing, and the mark that says so. So a reader with a blocked script still
+ * gets the whole week, server-rendered and complete, which is what the day
+ * selection falls back *to* and the reason it needs no `noscript` list of its
+ * own. See `useHydrated`.
  */
+
+"use client";
 
 import type { ReactNode } from "react";
 import { MIN_USEFUL_SPARK_WIDTH_PX } from "./DaySpark";
+import { useHydrated } from "./hydrated";
+import { resolveSelected, useSelectedDay } from "./selectedDay";
+import { TOUCH_TARGET } from "../ui/touchTarget";
 import { REGION_HEADING } from "./headingRank";
 import { ProvenanceLine } from "./ProvenanceLine";
 import { ReservedSlot } from "../ui/ReservedSlot";
@@ -266,6 +280,25 @@ export function WeekGrid({
   notes = [],
   reserved = [],
 }: WeekGridProps) {
+  const { selected, choose } = useSelectedDay();
+  const hydrated = useHydrated();
+
+  /*
+    Which day is marked, and it is not `day.isToday`.
+
+    Before the panel below could be pointed at another day, "today" and "the
+    day being shown" were the same thing and one band said both. They come
+    apart the moment a reader chooses Thursday, and they are marked by
+    different channels because they are different facts: the filled band says
+    what is showing below, and the yellow chip -- which is a word, not a colour
+    -- still says which day is now. On arrival they coincide, so nothing about
+    the grid a reader first sees has changed.
+  */
+  const showing = resolveSelected(
+    selected,
+    days.map((day) => day.localDate),
+  );
+
   return (
     <section aria-labelledby={headingId}>
       <h2 id={headingId} className={REGION_HEADING}>
@@ -347,19 +380,19 @@ export function WeekGrid({
                 at 1536, unchanged.
               */
               className={`@container overflow-hidden rounded-tile border-[1.5px] bg-white/60 ${
-                day.isToday ? "border-ocean" : "border-lavender"
+                day.localDate === showing ? "border-ocean" : "border-lavender"
               }`}
             >
               <div
                 className={`border-b-[1.5px] px-3 py-2 ${
-                  day.isToday
+                  day.localDate === showing
                     ? "border-ocean bg-ocean text-white/85"
                     : "border-lavender bg-mist text-fog"
                 }`}
               >
                 <h3
                   className={`text-2xs font-extrabold tracking-widest uppercase ${
-                    day.isToday ? "text-white" : "text-ocean"
+                    day.localDate === showing ? "text-white" : "text-ocean"
                   }`}
                 >
                   {/*
@@ -397,7 +430,65 @@ export function WeekGrid({
                     concatenation `ReadingCard` records hitting in the
                     accessible-name algorithm.
                   */}
-                  {day.isToday ? day.dateLabel : day.dayLabel}
+                  {/*
+                    The date is the control, and only the date.
+
+                    **Not the whole cell, and that is an accessibility
+                    constraint rather than a layout preference.** `button`,
+                    `radio` and `tab` all take presentational children, so a
+                    cell wrapped in any of them would hide its own figures from
+                    the accessibility tree -- and those figures are the week's
+                    entire text equivalent. A `button` could not legally hold
+                    the `<dl>` below either. So the control is the one piece of
+                    phrasing content that already names the day, and everything
+                    else in the cell stays readable exactly as it was.
+
+                    **Seven tab stops, not a roving tabindex.** ADR-0027 chose
+                    roving for the chart's hour columns because twenty-four
+                    stops between a reader and the next region is absurd. Seven
+                    named controls is not, and a roving group would need a role
+                    to explain itself -- the roles this cell cannot take.
+
+                    `aria-current="date"` rather than `aria-pressed`: this is
+                    the current item of a set of dates, which is the token's
+                    own definition, where a pressed button is a toggle that
+                    stays down.
+                  */}
+                  {hydrated ? (
+                    <button
+                      type="button"
+                      onClick={() => choose(day.localDate)}
+                      aria-current={
+                        day.localDate === showing ? "date" : undefined
+                      }
+                      /*
+                        The underline is the second channel, so the selection
+                        is not carried by the filled band's colour alone.
+
+                        Typographic rather than a mark, and that is this grid's
+                        own rule rather than a preference: `WeekPanel`'s test
+                        puts it in one line -- "the header's mark draws rather
+                        than spells, so a day block contributes no glyph text
+                        of its own" -- and a `▾` character is spelling. Drawing
+                        one would have meant an inline SVG for two pixels of
+                        triangle. An underline is a change of shape a reader
+                        already knows means "this one", it needs no legend, and
+                        it leaves the header's text exactly what it was.
+                      */
+                      className={`${TOUCH_TARGET} md:min-h-0 inline-flex cursor-pointer items-center text-left ${
+                        day.localDate === showing
+                          ? "text-white underline decoration-2 underline-offset-4"
+                          : "text-ocean"
+                      }`}
+                      data-day-choice={day.localDate}
+                    >
+                      {day.isToday ? day.dateLabel : day.dayLabel}
+                    </button>
+                  ) : day.isToday ? (
+                    day.dateLabel
+                  ) : (
+                    day.dayLabel
+                  )}
                   {day.isToday && (
                     <>
                       {" "}

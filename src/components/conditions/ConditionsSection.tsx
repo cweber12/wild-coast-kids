@@ -18,6 +18,7 @@ import { BeachSelector } from "./BeachSelector";
 import { ConditionsNotes } from "./ConditionsNotes";
 import { DayPanel } from "./DayPanel";
 import { ReservedSlot } from "../ui/ReservedSlot";
+import { SelectedDayProvider } from "./selectedDay";
 import { TidePanel } from "./TidePanel";
 import { WavePanel } from "./WavePanel";
 import { WeekPanel } from "./WeekPanel";
@@ -146,17 +147,27 @@ export function ConditionsSection({ slug }: { slug: string }) {
         gets its own suspense boundary for the same reason the three cards do
         rather than because it costs a second fetch.
       */}
-      <div className="mb-9">
-        <Suspense
-          fallback={
-            <p className="text-base text-fog">Reading the week from NOAA…</p>
-          }
-        >
-          <WeekPanel slug={slug} />
-        </Suspense>
-      </div>
-
       {/*
+        The week and the day are one instrument at two zoom levels, and from
+        here on they share a fact: which day is being shown. It is a client
+        fact, so it lives in a provider wrapping both -- and both regions are
+        still server components, passed through as children, so the reads
+        happen exactly where they did and each region keeps its own suspense
+        boundary. Five agencies go quiet independently and none may hold up
+        another; a shared choice does not change that.
+      */}
+      <SelectedDayProvider>
+        <div className="mb-9">
+          <Suspense
+            fallback={
+              <p className="text-base text-fog">Reading the week from NOAA…</p>
+            }
+          >
+            <WeekPanel slug={slug} />
+          </Suspense>
+        </div>
+
+        {/*
         The day opens under the week. Its own suspense boundary for the same
         reason every region here has one: this is a second request to the
         National Weather Service — the words, where the week's cloud row reads
@@ -172,15 +183,16 @@ export function ConditionsSection({ slug }: { slug: string }) {
         name contains the first banned word. The line beside it dodges the same
         edge by saying "the air and sky stations".
       */}
-      <div className="mb-9">
-        <Suspense
-          fallback={
-            <p className="text-base text-fog">Reading the sky in words…</p>
-          }
-        >
-          <DayPanel slug={slug} />
-        </Suspense>
-      </div>
+        <div className="mb-9">
+          <Suspense
+            fallback={
+              <p className="text-base text-fog">Reading the sky in words…</p>
+            }
+          >
+            <DayPanel slug={slug} />
+          </Suspense>
+        </div>
+      </SelectedDayProvider>
 
       {/*
         The sighting map is specified in #121 and deferred, so the page says

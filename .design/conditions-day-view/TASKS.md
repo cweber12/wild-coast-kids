@@ -165,7 +165,7 @@ the three; split further at a slice boundary if it outgrows review.
       resolution; keyboard operation reaches every tab and the focus ring is the
       site's own.
 
-- [ ] **The week becomes the selector.** Choosing a day redraws the panel below.
+- [x] **The week becomes the selector.** Choosing a day redraws the panel below.
       All seven days ship from the first render, so switching costs no request.
       The selected cell is marked by more than colour. Today is selected on
       arrival. `noscript` renders today's panel and leaves the week grid — which
@@ -174,6 +174,14 @@ the three; split further at a slice boundary if it outgrows review.
       **Tests assert:** activating a day changes the panel's day; the selected
       state is conveyed without colour; `revalidate = 900` and the empty
       `generateStaticParams` are unchanged, because the day never enters the URL.
+      **The fallback is what this line describes and not a `<noscript>` tag.**
+      Nothing dead is rendered without a script — the day headers are plain text
+      rather than buttons — so there is nothing for a `noscript` block to
+      replace. The week grid is whole and the panel shows today, which is what
+      the sentence above asks for.
+      **What "no request" costs, measured:** the page goes 209,923 to 260,518
+      bytes uncompressed, 43,250 gzipped, for six more days of four series.
+      That is the trade the brief chose over a loading state per click.
 
 - [ ] **`MeasuredToday`.** The three cards' content, merged into today's panel:
       water temperature, the buoy's wave height, the station's wind and gust, the

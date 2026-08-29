@@ -1,0 +1,262 @@
+/**
+ * The coupling between the two regions, asserted where it actually lives.
+ *
+ * Neither component owns this behaviour: the week grid raises a choice and the
+ * day panel answers it, and the only place the two meet is the provider. So
+ * these render both inside it, which is the seam, rather than testing each half
+ * against a mock of the other and proving nothing about the pair.
+ */
+
+import { expect, test } from "vitest";
+import { fireEvent, render, screen } from "@testing-library/react";
+import { renderToStaticMarkup } from "react-dom/server";
+import { localMidnightOf } from "@/lib/pacific-time";
+import { ChosenDay, type DayView } from "./ChosenDay";
+import { SelectedDayProvider } from "./selectedDay";
+import { WeekGrid, type WeekDay, type WeekRow } from "./WeekGrid";
+import type { SparkPoint } from "./DaySpark";
+
+const HOUR = 3_600_000;
+const DATES = ["2026-08-17", "2026-08-18", "2026-08-19"];
+
+const DAYS: WeekDay[] = [
+  {
+    localDate: DATES[0],
+    dayLabel: "Mon, Aug 17",
+    dateLabel: "Aug 17",
+    isToday: true,
+  },
+  {
+    localDate: DATES[1],
+    dayLabel: "Tue, Aug 18",
+    dateLabel: "Aug 18",
+    isToday: false,
+  },
+  {
+    localDate: DATES[2],
+    dayLabel: "Wed, Aug 19",
+    dateLabel: "Aug 19",
+    isToday: false,
+  },
+];
+
+const TIDE_ROW: WeekRow = {
+  label: "Lowest tide",
+  cells: {
+    [DATES[0]]: "6:41 PM",
+    [DATES[1]]: "7:10 AM",
+    [DATES[2]]: "7:44 AM",
+  },
+};
+
+/** A curve whose values differ per day, so a panel showing the wrong one is visible. */
+function points(localDate: string, base: number): SparkPoint[] {
+  return Array.from({ length: 24 }, (_, hour) => ({
+    atMs: localMidnightOf(localDate) + hour * HOUR,
+    value: base + hour / 10,
+    published: true,
+  }));
+}
+
+function dayView(index: number): DayView {
+  const localDate = DATES[index];
+  const isToday = index === 0;
+  return {
+    localDate,
+    dayName: isToday ? "Today" : DAYS[index].dayLabel,
+    startMs: localMidnightOf(localDate),
+    endMs: localMidnightOf(localDate) + 24 * HOUR,
+    sunriseMs: localMidnightOf(localDate) + 6 * HOUR,
+    sunsetMs: localMidnightOf(localDate) + 19 * HOUR,
+    nowMs: isToday ? localMidnightOf(localDate) + 14 * HOUR : null,
+    cloud: [],
+    series: [
+      {
+        key: "tide",
+        label: "Tide",
+        unitLabel: "ft",
+        points: points(localDate, index * 10),
+        description: `Tide on ${localDate}`,
+        absence: "No tide series.",
+      },
+      {
+        key: "swell",
+        label: "Swell",
+        unitLabel: "ft",
+        points: points(localDate, index * 10 + 100),
+        description: `Swell on ${localDate}`,
+        absence: "No swell series.",
+      },
+    ],
+    wording: <p>Words for {localDate}</p>,
+  };
+}
+
+const VIEWS = DATES.map((_, index) => dayView(index));
+
+function renderBoth() {
+  return render(
+    <SelectedDayProvider>
+      <WeekGrid
+        headingId="week-heading"
+        title="The week ahead"
+        days={DAYS}
+        rows={[TIDE_ROW]}
+      />
+      <ChosenDay days={VIEWS} />
+    </SelectedDayProvider>,
+  );
+}
+
+/** The plot's own accessible name, which says which day it drew. */
+function drawnDay(container: HTMLElement): string | null {
+  return (
+    container.querySelector("svg[aria-label]")?.getAttribute("aria-label") ??
+    null
+  );
+}
+
+test("the panel opens on today, without anything having read a clock", () => {
+  // The provider's state starts as null and each region resolves it against
+  // its own first column. Both build from `weekOfDays`, so both first columns
+  // are today -- which is how the default is reached without a component
+  // asking what time it is.
+  const { container } = renderBoth();
+
+  expect(container.querySelector("#day-panel-heading")?.textContent).toBe(
+    "Today, hour by hour",
+  );
+  expect(drawnDay(container)).toBe(`Tide on ${DATES[0]}`);
+});
+
+test("choosing a day in the week redraws the panel below", () => {
+  // THE POINT OF THIS SLICE. Two regions in two suspense boundaries, one
+  // choice.
+  const { container } = renderBoth();
+
+  fireEvent.click(container.querySelector(`[data-day-choice="${DATES[2]}"]`)!);
+
+  expect(container.querySelector("#day-panel-heading")?.textContent).toBe(
+    "Wed, Aug 19, hour by hour",
+  );
+  expect(drawnDay(container)).toBe(`Tide on ${DATES[2]}`);
+  expect(screen.getByText(`Words for ${DATES[2]}`)).toBeDefined();
+});
+
+test("switching costs no request, because every day was already here", () => {
+  // The whole week ships from the first render. Nothing fetches on a click,
+  // and the way to assert that without mocking the network is that the markup
+  // for another day is already in hand before anything is clicked.
+  const { container } = renderBoth();
+
+  // Three days of series were handed over; one is drawn.
+  expect(VIEWS).toHaveLength(3);
+  fireEvent.click(container.querySelector(`[data-day-choice="${DATES[1]}"]`)!);
+  expect(drawnDay(container)).toBe(`Tide on ${DATES[1]}`);
+});
+
+test("the chosen day is marked by more than colour", () => {
+  // The filled band is the loud half and it is a colour. The underline is the
+  // other channel, and `aria-current` is the third -- for a reader who sees
+  // neither.
+  const { container } = renderBoth();
+
+  const today = container.querySelector(`[data-day-choice="${DATES[0]}"]`)!;
+  const wednesday = container.querySelector(`[data-day-choice="${DATES[2]}"]`)!;
+
+  expect(today.className).toContain("underline");
+  expect(today.getAttribute("aria-current")).toBe("date");
+  expect(wednesday.className).not.toContain("underline");
+  expect(wednesday.getAttribute("aria-current")).toBeNull();
+
+  fireEvent.click(wednesday);
+
+  expect(wednesday.className).toContain("underline");
+  expect(wednesday.getAttribute("aria-current")).toBe("date");
+  expect(today.className).not.toContain("underline");
+});
+
+test("the 'now' line follows today, and does not follow the choice", () => {
+  // A vertical rule at an instant is a claim about the present. Choosing
+  // Wednesday must not draw one there, or the page says a reader is standing
+  // in a day that has not happened.
+  const { container } = renderBoth();
+
+  expect(container.querySelector("[data-now]")).not.toBeNull();
+
+  fireEvent.click(container.querySelector(`[data-day-choice="${DATES[2]}"]`)!);
+
+  expect(container.querySelector("[data-now]")).toBeNull();
+});
+
+test("the tab a reader chose survives a change of day", () => {
+  // The comparison the tabs exist for is across days, so the chart is not keyed
+  // on the day and stays mounted. The chosen *hour* does not survive, and that
+  // falls out rather than being arranged: the selection is an instant, and an
+  // instant on Monday matches no point in Wednesday.
+  const { container } = renderBoth();
+
+  fireEvent.click(container.querySelector('[data-series-tab="swell"]')!);
+  expect(drawnDay(container)).toBe(`Swell on ${DATES[0]}`);
+
+  fireEvent.click(container.querySelector(`[data-day-choice="${DATES[2]}"]`)!);
+  expect(drawnDay(container)).toBe(`Swell on ${DATES[2]}`);
+});
+
+test("the chosen hour does not survive it, because that instant is not in this day", () => {
+  const { container } = renderBoth();
+
+  fireEvent.click(container.querySelector('[data-hour-column="9"]')!);
+  expect(container.querySelector("[data-hour-readout]")?.textContent).toContain(
+    "9 AM",
+  );
+
+  fireEvent.click(container.querySelector(`[data-day-choice="${DATES[1]}"]`)!);
+  expect(container.querySelector("[data-hour-readout]")?.textContent).toBe(
+    "Pick an hour to read it.",
+  );
+});
+
+test("without a script the week is whole and offers no control", () => {
+  // This is what the day selection falls back *to*, and why it needs no
+  // `noscript` list of its own the way `BeachSelector` does: the week grid is
+  // already a complete, server-rendered week. What a reader loses is the
+  // choosing, not the forecast -- and the panel below shows today, which is the
+  // day it opens on with a script anyway.
+  const markup = renderToStaticMarkup(
+    <SelectedDayProvider>
+      <WeekGrid
+        headingId="week-heading"
+        title="The week ahead"
+        days={DAYS}
+        rows={[TIDE_ROW]}
+      />
+      <ChosenDay days={VIEWS} />
+    </SelectedDayProvider>,
+  );
+
+  // Every day, and every figure.
+  for (const day of ["Aug 17", "Tue, Aug 18", "Wed, Aug 19"]) {
+    expect(markup).toContain(day);
+  }
+  expect(markup).toContain("6:41 PM");
+  expect(markup).toContain("7:44 AM");
+
+  // And not one control that cannot work.
+  expect(markup).not.toContain("data-day-choice");
+  expect(markup).not.toContain("<button");
+
+  // The panel still renders, on today.
+  expect(markup).toContain("Today, hour by hour");
+  expect(markup).toContain(`Tide on ${DATES[0]}`);
+});
+
+test("a region outside the provider shows its first day rather than failing", () => {
+  // The context default is the null state rather than a throw. A region
+  // rendered without a provider is the state a reader without JavaScript is
+  // already in, and turning that into an error would make a degraded page a
+  // blank one.
+  const { container } = render(<ChosenDay days={VIEWS} />);
+
+  expect(drawnDay(container)).toBe(`Tide on ${DATES[0]}`);
+});

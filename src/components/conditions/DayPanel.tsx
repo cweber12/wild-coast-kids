@@ -5,20 +5,20 @@
  * panels beside it: read, compose, render. Everything with a judgement in it
  * sits on one side or the other, where it can be tested without a network.
  *
- * **It shows today and only today, for now.** The week above becomes the day
- * selector in a later slice of this same pull request; until then the panel is
- * the day a reader is standing in, which is the day it opens on afterwards
- * anyway. That ordering is deliberate rather than incidental -- the panel has
- * to be worth looking at before it is worth switching, and a selector wired to
- * a region nobody has reviewed is two unreviewed things at once.
+ * **It composes all seven days and shows one.** The week grid above is the
+ * control that says which; `ChosenDay` is the client half that picks. Every
+ * feed here already returns the whole week in one call, so building seven days
+ * costs nothing but arithmetic and choosing one costs no request at all --
+ * which is the property the brief asked for, on a page whose argument is that
+ * the future is what anybody came for.
  *
- * **Two tabs, and the frame belongs to neither of them.** The plot draws the
- * tide or the swell; wind and temperature arrive next, from a cell this page
- * already reads. They arrive as a foreground swapped inside the same frame,
- * which is why the day's ends, the night and the cloud are all composed here
- * rather than inside any one series -- and why the frame is arithmetic on the
- * calendar rather than a field of the tide read. It used to be the latter, and
- * that would have let a NOAA outage decide whether CDIP got drawn.
+ * **Four tabs, and the frame belongs to none of them.** The plot draws the
+ * tide, the swell, the wind or the air temperature as a foreground swapped
+ * inside one frame, which is why the day's ends, the night and the cloud are
+ * composed here rather than inside any one series -- and why the frame is
+ * arithmetic on the calendar rather than a field of the tide read. It used to
+ * be the latter, and that would have let a NOAA outage decide whether CDIP got
+ * drawn.
  *
  * **Which day is today comes from the daylight read, and no clock is read
  * here.** A component that called `Date.now()` would be reading a clock during
@@ -27,11 +27,11 @@
  * from the beach's own coordinates rather than fetched, so it cannot fail and
  * costs no request; it carries the instant it was computed from, which is what
  * the chart's "now" line is drawn at. `WeekPanel` takes its columns from the
- * same read, so the two regions cannot disagree about which day is today.
+ * same read, so the two regions cannot disagree about which day is which.
  *
- * **Four reads, made concurrently and failing apart.** The hourly heights come
+ * **Five reads, made concurrently and failing apart.** The hourly heights come
  * from NOAA, the swell from CDIP, the cloud from the National Weather Service's
- * numbers and the wording from its sentences -- four products, four outages. A
+ * numbers and the wording from its sentences -- five products, five outages. A
  * quiet cloud feed costs the band and not the curve; a quiet NOAA costs the
  * tide tab and not the swell tab; and each tab that is quiet says which
  * publisher went quiet rather than saying only that something is missing.
@@ -52,25 +52,26 @@ import {
   type WaveWeekView,
 } from "@/lib/conditions";
 import { localMidnightOf, addLocalDays } from "@/lib/pacific-time";
-import { HourChart, type HourSeries } from "./HourChart";
-import { REGION_HEADING } from "./headingRank";
+import { ChosenDay, type DayView } from "./ChosenDay";
+import type { HourSeries } from "./HourChart";
 import { SkyWording } from "./SkyWording";
 import { gridPoints, swellPoints, tidePoints } from "./series";
-
-/** What the chart says when the window this page asked NOAA for did not reach today. */
-const NO_SERIES =
-  "We have no hour-by-hour tide prediction for today. The figures on the week above are unaffected.";
 
 /**
  * What each tab says when its own feed is the thing that is missing.
  *
- * **Three states and not one sentence, and that is a change from the
- * one-series chart.** A beach with no MOP line will never have a swell curve
- * and that is a permanent fact about the place; a feed that did not answer is a
- * fact about this quarter of an hour; a day the forecast does not reach is
- * neither. With one series a reader could work out which had happened from the
- * rest of the page. With four tabs they cannot: "we have no figure for today"
- * printed four times says nothing about which publisher went quiet.
+ * **Three states and not one sentence.** A beach with no MOP line will never
+ * have a swell curve and that is a permanent fact about the place; a feed that
+ * did not answer is a fact about this quarter of an hour; a day the forecast
+ * does not reach is neither. With one series a reader could work out which had
+ * happened from the rest of the page. With four tabs they cannot: "we have no
+ * figure" printed four times says nothing about which publisher went quiet.
+ *
+ * **Every sentence names the day, because the region is no longer always
+ * today.** These were written when it was, and "we have no prediction for
+ * today" printed under a heading reading `Thu, Aug 27` is not a hedge, it is
+ * false. `when` is "today" on today and the grid's own label otherwise, so the
+ * two regions name the day the same way.
  *
  * The outage half follows `WeekPanel`'s wording rather than inventing its own,
  * down to the drift clause -- `ProvenanceLine`'s docstring records what a
@@ -79,46 +80,51 @@ const NO_SERIES =
  */
 const WORDS = {
   tide: {
-    outOfReach: NO_SERIES,
-    outage:
-      "We could not get today's hour-by-hour tide prediction from NOAA just now.",
+    outOfReach: (when: string) =>
+      `We have no hour-by-hour tide prediction for ${when}. The figures on the week above are unaffected.`,
+    outage: (when: string) =>
+      `We could not get ${when}'s hour-by-hour tide prediction from NOAA just now.`,
     drift:
       "NOAA's payload was not the shape this site pins, which is a bug here rather than a problem at NOAA.",
   },
   swell: {
-    outOfReach:
-      "CDIP's forecast for this beach does not reach today. The figures on the week above are unaffected.",
-    outage: "We could not get today's wave forecast from CDIP just now.",
+    outOfReach: (when: string) =>
+      `CDIP's forecast for this beach does not reach ${when}. The figures on the week above are unaffected.`,
+    outage: (when: string) =>
+      `We could not get ${when}'s wave forecast from CDIP just now.`,
     drift:
       "CDIP's payload was not the shape this site pins, which is a bug here rather than a problem with the model.",
   },
   wind: {
-    outOfReach:
-      "The National Weather Service's forecast for this cell does not reach today.",
-    outage:
-      "We could not get today's wind forecast from the National Weather Service just now.",
+    outOfReach: (when: string) =>
+      `The National Weather Service's forecast for this cell does not reach ${when}.`,
+    outage: (when: string) =>
+      `We could not get ${when}'s wind forecast from the National Weather Service just now.`,
     drift:
       "The forecast's payload was not the shape this site pins, which is a bug here rather than a problem at the National Weather Service.",
   },
   temperature: {
-    outOfReach:
-      "The National Weather Service's forecast for this cell does not reach today.",
-    outage:
-      "We could not get today's temperature forecast from the National Weather Service just now.",
+    outOfReach: (when: string) =>
+      `The National Weather Service's forecast for this cell does not reach ${when}.`,
+    outage: (when: string) =>
+      `We could not get ${when}'s temperature forecast from the National Weather Service just now.`,
     drift:
       "The forecast's payload was not the shape this site pins, which is a bug here rather than a problem at the National Weather Service.",
   },
 } as const;
 
+type Words = (typeof WORDS)[keyof typeof WORDS];
+
 /** Why a tab has no curve, said about that tab's own publisher. */
 function absenceFor(
   view: TideHourlyView | WaveWeekView | GridpointWeekView,
-  words: (typeof WORDS)[keyof typeof WORDS],
+  words: Words,
+  when: string,
 ): string {
-  if (view.state.kind === "week") return words.outOfReach;
+  if (view.state.kind === "week") return words.outOfReach(when);
   if (view.state.kind === "unavailable") {
     return (
-      `${words.outage} ${view.state.detail}` +
+      `${words.outage(when)} ${view.state.detail}` +
       (view.state.drift ? ` ${words.drift}` : "")
     );
   }
@@ -133,7 +139,7 @@ function absenceFor(
  * series.
  *
  * **A fourth state the other two products do not have.** A tide station either
- * exists or does not; a forecast cell can answer, cover today, and still say
+ * exists or does not; a forecast cell can answer, cover the day, and still say
  * nothing at all about the wind — which is exactly what `visibility` does at
  * every cell on every request, and the reason `GridpointSeries` carries a
  * reason rather than being empty. That sentence is the parser's, because only
@@ -142,10 +148,11 @@ function absenceFor(
 function gridAbsenceFor(
   view: GridpointWeekView,
   series: GridDaySeries | undefined,
-  words: (typeof WORDS)[keyof typeof WORDS],
+  words: Words,
+  when: string,
 ): string {
   if (series !== undefined && series.kind === "absent") return series.reason;
-  return absenceFor(view, words);
+  return absenceFor(view, words, when);
 }
 
 /**
@@ -159,6 +166,7 @@ function gridAbsenceFor(
  */
 function chartDescription(
   day: TideHourlyDay,
+  when: string,
   sunriseLabel: string,
   sunsetLabel: string,
 ): string {
@@ -166,7 +174,7 @@ function chartDescription(
   const low = Math.min(...feet).toFixed(1);
   const high = Math.max(...feet).toFixed(1);
   return (
-    `Tide today, hour by hour from midnight to midnight: ${low} ft at its lowest hour, ` +
+    `Tide ${when}, hour by hour from midnight to midnight: ${low} ft at its lowest hour, ` +
     `${high} ft at its highest. Night is shaded; the sun is up from ${sunriseLabel} to ` +
     `${sunsetLabel}.`
   );
@@ -184,6 +192,7 @@ function chartDescription(
  */
 function swellDescription(
   day: WaveWeekDay,
+  when: string,
   sunriseLabel: string,
   sunsetLabel: string,
 ): string {
@@ -192,8 +201,8 @@ function swellDescription(
   const low = Math.min(...heights).toFixed(1);
   const high = Math.max(...heights).toFixed(1);
   return (
-    `Swell today, from ${low} ft to ${high} ft. CDIP publishes every three hours and ` +
-    `issued ${published} estimates for today; the curve between them is drawn here rather ` +
+    `Swell ${when}, from ${low} ft to ${high} ft. CDIP publishes every three hours and ` +
+    `issued ${published} estimates for it; the curve between them is drawn here rather ` +
     `than forecast. Night is shaded; the sun is up from ${sunriseLabel} to ${sunsetLabel}.`
   );
 }
@@ -212,6 +221,7 @@ function gridDescription(
   name: string,
   unit: string,
   series: GridDaySeries | undefined,
+  when: string,
   sunriseLabel: string,
   sunsetLabel: string,
   outOfReach: string,
@@ -225,8 +235,8 @@ function gridDescription(
   const low = Math.min(...values).toFixed(0);
   const high = Math.max(...values).toFixed(0);
   return (
-    `${name} today, from ${low} to ${high} ${unit}. The National Weather Service forecasts ` +
-    `this cell in blocks rather than by the hour, and today's is made of ${blocks} of them; ` +
+    `${name} ${when}, from ${low} to ${high} ${unit}. The National Weather Service forecasts ` +
+    `this cell in blocks rather than by the hour, and this day's is made of ${blocks} of them; ` +
     `each block's own hour is marked. Night is shaded; the sun is up from ${sunriseLabel} to ` +
     `${sunsetLabel}.`
   );
@@ -244,11 +254,12 @@ function gridDescription(
  */
 function cloudBandDescription(
   hours: readonly { percent: number }[],
+  when: string,
 ): string | undefined {
   if (hours.length === 0) return undefined;
   const values = hours.map((hour) => hour.percent);
   return (
-    `Cloud cover through today, hour by hour: ${Math.min(...values)} to ` +
+    `Cloud cover through ${when}, hour by hour: ${Math.min(...values)} to ` +
     `${Math.max(...values)} per cent. Darker is more cloud.`
   );
 }
@@ -263,153 +274,174 @@ export async function DayPanel({ slug }: { slug: string }) {
     readSkyWording(slug),
   ]);
 
-  // `weekOfDays` builds its array from today outward, so the first entry is
-  // today by construction. Taking it from any of the five reads above instead
-  // would not work: each is ragged in its own way, and each can fail.
-  const today = daylight.days[0];
-
-  const tideDay =
-    hourly.state.kind === "week"
-      ? hourly.state.days.find((day) => day.localDate === today.localDate)
-      : undefined;
-
-  const waveDay =
-    waves.state.kind === "week"
-      ? waves.state.days.find((day) => day.localDate === today.localDate)
-      : undefined;
-
-  const cloudHours =
-    sky.state.kind === "week"
-      ? (sky.state.days.find((day) => day.localDate === today.localDate)
-          ?.hours ?? [])
-      : [];
-
-  const gridDay =
-    grid.state.kind === "week"
-      ? grid.state.days.find((day) => day.localDate === today.localDate)
-      : undefined;
-
   /*
-    The frame comes from the calendar, not from a feed.
+    The seven days come from the daylight read, which is the same choice
+    `WeekPanel` makes one region up: it is computed from the beach's own
+    coordinates rather than fetched, so it cannot fail and costs no request.
+    Every other read here is ragged in its own way and any of them can go
+    quiet, so building the spine from one of those would let an outage decide
+    how many days a reader may choose between.
 
-    It used to be the tide read's own `startMs` and `endMs`, which was right
-    when the tide was the only series: no tide, no chart, no frame needed. With
-    four products in one frame that would let NOAA's outage decide whether CDIP
-    gets drawn. `localMidnightOf` is arithmetic on the beach's own zone and
-    cannot fail, and it steps by date rather than by adding twenty-four hours,
-    because twice a year on this coast a day is twenty-three or twenty-five.
+    Both regions build from `weekOfDays`, so their columns are the same seven
+    days in the same order and the two cannot disagree about which is Tuesday.
   */
-  const startMs = localMidnightOf(today.localDate);
-  const endMs = localMidnightOf(addLocalDays(today.localDate, 1));
+  const days: DayView[] = daylight.days.map((day) => {
+    // "today" inside a sentence, `Thu, Aug 27` on the other six. The grid's own
+    // label, so the heading and the cell a reader just chose agree.
+    const when = day.isToday ? "today" : day.dayLabel;
 
-  /*
-    Tide first, always, and the order is the tab order.
+    const tideDay =
+      hourly.state.kind === "week"
+        ? hourly.state.days.find((each) => each.localDate === day.localDate)
+        : undefined;
 
-    It is the page's lead product -- the first row of the week and the first
-    card above it -- and it is what a reader without a script gets, since the
-    server renders the first tab. Reordering to put a series with data first
-    would be a rule nobody could see from the page.
-  */
-  const series: HourSeries[] = [
-    {
-      key: "tide",
-      label: "Tide",
-      unitLabel: "ft",
-      points: tideDay === undefined ? [] : tidePoints(tideDay),
-      description:
-        tideDay === undefined
-          ? NO_SERIES
-          : chartDescription(tideDay, today.sunriseLabel, today.sunsetLabel),
-      absence: absenceFor(hourly, WORDS.tide),
-    },
-    {
-      key: "swell",
-      label: "Swell",
-      unitLabel: "ft",
-      points: waveDay === undefined ? [] : swellPoints(waveDay),
-      description:
-        waveDay === undefined
-          ? WORDS.swell.outOfReach
-          : swellDescription(waveDay, today.sunriseLabel, today.sunsetLabel),
-      absence: absenceFor(waves, WORDS.swell),
-    },
-    {
-      key: "wind",
-      label: "Wind",
-      unitLabel: "mph",
-      points: gridDay === undefined ? [] : gridPoints(gridDay.windMph),
-      description: gridDescription(
-        "Wind",
-        "mph",
-        gridDay?.windMph,
-        today.sunriseLabel,
-        today.sunsetLabel,
-        WORDS.wind.outOfReach,
-      ),
-      absence: gridAbsenceFor(grid, gridDay?.windMph, WORDS.wind),
-    },
-    {
+    const waveDay =
+      waves.state.kind === "week"
+        ? waves.state.days.find((each) => each.localDate === day.localDate)
+        : undefined;
+
+    const cloudHours =
+      sky.state.kind === "week"
+        ? (sky.state.days.find((each) => each.localDate === day.localDate)
+            ?.hours ?? [])
+        : [];
+
+    const gridDay =
+      grid.state.kind === "week"
+        ? grid.state.days.find((each) => each.localDate === day.localDate)
+        : undefined;
+
+    /*
+      Tide first, always, and the order is the tab order.
+
+      It is the page's lead product -- the first row of the week and the first
+      card above it -- and it is what a reader without a script gets, since the
+      server renders the first tab. Reordering to put a series with data first
+      would be a rule nobody could see from the page.
+    */
+    const series: HourSeries[] = [
+      {
+        key: "tide",
+        label: "Tide",
+        unitLabel: "ft",
+        points: tideDay === undefined ? [] : tidePoints(tideDay),
+        description:
+          tideDay === undefined
+            ? WORDS.tide.outOfReach(when)
+            : chartDescription(
+                tideDay,
+                when,
+                day.sunriseLabel,
+                day.sunsetLabel,
+              ),
+        absence: absenceFor(hourly, WORDS.tide, when),
+      },
+      {
+        key: "swell",
+        label: "Swell",
+        unitLabel: "ft",
+        points: waveDay === undefined ? [] : swellPoints(waveDay),
+        description:
+          waveDay === undefined
+            ? WORDS.swell.outOfReach(when)
+            : swellDescription(
+                waveDay,
+                when,
+                day.sunriseLabel,
+                day.sunsetLabel,
+              ),
+        absence: absenceFor(waves, WORDS.swell, when),
+      },
+      {
+        key: "wind",
+        label: "Wind",
+        unitLabel: "mph",
+        points: gridDay === undefined ? [] : gridPoints(gridDay.windMph),
+        description: gridDescription(
+          "Wind",
+          "mph",
+          gridDay?.windMph,
+          when,
+          day.sunriseLabel,
+          day.sunsetLabel,
+          WORDS.wind.outOfReach(when),
+        ),
+        absence: gridAbsenceFor(grid, gridDay?.windMph, WORDS.wind, when),
+      },
+      {
+        /*
+          "Temp" rather than "Temperature", and the shortening is measured: four
+          tabs across a 375px screen are about 71px each, where "TEMPERATURE" at
+          this site's label register is about 90px. It is the same trade
+          ADR-0024 made when it labelled a third of the day "Mid".
+
+          It is not ambiguous with the water, and that is worth saying because
+          this page carries both: water temperature is a measured figure and
+          never a curve, so there is no second temperature in this bar for a
+          reader to confuse it with. The spoken description and the sentence
+          under the plot both say "air" in full.
+        */
+        key: "temperature",
+        label: "Temp",
+        unitLabel: "°F",
+        points: gridDay === undefined ? [] : gridPoints(gridDay.airTempF),
+        description: gridDescription(
+          "Air temperature",
+          "°F",
+          gridDay?.airTempF,
+          when,
+          day.sunriseLabel,
+          day.sunsetLabel,
+          WORDS.temperature.outOfReach(when),
+        ),
+        absence: gridAbsenceFor(
+          grid,
+          gridDay?.airTempF,
+          WORDS.temperature,
+          when,
+        ),
+      },
+    ];
+
+    return {
+      localDate: day.localDate,
+      // "Today" at the head of a heading, the grid's own label otherwise.
+      dayName: day.isToday ? "Today" : day.dayLabel,
       /*
-        "Temp" rather than "Temperature", and the shortening is measured: four
-        tabs across a 375px screen are about 71px each, where "TEMPERATURE" at
-        this site's label register is about 90px. It is the same trade ADR-0024
-        made when it labelled a third of the day "Mid".
+        The frame comes from the calendar, not from a feed.
 
-        It is not ambiguous with the water, and that is worth saying because
-        this page carries both: water temperature is a measured figure and
-        never a curve, so there is no second temperature in this bar for a
-        reader to confuse it with. The spoken description and the sentence
-        under the plot both say "air" in full.
+        It used to be the tide read's own `startMs` and `endMs`, which was
+        right when the tide was the only series: no tide, no chart, no frame
+        needed. With four products in one frame that would let NOAA's outage
+        decide whether CDIP gets drawn. `localMidnightOf` is arithmetic on the
+        beach's own zone and cannot fail, and it steps by date rather than by
+        adding twenty-four hours, because twice a year on this coast a day is
+        twenty-three or twenty-five.
       */
-      key: "temperature",
-      label: "Temp",
-      unitLabel: "°F",
-      points: gridDay === undefined ? [] : gridPoints(gridDay.airTempF),
-      description: gridDescription(
-        "Air temperature",
-        "°F",
-        gridDay?.airTempF,
-        today.sunriseLabel,
-        today.sunsetLabel,
-        WORDS.temperature.outOfReach,
-      ),
-      absence: gridAbsenceFor(grid, gridDay?.airTempF, WORDS.temperature),
-    },
-  ];
+      startMs: localMidnightOf(day.localDate),
+      endMs: localMidnightOf(addLocalDays(day.localDate, 1)),
+      sunriseMs: day.sunriseMs,
+      sunsetMs: day.sunsetMs,
+      /*
+        A vertical rule at an instant is a claim about the present, so it is
+        drawn on today and nowhere else. Six of the seven carry null, and that
+        is the whole of what stops Thursday claiming a reader is standing in it.
+      */
+      nowMs: day.isToday ? daylight.atMs : null,
+      cloud: cloudHours.map((hour) => ({
+        atMs: hour.atMs,
+        value: hour.percent,
+        published: true,
+      })),
+      cloudDescription: cloudBandDescription(cloudHours, when),
+      series,
+      wording: <SkyWording view={wording} localDate={day.localDate} />,
+    };
+  });
 
   return (
     <section aria-labelledby="day-panel-heading">
-      <h2 id="day-panel-heading" className={REGION_HEADING}>
-        Today, hour by hour
-      </h2>
-
-      <div className="mb-4">
-        <SkyWording view={wording} localDate={today.localDate} />
-      </div>
-
-      {/*
-        The plot draws the whole day rather than the daylight window, which is
-        what discharges ADR-0023's overnight debt: the 3 AM low the week grid
-        cannot print a label for is here, inside a band that is visibly night.
-
-        Every tab draws that same day against the same night and the same cloud.
-        Only the foreground changes, which is what makes the four one instrument
-        rather than four charts sharing a tile.
-      */}
-      <HourChart
-        startMs={startMs}
-        endMs={endMs}
-        series={series}
-        sunriseMs={today.sunriseMs}
-        sunsetMs={today.sunsetMs}
-        cloud={cloudHours.map((hour) => ({
-          atMs: hour.atMs,
-          value: hour.percent,
-          published: true,
-        }))}
-        cloudDescription={cloudBandDescription(cloudHours)}
-        nowMs={daylight.atMs}
-      />
+      <ChosenDay days={days} />
     </section>
   );
 }

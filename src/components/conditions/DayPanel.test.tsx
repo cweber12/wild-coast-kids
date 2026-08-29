@@ -466,7 +466,7 @@ test("the wind tab marks each block the office issued, not every hour", async ()
   expect(plot).not.toBeNull();
   expect(plot?.querySelectorAll("circle")).toHaveLength(4);
   expect(plot?.getAttribute("aria-label")).toContain(
-    "in blocks rather than by the hour, and today's is made of 4 of them",
+    "in blocks rather than by the hour, and this day's is made of 4 of them",
   );
 });
 
