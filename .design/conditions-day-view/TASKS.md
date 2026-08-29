@@ -193,7 +193,7 @@ days, and a week that chooses between them.
       bytes uncompressed, 43,250 gzipped, for six more days of four series.
       That is the trade the brief chose over a loading state per click.
 
-- [ ] **ADR: the day carries a curve, and the week keeps its thirds.**
+- [x] **ADR: the day carries a curve, and the week keeps its thirds.**
       Supersedes ADR-0024's **reach** and not its row, and that distinction is
       the whole of the decision. Keeps ADR-0024's finding: one number does not
       describe a burn-off day, and a curve does not reduce to one number.
