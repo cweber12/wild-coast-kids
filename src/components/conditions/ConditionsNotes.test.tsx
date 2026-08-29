@@ -249,7 +249,9 @@ test("the reader is told why the week leaves the overnight extremes out", () => 
   render(<ConditionsNotes entries={ENTRIES} reach={REACH} />);
 
   expect(screen.getByText(/so the week leaves them out/)).toBeDefined();
-  expect(screen.getByText(/on the cards above/)).toBeDefined();
+  expect(
+    screen.getByText(/the day below draws the whole twenty-four hours/i),
+  ).toBeDefined();
   expect(
     screen.getByText(/nothing here is a judgement about when you should go/),
   ).toBeDefined();

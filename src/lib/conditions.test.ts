@@ -77,7 +77,6 @@ vi.mock("./beaches", async (importOriginal) => {
 });
 
 const {
-  readTodaysLowestLow,
   readWeekOfLowestLows,
   readHourlyTide,
   readDaylightWeek,
@@ -91,7 +90,7 @@ const {
 
 /**
  * Noon Pacific on 2026-08-17. The clock is injected rather than faked, which is
- * the reason `readTodaysLowestLow` takes it as an argument at all.
+ * the reason every read in this file takes it as an argument at all.
  */
 const NOON_PACIFIC_20260817 = Date.UTC(2026, 7, 17, 19, 0);
 
@@ -117,159 +116,6 @@ function ok(extremes: { atMs: number; feet: number; kind: "low" | "high" }[]) {
   });
 }
 
-test("asks for the week's window even when only today is wanted", async () => {
-  ok([]);
-  await readTodaysLowestLow(BEACH, NOON_PACIFIC_20260817);
-
-  // The day read used to stop at tomorrow. It now asks for the same range the
-  // week read asks for, and that is the point rather than an accident: two
-  // ranges would be two URLs, which Next does not dedupe, and the page would
-  // reach NOAA twice for one station.
-  expect(fetchTideExtremes).toHaveBeenCalledWith({
-    stationId: "9410230",
-    beginDate: "20260816",
-    endDate: "20260825",
-  });
-});
-
-test("the window is anchored to the Pacific date, not the UTC one", async () => {
-  ok([]);
-  // 00:30 Pacific on the 17th is already 07:30 UTC on the 17th, so a UTC-anchored
-  // window would ask for the 16th-18th by accident and be right for the wrong
-  // reason. Anchoring on the local date makes it right on purpose.
-  await readTodaysLowestLow(BEACH, JUST_AFTER_MIDNIGHT_20260817);
-
-  expect(fetchTideExtremes).toHaveBeenCalledWith({
-    stationId: "9410230",
-    beginDate: "20260816",
-    endDate: "20260825",
-  });
-});
-
-test("carries the beach and station bindings, including how far the station is", async () => {
-  ok([]);
-  const view = await readTodaysLowestLow(BEACH, NOON_PACIFIC_20260817);
-
-  expect(view.beachName).toBe("La Jolla Shores Beach");
-  expect(view.station?.name).toContain("La Jolla");
-  expect(view.station?.water).toBe("open-coast");
-  expect(view.station?.distanceM).toBeGreaterThan(0);
-});
-
-test("leads with the deepest low a reader can reach, and keeps the day's own", async () => {
-  // The instants are hours clear of sunrise and sunset on purpose: a fixture
-  // that turned on the ephemeris agreeing to the minute would be asserting
-  // something other than the rule under test.
-  ok([
-    // 6:41 PM on the 16th in California: the previous day, and must not win.
-    { atMs: Date.UTC(2026, 7, 17, 1, 41), feet: 0.9, kind: "low" },
-    // 3:14 AM: deeper than anything in daylight, and hours before sunrise.
-    { atMs: Date.UTC(2026, 7, 17, 10, 14), feet: -0.42, kind: "low" },
-    // 2:00 PM: the lowest a parent can stand in front of.
-    { atMs: Date.UTC(2026, 7, 17, 21, 0), feet: 1.368, kind: "low" },
-  ]);
-
-  const view = await readTodaysLowestLow(BEACH, NOON_PACIFIC_20260817);
-
-  expect(view.state).toEqual({
-    kind: "reading",
-    daylight: { timeLabel: "2:00 PM", feet: 1.368 },
-    allDay: { timeLabel: "3:14 AM", feet: -0.42 },
-  });
-});
-
-test("says there is nothing lower when the day's lowest is the daylight one", async () => {
-  // Null means "nothing lower than the one above", never "unknown". Printing
-  // the same reading twice would read as a fault rather than as agreement.
-  ok([{ atMs: Date.UTC(2026, 7, 17, 21, 0), feet: 0.4, kind: "low" }]);
-
-  const view = await readTodaysLowestLow(BEACH, NOON_PACIFIC_20260817);
-
-  expect(view.state).toEqual({
-    kind: "reading",
-    daylight: { timeLabel: "2:00 PM", feet: 0.4 },
-    allDay: null,
-  });
-});
-
-test("a day whose only low is overnight still answers, from the other figure", async () => {
-  // Close to unreachable on this coast, and a real state: the reading is not
-  // withheld, it simply has nothing to lead with.
-  ok([{ atMs: Date.UTC(2026, 7, 17, 10, 14), feet: -0.42, kind: "low" }]);
-
-  const view = await readTodaysLowestLow(BEACH, NOON_PACIFIC_20260817);
-
-  expect(view.state).toEqual({
-    kind: "reading",
-    daylight: null,
-    allDay: { timeLabel: "3:14 AM", feet: -0.42 },
-  });
-});
-
-test("a window with no low for today is its own state, never a reading", async () => {
-  ok([{ atMs: Date.UTC(2026, 7, 20, 13, 24), feet: 1.1, kind: "low" }]);
-
-  const view = await readTodaysLowestLow(BEACH, NOON_PACIFIC_20260817);
-
-  expect(view.state).toEqual({ kind: "no-low-today" });
-});
-
-test("an unavailable upstream carries its reason through, unswallowed", async () => {
-  fetchTideExtremes.mockResolvedValue({
-    kind: "unavailable",
-    reason: "NOAA returned HTTP 503 for station 9410230.",
-    drift: false,
-    url: "https://example.invalid",
-  });
-
-  const view = await readTodaysLowestLow(BEACH, NOON_PACIFIC_20260817);
-
-  expect(view.state).toEqual({
-    kind: "unavailable",
-    detail: "NOAA returned HTTP 503 for station 9410230.",
-    drift: false,
-  });
-  // The bindings survive a failure, so the panel can still say which beach and
-  // station it was asking about.
-  expect(view.beachName).toBe("La Jolla Shores Beach");
-});
-
-test("drift is carried as drift rather than folded into a quiet failure", async () => {
-  fetchTideExtremes.mockResolvedValue({
-    kind: "unavailable",
-    reason:
-      'CO-OPS 9410230: expected a "predictions" array and found undefined.',
-    drift: true,
-    url: "https://example.invalid",
-  });
-
-  const view = await readTodaysLowestLow(BEACH, NOON_PACIFIC_20260817);
-
-  expect(view.state).toMatchObject({ kind: "unavailable", drift: true });
-});
-
-test("a beach with no station never reaches upstream, and is not an outage", async () => {
-  const view = await readTodaysLowestLow(UNBOUND_BEACH, NOON_PACIFIC_20260817);
-
-  // A permanent fact about the place, kept apart from a feed having a bad day:
-  // telling this reader to try again later would be telling them to wait for
-  // something that will never arrive.
-  expect(view.state.kind).toBe("no-station");
-  expect(view.station).toBeNull();
-  expect(fetchTideExtremes).not.toHaveBeenCalled();
-
-  if (view.state.kind === "no-station") {
-    expect(view.state.reason).toMatch(/outside San Diego County/);
-  }
-});
-
-test("a slug outside the inventory is a coding error, and nothing is fetched", async () => {
-  await expect(
-    readTodaysLowestLow("no-such-beach", NOON_PACIFIC_20260817),
-  ).rejects.toThrow(/no beach in the inventory/);
-  expect(fetchTideExtremes).not.toHaveBeenCalled();
-});
-
 /* ===========================================================================
  * The week
  * ========================================================================= */
@@ -281,18 +127,6 @@ function daysOf(view: TideWeekView) {
   }
   return view.state.days;
 }
-
-test("the day and the week come from one request, so NOAA is asked once", async () => {
-  ok([]);
-
-  await readTodaysLowestLow(BEACH, NOON_PACIFIC_20260817);
-  await readWeekOfLowestLows(BEACH, NOON_PACIFIC_20260817);
-
-  // Not "both were called" — both were called with the *same* contract. That
-  // is what makes them one URL, and one URL is what makes them one fetch.
-  const [dayCall, weekCall] = fetchTideExtremes.mock.calls;
-  expect(weekCall).toEqual(dayCall);
-});
 
 test("the window reaches past the last day of the week, not past today", async () => {
   ok([]);
@@ -431,6 +265,27 @@ test("an unavailable upstream is one failure for the week, not seven", async () 
     drift: false,
   });
   expect(view.beachName).toBe("La Jolla Shores Beach");
+});
+
+/**
+ * Moved here from the day read when `readTodaysLowestLow` was deleted. The flag
+ * travels through `readTideWindow`, which both reads share, and this was the
+ * only test of the whole file that asserted it survives the trip -- a payload
+ * whose shape drifted is a bug in this repo rather than a quiet feed, and the
+ * two states are worded differently on the page for that reason.
+ */
+test("drift is carried as drift rather than folded into a quiet failure", async () => {
+  fetchTideExtremes.mockResolvedValue({
+    kind: "unavailable",
+    reason:
+      'CO-OPS 9410230: expected a "predictions" array and found undefined.',
+    drift: true,
+    url: "https://example.invalid",
+  });
+
+  const view = await readWeekOfLowestLows(BEACH, NOON_PACIFIC_20260817);
+
+  expect(view.state).toMatchObject({ kind: "unavailable", drift: true });
 });
 
 test("a beach with no tide station has no week, and no outage either", async () => {

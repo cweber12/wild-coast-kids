@@ -1,14 +1,14 @@
 import { expect, test, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 
-// The panel fetches, and an async server component cannot be rendered by this
-// client-side test renderer. Its own suite covers every branch of it; here the
-// subject is the page shell around it.
-vi.mock("@/components/conditions/TidePanel", () => ({
-  TidePanel: ({ slug }: { slug: string }) => <p>panel for {slug}</p>,
+// The regions fetch, and an async server component cannot be rendered by this
+// client-side test renderer. Their own suites cover every branch of them; here
+// the subject is the page shell around them.
+vi.mock("@/components/conditions/WeekPanel", () => ({
+  WeekPanel: ({ slug }: { slug: string }) => <p>week for {slug}</p>,
 }));
-vi.mock("@/components/conditions/WavePanel", () => ({
-  WavePanel: ({ slug }: { slug: string }) => <p>waves for {slug}</p>,
+vi.mock("@/components/conditions/DayPanel", () => ({
+  DayPanel: ({ slug }: { slug: string }) => <p>day for {slug}</p>,
 }));
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push: vi.fn() }) }));
 
@@ -28,7 +28,7 @@ test("it opens on the named default beach", () => {
   render(<Conditions />);
 
   expect(screen.queryByText(/conditions tool coming soon/i)).toBeNull();
-  expect(screen.getByText(`panel for ${DEFAULT_BEACH_SLUG}`)).toBeDefined();
+  expect(screen.getByText(`week for ${DEFAULT_BEACH_SLUG}`)).toBeDefined();
 });
 
 test("a reader can choose another beach from here", () => {

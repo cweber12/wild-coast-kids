@@ -82,38 +82,6 @@ export interface TideLows {
   allDay: TideReading | null;
 }
 
-/**
- * What the view renders. Four states, kept distinct on purpose, because the
- * dangerous direction is any of the last three reading as a calm sea:
- *
- *   reading        a predicted low for today
- *   no-low-today   the window held none, which is a gap in our request
- *   no-station     the join bound no station to this beach at all
- *   unavailable    a station exists and upstream could not answer
- *
- * `no-station` is a permanent fact about the place; `unavailable` is a transient
- * fact about the feed. Collapsing them would tell a reader to try again later
- * about something that will never work, or the reverse.
- */
-export type TideTodayState =
-  | ({ kind: "reading" } & TideLows)
-  | { kind: "no-low-today" }
-  | { kind: "no-station"; reason: string }
-  | {
-      kind: "unavailable";
-      /** The exact upstream reason, for the disclosure. */
-      detail: string;
-      /** True when the payload shape drifted, which is a bug here rather than a quiet feed. */
-      drift: boolean;
-    };
-
-export interface TideTodayView {
-  beachName: string;
-  /** null exactly when the state is `no-station`. */
-  station: { name: string; water: string; distanceM: number | null } | null;
-  state: TideTodayState;
-}
-
 /** Days the week grid names, today included. */
 const WEEK_DAYS = 7;
 
@@ -132,24 +100,19 @@ interface WeekDayFrame {
  * Every row on that grid is built from this, so the rows cannot disagree about
  * which day is Tuesday.
  *
- * **Today is included, and its tide cell does repeat the card above it.** That
- * cost is real — the same time and the same height, twice within one screen,
- * and the grid's copy is the poorer of the two. It was weighed rather than
- * missed, and three things pay for it.
+ * **Today is included, and it no longer repeats anything.** It used to: a tide
+ * card above the grid printed the same time and the same height, twice within
+ * one screen, and the cost was weighed rather than missed. The card came off
+ * the page with the rest of the three-across band, and what argued for
+ * including today anyway is what is left.
  *
  * The grid is a comparison task, and "is Tuesday better than today?" wants
  * today inside the comparison rather than carried across from a differently
  * formatted component. Marking the first column `Today` removes any chance of
- * reading `Tue, Aug 25` as the day the reader is standing in. And daylight is
- * not in the now-band at all: today's sunrise and sunset appear nowhere else on
- * the page, and they are what say whether today's lowest low falls before the
- * sun comes up — which is the question the tide time alone cannot answer.
- *
- * The alternative that removes the repetition properly is to lift daylight into
- * the now-band and start the week tomorrow. That changes the three-across
- * layout PR B settled and runs into `StatGroup`'s one-group-one-provenance
- * contract, since daylight is computed here and the tide is NOAA's. So it is
- * its own slice rather than a tweak to this one.
+ * reading `Tue, Aug 25` as the day the reader is standing in. And today's
+ * sunrise and sunset appear nowhere else on the page, and they are what say
+ * whether today's lowest low falls before the sun comes up — which is the
+ * question the tide time alone cannot answer.
  */
 function weekOfDays(nowMs: number): WeekDayFrame[] {
   const today = localDateOf(nowMs);
@@ -378,58 +341,6 @@ function tideLowsOn(
 }
 
 /**
- * Read today's lowest low tide for one beach.
- *
- * Asks for the whole week's window even though it reads one day out of it. That
- * looks wasteful and is the opposite: the week read next door wants the same
- * station and the same six-hour cache, and a narrower range here would be a
- * second URL and a second call to NOAA. See `predictionsWindow`.
- *
- * Throws only when the slug is not in the inventory. Everything an upstream can
- * do wrong, and every beach the join could not bind, arrives as a state instead.
- */
-export async function readTodaysLowestLow(
-  slug: string,
-  nowMs: number = Date.now(),
-): Promise<TideTodayView> {
-  const read = await readTideWindow(slug, nowMs, "readTodaysLowestLow");
-
-  if (read.kind === "no-station") {
-    return {
-      beachName: read.beachName,
-      station: null,
-      state: { kind: "no-station", reason: read.reason },
-    };
-  }
-
-  const binding = { beachName: read.beachName, station: read.station };
-
-  if (read.kind === "unavailable") {
-    return {
-      ...binding,
-      state: {
-        kind: "unavailable",
-        detail: read.detail,
-        drift: read.drift,
-      },
-    };
-  }
-
-  const localDate = localDateOf(nowMs);
-  const lows = tideLowsOn(
-    read.extremes,
-    localDate,
-    read.daylight.get(localDate)!,
-  );
-
-  return {
-    ...binding,
-    state:
-      lows === null ? { kind: "no-low-today" } : { kind: "reading", ...lows },
-  };
-}
-
-/**
  * One day of the week, as the grid renders it.
  *
  * `no-low` is a named absence rather than a missing entry, and the week is
@@ -468,10 +379,10 @@ export interface TideWeekView {
 /**
  * Read a week of lowest low tides for one beach, starting today.
  *
- * Why today is in the week, and what including it costs, is argued once in
- * `weekOfDays` rather than again here. What this read adds is that today's cell
- * agrees with the now-band above it by construction rather than by luck: same
- * station, same request, same day-selection rule.
+ * Why today is in the week is argued once in `weekOfDays` rather than again
+ * here. What this read adds is that every one of the seven days is selected by
+ * the same rule from one station and one request, so no column can disagree
+ * with another about what a lowest low is.
  *
  * Throws only when the slug is not in the inventory.
  */

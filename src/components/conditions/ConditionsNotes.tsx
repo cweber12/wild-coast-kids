@@ -9,7 +9,7 @@
  * same explanation three times over, and repeating it is what buried the
  * numbers between it.
  *
- * `TideToday` already argued for this arrangement in its own docstring — "the
+ * The tide card already argued for this arrangement in its own docstring — "the
  * acronym is named once, at the bottom, rather than beside every figure" — and
  * then the page did that once per panel. This is that principle applied at the
  * scale it was actually about.
@@ -64,7 +64,8 @@ const NOTES = [
       "sunset, which is why each day opens with the window itself. On this coast the " +
       "day's own lowest tide and biggest swell are usually in the small hours — real, " +
       "and not something you can plan a morning around — so the week leaves them out. " +
-      "Today's are on the cards above, marked “all day”. Sunrise and sunset are computed " +
+      "The day below draws the whole twenty-four hours with night shaded, so an overnight " +
+      "low is there as the dip it is. Sunrise and sunset are computed " +
       "for this beach; nothing here is a judgement about when you should go.",
   },
   {
@@ -112,8 +113,8 @@ export function ConditionsNotes({
   reach: InventoryReach;
 }) {
   return (
-    // No top margin: the now-band above carries the gap. Spacing on both is
-    // counted twice, which is the failure `SnapSection`'s docstring records.
+    // No top margin: the reserved slot above carries the gap. Spacing on both
+    // is counted twice, which is the failure `SnapSection`'s docstring records.
     <section aria-labelledby="conditions-notes-heading">
       <h2 id="conditions-notes-heading" className={REGION_HEADING}>
         How to read these numbers
@@ -139,8 +140,9 @@ export function ConditionsNotes({
         on a very wide screen the columns stop growing rather than pulling the
         lines back out to 83.
 
-        Two steps, matching the now-band's `sm:grid-cols-2 lg:grid-cols-3`
-        rhythm rather than inventing one. `lg:grid-cols-3` alone would put three
+        Two steps, matching the `sm:grid-cols-2 lg:grid-cols-3` rhythm the
+        three-card band set rather than inventing one. `lg:grid-cols-3` alone
+        would put three
         columns at 1024 where each is 288px, about 47 characters, and this ramp
         never takes prose below roughly 52.
       */}

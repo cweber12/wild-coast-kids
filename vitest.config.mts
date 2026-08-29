@@ -192,11 +192,61 @@ export default defineConfig({
       //
       // Nothing new is excluded. The same six 0% files still drag all four
       // down, and this slice added none.
+      //
+      // 2026-08-29, THREE LOWERED AND ONE RAISED, by the day view's second
+      // slice (#172, second half). REASON 2, and it is worth reading the
+      // arithmetic rather than the percentages, because three of these moving
+      // down looks like the regression it is not.
+      //
+      // The slice deleted `TideToday`, `WavesToday`, `WindToday`, the three
+      // panels behind them and `readTodaysLowestLow` -- about 1,850 lines with
+      // their tests -- and added `MeasuredToday` and `MeasuredPanel`, which
+      // carry the surviving two thirds of that markup with tests of their own.
+      // Well-covered code left; well-covered code arrived; the denominator
+      // shrank either way, so the whole-project ratio moved toward the 0%
+      // entry plumbing that has always dragged it down.
+      //
+      //   statements 2377/2689 -> 2363/2672   88.39 -> 88.43
+      //   branches   1608/1818 -> 1564/1769   88.44 -> 88.41
+      //   functions   567/604  ->  562/599    93.87 -> 93.82
+      //   lines      2154/2446 -> 2138/2429   88.06 -> 88.01
+      //
+      // **The numerator falls by no more than the denominator on every one of
+      // the four**, which is the signature of covered code being deleted. A
+      // regression drops the numerator alone and reads identically in the
+      // failure message; that is what to check here before touching these
+      // numbers again, and it is available in the output rather than needing
+      // to be trusted. Statements rose because the arriving code is slightly
+      // better covered than the leaving code was -- `heightWords`' two end
+      // bands, flat water and a large sea, had never been asserted on the wave
+      // card and are asserted now.
+      //
+      // Nothing is left uncovered by this slice. `ChosenDay.tsx:86` and
+      // `DayPanel.tsx:105` are the two lines the report still names in this
+      // subtree and both predate it: the unreachable "no days to show"
+      // fallback, and one arm of the swell tab's outage wording.
+      //
+      // Nothing new is excluded, and the same six 0% files still drag all four
+      // down in plain sight.
+      //
+      // Moved again in the same pull request, by the regression the slab
+      // removal turned up: taking the tide card off the page took the only
+      // attribution the tide had with it, and `tideStation.ts` and its three
+      // tests put it back on the week's tide row. Small and in the ordinary
+      // direction -- both halves grew and the numerators grew faster:
+      //
+      //   statements 2363/2672 -> 2368/2677   88.43 -> 88.45
+      //   branches   1564/1769 -> 1573/1779   88.41 -> 88.42
+      //   functions   562/599  ->  564/601    93.82 -> 93.84
+      //   lines      2138/2429 -> 2143/2434   88.01 -> 88.04
+      //
+      // The figures below are these, not the ones in the block above, which
+      // are kept because they are what the deletion on its own cost.
       thresholds: {
-        statements: 88.39,
-        branches: 88.44,
-        functions: 93.87,
-        lines: 88.06,
+        statements: 88.45,
+        branches: 88.42,
+        functions: 93.84,
+        lines: 88.04,
       },
     },
   },

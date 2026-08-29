@@ -52,8 +52,8 @@ export function mopLineSource(lineId: string): string {
  * recorded no distance.
  *
  * One decimal, always, and no threshold under which it is withheld. The two
- * now-cards each have one — `WavesToday` hides a buoy nearer than 10 km,
- * `TideToday` a station nearer than 5 km — because a distance small enough not
+ * measured cards have one — the buoy is not named with a distance under
+ * 10 km — because a distance small enough not
  * to change the reading is noise beside it. This distance is never large: every
  * bound line is between 117 m and 910 m away, so rounding to whole kilometres
  * would print "1 km" or "0 km" for all fifteen and say nothing.

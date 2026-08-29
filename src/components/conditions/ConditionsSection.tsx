@@ -19,10 +19,7 @@ import { ConditionsNotes } from "./ConditionsNotes";
 import { DayPanel } from "./DayPanel";
 import { ReservedSlot } from "../ui/ReservedSlot";
 import { SelectedDayProvider } from "./selectedDay";
-import { TidePanel } from "./TidePanel";
-import { WavePanel } from "./WavePanel";
 import { WeekPanel } from "./WeekPanel";
-import { WindPanel } from "./WindPanel";
 
 export function ConditionsSection({ slug }: { slug: string }) {
   const groups = beachesByRegion().map((group) => ({
@@ -89,63 +86,28 @@ export function ConditionsSection({ slug }: { slug: string }) {
       </div>
 
       {/*
-        The now-band: what the beach is doing at this moment, three readings
-        across. This is what the page was missing rather than a way of filling
-        space — a parent weighing a tide time against a wave height had them
-        three screens apart in reading order, and could not see both at once.
+        THE PAGE OPENS ON THE WEEK, AND THE READINGS ARE INSIDE THE DAY.
 
-        Each keeps its own suspense boundary inside the grid. Three agencies go
-        quiet independently and none may hold up the other two; making the grid
-        the boundary instead would have traded that away for one line of markup.
+        A band of three cards stood here: today's lowest tide, the buoy, the
+        air station. It was the right answer while it was the only answer --
+        a parent weighing a tide time against a wave height had them three
+        screens apart before it, and could not see both at once. What made it
+        wrong is what landed under it. The week grid prints today's lowest
+        daylight tide in its first column and the day chart draws the whole
+        tide, the whole swell and the cell's own wind and temperature, so the
+        band and the two regions below it said the same things in two
+        registers -- which is the redundancy this brief exists to remove.
 
-        Two columns from `sm` rather than three: below `lg` three cards leave the
-        stat labels wrapping, and a wrapped 10px uppercase label is harder to
-        read than a card further down the page.
-      */}
-      <div className="mb-9 grid items-stretch gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        <Suspense
-          fallback={
-            <p className="text-base text-fog">
-              Reading today&apos;s tide from NOAA…
-            </p>
-          }
-        >
-          <TidePanel slug={slug} />
-        </Suspense>
+        The two measurements that were not duplicated moved rather than went.
+        `MeasuredToday` carries them inside the day panel, under the chart, on
+        today alone, because the buoy and the shore station are the only
+        instruments this site reports and today is the only day anybody took a
+        reading of. The other six days say so in a sentence.
 
-        <Suspense
-          fallback={<p className="text-base text-fog">Reading the buoy…</p>}
-        >
-          <WavePanel slug={slug} />
-        </Suspense>
-
-        {/*
-          Two stations, named, because the panel reads two: air for temperature
-          and wind, sky for cloud and visibility -- usually a different station
-          and much further away, which is what ADR-0010 turns on. A singular
-          line here promised a simpler answer than the card delivers.
-
-          "Stations" rather than "weather station" also keeps the loading copy
-          inside the glossary: CONTEXT.md's `Conditions` entry ends
-          `_Avoid_: weather, forecast, surf report`, and this was the last
-          rendered text on the page still using one of them.
-        */}
-        <Suspense
-          fallback={
-            <p className="text-base text-fog">
-              Reading the air and sky stations…
-            </p>
-          }
-        >
-          <WindPanel slug={slug} />
-        </Suspense>
-      </div>
-
-      {/*
-        The page turns from now to planning. The week reads from the same NOAA
-        request the tide card above already makes — one URL, one call — so it
-        gets its own suspense boundary for the same reason the three cards do
-        rather than because it costs a second fetch.
+        Nothing that was on this page is off it. The tide's daylight low is in
+        the week's today column; its overnight low and CDIP's biggest-all-day
+        are the dips in the curves the chart draws, which is what the brief
+        asked those curves to be for.
       */}
       {/*
         The week and the day are one instrument at two zoom levels, and from
@@ -180,8 +142,14 @@ export function ConditionsSection({ slug }: { slug: string }) {
         `Conditions` entry ends `_Avoid_: weather, forecast, surf report`, and
         the test guarding that refused two earlier wordings — one for
         "forecast", and one for naming the National Weather Service, whose own
-        name contains the first banned word. The line beside it dodges the same
-        edge by saying "the air and sky stations".
+        name contains the first banned word.
+
+        It is not the only loading line in this region any more. `DayPanel`
+        holds a second boundary of its own around the measured block, whose
+        line says "the buoy and the air station" and dodges the same edge the
+        same way. The check that catches this cannot see it from here, because
+        this file's tests mock `DayPanel` — so it is asserted in that panel's
+        own tests instead.
       */}
         <div className="mb-9">
           <Suspense

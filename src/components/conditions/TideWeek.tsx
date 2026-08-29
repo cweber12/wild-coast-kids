@@ -24,10 +24,13 @@
  * has nothing to distinguish itself from.
  *
  * **The overnight low is not dropped from the site, only from this grid.**
- * `TideToday` still prints "Lowest all day" for today, and the day view is
- * where the other six are going. `WeekPanel` says so in a sentence beneath the
- * grid rather than letting the figure vanish quietly — ADR-0023 records why
- * that sentence is the condition this was allowed under.
+ * The day view below draws all twenty-four hours with night shaded, so the
+ * 3 AM low no cell here has room to label is visible there as the dip it is.
+ * It was the tide card that carried it as a figure, under "Lowest all day",
+ * until that card came off the page; the shape replaced the figure, which is
+ * what the day view was built to do. `WeekPanel` says so in a sentence beneath
+ * the grid rather than letting it vanish quietly — ADR-0023 records why that
+ * sentence is the condition this was allowed under.
  *
  * **One line, at every width.** The old second line was two lines at `lg` on
  * purpose, because a cell whose height depended on which branch it took put
@@ -43,9 +46,9 @@
  * whole page is built to avoid.
  *
  * **What is not here is a caveat per cell.** Which station these predictions
- * come from, how far away it is and what the datum means are all said once, on
- * the card above and in the notes block below. Seven columns each repeating an
- * attribution would bury the figures they qualify.
+ * come from, how far away it is and what the datum means are all said once, in
+ * the notes block below. Seven columns each repeating an attribution would
+ * bury the figures they qualify.
  */
 
 import type { TideWeekDay } from "@/lib/conditions";

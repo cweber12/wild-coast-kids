@@ -35,8 +35,17 @@
  * quiet cloud feed costs the band and not the curve; a quiet NOAA costs the
  * tide tab and not the swell tab; and each tab that is quiet says which
  * publisher went quiet rather than saying only that something is missing.
+ *
+ * **And, on today alone, what was measured.** Every read above is a model or a
+ * prediction; the buoy and the shore station are the only instruments this
+ * site reports at all. They arrive through `MeasuredPanel` on a Suspense
+ * boundary of their own rather than joining the five above, because they draw
+ * no part of the chart and a slow buoy must not hold up a curve it has nothing
+ * to do with. The other six days get a sentence instead, naming the day, for
+ * the reason `WORDS` below takes a `when` at all.
  */
 
+import { Suspense } from "react";
 import {
   readDaylightWeek,
   readGridpointWeek,
@@ -54,6 +63,8 @@ import {
 import { localMidnightOf, addLocalDays } from "@/lib/pacific-time";
 import { ChosenDay, type DayView } from "./ChosenDay";
 import type { HourSeries } from "./HourChart";
+import { MeasuredPanel } from "./MeasuredPanel";
+import { MeasuredToday } from "./MeasuredToday";
 import { SkyWording } from "./SkyWording";
 import { gridPoints, swellPoints, tidePoints } from "./series";
 
@@ -314,9 +325,9 @@ export async function DayPanel({ slug }: { slug: string }) {
     /*
       Tide first, always, and the order is the tab order.
 
-      It is the page's lead product -- the first row of the week and the first
-      card above it -- and it is what a reader without a script gets, since the
-      server renders the first tab. Reordering to put a series with data first
+      It is the page's lead product -- the first row of the week above -- and it
+      is what a reader without a script gets, since the server renders the first
+      tab. Reordering to put a series with data first
       would be a rule nobody could see from the page.
     */
     const series: HourSeries[] = [
@@ -436,6 +447,31 @@ export async function DayPanel({ slug }: { slug: string }) {
       cloudDescription: cloudBandDescription(cloudHours, when),
       series,
       wording: <SkyWording view={wording} localDate={day.localDate} />,
+      /*
+        Rendered here and handed over finished, which is the `wording` field's
+        precedent one line up: the reads are the server's and `ChosenDay` is a
+        client component, so a measured block that fetched for itself would
+        have to become one too.
+
+        `day.isToday` decides it here rather than `ChosenDay` testing
+        `nowMs !== null` downstream. That test would work -- six days carry
+        null -- and it would be reading a coincidence of construction as if it
+        were a contract. The daylight read states which day is today, and this
+        is the one place that fact is already in hand.
+      */
+      measured: day.isToday ? (
+        <Suspense
+          fallback={
+            <p className="text-base text-fog">
+              Reading the buoy and the air station…
+            </p>
+          }
+        >
+          <MeasuredPanel slug={slug} />
+        </Suspense>
+      ) : (
+        <MeasuredToday when={when} readings={null} />
+      ),
     };
   });
 

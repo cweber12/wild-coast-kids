@@ -18,9 +18,10 @@
  * **The day's own biggest is no longer here.** On the seven days measured on
  * 2026-08-26 it fell outside daylight on six of them — four of those at 11 PM
  * or 2 AM — which is what made the daylight estimate the one worth leading
- * with. It is not dropped from the site: `WavesToday` still prints "Biggest all
- * day" for today, the day view is where the other six are going, and
- * `WeekPanel` says so in a sentence beneath the grid.
+ * with. It is not dropped from the site: the day view below draws CDIP's whole
+ * curve for whichever day is chosen, night included, so an 11 PM peak is there
+ * as a shape on every day rather than as a figure on one. `WeekPanel` says so
+ * in a sentence beneath the grid.
  *
  * **The time leads, the way it does in every other row of this grid.** An
  * earlier draft led with the height, on the argument that a swell is a decision

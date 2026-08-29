@@ -410,6 +410,16 @@ test("a NOAA outage costs the tide row, not the whole grid", async () => {
   render(await WeekPanel({ slug: "la-jolla-shores-beach" }));
 
   expect(screen.getByText(/could not get this week/i)).toBeDefined();
+  // The upstream reason, printed rather than pointed at. This note used to say
+  // "the card above says what went wrong", which was true while the tide card
+  // shared this request and stood above the grid. That card is gone, so a note
+  // that still delegated would leave the only account of the outage nowhere on
+  // the page -- the hour-by-hour tab below is a different request and can be
+  // perfectly healthy while this one is not.
+  expect(
+    screen.getByText(/NOAA returned HTTP 503 for station 9410230/),
+  ).toBeDefined();
+  expect(screen.queryByText(/the card above/)).toBeNull();
   // The reason the columns come from the daylight read: it is computed here and
   // cannot fail, so the week still stands and still answers a question.
   expect(screen.getByText("Tue, Aug 18")).toBeDefined();
@@ -531,7 +541,7 @@ test("the wave row is attributed once, beneath the grid, not seven times", async
     "CDIP, Scripps Institution of Oceanography",
   );
   // The distance is what lets a reader see the model's point is nearer than
-  // the buoy the card above reads. A decimal, because every line is under a km.
+  // the buoy the day panel below reads. A decimal, every line being under a km.
   expect(attributions[0].textContent).toContain("about 0.3 km from this beach");
   expect(attributions[0].textContent).toContain(
     "a model of the swell at 10 m depth, not a measurement",
@@ -721,7 +731,11 @@ test("the week says it shows only the daylight window, once", async () => {
     screen.getAllByText(/shows what falls between sunrise and sunset/i),
   ).toHaveLength(1);
   // And says where the missing figure went, rather than only that it is gone.
-  expect(screen.getByText(/today's are on the cards above/i)).toBeDefined();
+  // It pointed at the tide card until that card came off the page; it points
+  // at the day chart now, which is where an overnight low is actually drawn.
+  expect(
+    screen.getByText(/the day below draws the whole twenty-four hours/i),
+  ).toBeDefined();
 });
 
 test("the scope sentence stands whether or not a feed also failed", async () => {
@@ -982,4 +996,121 @@ test("a beach with no tide station gets no shape and the reason it already had",
   // place, not a second thing that went wrong.
   expect(screen.queryByText(/hour-by-hour shape behind each day/)).toBeNull();
   expect(sparkPaths(container)).toHaveLength(0);
+});
+
+/**
+ * REGRESSION. The tide station was named exactly once on this page and the
+ * naming was on the tide card, which sat above the grid and shared this read's
+ * station and request. Taking the three-card slab off the page took the only
+ * attribution the tide has with it: every tide figure in the grid, and the
+ * chart's whole tide curve below it, were suddenly published by nobody.
+ *
+ * Found by rendering `main` and this branch and diffing what a reader sees --
+ * "La Jolla (Scripps Institution Wharf) · NOAA Tides & Currents" was on one
+ * page and on no part of the other. No test failed, because no test had ever
+ * needed to assert it here: the card's own suite asserted it, and that suite
+ * was deleted with the card.
+ *
+ * ADR-0010 is what this breaks. Its guarantee is the one sentence it ends on:
+ * "No figure is ever shown without the reader being able to see where it came
+ * from." The wave and cloud rows each carry their own line and always have;
+ * the tide row delegated, and had nothing to delegate to.
+ */
+test("the tide row names its station, which nothing else on the page does", async () => {
+  readWeekOfLowestLows.mockResolvedValue({
+    ...BINDING,
+    state: {
+      kind: "week",
+      days: [tideDay(0, "6:41 PM", 0.9), tideDay(1, "7:10 AM", -0.42)],
+    },
+  });
+
+  render(await WeekPanel({ slug: "la-jolla-shores-beach" }));
+
+  // One line for the row, like the wave row beside it -- a feed's identity is
+  // one fact about a feed, not one per column.
+  const attributions = screen.getAllByText(/NOAA Tides & Currents/);
+  expect(attributions).toHaveLength(1);
+  expect(attributions[0].textContent).toContain(
+    "La Jolla (Scripps Institution Wharf)",
+  );
+  // Labelled with the row's own name, because the grid carries three of these
+  // and an unlabelled one would leave a reader matching stations to rows.
+  expect(attributions[0].textContent).toContain("Low tide");
+});
+
+test("a near tide station is credited without a distance, a far one with it", async () => {
+  // The 5 km threshold and its reason came off the tide card with everything
+  // else. It is a real rule: NOAA publishes no delivering station on the open
+  // coast between La Jolla and Imperial Beach, so some beaches read one tens of
+  // kilometres away, and that is the difference between a prediction for this
+  // shore and the nearest one anybody publishes.
+  readWeekOfLowestLows.mockResolvedValue({
+    ...BINDING,
+    state: { kind: "week", days: [tideDay(0, "6:41 PM", 0.9)] },
+  });
+
+  const { unmount } = render(
+    await WeekPanel({ slug: "la-jolla-shores-beach" }),
+  );
+  // 1,369 m, under the threshold: the number would say nothing here.
+  expect(screen.getByText(/NOAA Tides & Currents/).textContent).not.toContain(
+    "km from this beach",
+  );
+  unmount();
+
+  readWeekOfLowestLows.mockResolvedValue({
+    beachName: "Border Field State Park",
+    station: {
+      name: "San Diego, San Diego Bay",
+      water: "bay",
+      distanceM: 21_400,
+    },
+    state: { kind: "week", days: [tideDay(0, "6:41 PM", 0.9)] },
+  });
+
+  const { unmount: unmount2 } = render(
+    await WeekPanel({ slug: "border-field-state-park" }),
+  );
+
+  const far = screen.getByText(/NOAA Tides & Currents/).textContent ?? "";
+  expect(far).toContain("about 21 km from this beach");
+  expect(far).toContain("the nearest bay station publishing predictions");
+  unmount2();
+
+  // And the other side of the join's classification, which decides which pool
+  // the station came from: an open-coast beach binds a shore station, a bay
+  // beach binds the nearest of any kind. Both words reach a reader, so both
+  // are asserted -- a clause that only ever said "bay" would be a rule nobody
+  // could see was being applied.
+  readWeekOfLowestLows.mockResolvedValue({
+    beachName: "Torrey Pines State Beach",
+    station: {
+      name: "La Jolla (Scripps Institution Wharf)",
+      water: "open-coast",
+      distanceM: 8_900,
+    },
+    state: { kind: "week", days: [tideDay(0, "6:41 PM", 0.9)] },
+  });
+
+  render(await WeekPanel({ slug: "torrey-pines-state-beach" }));
+
+  const coast = screen.getByText(/NOAA Tides & Currents/).textContent ?? "";
+  expect(coast).toContain("about 9 km from this beach");
+  expect(coast).toContain("the nearest open-coast station publishing");
+});
+
+test("a beach with no tide station is attributed to nothing rather than to a blank", async () => {
+  // `no-station` carries a null binding, so there is no source to name and the
+  // line must not render an empty one. The grid says the row is absent in its
+  // own words; an attribution with no station in it would be worse than none.
+  readWeekOfLowestLows.mockResolvedValue({
+    beachName: "Nothing Is Bound Here",
+    station: null,
+    state: { kind: "no-station", reason: "no tide station was joined to it" },
+  });
+
+  render(await WeekPanel({ slug: "nothing-is-bound-here" }));
+
+  expect(screen.queryByText(/NOAA Tides & Currents/)).toBeNull();
 });

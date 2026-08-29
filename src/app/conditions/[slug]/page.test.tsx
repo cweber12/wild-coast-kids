@@ -1,11 +1,11 @@
 import { expect, test, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 
-vi.mock("@/components/conditions/TidePanel", () => ({
-  TidePanel: ({ slug }: { slug: string }) => <p>panel for {slug}</p>,
+vi.mock("@/components/conditions/WeekPanel", () => ({
+  WeekPanel: ({ slug }: { slug: string }) => <p>week for {slug}</p>,
 }));
-vi.mock("@/components/conditions/WavePanel", () => ({
-  WavePanel: ({ slug }: { slug: string }) => <p>waves for {slug}</p>,
+vi.mock("@/components/conditions/DayPanel", () => ({
+  DayPanel: ({ slug }: { slug: string }) => <p>day for {slug}</p>,
 }));
 
 const notFound = vi.fn(() => {
@@ -29,7 +29,7 @@ test("renders the beach named in the route", async () => {
   render(await BeachConditions(params("torrey-pines-state-beach")));
 
   expect(screen.getByRole("main")).toBeDefined();
-  expect(screen.getByText("panel for torrey-pines-state-beach")).toBeDefined();
+  expect(screen.getByText("week for torrey-pines-state-beach")).toBeDefined();
 });
 
 test("a slug outside the inventory is a 404, not an apology page", async () => {
@@ -54,7 +54,7 @@ test("the six beaches TWC0405 brought back are reachable at their routes", async
     "coronado-city-beaches",
   ]) {
     const { unmount } = render(await BeachConditions(params(slug)));
-    expect(screen.getByText(`panel for ${slug}`)).toBeDefined();
+    expect(screen.getByText(`week for ${slug}`)).toBeDefined();
     unmount();
   }
 });

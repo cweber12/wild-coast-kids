@@ -609,7 +609,7 @@ export function WeekGrid({
         gives for carrying no attribution of its own.
 
         It is here rather than in the day blocks for a second reason too: the
-        wave row's figures are model output and the wave card above the grid is
+        wave row's figures are model output and the measured height in the day is
         a measurement, so on today's column a reader is looking at two wave
         heights for one beach. Being able to tell which is which is what
         ADR-0010 turns on, and ADR-0016 records why the two are allowed to share
