@@ -541,6 +541,63 @@ that survives. **This is the third arrangement of the marks and the second time
 a review of the rendered thing moved them** — #171 recorded that they are
 invisible in a 21px sparkline and correctly so.
 
+## Addendum, 2026-08-29: #172 ships in two pull requests
+
+Dated rather than woven in. **The Sequencing section below says three pull
+requests. It is four**, and the fourth is the second half of #172. The issue is
+not re-cut and no slice changed; what changed is how much of it arrives at once.
+
+**The measurement that decided it.** At the commit that finished the week
+coupling the branch stood 13 commits and 9,559 changed lines against
+`origin/main` — 3,461 of source, 3,284 of test, 2,300 of captured fixture and
+514 of prose. CLAUDE.md's guide is "~400 changed lines or ~5 slices", at which
+point a plan should be split at a dependency boundary rather than shipped whole.
+Six of `TASKS.md`'s nine PR 2 tasks were done at that point and no single one of
+them overran: the list was scoped past the guide when it was written, which is
+worth saying because it means the split is not a slice going wrong.
+
+**Where it is cut.** After _the week becomes the selector_ — the point at which
+the region is whole. The day panel draws four series for any of seven days, the
+week chooses which, and the page works with nothing further landing.
+
+That boundary is the only one available. Cutting earlier separates the chart
+from its tabs, or the tabs from the week that drives them, and neither half
+reads as a finished thing alone: `HourChart` with one tab was shippable while it
+was all that existed and is not shippable now, because the branch would be
+offering a component it has already outgrown.
+
+What is left over is not chart work at all. `MeasuredToday` and the removal of
+the slab move three measurements into the day and take three cards off the page
+— a change to what the page _is_, rather than to what the day panel can draw,
+and reviewable on its own terms by somebody who has already accepted the first.
+
+**Which ADR goes with which half, and it is not an even split.**
+
+_The day carries a curve, and the week keeps its thirds_ goes with the first
+half. Everything it records is built there: the chart's cloud band, and
+ADR-0024's deferred `shortForecast` read, which the sky-wording slice took.
+Holding it back would ship the discharge of a deferred decision with nothing in
+`docs/adr/` saying it had been discharged.
+
+_A forecast may sit beside a measurement without displacing it_ goes with the
+second. It records a decision `MeasuredToday` takes, and written before that
+component exists it would be an ADR about code nobody can read.
+
+**That leaves a gap in the first half, named here rather than found later.**
+From the moment the wind and temperature tabs land, the page carries two winds
+and two air temperatures — the cell's forecast in the day panel, the station's
+measurement in the third card — and no ADR explains why both. That is exactly
+the duplication ADR-0019 deferred, and the decision is genuinely not taken until
+something is built that could have displaced one of them. It is recorded here
+and in the first PR's body until then.
+
+**The second half does not start until the first merges.** CLAUDE.md: "Do not
+start an issue whose blocker has not merged." The first half's code is the
+ground the remaining slices stand on — `MeasuredToday` has to fit the seven-day
+`DayView` this half introduced, not the today-only region `TASKS.md` was written
+against — and rebasing half-finished work onto a moved blocker is how a verified
+slice quietly stops being verified.
+
 ## Out of scope
 
 The sighting layer (#121). Visibility, in any form. A rain tab. A
