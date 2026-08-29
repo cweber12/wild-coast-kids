@@ -228,11 +228,25 @@ export default defineConfig({
       //
       // Nothing new is excluded, and the same six 0% files still drag all four
       // down in plain sight.
+      //
+      // Moved again in the same pull request, by the regression the slab
+      // removal turned up: taking the tide card off the page took the only
+      // attribution the tide had with it, and `tideStation.ts` and its three
+      // tests put it back on the week's tide row. Small and in the ordinary
+      // direction -- both halves grew and the numerators grew faster:
+      //
+      //   statements 2363/2672 -> 2368/2677   88.43 -> 88.45
+      //   branches   1564/1769 -> 1573/1779   88.41 -> 88.42
+      //   functions   562/599  ->  564/601    93.82 -> 93.84
+      //   lines      2138/2429 -> 2143/2434   88.01 -> 88.04
+      //
+      // The figures below are these, not the ones in the block above, which
+      // are kept because they are what the deletion on its own cost.
       thresholds: {
-        statements: 88.43,
-        branches: 88.41,
-        functions: 93.82,
-        lines: 88.01,
+        statements: 88.45,
+        branches: 88.42,
+        functions: 93.84,
+        lines: 88.04,
       },
     },
   },

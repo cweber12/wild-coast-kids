@@ -61,6 +61,11 @@ import {
   gridCellCaveat,
 } from "./gridCell";
 import { SkyWeek, SKY_WEEK_ROW } from "./SkyWeek";
+import {
+  TIDE_NETWORK,
+  tideStationDistanceKm,
+  tideStationNote,
+} from "./tideStation";
 import { TideWeek, TIDE_WEEK_ROW } from "./TideWeek";
 import { WaveWeek, WAVE_WEEK_ROW } from "./WaveWeek";
 import { WeekGrid, type ReservedRow, type WeekRow } from "./WeekGrid";
@@ -251,6 +256,7 @@ export async function WeekPanel({ slug }: { slug: string }) {
 
   if (view.state.kind === "week") {
     const tideDays = view.state.days;
+    const station = view.station;
     rows.push({
       ...TIDE_WEEK_ROW,
       cells: Object.fromEntries(
@@ -259,6 +265,33 @@ export async function WeekPanel({ slug }: { slug: string }) {
           <TideWeek key={day.localDate} state={day.state} />,
         ]),
       ),
+      /*
+        The tide row carries its own attribution, and it did not until #172.
+
+        These four facts used to be on the tide card above the grid, which read
+        the same station through the same request -- so the row delegated, and
+        the notes beneath it said so. The card came off with the three-card
+        slab, and the delegation had nothing left to point at: seven cells and
+        the day chart's whole tide curve were published by nobody, which is the
+        one thing ADR-0010 ends by forbidding.
+
+        `station` is null exactly when the state is `no-station`, and this
+        branch is `week`, so the check is narrowing rather than defence. A line
+        with no source in it would be worse than no line.
+
+        Every word from `tideStation.ts`, for the reason `mopLine.ts` and
+        `gridCell.ts` exist: two call sites wording one fact is how
+        `ProvenanceLine` came to print the same station two ways on one card.
+      */
+      provenance:
+        station === null
+          ? undefined
+          : {
+              source: station.name,
+              network: TIDE_NETWORK,
+              distanceKm: tideStationDistanceKm(station.distanceM),
+              note: tideStationNote(station.distanceM, station.water),
+            },
     });
   }
 
