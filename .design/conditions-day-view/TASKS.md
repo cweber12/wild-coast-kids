@@ -141,11 +141,24 @@ the three; split further at a slice boundary if it outgrows review.
       appears on today and on no other day; an unavailable series renders its
       reason, not an empty frame.
 
-- [ ] **The four tabs.** Tide, swell, wind, temperature. Selecting one redraws
+- [x] **The four tabs.** Tide, swell, wind, temperature. Selecting one redraws
       the foreground series; the background layers do not change. Client
       component, with a `noscript` equivalent following `BeachSelector`'s
       precedent. 44px touch targets below `md` via `TOUCH_TARGET`, not
       hand-written padding. _Modifies `HourChart`._
+      **Built without the `noscript`, deliberately.** ADR-0027 settled that
+      question for this component after this list was written: a `noscript`
+      equivalent has to contain what it falls back _to_, and the other three
+      series are not on the page in any other form — so it would be four
+      stacked charts, which is the alternative the tabs exist instead of. The
+      honest fallback is the one the hour controls already take: no bar at all,
+      and the band names the series that was drawn. The direction the line
+      above was protecting — that nobody gets a control which silently does
+      nothing — is kept; the mechanism is not.
+      Also built beyond it: the swell needed an hourly series `readWaveWeek`
+      did not carry, and the wind and temperature needed a day-shaped read of
+      the cell, so this task reached `conditions.ts` and `nws-gridpoint.ts` as
+      well as `HourChart`.
       **Tests assert:** each tab draws its own series and its own units; a tab
       whose feed is quiet says why rather than drawing a flat line; the swell tab
       marks all 8 published points across the day and does not claim hourly

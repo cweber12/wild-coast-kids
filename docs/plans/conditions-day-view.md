@@ -472,6 +472,75 @@ four products at reading size. What holds them together is `SparkPoint`,
 `dayFrame` and the tide — and that is a smaller claim than the brief made,
 recorded here rather than absorbed.
 
+## Addendum, 2026-08-28: what the tabs measured
+
+Dated rather than woven in. Four figures, one of which corrects a figure in the
+addendum above.
+
+**The recorded 375 measurement does not reproduce, and it was never this work's
+to lose.** The addendum on the day chart's review records the plot as `283 × 87`
+at 375. Measured again on the built page — first on this branch, then on the
+base commit before any of this landed, with the same script — both give
+**237 × 72**. The base was measured first, deliberately: a height regression is
+only this work's if the branch it came from did not already have it, and this
+one did. The earlier figure is left where it is, as the dated record it is; what
+is corrected is the belief that the chart at 375 was 87px, because the decision
+this slice was handed rests on that number and 72 is a worse problem than 87.
+
+**One aspect ratio genuinely cannot serve this range, which the plan asserted
+and this measured.** The frame is 3.27:1, so its height is whatever its width
+divides to:
+
+| viewport | plot      | tab bar          |
+| -------- | --------- | ---------------- |
+| 1536     | 806 × 246 | 4 × 213px, 1 row |
+| 768      | 582 × 178 | 4 × 157px, 1 row |
+| 375      | 237 × 72  | 4 × 70px, 1 row  |
+| 320      | 182 × 56  | 4 × 57px, 1 row  |
+
+A ratio flat enough to hold 246px at 806 wide gives 72px at 237 wide; a ratio
+tall enough to give a phone a chart draws a third of a laptop screen. There is
+no third number.
+
+**So the frame changes shape rather than size, which is what the brief asked
+for.** Below `sm` it is 2:1 and the drawing stretches to fill it; above `sm`
+nothing happens at all, because `h-auto` takes the box's height from the viewBox
+and the box's aspect already _is_ the drawing's. Re-measured after the change:
+**1536 stays 806 × 246 exactly**, 768 stays 582 × 178, 375 goes to **237 × 119**
+and 320 to **182 × 91**. The frame reviewed at 1536 is untouched, which is the
+property that made this the version worth building rather than capping the
+chart's width — capping would have narrowed the desktop plot by a third now, to
+reserve space for a map that has not been built yet.
+
+The cost is `preserveAspectRatio="none"` on the plot, which this component's own
+docstring had ruled out on the grounds that a published point should stay a
+circle. Below `sm` a mark renders about 2px across and 3.3px tall rather than
+2px square, and two pixels is not a shape anybody reads; above `sm` there is no
+stretch at all. The 72px frame was the larger loss.
+
+**The brief's mobile sentence is wrong about the tabs, and measurably so.** It
+says "four tabs at 44px touch targets do not fit one row at 375px". ADR-0004's
+floor is a _height_ — `TOUCH_TARGET` is `min-h-11` and nothing else — and four
+tabs render 70 × 44px in one row at 375 with no overflow, 57 × 44px at 320. The
+sentence was reasoning about a 44px width nothing in this repo asks for.
+
+**One thing the screenshots found that no measurement would have.** At 375 the
+tide's twenty-four published-point marks — a 2px dot inside a 5px white ring,
+9.9px apart — read as gaps in the curve rather than as marks on it, and the
+curve came out looking dashed. On this plot dashed already means something else:
+the "now" rule is dashed exactly so it cannot be mistaken for a series. So a
+series with more marks than the width can separate drops them below `sm`, at a
+threshold the spacing sets rather than taste.
+
+It is a degrade rather than a loss, and the direction is what makes it one: the
+series that trip it are the hourly ones, whose marks say "hourly" — the least
+surprising cadence on the page. The swell's eight and a gridpoint block's four
+stay under the threshold and keep their marks at every width, so the distinction
+a reader actually needs, between an hourly model and a coarser one, is the one
+that survives. **This is the third arrangement of the marks and the second time
+a review of the rendered thing moved them** — #171 recorded that they are
+invisible in a 21px sparkline and correctly so.
+
 ## Out of scope
 
 The sighting layer (#121). Visibility, in any form. A rain tab. A

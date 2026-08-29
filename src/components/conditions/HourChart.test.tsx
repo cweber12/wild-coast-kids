@@ -1,7 +1,7 @@
 import { describe, expect, test } from "vitest";
 import { fireEvent, render, screen } from "@testing-library/react";
 import { renderToStaticMarkup } from "react-dom/server";
-import { HourChart } from "./HourChart";
+import { HourChart, NARROW_FRAME } from "./HourChart";
 import { TOUCH_TARGET } from "../ui/touchTarget";
 import type { SparkPoint } from "./DaySpark";
 import { localMidnightOf } from "@/lib/pacific-time";
@@ -898,5 +898,58 @@ describe("the tabs", () => {
     expect(markup).not.toContain("data-series-tab");
     expect(markup).not.toContain('role="tabpanel"');
     expect(markup).toContain("data-curve");
+  });
+});
+
+describe("the frame on a phone", () => {
+  test("the plot's shape changes below sm, and the drawing stretches to fill it", () => {
+    // One aspect ratio cannot serve 806px and 237px. Measured on the built page
+    // 2026-08-28: the frame's own 3.27:1 renders 246px at 1536 and 72px at 375.
+    // Below `sm` the frame is 2:1 instead and the drawing stretches into it,
+    // which is what takes 375 to 119px and 320 to 91px.
+    const { container } = render(<HourChart {...PROPS} />);
+
+    const frame = container.querySelector("[data-series-panel] .relative");
+    expect(frame?.className).toContain(NARROW_FRAME);
+    expect(plot(container).getAttribute("preserveAspectRatio")).toBe("none");
+  });
+
+  test("the literal Tailwind needs is written out, not composed", () => {
+    // ADR-0006: source detection scans `src/` for literal strings, so a class
+    // built from template parts compiles to nothing and fails only on a device
+    // no test runs on. The `built-css` gate's AT_RULES row is the other half --
+    // this class name sits in the markup whether or not a rule was emitted for
+    // it, so jsdom finds it either way.
+    expect(NARROW_FRAME).toBe("max-sm:aspect-[2/1]");
+  });
+
+  test("a dense series drops its marks on a phone; a sparse one keeps them", () => {
+    // Not "narrow screens have no marks". The marks are dropped exactly where
+    // they say least: twenty-four of them say "hourly", which is the least
+    // surprising cadence on this page, where the swell's eight are the thing a
+    // reader needs to tell a coarse model from a fine one.
+    const hourlyChart = render(<HourChart {...PROPS} />);
+    // `className` on an SVG element is an SVGAnimatedString, not a string.
+    expect(
+      hourlyChart.container
+        .querySelector("[data-marks]")
+        ?.getAttribute("class"),
+    ).toContain("max-sm:hidden");
+
+    const swellChart = render(<HourChart {...PROPS} series={[SWELL]} />);
+    expect(
+      swellChart.container.querySelector("[data-marks]")?.getAttribute("class"),
+    ).toBe("");
+    // And it really is the sparse one keeping them, not nobody having any.
+    expect(swellChart.container.querySelectorAll("circle")).toHaveLength(8);
+  });
+
+  test("the marks are still in the markup, so nothing is lost above sm", () => {
+    // A CSS rule, not a branch: the same server render serves both widths, and
+    // at 1536 all twenty-four marks draw. Removing them from the DOM would make
+    // the shape depend on a width the server does not know.
+    const { container } = render(<HourChart {...PROPS} />);
+
+    expect(container.querySelectorAll("circle")).toHaveLength(24);
   });
 });

@@ -216,6 +216,74 @@ const CLOUD_H = 14;
 /** Kept clear top and bottom so an extreme is inside the frame, not on its edge. */
 const PAD = 8;
 
+/**
+ * The plot frame's shape on a phone, where its own is too flat to read.
+ *
+ * **One aspect ratio cannot serve both ends of this range, and that is a
+ * measurement rather than a judgement.** The frame is 3.27:1, so its height is
+ * whatever its width divides to. Measured on the built page 2026-08-28, before
+ * and after the tabs, at four widths:
+ *
+ * | viewport | plot      |
+ * | -------- | --------- |
+ * | 1536     | 806 × 246 |
+ * | 768      | 582 × 178 |
+ * | 375      | 237 × 72  |
+ * | 320      | 182 × 56  |
+ *
+ * A ratio flat enough to keep 246px at 806 wide gives 72px at 237 wide, and a
+ * ratio tall enough to give a phone a chart draws a third of a laptop screen.
+ * `docs/plans/conditions-day-view.md` recorded the 375 figure rather than
+ * fixing it and left the decision to this slice.
+ *
+ * **So the frame changes shape below `sm` and the drawing stretches to fill
+ * it.** 2:1, which renders 118px at 375 and 91px at 320. Above `sm` nothing
+ * happens: `h-auto` takes the box's height from the viewBox, so the box's
+ * aspect already *is* the drawing's and `preserveAspectRatio="none"` has
+ * nothing to do. The frame a reader reviewed at 1536 is untouched.
+ *
+ * **What the stretch costs is that a mark stops being a circle, and it costs
+ * less than it sounds.** This file's own note says uniform scaling keeps a
+ * published point round; below `sm` a mark of r=3 renders about 2px across and
+ * 3.3px tall instead of 2px square. At two pixels that is not a shape anybody
+ * reads, and the alternative -- a 72px frame -- loses the curve itself. The
+ * band above the plot has drawn with `preserveAspectRatio="none"` since it was
+ * built; what is new is that the plot does so at one end of its range.
+ *
+ * Written out rather than derived from `WIDTH` and `HEIGHT`, because Tailwind
+ * scans source text and a composed class name compiles to nothing (ADR-0006).
+ * It deliberately does **not** have to match them: it applies only where the
+ * stretch is wanted.
+ */
+export const NARROW_FRAME = "max-sm:aspect-[2/1]";
+
+/**
+ * How many published points a phone can separate, above which they are not
+ * drawn there at all.
+ *
+ * **A mark is a ring, not a dot, and the ring is what runs out of room.** It is
+ * `r=3` in a viewBox 720 wide with a 1.5px non-scaling stroke, so at 237px of
+ * plot it renders about 2px across inside a white halo about 5px across. Two
+ * dozen of those at 9.9px apart do not read as marks on a curve; they read as
+ * gaps in it, and the curve comes out looking dashed -- which on this plot
+ * already means something else, since the "now" rule is dashed exactly so it
+ * cannot be mistaken for a series.
+ *
+ * **Twelve, because that is the count the spacing allows**, and the arithmetic
+ * is the same at both narrow widths measured: 237px of plot gives 19.8px per
+ * mark at twelve and 9.9px at twenty-four; 182px at 320 gives 15.2px and 7.6px.
+ * A five-pixel ring wants the former.
+ *
+ * **It drops them exactly where they say least, which is why this is a
+ * degrade rather than a loss.** The series that trip it are the hourly ones,
+ * whose twenty-four marks say "hourly" -- the least surprising cadence on the
+ * page. The swell's eight and a gridpoint block's four are under the threshold
+ * and keep their marks at every width, so the distinction a reader actually
+ * needs, between an hourly model and a coarser one, is the one that survives.
+ * The spoken description states the cadence in words on every tab regardless.
+ */
+const MARKS_FIT_NARROW = 12;
+
 /** One hour, which is how wide a cloud hour is drawn. */
 const HOUR_MS = 3_600_000;
 
@@ -483,6 +551,9 @@ export function HourChart({
    * takes the same ocean whatever the tide is doing, so this asserts nothing
    * about the water.
    */
+  /** What the publisher issued, which is what gets a mark. See `MARKS_FIT_NARROW`. */
+  const publishedPoints = points.filter((point) => point.published);
+
   const areaPath =
     points.length < 2
       ? null
@@ -685,7 +756,7 @@ export function HourChart({
             </span>
           </div>
 
-          <div className="relative min-w-0 flex-1">
+          <div className={`relative min-w-0 flex-1 ${NARROW_FRAME}`}>
             {/*
             The "now" chip, which names the dashed rule rather than leaving a
             reader to work out what a vertical line means. Chrome, so it takes
@@ -705,7 +776,15 @@ export function HourChart({
               role="img"
               aria-label={description}
               viewBox={`0 0 ${WIDTH} ${HEIGHT}`}
-              className="block h-auto w-full"
+              /*
+                `preserveAspectRatio="none"` so the frame above can be a
+                different shape below `sm` -- see `NARROW_FRAME`. From `sm` up
+                the box's aspect is the viewBox's own, derived from `h-auto`, so
+                there is nothing to stretch and this attribute does nothing at
+                all at the width the chart was reviewed on.
+              */
+              preserveAspectRatio="none"
+              className="block h-auto w-full max-sm:h-full"
             >
               {/*
               Night, full height, the ground the whole day is drawn on. It is
@@ -751,10 +830,19 @@ export function HourChart({
               hourly tide marks 24 points and a three-hourly swell marks 8, so
               the two models cannot look alike at this size the way they did at
               the sparkline's.
+
+              A dense series drops its marks on a phone, and drops them where
+              they say least -- see `MARKS_FIT_NARROW`.
             */}
-              {points
-                .filter((point) => point.published)
-                .map((point) => (
+              <g
+                className={
+                  publishedPoints.length > MARKS_FIT_NARROW
+                    ? "max-sm:hidden"
+                    : ""
+                }
+                data-marks
+              >
+                {publishedPoints.map((point) => (
                   <circle
                     key={point.atMs}
                     cx={x(point.atMs)}
@@ -765,6 +853,7 @@ export function HourChart({
                     vectorEffect="non-scaling-stroke"
                   />
                 ))}
+              </g>
 
               {/*
               The chosen hour: a guide down the plot and a bigger mark on the
