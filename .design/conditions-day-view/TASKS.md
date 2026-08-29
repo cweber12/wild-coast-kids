@@ -30,8 +30,10 @@ work can be verified at all.
 
 **Gates:** `format`, `lint`, `typecheck`, `adr-numbers`, `test`, `build`,
 `stylesheet` — one command, `npm run gate`. The coverage floor is real and
-ratchets: statements 86.16, branches 87.62, functions 92.62. New code without
-tests fails the run.
+ratchets, so new code without tests fails the run. **The figures are in
+`vitest.config.mts` and are not repeated here**: this list quoted them once and
+they were stale within a day, because every PR below has a slice whose whole
+job is to move them.
 
 **ADR numbers are not claimed here.** The `adr-numbers` gate exists because two
 decisions shared ADR-0008 for two days, and a number reserved in a plan has gone
@@ -210,7 +212,7 @@ days, and a week that chooses between them.
       leave the week saying nothing at all about the sky. An ADR written under
       the old title would contradict a decision recorded in the file it cites.
 
-- [ ] **Coverage floor.** As PR 1.
+- [x] **Coverage floor.** As PR 1.
 
 ---
 
