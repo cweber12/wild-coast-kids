@@ -85,6 +85,7 @@ const {
   readLatestAir,
   readWaveWeek,
   readSkyWeek,
+  readGridpointWeek,
   readSkyWording,
 } = await import("./conditions");
 
@@ -1568,6 +1569,162 @@ test("an hour the forecast did not reach is absent rather than zero", async () =
   if (view.state.kind !== "week") throw new Error("expected a week");
 
   expect(view.state.days[0].hours).toHaveLength(2);
+});
+
+/* =========================================================================
+ * readGridpointWeek
+ * ========================================================================= */
+
+/** The cell answering with a wind and a temperature series, or an absence. */
+function gridSeriesOk(
+  windMph: unknown,
+  airTempF: unknown = { kind: "published", hours: [] },
+) {
+  fetchGridForecast.mockResolvedValue({
+    kind: "ok",
+    forecast: {
+      cellId: "SGX/54,21",
+      skyCover: [],
+      weather: [],
+      windMph,
+      airTempF,
+      gustMph: { kind: "published", hours: [] },
+      windDirDegT: { kind: "published", hours: [] },
+      apparentTempF: { kind: "published", hours: [] },
+    },
+    url: "https://example.invalid",
+  });
+}
+
+test("each day gets the hours of the run that fall on it, in Pacific time", async () => {
+  // The request is answered in UTC instants and the days on this page are
+  // Pacific days, so a run bucketed by position rather than by date would put
+  // an evening on the wrong column -- the same care every read here takes.
+  gridSeriesOk({
+    kind: "published",
+    hours: [
+      // 5 PM Pacific on the 17th, and 5 PM Pacific on the 18th.
+      { atMs: hourUtc(18, 0), value: 8, published: true },
+      { atMs: hourUtc(19, 0), value: 12, published: true },
+    ],
+  });
+
+  const view = await readGridpointWeek(BEACH, NOON_PACIFIC_20260817);
+
+  if (view.state.kind !== "week") throw new Error("expected a week");
+  const [today, tomorrow] = view.state.days;
+  expect(today.localDate).toBe("2026-08-17");
+  expect(today.windMph).toEqual({
+    kind: "published",
+    hours: [{ atMs: hourUtc(18, 0), value: 8, published: true }],
+  });
+  expect(tomorrow.windMph).toEqual({
+    kind: "published",
+    hours: [{ atMs: hourUtc(19, 0), value: 12, published: true }],
+  });
+});
+
+test("a day the run does not reach is published-and-empty, never absent", async () => {
+  // Two absences a chart owes different sentences to. "The forecast stops on
+  // Sunday" is a forecast doing what forecasts do; "this cell does not publish
+  // the wind" is a fact about the product. Collapsing them would tell a reader
+  // to come back later about something that will never arrive.
+  gridSeriesOk({
+    kind: "published",
+    hours: [{ atMs: hourUtc(18, 0), value: 8, published: true }],
+  });
+
+  const view = await readGridpointWeek(BEACH, NOON_PACIFIC_20260817);
+
+  if (view.state.kind !== "week") throw new Error("expected a week");
+  expect(view.state.days[6].windMph).toEqual({ kind: "published", hours: [] });
+});
+
+test("a series the cell does not publish carries the parser's own reason", async () => {
+  // The reason has to survive to the page, because only the parser knows
+  // whether the key was missing or was declared and empty -- and that sentence
+  // is the whole of what stands between a reader and a flat line at zero.
+  gridSeriesOk({
+    kind: "absent",
+    reason:
+      "SGX/54,21: the National Weather Service declares windSpeed and published no values.",
+  });
+
+  const view = await readGridpointWeek(BEACH, NOON_PACIFIC_20260817);
+
+  if (view.state.kind !== "week") throw new Error("expected a week");
+  for (const day of view.state.days) {
+    expect(day.windMph).toEqual({
+      kind: "absent",
+      reason:
+        "SGX/54,21: the National Weather Service declares windSpeed and published no values.",
+    });
+  }
+});
+
+test("one quiet series does not take the other down with it", async () => {
+  // The asymmetry the parser was built for: sky cover's strictness rests on a
+  // measurement -- 21 of 21 cells published it -- and no such measurement
+  // exists for these, so refusing the cell over one would let the scarcest
+  // series decide for the rest. That is the coupling ADR-0010 and ADR-0020
+  // each spent a decision undoing.
+  gridSeriesOk(
+    { kind: "absent", reason: "no wind published for this cell" },
+    {
+      kind: "published",
+      hours: [{ atMs: hourUtc(18, 0), value: 71, published: true }],
+    },
+  );
+
+  const view = await readGridpointWeek(BEACH, NOON_PACIFIC_20260817);
+
+  if (view.state.kind !== "week") throw new Error("expected a week");
+  expect(view.state.days[0].windMph.kind).toBe("absent");
+  expect(view.state.days[0].airTempF).toEqual({
+    kind: "published",
+    hours: [{ atMs: hourUtc(18, 0), value: 71, published: true }],
+  });
+});
+
+test("all seven days are returned even when the run reaches none of them", async () => {
+  // `readHourlyTide`'s treatment rather than `readSkyWeek`'s. The cloud row
+  // draws no cell where it has nothing; a day chart always has a day to draw
+  // and owes the reader a sentence about the tab they chose.
+  gridSeriesOk({ kind: "published", hours: [] });
+
+  const view = await readGridpointWeek(BEACH, NOON_PACIFIC_20260817);
+
+  if (view.state.kind !== "week") throw new Error("expected a week");
+  expect(view.state.days).toHaveLength(7);
+});
+
+test("a beach with no forecast cell is a permanent fact, not an outage", async () => {
+  const view = await readGridpointWeek(UNBOUND_BEACH, NOON_PACIFIC_20260817);
+
+  expect(view.cell).toBeNull();
+  expect(view.state.kind).toBe("no-cell");
+  expect(fetchGridForecast).not.toHaveBeenCalled();
+});
+
+test("a cell that could not be reached keeps its binding", async () => {
+  fetchGridForecast.mockResolvedValue({
+    kind: "unavailable",
+    reason: "HTTP 503",
+    drift: false,
+    url: "https://example.invalid",
+  });
+
+  const view = await readGridpointWeek(BEACH, NOON_PACIFIC_20260817);
+
+  expect(view.state).toMatchObject({ kind: "unavailable", detail: "HTTP 503" });
+  // So the page can still say which cell it was asking about.
+  expect(view.cell?.id).toBe("SGX/54,21");
+});
+
+test("a slug that is not in the inventory is a coding error, not a quiet feed", async () => {
+  await expect(
+    readGridpointWeek("no-such-beach", NOON_PACIFIC_20260817),
+  ).rejects.toThrow(/no beach in the inventory/);
 });
 
 /* ==========================================================================

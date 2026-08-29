@@ -16,7 +16,11 @@
  * actually sent, never to a convenient constant.
  */
 
-import type { TideHourlyDay, WaveWeekDay } from "@/lib/conditions";
+import type {
+  GridDaySeries,
+  TideHourlyDay,
+  WaveWeekDay,
+} from "@/lib/conditions";
 import type { SparkPoint } from "./DaySpark";
 
 /**
@@ -53,4 +57,30 @@ export function swellPoints(day: WaveWeekDay): SparkPoint[] {
     value: hour.heightFt,
     published: hour.published,
   }));
+}
+
+/**
+ * One of the forecast cell's series as a plot draws it.
+ *
+ * **The publisher's own instants, not the hours it was held across.** The
+ * National Weather Service publishes intervals rather than hours -- one hour
+ * near the present, three and six further out -- and `nws-gridpoint.ts` expands
+ * them so a caller selecting a day does not have to reason about a block
+ * straddling sunrise. The flag is what survives that expansion, so a chart
+ * marks where the office put a point and not where this repo repeated one.
+ *
+ * A series the cell does not forecast converts to nothing rather than to a
+ * curve, and the caller renders the parser's own reason. That absence is the
+ * one this whole shape exists to keep distinguishable from a calm day: a flat
+ * line at zero would say the wind drops to nothing, out of the fact that we
+ * were not told.
+ */
+export function gridPoints(series: GridDaySeries): SparkPoint[] {
+  return series.kind === "absent"
+    ? []
+    : series.hours.map((hour) => ({
+        atMs: hour.atMs,
+        value: hour.value,
+        published: hour.published,
+      }));
 }

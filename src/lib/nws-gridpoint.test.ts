@@ -356,6 +356,33 @@ describe("the wind and temperature series", () => {
     }
   });
 
+  it("marks the hour each block began, and not the hours it was held across", () => {
+    // THE EXPANSION'S ONE LOSS, PUT BACK. The service publishes intervals, not
+    // hours, and the far end of a run is blocks of six. A plot marking all six
+    // would say this cell forecasts the wind hourly a week out, which is the
+    // same overstatement the swell's three-hour grid gets marks to prevent.
+    // Every block's value covers its hours -- what is not published is the
+    // instant, not the figure.
+    const forecast = parseGridpointForecast(PAYLOAD, CELL);
+
+    for (const [field, key] of OPTIONAL) {
+      const hours = published(forecast[field]);
+      const marked = hours.filter((hour) => hour.published);
+
+      // One mark per entry the payload carried, and never one per hour.
+      expect(marked).toHaveLength(PAYLOAD.properties[key].values.length);
+      expect(marked.length).toBeLessThan(hours.length);
+
+      // And each mark sits on an instant the payload actually names.
+      const issued = new Set(
+        PAYLOAD.properties[key].values.map((entry: { validTime: string }) =>
+          Date.parse(entry.validTime.split("/")[0]),
+        ),
+      );
+      for (const hour of marked) expect(issued.has(hour.atMs)).toBe(true);
+    }
+  });
+
   it("pins each series' own unit, and says which one it pinned", () => {
     // Read off the payload rather than assumed. Four different unit codes
     // across five series, and getting one wrong is a wrong number rather than

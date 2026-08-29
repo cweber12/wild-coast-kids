@@ -158,6 +158,24 @@ export interface GridpointHour {
   atMs: number;
   /** The value, in the unit named by the field carrying this series. */
   value: number;
+  /**
+   * True on the hour an interval began, false on the hours it was held across.
+   *
+   * **The expansion loses this and a plot needs it back.** The service does not
+   * publish hourly: it publishes intervals, and the committed payload carries
+   * ten distinct block lengths across the six series -- one hour near the
+   * present, three and six further out. Every hour of a six-hour block carries
+   * the same figure because that is what the block says, but only the first of
+   * them is an instant the office issued, and a chart marking all six would
+   * claim this cell forecasts the wind hourly a week out.
+   *
+   * It is the same flag `SparkPoint` carries and it means the same thing:
+   * where the publisher put a point. What it does *not* mean here is that the
+   * held hours are guesses -- the block's value covers them, which is a
+   * stronger claim than the interpolation between two of CDIP's estimates.
+   * What the two share is that the mark is the publisher's resolution.
+   */
+  published: boolean;
 }
 
 /**
@@ -378,7 +396,12 @@ function expandToHours(
 
     const value = spec.toDisplay(entry.value);
     for (let hour = 0; hour < span; hour += 1) {
-      hours.push({ atMs: startMs + hour * 3_600_000, value });
+      // Only the interval's own instant is the office's. See `published`.
+      hours.push({
+        atMs: startMs + hour * 3_600_000,
+        value,
+        published: hour === 0,
+      });
     }
   }
 

@@ -7,12 +7,14 @@ const readDaylightWeek = vi.fn();
 const readHourlyTide = vi.fn();
 const readSkyWeek = vi.fn();
 const readWaveWeek = vi.fn();
+const readGridpointWeek = vi.fn();
 vi.mock("@/lib/conditions", () => ({
   readSkyWording,
   readDaylightWeek,
   readHourlyTide,
   readSkyWeek,
   readWaveWeek,
+  readGridpointWeek,
 }));
 
 const { DayPanel } = await import("./DayPanel");
@@ -112,6 +114,44 @@ function waveWeek(dates: string[]) {
   });
 }
 
+/**
+ * The cell's wind and air temperature as the read hands them over: hourly
+ * hours, but published only where a block began. Six-hour blocks, which is
+ * what the far end of a real run looks like.
+ */
+function gridWeek(
+  dates: string[],
+  overrides: {
+    windMph?: { kind: "absent"; reason: string };
+    airTempF?: { kind: "absent"; reason: string };
+  } = {},
+) {
+  const hours = (localDate: string, base: number) => ({
+    kind: "published" as const,
+    hours: Array.from({ length: 24 }, (_, hour) => ({
+      atMs: localMidnightOf(localDate) + hour * HOUR,
+      value: base + Math.floor(hour / 6) * 3,
+      published: hour % 6 === 0,
+    })),
+  });
+
+  readGridpointWeek.mockResolvedValue({
+    beachName: BINDING.beachName,
+    cell: CELL,
+    state: {
+      kind: "week",
+      days: dates.map((localDate) => ({
+        localDate,
+        dayLabel: "Mon, Aug 17",
+        dateLabel: "Mon, Aug 17",
+        isToday: localDate === TODAY,
+        windMph: overrides.windMph ?? hours(localDate, 5),
+        airTempF: overrides.airTempF ?? hours(localDate, 64),
+      })),
+    },
+  });
+}
+
 function skyWeek(dates: string[], percent = 40) {
   readSkyWeek.mockResolvedValue({
     beachName: BINDING.beachName,
@@ -158,9 +198,11 @@ beforeEach(() => {
   readHourlyTide.mockReset();
   readSkyWeek.mockReset();
   readWaveWeek.mockReset();
+  readGridpointWeek.mockReset();
   daylight([TODAY, TOMORROW]);
   tideWeek([TODAY, TOMORROW]);
   waveWeek([TODAY, TOMORROW]);
+  gridWeek([TODAY, TOMORROW]);
   skyWeek([TODAY, TOMORROW]);
   wordingWeek([
     {
@@ -181,6 +223,7 @@ test("asks every read for the slug it was given", async () => {
     readHourlyTide,
     readSkyWeek,
     readWaveWeek,
+    readGridpointWeek,
   ]) {
     expect(read).toHaveBeenCalledWith("la-jolla-shores-beach");
   }
@@ -406,4 +449,123 @@ test("a failure to resolve the beach is not swallowed into a rendered nothing", 
   await expect(DayPanel({ slug: "no-such-beach" })).rejects.toThrow(
     /no beach in the inventory/,
   );
+});
+
+test("the wind tab marks each block the office issued, not every hour", async () => {
+  // The cell is not an hourly forecast. It publishes intervals -- one hour near
+  // the present, three and six further out -- and the expansion that makes a
+  // day selectable would otherwise claim twenty-four points where the office
+  // issued four. The fixture is six-hour blocks, so four is the honest count.
+  const { container } = render(
+    await DayPanel({ slug: "la-jolla-shores-beach" }),
+  );
+
+  fireEvent.click(container.querySelector('[data-series-tab="wind"]')!);
+
+  const plot = container.querySelector('svg[aria-label^="Wind today"]');
+  expect(plot).not.toBeNull();
+  expect(plot?.querySelectorAll("circle")).toHaveLength(4);
+  expect(plot?.getAttribute("aria-label")).toContain(
+    "in blocks rather than by the hour, and today's is made of 4 of them",
+  );
+});
+
+test("the temperature tab is the air, in Fahrenheit, and says so in full", async () => {
+  // "Temp" fits four tabs across a phone where "Temperature" does not. The word
+  // it drops is put back everywhere a reader is not paying for the width.
+  const { container } = render(
+    await DayPanel({ slug: "la-jolla-shores-beach" }),
+  );
+
+  fireEvent.click(container.querySelector('[data-series-tab="temperature"]')!);
+
+  const plot = container.querySelector('svg[aria-label^="Air temperature"]');
+  expect(plot).not.toBeNull();
+  expect(container.querySelector('[data-axis="high"]')?.textContent).toContain(
+    "°F",
+  );
+});
+
+test("a cell that forecasts no wind says so, and never draws a flat line at zero", async () => {
+  // THE FAILURE THIS WHOLE SHAPE EXISTS TO PREVENT. "The wind drops to nothing"
+  // and "we were not told" are different facts, and a curve along the floor
+  // would make the stronger of the two out of the weaker.
+  gridWeek([TODAY, TOMORROW], {
+    windMph: {
+      kind: "absent",
+      reason:
+        "SGX/54,21: the National Weather Service declares windSpeed and published no values for it.",
+    },
+  });
+
+  const { container } = render(
+    await DayPanel({ slug: "la-jolla-shores-beach" }),
+  );
+
+  fireEvent.click(container.querySelector('[data-series-tab="wind"]')!);
+
+  expect(
+    screen.getByText(/declares windSpeed and published no values/),
+  ).toBeDefined();
+  expect(container.querySelector("[data-curve]")).toBeNull();
+});
+
+test("a quiet series costs its own tab and no other", async () => {
+  // One cell, one payload, five series -- and the parser lets four of them
+  // answer when the fifth is empty. That softness is only worth having if the
+  // page keeps it, which is what this asserts.
+  gridWeek([TODAY, TOMORROW], {
+    windMph: { kind: "absent", reason: "no wind published for this cell" },
+  });
+
+  const { container } = render(
+    await DayPanel({ slug: "la-jolla-shores-beach" }),
+  );
+
+  fireEvent.click(container.querySelector('[data-series-tab="temperature"]')!);
+
+  expect(
+    container.querySelector('svg[aria-label^="Air temperature"] [data-curve]'),
+  ).not.toBeNull();
+});
+
+test("a cell that could not be reached says which publisher, on both its tabs", async () => {
+  readGridpointWeek.mockResolvedValue({
+    beachName: BINDING.beachName,
+    cell: CELL,
+    state: { kind: "unavailable", detail: "HTTP 503", drift: false },
+  });
+
+  const { container } = render(
+    await DayPanel({ slug: "la-jolla-shores-beach" }),
+  );
+
+  fireEvent.click(container.querySelector('[data-series-tab="wind"]')!);
+  expect(
+    screen.getByText(
+      /wind forecast from the National Weather Service just now\. HTTP 503/,
+    ),
+  ).toBeDefined();
+
+  fireEvent.click(container.querySelector('[data-series-tab="temperature"]')!);
+  expect(
+    screen.getByText(
+      /temperature forecast from the National Weather Service just now\. HTTP 503/,
+    ),
+  ).toBeDefined();
+});
+
+test("the four tabs are in the order the page leads with", async () => {
+  // Tide first because it is the page's lead product and the one the server
+  // draws. The rest follow the week grid's own row order, so a reader moving
+  // between the two regions is not re-learning an order.
+  const { container } = render(
+    await DayPanel({ slug: "la-jolla-shores-beach" }),
+  );
+
+  expect(
+    [...container.querySelectorAll("[data-series-tab]")].map((tab) =>
+      tab.getAttribute("data-series-tab"),
+    ),
+  ).toEqual(["tide", "swell", "wind", "temperature"]);
 });

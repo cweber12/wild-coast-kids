@@ -39,10 +39,13 @@
 
 import {
   readDaylightWeek,
+  readGridpointWeek,
   readHourlyTide,
   readSkyWeek,
   readSkyWording,
   readWaveWeek,
+  type GridDaySeries,
+  type GridpointWeekView,
   type TideHourlyDay,
   type TideHourlyView,
   type WaveWeekDay,
@@ -52,7 +55,7 @@ import { localMidnightOf, addLocalDays } from "@/lib/pacific-time";
 import { HourChart, type HourSeries } from "./HourChart";
 import { REGION_HEADING } from "./headingRank";
 import { SkyWording } from "./SkyWording";
-import { swellPoints, tidePoints } from "./series";
+import { gridPoints, swellPoints, tidePoints } from "./series";
 
 /** What the chart says when the window this page asked NOAA for did not reach today. */
 const NO_SERIES =
@@ -89,11 +92,27 @@ const WORDS = {
     drift:
       "CDIP's payload was not the shape this site pins, which is a bug here rather than a problem with the model.",
   },
+  wind: {
+    outOfReach:
+      "The National Weather Service's forecast for this cell does not reach today.",
+    outage:
+      "We could not get today's wind forecast from the National Weather Service just now.",
+    drift:
+      "The forecast's payload was not the shape this site pins, which is a bug here rather than a problem at the National Weather Service.",
+  },
+  temperature: {
+    outOfReach:
+      "The National Weather Service's forecast for this cell does not reach today.",
+    outage:
+      "We could not get today's temperature forecast from the National Weather Service just now.",
+    drift:
+      "The forecast's payload was not the shape this site pins, which is a bug here rather than a problem at the National Weather Service.",
+  },
 } as const;
 
 /** Why a tab has no curve, said about that tab's own publisher. */
 function absenceFor(
-  view: TideHourlyView | WaveWeekView,
+  view: TideHourlyView | WaveWeekView | GridpointWeekView,
   words: (typeof WORDS)[keyof typeof WORDS],
 ): string {
   if (view.state.kind === "week") return words.outOfReach;
@@ -103,10 +122,30 @@ function absenceFor(
       (view.state.drift ? ` ${words.drift}` : "")
     );
   }
-  // `no-station` and `no-line`: the join's own reason, which names the distance
-  // that refused the binding. It is already a sentence and rewording it here
-  // would lose the figure in it.
+  // `no-station`, `no-line` and `no-cell`: the join's own reason, which names
+  // the distance that refused the binding. It is already a sentence and
+  // rewording it here would lose the figure in it.
   return view.state.reason;
+}
+
+/**
+ * The same, one level further in, for a cell that answered without one of its
+ * series.
+ *
+ * **A fourth state the other two products do not have.** A tide station either
+ * exists or does not; a forecast cell can answer, cover today, and still say
+ * nothing at all about the wind — which is exactly what `visibility` does at
+ * every cell on every request, and the reason `GridpointSeries` carries a
+ * reason rather than being empty. That sentence is the parser's, because only
+ * there is it known whether the key was missing or was declared and empty.
+ */
+function gridAbsenceFor(
+  view: GridpointWeekView,
+  series: GridDaySeries | undefined,
+  words: (typeof WORDS)[keyof typeof WORDS],
+): string {
+  if (series !== undefined && series.kind === "absent") return series.reason;
+  return absenceFor(view, words);
 }
 
 /**
@@ -160,6 +199,40 @@ function swellDescription(
 }
 
 /**
+ * The same again for the cell's own series, and it says its cadence too.
+ *
+ * **The block count is the honest figure here, the way the estimate count is
+ * for the swell.** The National Weather Service does not publish hourly: it
+ * publishes intervals, one hour near the present and three or six further out,
+ * and the plot marks the instant each block began. A reader who cannot see the
+ * marks would otherwise be told a forecast is hourly when a day of it is four
+ * numbers.
+ */
+function gridDescription(
+  name: string,
+  unit: string,
+  series: GridDaySeries | undefined,
+  sunriseLabel: string,
+  sunsetLabel: string,
+  outOfReach: string,
+): string {
+  if (series === undefined) return outOfReach;
+  if (series.kind === "absent") return series.reason;
+  if (series.hours.length === 0) return outOfReach;
+
+  const values = series.hours.map((hour) => hour.value);
+  const blocks = series.hours.filter((hour) => hour.published).length;
+  const low = Math.min(...values).toFixed(0);
+  const high = Math.max(...values).toFixed(0);
+  return (
+    `${name} today, from ${low} to ${high} ${unit}. The National Weather Service forecasts ` +
+    `this cell in blocks rather than by the hour, and today's is made of ${blocks} of them; ` +
+    `each block's own hour is marked. Night is shaded; the sun is up from ${sunriseLabel} to ` +
+    `${sunsetLabel}.`
+  );
+}
+
+/**
  * The spoken equivalent of the cloud band, which is its own graphic.
  *
  * Separate from the plot's because the two credit different publishers: the
@@ -182,15 +255,16 @@ function cloudBandDescription(
 
 export async function DayPanel({ slug }: { slug: string }) {
   const daylight = readDaylightWeek(slug);
-  const [hourly, waves, sky, wording] = await Promise.all([
+  const [hourly, waves, sky, grid, wording] = await Promise.all([
     readHourlyTide(slug),
     readWaveWeek(slug),
     readSkyWeek(slug),
+    readGridpointWeek(slug),
     readSkyWording(slug),
   ]);
 
   // `weekOfDays` builds its array from today outward, so the first entry is
-  // today by construction. Taking it from any of the four reads above instead
+  // today by construction. Taking it from any of the five reads above instead
   // would not work: each is ragged in its own way, and each can fail.
   const today = daylight.days[0];
 
@@ -209,6 +283,11 @@ export async function DayPanel({ slug }: { slug: string }) {
       ? (sky.state.days.find((day) => day.localDate === today.localDate)
           ?.hours ?? [])
       : [];
+
+  const gridDay =
+    grid.state.kind === "week"
+      ? grid.state.days.find((day) => day.localDate === today.localDate)
+      : undefined;
 
   /*
     The frame comes from the calendar, not from a feed.
@@ -253,6 +332,48 @@ export async function DayPanel({ slug }: { slug: string }) {
           ? WORDS.swell.outOfReach
           : swellDescription(waveDay, today.sunriseLabel, today.sunsetLabel),
       absence: absenceFor(waves, WORDS.swell),
+    },
+    {
+      key: "wind",
+      label: "Wind",
+      unitLabel: "mph",
+      points: gridDay === undefined ? [] : gridPoints(gridDay.windMph),
+      description: gridDescription(
+        "Wind",
+        "mph",
+        gridDay?.windMph,
+        today.sunriseLabel,
+        today.sunsetLabel,
+        WORDS.wind.outOfReach,
+      ),
+      absence: gridAbsenceFor(grid, gridDay?.windMph, WORDS.wind),
+    },
+    {
+      /*
+        "Temp" rather than "Temperature", and the shortening is measured: four
+        tabs across a 375px screen are about 71px each, where "TEMPERATURE" at
+        this site's label register is about 90px. It is the same trade ADR-0024
+        made when it labelled a third of the day "Mid".
+
+        It is not ambiguous with the water, and that is worth saying because
+        this page carries both: water temperature is a measured figure and
+        never a curve, so there is no second temperature in this bar for a
+        reader to confuse it with. The spoken description and the sentence
+        under the plot both say "air" in full.
+      */
+      key: "temperature",
+      label: "Temp",
+      unitLabel: "°F",
+      points: gridDay === undefined ? [] : gridPoints(gridDay.airTempF),
+      description: gridDescription(
+        "Air temperature",
+        "°F",
+        gridDay?.airTempF,
+        today.sunriseLabel,
+        today.sunsetLabel,
+        WORDS.temperature.outOfReach,
+      ),
+      absence: gridAbsenceFor(grid, gridDay?.airTempF, WORDS.temperature),
     },
   ];
 

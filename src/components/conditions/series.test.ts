@@ -1,6 +1,6 @@
 import { expect, test } from "vitest";
 import { localMidnightOf } from "@/lib/pacific-time";
-import { swellPoints, tidePoints } from "./series";
+import { gridPoints, swellPoints, tidePoints } from "./series";
 
 const START = localMidnightOf("2026-08-17");
 const HOUR = 3_600_000;
@@ -66,4 +66,37 @@ test("a day the forecast did not reach converts to nothing, never to a zero", ()
   expect(
     swellPoints({ ...FRAME, daylight: null, allDay: null, hours: [] }),
   ).toEqual([]);
+});
+
+test("a cell's series marks the block's own hour and not the hours it held", () => {
+  // The National Weather Service publishes intervals, not hours. Marking all
+  // six hours of a six-hour block would say the cell forecasts the wind hourly
+  // a week out; marking the first says where the office put a point.
+  const points = gridPoints({
+    kind: "published",
+    hours: [
+      { atMs: START, value: 8, published: true },
+      { atMs: START + HOUR, value: 8, published: false },
+      { atMs: START + 2 * HOUR, value: 8, published: false },
+      { atMs: START + 3 * HOUR, value: 11, published: true },
+    ],
+  });
+
+  expect(points.map((point) => point.published)).toEqual([
+    true,
+    false,
+    false,
+    true,
+  ]);
+  // The held hours carry the block's own figure, which is a stronger claim
+  // than an interpolation and is why they are drawn at all.
+  expect(points.map((point) => point.value)).toEqual([8, 8, 8, 11]);
+});
+
+test("a series the cell does not forecast converts to nothing, not to a zero", () => {
+  // "The wind drops to nothing" and "we were not told" are different facts.
+  // The caller renders the parser's reason in place of a curve.
+  expect(gridPoints({ kind: "absent", reason: "not forecast here" })).toEqual(
+    [],
+  );
 });

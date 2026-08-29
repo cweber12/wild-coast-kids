@@ -32,7 +32,12 @@ import {
 } from "./pacific-time";
 import { lowestLowBetween, lowestLowOn } from "./tide-day";
 import type { MopWaveRow } from "./mop-forecast";
-import type { SkyCoverHour, WeatherHour } from "./nws-gridpoint";
+import type {
+  GridpointHour,
+  GridpointSeries,
+  SkyCoverHour,
+  WeatherHour,
+} from "./nws-gridpoint";
 import type { ForecastPeriod } from "./nws-forecast";
 import {
   fetchGridForecast,
@@ -1532,6 +1537,163 @@ export async function readSkyWeek(
     );
     return reading === null ? [] : [{ ...frame, hours, ...reading }];
   });
+
+  return { ...binding, state: { kind: "week", days } };
+}
+
+/* =========================================================================
+ * The week's wind and air temperature, from the same forecast cell
+ * ========================================================================= */
+
+/**
+ * One of the cell's series for one day: the hours, or the reason there are
+ * none.
+ *
+ * **Two absences that must not be collapsed.** `absent` is the parser's word
+ * for a series this cell does not forecast at all — declared and empty, which
+ * is what `visibility` does at every cell on every request. An empty `hours`
+ * inside `published` is a day the run did not reach, which is a forecast doing
+ * what forecasts do. A plot owes a different sentence to each, and a plot that
+ * drew a flat line at zero for either would make the strongest claim available
+ * out of the weakest fact it had.
+ */
+export type GridDaySeries =
+  | { kind: "published"; hours: readonly GridpointHour[] }
+  | { kind: "absent"; reason: string };
+
+/** One day of the cell's wind and air temperature. */
+export interface GridpointWeekDay extends WeekDayFrame {
+  /** Wind speed in miles per hour. */
+  windMph: GridDaySeries;
+  /** Air temperature in Fahrenheit. */
+  airTempF: GridDaySeries;
+}
+
+/**
+ * What the day chart's wind and temperature tabs are drawn from.
+ *
+ * **A sibling of `readSkyWeek` rather than a field on it**, and the split is
+ * ADR-0020's rather than a preference. That decision took the sky off the air
+ * card because requiring one source to supply every value let the scarcest of
+ * them decide for the rest; a `SkyWeekView` carrying the wind would put the
+ * same coupling back one layer up, under a name that says sky.
+ *
+ * **It costs no second request.** `fetchGridForecast` is a `next.revalidate`
+ * fetch for a URL this page already asks for, so the two reads share one
+ * response and one outage. What they do not share is a shape: this one is
+ * ragged per series, where the cloud row is ragged per day.
+ */
+export interface GridpointWeekView {
+  beachName: string;
+  /** null exactly when the state is `no-cell`. */
+  cell: { id: string; elevationM: number | null } | null;
+  state:
+    | { kind: "week"; days: GridpointWeekDay[] }
+    | { kind: "no-cell"; reason: string }
+    | { kind: "unavailable"; detail: string; drift: boolean };
+}
+
+/** One series' hours, bucketed by the Pacific date each falls on. */
+function gridHoursByDate(
+  series: GridpointSeries,
+): ReadonlyMap<string, GridpointHour[]> {
+  const byDate = new Map<string, GridpointHour[]>();
+  if (series.kind === "absent") return byDate;
+  for (const hour of series.hours) {
+    const localDate = localDateOf(hour.atMs);
+    const standing = byDate.get(localDate);
+    if (standing === undefined) byDate.set(localDate, [hour]);
+    else standing.push(hour);
+  }
+  return byDate;
+}
+
+/**
+ * One day's slice of one series, keeping the parser's absence where there is
+ * one.
+ *
+ * A cell that does not forecast the wind does not forecast it on Tuesday
+ * either, so the reason is repeated on every day rather than being hoisted to
+ * the view: the consumer draws one day at a time and the sentence has to be
+ * where it is read.
+ */
+function gridDaySeries(
+  series: GridpointSeries,
+  byDate: ReadonlyMap<string, GridpointHour[]>,
+  localDate: string,
+): GridDaySeries {
+  return series.kind === "absent"
+    ? series
+    : { kind: "published", hours: byDate.get(localDate) ?? [] };
+}
+
+/**
+ * Read a week of the cell's wind and air temperature for one beach.
+ *
+ * **Every day is returned, including the ones with no hours**, which is
+ * `readHourlyTide`'s treatment rather than `readSkyWeek`'s. The cloud row draws
+ * no cell where it has nothing; a day chart always has a day to draw and owes
+ * the reader a sentence about the tab they chose.
+ *
+ * Throws only when the slug is not in the inventory.
+ */
+export async function readGridpointWeek(
+  slug: string,
+  nowMs: number = Date.now(),
+): Promise<GridpointWeekView> {
+  const beach = beachBySlug(slug);
+  if (!beach) {
+    throw new Error(
+      `readGridpointWeek: no beach in the inventory with slug "${slug}".`,
+    );
+  }
+
+  if (beach.grid_cell === null) {
+    return {
+      beachName: beach.name,
+      cell: null,
+      state: {
+        kind: "no-cell",
+        reason:
+          beach.grid_cell_null_reason ??
+          "the join bound no forecast cell to this beach, and recorded no reason",
+      },
+    };
+  }
+
+  const binding = {
+    beachName: beach.name,
+    cell: { id: beach.grid_cell, elevationM: beach.grid_cell_elevation_m },
+  };
+
+  const result = await fetchGridForecast(beach.grid_cell);
+  if (result.kind === "unavailable") {
+    return {
+      ...binding,
+      state: {
+        kind: "unavailable",
+        detail: result.reason,
+        drift: result.drift,
+      },
+    };
+  }
+
+  const windByDate = gridHoursByDate(result.forecast.windMph);
+  const tempByDate = gridHoursByDate(result.forecast.airTempF);
+
+  const days = weekOfDays(nowMs).map((frame) => ({
+    ...frame,
+    windMph: gridDaySeries(
+      result.forecast.windMph,
+      windByDate,
+      frame.localDate,
+    ),
+    airTempF: gridDaySeries(
+      result.forecast.airTempF,
+      tempByDate,
+      frame.localDate,
+    ),
+  }));
 
   return { ...binding, state: { kind: "week", days } };
 }
