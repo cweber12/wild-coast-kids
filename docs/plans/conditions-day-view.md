@@ -410,6 +410,68 @@ where #173's map goes. **The 87px height at 375 is thin and is recorded rather
 than fixed** — one aspect ratio cannot serve 283px and 806px, and the tabs slice
 is where mobile behaviour is addressed.
 
+## Addendum, 2026-08-28: the two questions the tabs were waiting on
+
+Dated rather than woven in. Both were left open deliberately — one until the
+day chart existed, one until the ADR that binds it came due — and both are
+answered here before the tabs are built, because the second one decides how
+much of the page the tab state has to reach.
+
+**The cloud row keeps its thirds.** `.design/conditions-day-view/DESIGN_BRIEF.md`
+lists `SkyWeek` as _Modify — "Thirds give way to the cloud wash carried on every
+sparkline"_, and that is a conditional rather than a decision: **the condition
+expired.** ADR-0026 took the wash off the sparkline, so there is no wash on the
+week for the thirds to give way to, and cutting the row now would leave the week
+saying nothing at all about the sky.
+
+The duplication objection is real and is answered rather than dismissed. Once
+the week becomes the selector, the day chart's cloud band covers whichever day
+is chosen, so the thirds and the band do describe the same forecast. What the
+band cannot do is put Sunday's morning beside Tuesday's: it draws one day. That
+is the same argument that rejected **compress the week to a bare day strip**
+above — cross-day comparison is the week's entire job — and it is why two
+readings of one product at two zoom levels is the design rather than an
+oversight.
+
+So the ADR due at the end of this half supersedes **ADR-0024's reach and not its
+row**: the day view carries a curve where the week carries three means, and
+ADR-0024's own warning — that "anything that restores a single daylight figure
+to this row reverses this" — is untouched, because nothing is restored and
+nothing is removed.
+
+**The week's sparkline does not follow the selected tab, and that is the
+brief's third decision not to survive the page.** _Key Interactions_ says
+selecting a tab redraws "the foreground series and every sparkline in the week
+above, together — that simultaneity is the whole point of principle 1".
+
+It does not work, and the reason is the tab bar's home. The bar sits in the
+chart's own header band, **below** the week. On the wind tab the grid would
+draw seven wind curves sitting directly above figures reading `LOW TIDE 3:13 PM
+1.6 ft`, with nothing in the cell saying the shape had changed variable — and
+ADR-0023 measured that this cell has no room for a label, which is the whole
+reason the shape works there at all. `DaySpark` and ADR-0025 both put it in the
+same words: the shape draws the hours the figure beside it was selected _out
+of_. A shape that stops agreeing with the figures under it is not a second view
+of one instrument; it is a fourth product with no label.
+
+**Two alternatives were weighed rather than assumed.** _Move the tab bar above
+the week_, so it visibly governs both regions: rejected because the bar is the
+chart's own chrome, the week's rows are not tabbed, and it would put a control
+for the day panel above the region that selects the day. _Give the week a
+second shape for swell_, stacked and labelled by the row it sits over, so a
+shape always agrees with a figure: rejected on height — about 30px back onto a
+grid ADR-0023 and ADR-0026 each spent a decision shortening, to gain a
+comparison the swell row's figures already support.
+
+**What this costs is principle 1, narrowed a third time, and it is worth
+stating plainly.** ADR-0025 claimed one series shape and the same two
+background layers. ADR-0026 corrected that to one shared background layer and
+one not. This narrows it again: **the two plots share a point type, a night
+band, and one product.** The week is the tide's shape at a glance; the chart is
+four products at reading size. What holds them together is `SparkPoint`,
+`dayFrame` and the tide — and that is a smaller claim than the brief made,
+recorded here rather than absorbed.
+
 ## Out of scope
 
 The sighting layer (#121). Visibility, in any form. A rain tab. A
