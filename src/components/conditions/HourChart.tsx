@@ -65,6 +65,20 @@
  * What selection adds is per-hour detail the page never carried at all, so
  * nothing has moved behind a gesture.
  *
+ * **Four products, one frame, and the tabs are additive too.** Tide, swell,
+ * wind and temperature share the day, the night band and the cloud above it;
+ * only the foreground changes. That the tabs are mutually exclusive is worth
+ * being exact about against ADR-0027's "only additively" condition, because it
+ * looks like a violation and is not: three of these four series were never on
+ * this page in any form, and the fourth -- the tide -- is the tab the server
+ * draws and the one a reader is on until they choose otherwise. Nothing that
+ * was drawn or written has gone behind a gesture; three things that were
+ * nowhere have arrived behind one.
+ *
+ * The alternative was four stacked charts, which is four times 246px of one
+ * screen for a page whose whole complaint was that it was tall and said the
+ * same thing twice.
+ *
  * **Two ways in, because one of them cannot meet the touch floor.** Twenty-four
  * hour columns across an 806px plot are 33.6px each and across a 283px plot are
  * 11.8px, against ADR-0004's 44px. So the columns are the enhancement and a
@@ -86,18 +100,56 @@
 
 "use client";
 
-import { useState, useSyncExternalStore } from "react";
+import { useId, useState, useSyncExternalStore } from "react";
 import { nightBands } from "./dayFrame";
 import type { SparkPoint } from "./DaySpark";
 import { TOUCH_TARGET } from "../ui/touchTarget";
+
+/**
+ * One product this chart can draw, and one tab in the bar above it.
+ *
+ * **A tab is a whole series and its words, not a key into four parallel
+ * arrays.** The unit, the spoken description and the sentence for an absence
+ * all differ per product and all have to move together: a swell tab drawing
+ * feet under a heading that says mph is the failure this shape makes
+ * impossible.
+ */
+export type HourSeries = {
+  /** Stable identity, for the tab's DOM id and for React's key. */
+  key: string;
+  /** The tab's word, and the product's name: "Tide", "Swell". */
+  label: string;
+  /** The unit the values are in: "ft", "mph". */
+  unitLabel: string;
+  /** The series, in time order. Empty renders `absence` in place of the plot. */
+  points: readonly SparkPoint[];
+  /** The spoken equivalent of this plot. Composed by the caller. */
+  description: string;
+  /**
+   * What to say instead of a plot when `points` is empty.
+   *
+   * **Its own sentence per product rather than one for the chart**, because
+   * the reasons differ and a reader is owed the real one: a beach with no MOP
+   * line will never have a swell curve, where a cell that answered without a
+   * wind series is a fact about one forecast run.
+   */
+  absence: string;
+};
 
 export type HourChartProps = {
   /** Local midnight this day begins on. The left edge. */
   startMs: number;
   /** Local midnight the next day begins on. The right edge. */
   endMs: number;
-  /** The series, in time order. Empty renders `absence`. */
-  points: readonly SparkPoint[];
+  /**
+   * What this chart can draw, in tab order. At least one.
+   *
+   * The first is what the server renders and what a reader without JavaScript
+   * gets, so the caller puts the page's lead product first rather than the one
+   * that happens to have data. Choosing a different tab on the reader's behalf
+   * would be a rule nobody could see, and the tab that is quiet says why.
+   */
+  series: readonly HourSeries[];
   /** Sunrise; everything before it is shaded as night. */
   sunriseMs: number;
   /** Sunset; everything after it is shaded as night. */
@@ -119,12 +171,6 @@ export type HourChartProps = {
    * to draw it at.
    */
   nowMs?: number | null;
-  /** What the series is, for the figures beneath: "Tide", "Swell". */
-  variableLabel: string;
-  /** The unit the values are in: "ft", "mph". */
-  unitLabel: string;
-  /** The spoken equivalent of the whole plot. Composed by the caller. */
-  description: string;
   /**
    * The spoken equivalent of the cloud band.
    *
@@ -134,8 +180,6 @@ export type HourChartProps = {
    * what it described.
    */
   cloudDescription?: string;
-  /** What to say instead of a plot when `points` is empty. */
-  absence: string;
 };
 
 /**
@@ -231,18 +275,26 @@ function hourLabel(hour: number): string {
 export function HourChart({
   startMs,
   endMs,
-  points,
+  series,
   sunriseMs,
   sunsetMs,
   cloud = [],
   cloudDescription = "Cloud cover through the day.",
   nowMs = null,
-  variableLabel,
-  unitLabel,
-  description,
-  absence,
 }: HourChartProps) {
-  const [selected, setSelected] = useState<number | null>(null);
+  /**
+   * The chosen hour, held as an instant rather than as an index into `points`.
+   *
+   * **So that switching tabs keeps the hour.** An index means something
+   * different in each series -- the tide has twenty-four points and a swell
+   * that ran out at teatime has fewer -- so index 9 would land on 9 AM in one
+   * and mid-afternoon in another. An instant means the same thing in all four,
+   * and a tab with no point at that instant simply has nothing selected, which
+   * is the honest answer rather than the nearest one.
+   */
+  const [selectedMs, setSelectedMs] = useState<number | null>(null);
+  const [tab, setTab] = useState(0);
+  const tabIds = useId();
 
   /*
     The controls exist only once they can work. Rendered on the server they
@@ -250,6 +302,12 @@ export function HourChart({
     `BeachSelector`'s `noscript` list exists to prevent -- and here there is
     nothing to fall back *to*, because the detail they reveal is not on the page
     in any other form. So the honest fallback is no control at all.
+
+    The tab bar is the same case and takes the same treatment: without a script
+    it would be four words that look like controls and are not, so the band
+    prints the one series that was drawn instead. The other three are not lost
+    to that reader -- they were never on the page, which is what makes this
+    additive under ADR-0027 rather than a concealment.
 
     `useSyncExternalStore` rather than an effect that sets state: this repo's
     lint rules refuse `setState` inside an effect, correctly, and this is what
@@ -259,8 +317,117 @@ export function HourChart({
   */
   const mounted = useSyncExternalStore(neverChanges, onClient, onServer);
 
+  // The first series on the server and until a tab is chosen, always. See the
+  // prop's docstring: picking the first one with data would be a rule a reader
+  // could not see.
+  const active = series[mounted ? tab : 0] ?? series[0];
+  const { points, unitLabel, description, absence } = active;
+
+  const onTabKeyDown = (event: React.KeyboardEvent) => {
+    const moves: Record<string, number> = { ArrowLeft: -1, ArrowRight: 1 };
+    const last = series.length - 1;
+    if (event.key in moves) {
+      event.preventDefault();
+      setTab((current) =>
+        Math.min(last, Math.max(0, current + moves[event.key])),
+      );
+      return;
+    }
+    if (event.key === "Home" || event.key === "End") {
+      event.preventDefault();
+      setTab(event.key === "Home" ? 0 : last);
+    }
+  };
+
+  const panelId = `${tabIds}panel`;
+  const tabId = (index: number) => `${tabIds}tab-${series[index].key}`;
+
+  /*
+    The furniture, and the reason it is here: reviewed on the page, the chart
+    read as plain and as not belonging to the rest of the site. The brief's
+    aesthetic direction is what says where to put that right -- "the loud
+    register belongs to headings, tabs, chips and glyphs; inside the plot frame
+    the page goes quiet". So the energy goes into the frame and the chrome, and
+    the data stays a chart in a field guide.
+
+    This band is the week grid's own today-cell header reused rather than
+    invented: `border-ocean bg-ocean` with the label register in white, already
+    measured there. The day panel *is* today, so it takes today's treatment and
+    the two regions read as one instrument.
+
+    The tabs are the loudest thing on the page for the same reason, and they
+    are chrome rather than data: the selected one takes the site's own pill,
+    which is a change of *shape* and not only of colour -- a filled ground
+    against bare words -- so the selection survives a reader who cannot tell
+    white from white-on-ocean.
+
+    Without a script the bar is not rendered at all and the band prints the one
+    series that was drawn, per the note on `mounted` above.
+  */
+  const band = mounted ? (
+    <div
+      role="tablist"
+      aria-label="What to plot for this day"
+      aria-orientation="horizontal"
+      className="flex gap-1"
+      onKeyDown={onTabKeyDown}
+      data-series-tabs
+    >
+      {series.map((option, index) => (
+        <button
+          key={option.key}
+          type="button"
+          role="tab"
+          id={tabId(index)}
+          aria-selected={index === tab}
+          aria-controls={panelId}
+          tabIndex={index === tab ? 0 : -1}
+          onClick={() => setTab(index)}
+          className={`text-2xs ${TOUCH_TARGET} md:min-h-0 min-w-0 flex-1 cursor-pointer rounded-pill px-2 py-1 font-extrabold tracking-widest uppercase ${
+            index === tab ? "bg-white text-ocean" : "text-white/75"
+          }`}
+          data-series-tab={option.key}
+        >
+          {option.label}
+        </button>
+      ))}
+    </div>
+  ) : (
+    <p className="text-2xs font-extrabold tracking-widest text-white uppercase">
+      {active.label}
+      <span className="text-white/70"> · {unitLabel}</span>
+    </p>
+  );
+
+  /*
+    The tile, drawn the same whether this tab has a series or not.
+
+    **A quiet tab keeps its bar.** The absence used to replace the whole
+    component, which was right when there was one series and would strand a
+    reader now: they would have chosen a tab and lost the control that got them
+    there. What the absence replaces is the plot, and nothing else -- including
+    the cloud band, which is context for a frame that is not being drawn.
+  */
+  const shell = (body: React.ReactNode) => (
+    <div className="max-w-4xl overflow-hidden rounded-box border-[1.5px] border-ocean bg-white/60">
+      <div className="border-b-[1.5px] border-ocean bg-ocean px-4 py-2">
+        {band}
+      </div>
+      <div className="p-4">{body}</div>
+    </div>
+  );
+
   if (points.length === 0) {
-    return <p className="leading-relaxed text-base text-fog">{absence}</p>;
+    return shell(
+      <p
+        className="leading-relaxed text-base text-fog"
+        id={mounted ? panelId : undefined}
+        role={mounted ? "tabpanel" : undefined}
+        aria-labelledby={mounted ? tabId(tab) : undefined}
+      >
+        {absence}
+      </p>,
+    );
   }
 
   const spanMs = endMs - startMs;
@@ -334,7 +501,19 @@ export function HourChart({
     ]),
   );
 
-  const selectedPoint = selected === null ? null : (points[selected] ?? null);
+  /**
+   * Where the chosen instant falls in *this* series, or -1 when it does not.
+   *
+   * Exact rather than nearest. A swell tab whose forecast ran out at teatime
+   * has no 8 PM, and quietly selecting 5 PM instead would put a figure under a
+   * heading the reader chose for a different hour.
+   */
+  const selected =
+    selectedMs === null
+      ? -1
+      : points.findIndex((point) => point.atMs === selectedMs);
+
+  const selectedPoint = selected === -1 ? null : (points[selected] ?? null);
   const selectedHour =
     selectedPoint === null
       ? null
@@ -365,12 +544,15 @@ export function HourChart({
       .join(" · ");
   };
 
+  /** Select by position in this series, which is how both controls move. */
+  const selectAt = (index: number) => {
+    const point = points[Math.min(points.length - 1, Math.max(0, index))];
+    if (point !== undefined) setSelectedMs(point.atMs);
+  };
+
   /** Move the selection, wrapping at neither end: a day has two ends and they hold. */
   const step = (delta: number) => {
-    setSelected((current) => {
-      const next = current === null ? 0 : current + delta;
-      return Math.min(points.length - 1, Math.max(0, next));
-    });
+    selectAt(selected === -1 ? 0 : selected + delta);
   };
 
   const onColumnKeyDown = (event: React.KeyboardEvent) => {
@@ -382,55 +564,31 @@ export function HourChart({
     }
     if (event.key === "Home" || event.key === "End") {
       event.preventDefault();
-      setSelected(event.key === "Home" ? 0 : points.length - 1);
+      selectAt(event.key === "Home" ? 0 : points.length - 1);
     }
   };
 
-  return (
-    <div className="max-w-4xl overflow-hidden rounded-box border-[1.5px] border-ocean bg-white/60">
+  return shell(
+    <>
       {/*
-        The furniture, and the reason it is here: reviewed on the page, the
-        chart read as plain and as not belonging to the rest of the site. The
-        brief's aesthetic direction is what says where to put that right --
-        "the loud register belongs to headings, tabs, chips and glyphs; inside
-        the plot frame the page goes quiet". So the energy goes into the frame
-        and the chrome, and the data stays a chart in a field guide.
-
-        This band is the week grid's own today-cell header reused rather than
-        invented: `border-ocean bg-ocean` with the label register in white,
-        already measured there. The day panel *is* today, so it takes today's
-        treatment and the two regions read as one instrument.
-
-        It is also where the four tabs will sit, which is why the variable is
-        named here rather than only in the sentence at the foot.
-      */}
-      <div className="border-b-[1.5px] border-ocean bg-ocean px-4 py-2">
-        <p className="text-2xs font-extrabold tracking-widest text-white uppercase">
-          {variableLabel}
-          <span className="text-white/70"> · {unitLabel}</span>
-        </p>
-      </div>
-
-      <div className="p-4">
-        {/*
         The cloud band, above the plot and outside it. Labelled to the left in
         the same register the week grid labels its rows, so a reader meets the
         word before the shading rather than after it.
       */}
-        {cloud.length > 0 && (
-          <>
-            <div className="mb-1 flex items-center gap-2">
-              <span className="text-2xs w-12 shrink-0 text-right font-extrabold tracking-widest text-fog uppercase">
-                Cloud
-              </span>
-              <svg
-                role="img"
-                aria-label={cloudDescription}
-                viewBox={`0 0 ${WIDTH} ${CLOUD_H}`}
-                preserveAspectRatio="none"
-                className="block h-3 min-w-0 flex-1 rounded-sm"
-              >
-                {/*
+      {cloud.length > 0 && (
+        <>
+          <div className="mb-1 flex items-center gap-2">
+            <span className="text-2xs w-12 shrink-0 text-right font-extrabold tracking-widest text-fog uppercase">
+              Cloud
+            </span>
+            <svg
+              role="img"
+              aria-label={cloudDescription}
+              viewBox={`0 0 ${WIDTH} ${CLOUD_H}`}
+              preserveAspectRatio="none"
+              className="block h-3 min-w-0 flex-1 rounded-sm"
+            >
+              {/*
                 One rect per forecast hour rather than one across the run. An
                 hour the forecast did not reach draws nothing, where a rect
                 stretched to the next point it *did* reach would claim cloud for
@@ -441,26 +599,26 @@ export function HourChart({
                 stretch without distorting, where the plot below holds circles
                 that would become ellipses.
               */}
-                {cloud.map((hour) => {
-                  const from = Math.max(x(hour.atMs), 0);
-                  const to = Math.min(x(hour.atMs + HOUR_MS), WIDTH);
-                  return to <= from ? null : (
-                    <rect
-                      key={hour.atMs}
-                      x={from}
-                      width={to - from}
-                      y={0}
-                      height={CLOUD_H}
-                      className="fill-fog"
-                      fillOpacity={cloudOpacity(hour.value)}
-                      data-cloud-percent={hour.value}
-                    />
-                  );
-                })}
-              </svg>
-            </div>
+              {cloud.map((hour) => {
+                const from = Math.max(x(hour.atMs), 0);
+                const to = Math.min(x(hour.atMs + HOUR_MS), WIDTH);
+                return to <= from ? null : (
+                  <rect
+                    key={hour.atMs}
+                    x={from}
+                    width={to - from}
+                    y={0}
+                    height={CLOUD_H}
+                    className="fill-fog"
+                    fillOpacity={cloudOpacity(hour.value)}
+                    data-cloud-percent={hour.value}
+                  />
+                );
+              })}
+            </svg>
+          </div>
 
-            {/*
+          {/*
             The key, and it states percentages rather than words.
 
             **Naming the bands "sunny" and "cloudy" would reverse ADR-0024.**
@@ -476,25 +634,40 @@ export function HourChart({
             sky, and this is the first. It says what a shade is worth, and the
             words for the day stay the forecaster's.
           */}
-            <div
-              className="text-2xs mb-3 ml-14 flex items-center gap-1.5 text-fog"
-              data-cloud-key
-            >
-              <span>Cloud cover</span>
-              {CLOUD_KEY_STOPS.map((percent) => (
-                <span key={percent} className="flex items-center gap-1">
-                  <span
-                    aria-hidden
-                    className="inline-block h-2.5 w-4 rounded-xs bg-fog"
-                    style={{ opacity: cloudOpacity(percent) }}
-                  />
-                  {percent}%
-                </span>
-              ))}
-            </div>
-          </>
-        )}
+          <div
+            className="text-2xs mb-3 ml-14 flex items-center gap-1.5 text-fog"
+            data-cloud-key
+          >
+            <span>Cloud cover</span>
+            {CLOUD_KEY_STOPS.map((percent) => (
+              <span key={percent} className="flex items-center gap-1">
+                <span
+                  aria-hidden
+                  className="inline-block h-2.5 w-4 rounded-xs bg-fog"
+                  style={{ opacity: cloudOpacity(percent) }}
+                />
+                {percent}%
+              </span>
+            ))}
+          </div>
+        </>
+      )}
 
+      {/*
+        What the chosen tab draws, and the region the tabs point at. The cloud
+        band is deliberately outside it: the sky is the condition all four
+        series happen in rather than one of them, so it does not change when a
+        tab does and does not belong to any one tab's panel.
+
+        The roles only exist once the bar does. A `tabpanel` with no tablist is
+        a promise to a screen reader that nothing on the page keeps.
+      */}
+      <div
+        id={mounted ? panelId : undefined}
+        role={mounted ? "tabpanel" : undefined}
+        aria-labelledby={mounted ? tabId(tab) : undefined}
+        data-series-panel
+      >
         <div className="flex gap-2">
           {/*
           The value scale, in markup rather than in the SVG, so it stays in the
@@ -657,7 +830,7 @@ export function HourChart({
             {mounted && (
               <div
                 role="group"
-                aria-label={`Hours of the day. Choose one to read its ${variableLabel.toLowerCase()}.`}
+                aria-label={`Hours of the day. Choose one to read its ${active.label.toLowerCase()}.`}
                 className="absolute inset-0 flex"
                 onKeyDown={onColumnKeyDown}
                 data-hour-columns
@@ -670,9 +843,9 @@ export function HourChart({
                       key={point.atMs}
                       type="button"
                       className="min-w-0 flex-1 cursor-pointer"
-                      tabIndex={index === (selected ?? 0) ? 0 : -1}
+                      tabIndex={index === Math.max(selected, 0) ? 0 : -1}
                       aria-pressed={index === selected}
-                      onClick={() => setSelected(index)}
+                      onClick={() => selectAt(index)}
                       data-hour-column={hour}
                     >
                       {/*
@@ -776,6 +949,6 @@ export function HourChart({
           {unitLabel} today. Night is shaded; cloud is the band above.
         </p>
       </div>
-    </div>
+    </>,
   );
 }

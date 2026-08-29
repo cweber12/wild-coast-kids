@@ -1040,6 +1040,85 @@ test("a slug that is not in the inventory is a coding error, not a quiet feed", 
   ).rejects.toThrow(/no beach in the inventory/);
 });
 
+test("the day carries every hour of it, drawn between CDIP's own estimates", async () => {
+  // What the day chart's swell tab plots. CDIP publishes on a three-hour grid,
+  // so a curve wants the hours in between and a reader has to be able to tell
+  // which two of every six the model actually issued.
+  mopRows([
+    { atMs: pacificHour(0, 2), heightFt: 2, periodS: 14 },
+    { atMs: pacificHour(0, 5), heightFt: 5, periodS: 14 },
+  ]);
+
+  const view = await readWaveWeek(BEACH, NOON_PACIFIC_20260817);
+
+  if (view.state.kind !== "week") throw new Error("expected a week");
+  expect(view.state.days[0].hours).toEqual([
+    { atMs: pacificHour(0, 2), heightFt: 2, published: true },
+    { atMs: pacificHour(0, 3), heightFt: 3, published: false },
+    { atMs: pacificHour(0, 4), heightFt: 4, published: false },
+    { atMs: pacificHour(0, 5), heightFt: 5, published: true },
+  ]);
+});
+
+test("the hours before the grid's first estimate come from the day before", async () => {
+  // In Pacific time CDIP's UTC grid lands at 02:00, so midnight and 1 AM fall
+  // between the previous day's last estimate and this day's first. Bucketing
+  // and then interpolating would leave every morning two hours short, which is
+  // why the run is interpolated whole and split afterwards.
+  mopRows([
+    { atMs: pacificHour(-1, 23), heightFt: 1, periodS: 14 },
+    { atMs: pacificHour(0, 2), heightFt: 4, periodS: 14 },
+  ]);
+
+  const view = await readWaveWeek(BEACH, NOON_PACIFIC_20260817);
+
+  if (view.state.kind !== "week") throw new Error("expected a week");
+  const today = view.state.days.find((day) => day.localDate === "2026-08-17");
+  expect(today?.hours).toEqual([
+    { atMs: pacificHour(0, 0), heightFt: 2, published: false },
+    { atMs: pacificHour(0, 1), heightFt: 3, published: false },
+    { atMs: pacificHour(0, 2), heightFt: 4, published: true },
+  ]);
+});
+
+test("a gap wider than the grid is left empty rather than drawn across", async () => {
+  // `flaggedOut` counts estimates this repo refused, and refusing one leaves a
+  // six-hour hole. Filling it would put a figure on every hour of a stretch the
+  // model said nothing usable about, and the chart would let a reader select
+  // one and read it off.
+  mopRows([
+    { atMs: pacificHour(0, 2), heightFt: 2, periodS: 14 },
+    { atMs: pacificHour(0, 11), heightFt: 8, periodS: 14 },
+  ]);
+
+  const view = await readWaveWeek(BEACH, NOON_PACIFIC_20260817);
+
+  if (view.state.kind !== "week") throw new Error("expected a week");
+  expect(view.state.days[0].hours).toEqual([
+    { atMs: pacificHour(0, 2), heightFt: 2, published: true },
+    { atMs: pacificHour(0, 11), heightFt: 8, published: true },
+  ]);
+});
+
+test("the figures the week prints are unchanged by the hours beside them", async () => {
+  // ADR-0023's selected figure is a turning point of the run, not a sample of
+  // this series. Reading it off the hours would round it, and the same care
+  // `readHourlyTide` takes applies here: the curve is what the figure was
+  // selected out of.
+  mopRows([
+    { atMs: pacificHour(0, 2), heightFt: 2, periodS: 8 },
+    { atMs: pacificHour(0, 11), heightFt: 8, periodS: 14 },
+  ]);
+
+  const view = await readWaveWeek(BEACH, NOON_PACIFIC_20260817);
+
+  if (view.state.kind !== "week") throw new Error("expected a week");
+  expect(view.state.days[0]).toMatchObject({
+    daylight: { timeLabel: "11:00 AM", heightFt: 8, periodS: 14 },
+    allDay: null,
+  });
+});
+
 /* =========================================================================
  * readSkyWeek
  * ========================================================================= */

@@ -1,16 +1,18 @@
 import { beforeEach, expect, test, vi } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { localMidnightOf } from "@/lib/pacific-time";
 
 const readSkyWording = vi.fn();
 const readDaylightWeek = vi.fn();
 const readHourlyTide = vi.fn();
 const readSkyWeek = vi.fn();
+const readWaveWeek = vi.fn();
 vi.mock("@/lib/conditions", () => ({
   readSkyWording,
   readDaylightWeek,
   readHourlyTide,
   readSkyWeek,
+  readWaveWeek,
 }));
 
 const { DayPanel } = await import("./DayPanel");
@@ -81,6 +83,35 @@ function tideWeek(dates: string[]) {
   });
 }
 
+/**
+ * A day of CDIP's grid as the read hands it over: eight published estimates
+ * and the sixteen hours interpolated between them. The pattern is what matters
+ * -- a fixture with every hour published could not tell a swell tab that
+ * claimed hourly resolution from one that did not.
+ */
+function waveWeek(dates: string[]) {
+  readWaveWeek.mockResolvedValue({
+    beachName: BINDING.beachName,
+    line: { id: "D0481", distanceM: 117 },
+    state: {
+      kind: "week",
+      days: dates.map((localDate) => ({
+        localDate,
+        dayLabel: "Mon, Aug 17",
+        dateLabel: "Mon, Aug 17",
+        isToday: localDate === TODAY,
+        daylight: { timeLabel: "11:00 AM", heightFt: 1.8, periodS: 15 },
+        allDay: null,
+        hours: Array.from({ length: 24 }, (_, hour) => ({
+          atMs: localMidnightOf(localDate) + hour * HOUR,
+          heightFt: 1.5 + Math.sin((hour / 24) * 2 * Math.PI) / 2,
+          published: hour % 3 === 2,
+        })),
+      })),
+    },
+  });
+}
+
 function skyWeek(dates: string[], percent = 40) {
   readSkyWeek.mockResolvedValue({
     beachName: BINDING.beachName,
@@ -126,8 +157,10 @@ beforeEach(() => {
   readDaylightWeek.mockReset();
   readHourlyTide.mockReset();
   readSkyWeek.mockReset();
+  readWaveWeek.mockReset();
   daylight([TODAY, TOMORROW]);
   tideWeek([TODAY, TOMORROW]);
+  waveWeek([TODAY, TOMORROW]);
   skyWeek([TODAY, TOMORROW]);
   wordingWeek([
     {
@@ -147,6 +180,7 @@ test("asks every read for the slug it was given", async () => {
     readDaylightWeek,
     readHourlyTide,
     readSkyWeek,
+    readWaveWeek,
   ]) {
     expect(read).toHaveBeenCalledWith("la-jolla-shores-beach");
   }
@@ -243,10 +277,79 @@ test("a quiet tide feed says so, and never draws a flat line at zero", async () 
   );
 
   expect(curve(container)).toBeNull();
-  expect(screen.getByText(/no hour-by-hour tide prediction/i)).toBeDefined();
+  // NAMES NOAA AND CARRIES THE DETAIL. With four tabs, "we have no figure for
+  // today" printed on whichever one is quiet says nothing about which publisher
+  // went silent -- and the detail is the only thing on the page that does.
+  expect(
+    screen.getByText(/tide prediction from NOAA just now\. HTTP 503/i),
+  ).toBeDefined();
   // And the words are untouched: a NOAA outage is not a National Weather
   // Service outage.
   expect(screen.getByText("Patchy Fog then Mostly Sunny")).toBeDefined();
+});
+
+test("an outage on one tab's feed does not cost the other tab", async () => {
+  // The whole reason the frame is arithmetic on the calendar rather than a
+  // field of the tide read. Before the tabs, no tide meant no chart; a swell
+  // forecast that answered would have gone undrawn because a different agency
+  // did not.
+  readHourlyTide.mockResolvedValue({
+    ...BINDING,
+    state: { kind: "unavailable", detail: "HTTP 503", drift: false },
+  });
+
+  const { container } = render(
+    await DayPanel({ slug: "la-jolla-shores-beach" }),
+  );
+
+  const swell = container.querySelector('[data-series-tab="swell"]');
+  expect(swell).not.toBeNull();
+  fireEvent.click(swell!);
+
+  expect(
+    container.querySelector('svg[aria-label^="Swell today"] [data-curve]'),
+  ).not.toBeNull();
+});
+
+test("the swell tab marks CDIP's own estimates and no others", async () => {
+  // The mechanism that stops a three-hourly model looking like an hourly one.
+  // The tide beside it marks twenty-four; this marks the eight CDIP issued.
+  const { container } = render(
+    await DayPanel({ slug: "la-jolla-shores-beach" }),
+  );
+
+  fireEvent.click(container.querySelector('[data-series-tab="swell"]')!);
+
+  const plot = container.querySelector('svg[aria-label^="Swell today"]');
+  expect(plot?.querySelectorAll("circle")).toHaveLength(8);
+  // And the sentence says it too, for a reader who gets no marks at all.
+  expect(plot?.getAttribute("aria-label")).toContain(
+    "publishes every three hours and issued 8 estimates",
+  );
+});
+
+test("a beach with no MOP line says that, not that the feed failed", async () => {
+  // Two absences that look alike and are not: 26 of 51 beaches have no line at
+  // all, which is permanent, where an outage is this quarter of an hour.
+  readWaveWeek.mockResolvedValue({
+    beachName: BINDING.beachName,
+    line: null,
+    state: {
+      kind: "no-line",
+      reason: "every point the model publishes sits out on the open coast",
+    },
+  });
+
+  const { container } = render(
+    await DayPanel({ slug: "la-jolla-shores-beach" }),
+  );
+
+  fireEvent.click(container.querySelector('[data-series-tab="swell"]')!);
+
+  expect(screen.getByText(/sits out on the open coast/)).toBeDefined();
+  expect(screen.queryByText(/just now/)).toBeNull();
+  // The bar survives, so the reader can get back to the tab that has a curve.
+  expect(container.querySelector('[data-series-tab="tide"]')).not.toBeNull();
 });
 
 test("a quiet wording feed costs the words and not the chart", async () => {

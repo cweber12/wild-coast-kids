@@ -33,16 +33,46 @@ const OVERNIGHT_DIP = hourly([
   2.4, 3.1, 3.9, 4.5, 4.8, 4.6, 4.1, 3.5,
 ]);
 
+/** The tab this chart opens on, and the one every test here drives unless it says otherwise. */
+const TIDE = {
+  key: "tide",
+  label: "Tide",
+  unitLabel: "ft",
+  points: OVERNIGHT_DIP as readonly SparkPoint[],
+  description: "Tide through Monday, 0.2 to 4.8 feet",
+  absence: "No hourly prediction for this day.",
+};
+
+/**
+ * A second tab, three-hourly, so the swell's cadence has something to be
+ * different from. Eight published estimates and the sixteen hours between
+ * them, which is what CDIP's grid looks like in Pacific time.
+ */
+const SWELL = {
+  key: "swell",
+  label: "Swell",
+  unitLabel: "ft",
+  points: Array.from({ length: 24 }, (_, hour) => ({
+    atMs: START + hour * HOUR,
+    value: 2 + Math.sin(hour / 4),
+    published: hour % 3 === 2,
+  })) as readonly SparkPoint[],
+  description: "Swell through Monday, three-hourly",
+  absence: "No swell forecast reaches this day.",
+};
+
 const PROPS = {
   startMs: START,
   endMs: END,
   sunriseMs: SUNRISE,
   sunsetMs: SUNSET,
-  variableLabel: "Tide",
-  unitLabel: "ft",
-  description: "Tide through Monday, 0.2 to 4.8 feet",
-  absence: "No hourly prediction for this day.",
+  series: [TIDE],
 };
+
+/** The same chart with the tide tab drawing something other than the usual day. */
+function tideOf(points: readonly SparkPoint[]) {
+  return [{ ...TIDE, points }];
+}
 
 function plot(container: HTMLElement): SVGSVGElement {
   const svg = container.querySelector("svg");
@@ -72,9 +102,7 @@ describe("the whole day, which is what discharges ADR-0023", () => {
     // THE POINT OF THIS COMPONENT. ADR-0023 dropped the overnight extreme from
     // six week cells of seven "until a day view carries them". A chart that
     // started at sunrise would leave that debt exactly where it was.
-    const { container } = render(
-      <HourChart {...PROPS} points={OVERNIGHT_DIP} />,
-    );
+    const { container } = render(<HourChart {...PROPS} />);
 
     expect(pathPoints(container)).toHaveLength(24);
   });
@@ -83,9 +111,7 @@ describe("the whole day, which is what discharges ADR-0023", () => {
     // The figure ADR-0023 could not fit as a number. It is carried here as a
     // dip a reader can see is in the dark, which is the whole argument that
     // drawing it costs nothing the label did.
-    const { container } = render(
-      <HourChart {...PROPS} points={OVERNIGHT_DIP} />,
-    );
+    const { container } = render(<HourChart {...PROPS} />);
 
     const points = pathPoints(container);
     const lowest = points.reduce((a, b) => (b[1] > a[1] ? b : a));
@@ -100,9 +126,7 @@ describe("the whole day, which is what discharges ADR-0023", () => {
   });
 
   test("shades both ends of the day, because a day starts and ends dark", () => {
-    const { container } = render(
-      <HourChart {...PROPS} points={OVERNIGHT_DIP} />,
-    );
+    const { container } = render(<HourChart {...PROPS} />);
 
     expect(container.querySelector('[data-night="before-dawn"]')).toBeDefined();
     expect(container.querySelector('[data-night="after-dusk"]')).toBeDefined();
@@ -113,9 +137,7 @@ describe("the whole day, which is what discharges ADR-0023", () => {
     // An SVG <text> scales with the viewBox: a label that reads at 1536 renders
     // about 4px at 375. Keeping the scales in markup is what makes the plot
     // readable at a phone's width, and it is why the SVG holds only geometry.
-    const { container } = render(
-      <HourChart {...PROPS} points={OVERNIGHT_DIP} />,
-    );
+    const { container } = render(<HourChart {...PROPS} />);
 
     expect(plot(container).querySelectorAll("text")).toHaveLength(0);
     expect(container.querySelector('[data-axis="low"]')?.tagName).toBe("SPAN");
@@ -134,7 +156,6 @@ describe("the whole day, which is what discharges ADR-0023", () => {
     const { container } = render(
       <HourChart
         {...PROPS}
-        points={OVERNIGHT_DIP}
         cloud={[{ atMs: START + 8 * HOUR, value: 60, published: true }]}
       />,
     );
@@ -163,7 +184,6 @@ describe("the whole day, which is what discharges ADR-0023", () => {
     const { container } = render(
       <HourChart
         {...PROPS}
-        points={OVERNIGHT_DIP}
         cloud={[{ atMs: START + 8 * HOUR, value: 60, published: true }]}
       />,
     );
@@ -180,9 +200,7 @@ describe("the whole day, which is what discharges ADR-0023", () => {
   });
 
   test("no band and no key when the forecast said nothing about the sky", () => {
-    const { container } = render(
-      <HourChart {...PROPS} points={OVERNIGHT_DIP} />,
-    );
+    const { container } = render(<HourChart {...PROPS} />);
 
     expect(container.querySelector("[data-cloud-key]")).toBeNull();
     expect(container.querySelectorAll("[data-cloud-percent]")).toHaveLength(0);
@@ -192,7 +210,7 @@ describe("the whole day, which is what discharges ADR-0023", () => {
 describe("the now line", () => {
   test("appears on today", () => {
     const { container } = render(
-      <HourChart {...PROPS} points={OVERNIGHT_DIP} nowMs={START + 14 * HOUR} />,
+      <HourChart {...PROPS} nowMs={START + 14 * HOUR} />,
     );
 
     const now = container.querySelector("[data-now]");
@@ -206,9 +224,7 @@ describe("the now line", () => {
   test("appears on no other day", () => {
     // A vertical rule at an instant is a claim about the present. Drawing one
     // on Thursday would tell a reader they are standing in Thursday.
-    const { container } = render(
-      <HourChart {...PROPS} points={OVERNIGHT_DIP} nowMs={null} />,
-    );
+    const { container } = render(<HourChart {...PROPS} nowMs={null} />);
 
     expect(container.querySelector("[data-now]")).toBeNull();
   });
@@ -216,9 +232,7 @@ describe("the now line", () => {
   test("is not drawn for an instant outside this day", () => {
     // The caller passing yesterday's clock is a bug, and a line clamped to the
     // frame's edge would hide it behind a plausible-looking marker.
-    const { container } = render(
-      <HourChart {...PROPS} points={OVERNIGHT_DIP} nowMs={END + HOUR} />,
-    );
+    const { container } = render(<HourChart {...PROPS} nowMs={END + HOUR} />);
 
     expect(container.querySelector("[data-now]")).toBeNull();
   });
@@ -227,7 +241,7 @@ describe("the now line", () => {
     // Colour is never the only channel separating two marks on this page. The
     // rule is dashed and the curve is not.
     const { container } = render(
-      <HourChart {...PROPS} points={OVERNIGHT_DIP} nowMs={START + 2 * HOUR} />,
+      <HourChart {...PROPS} nowMs={START + 2 * HOUR} />,
     );
 
     const now = container.querySelector("[data-now]");
@@ -246,7 +260,6 @@ describe("the cloud band, which lives here rather than on the sparkline", () => 
     const { container } = render(
       <HourChart
         {...PROPS}
-        points={OVERNIGHT_DIP}
         cloud={[{ atMs: START + 8 * HOUR, value: 60, published: true }]}
         cloudDescription="Cloud cover through Monday, 40 to 70 per cent."
       />,
@@ -256,14 +269,13 @@ describe("the cloud band, which lives here rather than on the sparkline", () => 
       svg.getAttribute("aria-label"),
     );
     expect(labels).toContain("Cloud cover through Monday, 40 to 70 per cent.");
-    expect(labels).toContain(PROPS.description);
+    expect(labels).toContain(TIDE.description);
   });
 
   test("a heavier hour washes darker than a lighter one", () => {
     const { container } = render(
       <HourChart
         {...PROPS}
-        points={OVERNIGHT_DIP}
         cloud={[
           { atMs: START + 8 * HOUR, value: 20, published: true },
           { atMs: START + 9 * HOUR, value: 80, published: true },
@@ -286,7 +298,6 @@ describe("the cloud band, which lives here rather than on the sparkline", () => 
     const { container } = render(
       <HourChart
         {...PROPS}
-        points={OVERNIGHT_DIP}
         cloud={[{ atMs: START + 8 * HOUR, value: 0, published: true }]}
       />,
     );
@@ -299,7 +310,6 @@ describe("the cloud band, which lives here rather than on the sparkline", () => 
     const { container } = render(
       <HourChart
         {...PROPS}
-        points={OVERNIGHT_DIP}
         cloud={[
           { atMs: START + 8 * HOUR, value: 40, published: true },
           // Nothing for 9:00. A wash stretched to the next point it did reach
@@ -313,9 +323,7 @@ describe("the cloud band, which lives here rather than on the sparkline", () => 
   });
 
   test("no cloud at all draws no wash, rather than a clear sky", () => {
-    const { container } = render(
-      <HourChart {...PROPS} points={OVERNIGHT_DIP} />,
-    );
+    const { container } = render(<HourChart {...PROPS} />);
 
     expect(container.querySelectorAll("[data-cloud-percent]")).toHaveLength(0);
   });
@@ -323,9 +331,7 @@ describe("the cloud band, which lives here rather than on the sparkline", () => 
 
 describe("reading a value off it", () => {
   test("the axis states this day's own range", () => {
-    const { container } = render(
-      <HourChart {...PROPS} points={OVERNIGHT_DIP} />,
-    );
+    const { container } = render(<HourChart {...PROPS} />);
 
     expect(container.querySelector('[data-axis="low"]')?.textContent).toBe(
       "0.2 ft",
@@ -336,9 +342,7 @@ describe("reading a value off it", () => {
   });
 
   test("the hours are named in the reader's own clock", () => {
-    const { container } = render(
-      <HourChart {...PROPS} points={OVERNIGHT_DIP} />,
-    );
+    const { container } = render(<HourChart {...PROPS} />);
 
     expect(container.querySelector('[data-axis-hour="0"]')?.textContent).toBe(
       "12 AM",
@@ -355,19 +359,17 @@ describe("reading a value off it", () => {
     // The plot is data rather than decoration. What a reader would take off the
     // curve is also written, for anyone who cannot see it and for anyone whose
     // images have not painted.
-    render(<HourChart {...PROPS} points={OVERNIGHT_DIP} />);
+    render(<HourChart {...PROPS} />);
 
     expect(screen.getByText(/Low 0\.2 ft/)).toBeDefined();
     expect(screen.getByText(/high 4\.8 ft/)).toBeDefined();
   });
 
   test("the plot names itself for anyone who cannot see it", () => {
-    const { container } = render(
-      <HourChart {...PROPS} points={OVERNIGHT_DIP} />,
-    );
+    const { container } = render(<HourChart {...PROPS} />);
 
     expect(plot(container).getAttribute("role")).toBe("img");
-    expect(plot(container).getAttribute("aria-label")).toBe(PROPS.description);
+    expect(plot(container).getAttribute("aria-label")).toBe(TIDE.description);
   });
 
   test("a bigger value sits higher in the frame", () => {
@@ -376,10 +378,10 @@ describe("reading a value off it", () => {
     const { container } = render(
       <HourChart
         {...PROPS}
-        points={[
+        series={tideOf([
           { atMs: START, value: 1, published: true },
           { atMs: START + 12 * HOUR, value: 5, published: true },
-        ]}
+        ])}
       />,
     );
 
@@ -393,7 +395,7 @@ describe("reading a value off it", () => {
     const { container } = render(
       <HourChart
         {...PROPS}
-        points={hourly(Array.from({ length: 24 }, () => 3))}
+        series={tideOf(hourly(Array.from({ length: 24 }, () => 3)))}
       />,
     );
 
@@ -417,12 +419,12 @@ describe("published points", () => {
     const { container } = render(
       <HourChart
         {...PROPS}
-        points={[
+        series={tideOf([
           { atMs: START, value: 2, published: true },
           { atMs: START + HOUR, value: 3, published: false },
           { atMs: START + 2 * HOUR, value: 4, published: false },
           { atMs: START + 3 * HOUR, value: 5, published: true },
-        ]}
+        ])}
       />,
     );
 
@@ -430,9 +432,7 @@ describe("published points", () => {
   });
 
   test("an hourly day marks every hour", () => {
-    const { container } = render(
-      <HourChart {...PROPS} points={OVERNIGHT_DIP} />,
-    );
+    const { container } = render(<HourChart {...PROPS} />);
 
     expect(container.querySelectorAll("circle")).toHaveLength(24);
   });
@@ -442,9 +442,9 @@ describe("when there is no series", () => {
   test("an unavailable series renders its reason, not an empty frame", () => {
     // A curve is a stronger claim than a figure: a flat line at zero says the
     // sea did something, where a named absence says we were not told.
-    const { container } = render(<HourChart {...PROPS} points={[]} />);
+    const { container } = render(<HourChart {...PROPS} series={tideOf([])} />);
 
-    expect(screen.getByText(PROPS.absence)).toBeDefined();
+    expect(screen.getByText(TIDE.absence)).toBeDefined();
     expect(container.querySelector("svg")).toBeNull();
   });
 });
@@ -455,9 +455,7 @@ describe("the hour scale at a phone's width", () => {
     // exactly -- measured on the built page, where "12 PM" touched its
     // neighbours. The quarter-day hours stay at every width; the rest appear
     // from `sm`. Degrading before it lies is the same rule the sparkline follows.
-    const { container } = render(
-      <HourChart {...PROPS} points={OVERNIGHT_DIP} />,
-    );
+    const { container } = render(<HourChart {...PROPS} />);
 
     for (const hour of [0, 6, 12, 18]) {
       const label = container.querySelector(`[data-axis-hour="${hour}"]`);
@@ -473,9 +471,7 @@ describe("the hour scale at a phone's width", () => {
   test("midnight is not centred on the plot's left edge", () => {
     // Centred, "12 AM" reaches half its own width to the left of the plot and
     // lands on top of the value scale. It sat on "-0.1 ft" on the built page.
-    const { container } = render(
-      <HourChart {...PROPS} points={OVERNIGHT_DIP} />,
-    );
+    const { container } = render(<HourChart {...PROPS} />);
 
     expect(
       container.querySelector('[data-axis-hour="0"]')?.className,
@@ -494,7 +490,6 @@ describe("choosing an hour", () => {
     const { container } = render(
       <HourChart
         {...PROPS}
-        points={OVERNIGHT_DIP}
         cloud={[{ atMs: START + 9 * HOUR, value: 62, published: true }]}
       />,
     );
@@ -509,9 +504,7 @@ describe("choosing an hour", () => {
   });
 
   test("says an hour is outside daylight when it is", () => {
-    const { container } = render(
-      <HourChart {...PROPS} points={OVERNIGHT_DIP} />,
-    );
+    const { container } = render(<HourChart {...PROPS} />);
 
     fireEvent.click(container.querySelector('[data-hour-column="3"]')!);
 
@@ -527,7 +520,6 @@ describe("choosing an hour", () => {
     const { container } = render(
       <HourChart
         {...PROPS}
-        points={OVERNIGHT_DIP}
         cloud={[{ atMs: START + 9 * HOUR, value: 62, published: true }]}
       />,
     );
@@ -541,9 +533,7 @@ describe("choosing an hour", () => {
 
   test("marks the chosen hour by size as well as by colour", () => {
     // Colour is never the only channel separating two marks on this page.
-    const { container } = render(
-      <HourChart {...PROPS} points={OVERNIGHT_DIP} />,
-    );
+    const { container } = render(<HourChart {...PROPS} />);
 
     expect(container.querySelector("[data-selected-mark]")).toBeNull();
     fireEvent.click(container.querySelector('[data-hour-column="9"]')!);
@@ -563,9 +553,7 @@ describe("choosing an hour", () => {
     // What the brief's no-affordance rule was protecting. The shape, the range
     // and the day's extremes are all still there once an hour is chosen; what
     // selection adds is detail the page never carried at all.
-    const { container } = render(
-      <HourChart {...PROPS} points={OVERNIGHT_DIP} />,
-    );
+    const { container } = render(<HourChart {...PROPS} />);
 
     expect(screen.getByText(/Low 0\.2 ft/)).toBeDefined();
     fireEvent.click(container.querySelector('[data-hour-column="9"]')!);
@@ -577,9 +565,7 @@ describe("choosing an hour", () => {
 
 describe("reaching the hours without a mouse", () => {
   test("the arrow keys walk the day, and stop at both ends", () => {
-    const { container } = render(
-      <HourChart {...PROPS} points={OVERNIGHT_DIP} />,
-    );
+    const { container } = render(<HourChart {...PROPS} />);
     const group = container.querySelector("[data-hour-columns]")!;
 
     fireEvent.click(container.querySelector('[data-hour-column="0"]')!);
@@ -609,9 +595,7 @@ describe("reaching the hours without a mouse", () => {
   test("one tab stop for the group, not twenty-four", () => {
     // A roving tabindex, the way a radio group behaves. Twenty-four stops would
     // put the rest of the page a day's worth of tabs away.
-    const { container } = render(
-      <HourChart {...PROPS} points={OVERNIGHT_DIP} />,
-    );
+    const { container } = render(<HourChart {...PROPS} />);
 
     const stops = [...container.querySelectorAll("[data-hour-column]")].filter(
       (button) => button.getAttribute("tabindex") === "0",
@@ -625,7 +609,6 @@ describe("reaching the hours without a mouse", () => {
     const { container } = render(
       <HourChart
         {...PROPS}
-        points={OVERNIGHT_DIP}
         cloud={[{ atMs: START + 9 * HOUR, value: 62, published: true }]}
       />,
     );
@@ -640,9 +623,7 @@ describe("reaching the hours without a mouse", () => {
     // Twenty-four columns are 33.6px across an 806px plot and 11.8px across a
     // 283px one, against ADR-0004's 44px. The columns are the enhancement; this
     // pair is the guarantee.
-    const { container } = render(
-      <HourChart {...PROPS} points={OVERNIGHT_DIP} />,
-    );
+    const { container } = render(<HourChart {...PROPS} />);
 
     for (const selector of ["[data-hour-prev]", "[data-hour-next]"]) {
       const button = container.querySelector(selector);
@@ -652,9 +633,7 @@ describe("reaching the hours without a mouse", () => {
   });
 
   test("the stepper moves the readout and stops at the ends", () => {
-    const { container } = render(
-      <HourChart {...PROPS} points={OVERNIGHT_DIP} />,
-    );
+    const { container } = render(<HourChart {...PROPS} />);
 
     fireEvent.click(container.querySelector("[data-hour-next]")!);
     expect(
@@ -673,9 +652,7 @@ describe("reaching the hours without a mouse", () => {
   });
 
   test("the readout announces itself, since nobody is watching it", () => {
-    const { container } = render(
-      <HourChart {...PROPS} points={OVERNIGHT_DIP} />,
-    );
+    const { container } = render(<HourChart {...PROPS} />);
 
     expect(
       container.querySelector("[data-hour-readout]")?.getAttribute("aria-live"),
@@ -695,7 +672,6 @@ describe("what a reader without JavaScript gets", () => {
     const markup = renderToStaticMarkup(
       <HourChart
         {...PROPS}
-        points={OVERNIGHT_DIP}
         cloud={[{ atMs: START + 9 * HOUR, value: 62, published: true }]}
         nowMs={START + 14 * HOUR}
       />,
@@ -714,5 +690,213 @@ describe("what a reader without JavaScript gets", () => {
     expect(markup).not.toContain("data-hour-prev");
     expect(markup).not.toContain("data-hour-readout");
     expect(markup).not.toContain("<button");
+  });
+});
+
+describe("the tabs", () => {
+  const TABBED = { ...PROPS, series: [TIDE, SWELL] };
+
+  test("names every series, and marks the chosen one by more than colour", () => {
+    // ADR-0027's fourth condition, and the accessibility pass's rule that
+    // colour is never the only channel. The selected tab takes the site's own
+    // pill -- a filled ground where the others have none -- so the selection is
+    // a change of shape as well as of ink, and `aria-selected` carries it for
+    // anyone who sees neither.
+    const { container } = render(<HourChart {...TABBED} />);
+
+    const tabs = [...container.querySelectorAll('[role="tab"]')];
+    expect(tabs.map((tab) => tab.textContent)).toEqual(["Tide", "Swell"]);
+    expect(tabs[0].getAttribute("aria-selected")).toBe("true");
+    expect(tabs[1].getAttribute("aria-selected")).toBe("false");
+    expect(tabs[0].className).toContain("bg-white");
+    expect(tabs[1].className).not.toContain("bg-white");
+  });
+
+  test("opens on the first series, never on whichever one has data", () => {
+    // A rule the reader could not see from the page would be worse than a quiet
+    // first tab: they would have no way to know why the chart opened on the
+    // swell one day and the tide the next.
+    const { container } = render(
+      <HourChart {...TABBED} series={[{ ...TIDE, points: [] }, SWELL]} />,
+    );
+
+    expect(screen.getByText(TIDE.absence)).toBeDefined();
+    expect(container.querySelector("[data-curve]")).toBeNull();
+  });
+
+  test("choosing a tab redraws the foreground and leaves the background alone", () => {
+    // The design's first principle at this zoom level: cloud and daylight are
+    // the conditions the selected variable happens in, not competitors to it.
+    // If the night bands moved when a tab did, the four would be four charts
+    // sharing a tile rather than one instrument.
+    const cloud = [{ atMs: START + 8 * HOUR, value: 60, published: true }];
+    const { container } = render(<HourChart {...TABBED} cloud={cloud} />);
+
+    const bands = () =>
+      [...container.querySelectorAll("[data-night]")].map(
+        (band) => `${band.getAttribute("x")}/${band.getAttribute("width")}`,
+      );
+    const cloudHours = () =>
+      [...container.querySelectorAll("[data-cloud-percent]")].map((hour) =>
+        hour.getAttribute("data-cloud-percent"),
+      );
+
+    const nightBefore = bands();
+    const cloudBefore = cloudHours();
+    const curveBefore = container
+      .querySelector("[data-curve]")
+      ?.getAttribute("d");
+
+    fireEvent.click(container.querySelector('[data-series-tab="swell"]')!);
+
+    expect(bands()).toEqual(nightBefore);
+    expect(cloudHours()).toEqual(cloudBefore);
+    expect(container.querySelector("[data-curve]")?.getAttribute("d")).not.toBe(
+      curveBefore,
+    );
+  });
+
+  test("a three-hourly tab marks eight points where the hourly one marks twenty-four", () => {
+    // THE MECHANISM, at the size it was built for. #171 recorded that these
+    // marks are invisible in a 21px sparkline and correctly so; this is where
+    // they earn their keep, because an hourly model and a three-hourly one are
+    // now drawn in the same frame one tap apart.
+    const { container } = render(<HourChart {...TABBED} />);
+
+    expect(container.querySelectorAll("circle")).toHaveLength(24);
+    fireEvent.click(container.querySelector('[data-series-tab="swell"]')!);
+    expect(container.querySelectorAll("circle")).toHaveLength(8);
+  });
+
+  test("each tab states its own unit and its own spoken description", () => {
+    const { container } = render(
+      <HourChart {...TABBED} series={[TIDE, { ...SWELL, unitLabel: "m" }]} />,
+    );
+
+    expect(plot(container).getAttribute("aria-label")).toBe(TIDE.description);
+
+    fireEvent.click(container.querySelector('[data-series-tab="swell"]')!);
+
+    expect(plot(container).getAttribute("aria-label")).toBe(SWELL.description);
+    expect(
+      container.querySelector('[data-axis="high"]')?.textContent,
+    ).toContain("m");
+  });
+
+  test("a tab whose feed is quiet says why, and keeps the bar", () => {
+    // The absence used to replace the whole component, which was right with one
+    // series and would strand a reader now: they would have chosen a tab and
+    // lost the control that got them there.
+    const { container } = render(
+      <HourChart {...TABBED} series={[TIDE, { ...SWELL, points: [] }]} />,
+    );
+
+    fireEvent.click(container.querySelector('[data-series-tab="swell"]')!);
+
+    expect(screen.getByText(SWELL.absence)).toBeDefined();
+    expect(container.querySelector("[data-curve]")).toBeNull();
+    expect(container.querySelector('[data-series-tab="tide"]')).not.toBeNull();
+  });
+
+  test("a quiet tab draws no cloud band either, so nothing frames an empty frame", () => {
+    const { container } = render(
+      <HourChart
+        {...TABBED}
+        series={[{ ...TIDE, points: [] }, SWELL]}
+        cloud={[{ atMs: START + 8 * HOUR, value: 60, published: true }]}
+      />,
+    );
+
+    expect(container.querySelector("svg")).toBeNull();
+  });
+
+  test("the chosen hour survives a change of tab", () => {
+    // Why the selection is held as an instant rather than as an index. An index
+    // means something different in each series -- a swell that ran out at
+    // teatime has fewer points -- so index 9 would land on 9 AM in one tab and
+    // mid-afternoon in another.
+    const { container } = render(<HourChart {...TABBED} />);
+
+    fireEvent.click(container.querySelector('[data-hour-column="9"]')!);
+    expect(
+      container.querySelector("[data-hour-readout]")?.textContent,
+    ).toContain("9 AM");
+
+    fireEvent.click(container.querySelector('[data-series-tab="swell"]')!);
+    expect(
+      container.querySelector("[data-hour-readout]")?.textContent,
+    ).toContain("9 AM");
+  });
+
+  test("the tabs walk with the arrow keys and stop at both ends", () => {
+    const { container } = render(<HourChart {...TABBED} />);
+
+    const tablist = container.querySelector('[role="tablist"]')!;
+    const chosen = () =>
+      container
+        .querySelector('[role="tab"][aria-selected="true"]')
+        ?.getAttribute("data-series-tab");
+
+    fireEvent.keyDown(tablist, { key: "ArrowRight" });
+    expect(chosen()).toBe("swell");
+    // Stops rather than wrapping, which is the rule the hour columns follow.
+    fireEvent.keyDown(tablist, { key: "ArrowRight" });
+    expect(chosen()).toBe("swell");
+    fireEvent.keyDown(tablist, { key: "Home" });
+    expect(chosen()).toBe("tide");
+    fireEvent.keyDown(tablist, { key: "ArrowLeft" });
+    expect(chosen()).toBe("tide");
+    fireEvent.keyDown(tablist, { key: "End" });
+    expect(chosen()).toBe("swell");
+  });
+
+  test("one tab stop for the bar, not one per tab", () => {
+    // A roving tabindex, the way a radio group behaves. One stop per tab would
+    // put three keystrokes between a reader and the plot every time they
+    // passed it.
+    const { container } = render(<HourChart {...TABBED} />);
+
+    const tabs = [...container.querySelectorAll('[role="tab"]')];
+    expect(
+      tabs.filter((tab) => tab.getAttribute("tabindex") === "0"),
+    ).toHaveLength(1);
+  });
+
+  test("the tabs are real controls at the site's touch floor", () => {
+    // ADR-0027's third condition, and the one a new control is most likely to
+    // miss because it only fails at a width nobody develops at. Composing the
+    // constant does not prove 44px renders -- jsdom applies no stylesheets --
+    // so this asserts the element refers to the standard.
+    const { container } = render(<HourChart {...TABBED} />);
+
+    for (const tab of container.querySelectorAll('[role="tab"]')) {
+      expect(tab.className).toContain(TOUCH_TARGET);
+    }
+  });
+
+  test("the panel is named by the tab that chose it", () => {
+    const { container } = render(<HourChart {...TABBED} />);
+
+    const panel = container.querySelector('[role="tabpanel"]');
+    const selected = container.querySelector(
+      '[role="tab"][aria-selected="true"]',
+    );
+    expect(panel?.getAttribute("aria-labelledby")).toBe(selected?.id);
+    expect(selected?.getAttribute("aria-controls")).toBe(panel?.id);
+  });
+
+  test("without a script the band names the drawn series and offers no tab", () => {
+    // The same rule the hour controls follow, for the same reason: four words
+    // that look like controls and are not is the failure `BeachSelector`'s
+    // `noscript` list exists to prevent. There is nothing to fall back *to* --
+    // the other series are not on the page in any other form -- so the honest
+    // fallback is the one that was drawn, named.
+    const markup = renderToStaticMarkup(<HourChart {...TABBED} />);
+
+    expect(markup).toContain("Tide");
+    expect(markup).not.toContain('role="tab"');
+    expect(markup).not.toContain("data-series-tab");
+    expect(markup).not.toContain('role="tabpanel"');
+    expect(markup).toContain("data-curve");
   });
 });

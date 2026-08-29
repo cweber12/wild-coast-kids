@@ -16,7 +16,7 @@
  * actually sent, never to a convenient constant.
  */
 
-import type { TideHourlyDay } from "@/lib/conditions";
+import type { TideHourlyDay, WaveWeekDay } from "@/lib/conditions";
 import type { SparkPoint } from "./DaySpark";
 
 /**
@@ -33,5 +33,24 @@ export function tidePoints(day: TideHourlyDay): SparkPoint[] {
     atMs: hour.atMs,
     value: hour.feet,
     published: true,
+  }));
+}
+
+/**
+ * Swell heights as a plot draws them, and the converter the paragraph above
+ * was written for.
+ *
+ * **The flag is carried, never assumed.** CDIP publishes on a three-hour grid,
+ * so eight points of a day are its own and the sixteen between them are a line
+ * `readHourlyTide`'s neighbour drew — and the read is the only place that knows
+ * which is which. Setting `published: true` here to match `tidePoints` would
+ * make a three-hourly model and an hourly one draw the same twenty-four marks,
+ * which is the single thing this flag exists to prevent.
+ */
+export function swellPoints(day: WaveWeekDay): SparkPoint[] {
+  return day.hours.map((hour) => ({
+    atMs: hour.atMs,
+    value: hour.heightFt,
+    published: hour.published,
   }));
 }
