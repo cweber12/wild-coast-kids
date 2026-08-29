@@ -100,8 +100,9 @@
 
 "use client";
 
-import { useId, useState, useSyncExternalStore } from "react";
+import { useId, useState } from "react";
 import { nightBands } from "./dayFrame";
+import { useHydrated } from "./hydrated";
 import type { SparkPoint } from "./DaySpark";
 import { TOUCH_TARGET } from "../ui/touchTarget";
 
@@ -323,16 +324,6 @@ function cloudOpacity(percent: number): number {
   return 0.12 + 0.55 * (Math.min(100, Math.max(0, percent)) / 100);
 }
 
-/**
- * The three halves of the "is this the client yet" store.
- *
- * Module scope so their identities are stable across renders, which is what
- * `useSyncExternalStore` requires of `subscribe`.
- */
-const neverChanges = () => () => {};
-const onClient = () => true;
-const onServer = () => false;
-
 /** `0` to "12 AM", `13` to "1 PM". The axis speaks the reader's clock. */
 function hourLabel(hour: number): string {
   if (hour === 0) return "12 AM";
@@ -377,13 +368,10 @@ export function HourChart({
     to that reader -- they were never on the page, which is what makes this
     additive under ADR-0027 rather than a concealment.
 
-    `useSyncExternalStore` rather than an effect that sets state: this repo's
-    lint rules refuse `setState` inside an effect, correctly, and this is what
-    React offers instead for a value that differs between the server render and
-    the client. The store never changes, so `subscribe` returns a no-op and the
-    two snapshots are constants.
+    `useHydrated` is how, and its own docstring is where the mechanism is
+    written down -- it has a second caller now that the week chooses a day.
   */
-  const mounted = useSyncExternalStore(neverChanges, onClient, onServer);
+  const mounted = useHydrated();
 
   // The first series on the server and until a tab is chosen, always. See the
   // prop's docstring: picking the first one with data would be a rule a reader
