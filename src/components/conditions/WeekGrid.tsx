@@ -623,9 +623,16 @@ export function WeekGrid({
         <div className="mb-4">
           {rows.map((row) =>
             row.provenance === undefined ? null : (
+              /*
+                `surface="page"`: the grid sits on the page's own ground, not
+                on a reading card, and this line printed the card's colour on
+                it -- 1.03:1, invisible. It shipped that way, so the fix is
+                here rather than in the slice that noticed it.
+              */
               <ProvenanceLine
                 key={row.label}
                 label={row.label}
+                surface="page"
                 {...row.provenance}
               />
             ),

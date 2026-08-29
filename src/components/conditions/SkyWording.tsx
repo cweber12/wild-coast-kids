@@ -32,7 +32,7 @@
  * fallback is exactly where it would look reasonable.
  */
 
-import { CARD_MUTED } from "./cardText";
+import { PAGE_MUTED } from "./cardText";
 import { GRID_MODEL_NOTE, GRID_NETWORK, GRID_SOURCE } from "./gridCell";
 import { gridCellCaveat } from "./gridCell";
 import { ProvenanceLine } from "./ProvenanceLine";
@@ -106,7 +106,12 @@ export function SkyWording({ view, localDate }: SkyWordingProps) {
 
   if (resolved.kind === "absent") {
     return (
-      <p className={`leading-relaxed text-base ${CARD_MUTED}`}>
+      /* PAGE_MUTED, not the card's: this panel renders straight onto the
+         page ground, and the card's colour paints 1.03:1 there. An absence
+         nobody can see is the silent failure this whole component exists to
+         avoid -- it would say why there are no words in text the colour of
+         the paper. */
+      <p className={`leading-relaxed text-base ${PAGE_MUTED}`}>
         {resolved.reason}
       </p>
     );
@@ -137,6 +142,7 @@ export function SkyWording({ view, localDate }: SkyWordingProps) {
         asked once.
       */}
       <ProvenanceLine
+        surface="page"
         label="Sky, in words"
         source={GRID_SOURCE}
         network={GRID_NETWORK}

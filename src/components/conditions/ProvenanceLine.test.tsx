@@ -108,3 +108,34 @@ test("no label is rendered when a card has only one source", () => {
 
   expect(container.querySelector("span")).toBeNull();
 });
+
+/**
+ * The regression. This component hardcoded `CARD_MUTED` -- white at 55%, chosen
+ * and measured against the reading card's `bg-dark` -- and two callers render
+ * it on the page's own cream ground, where that paints 1.03:1. The line was in
+ * the DOM, correct, attributed and invisible.
+ *
+ * The surface is the caller's fact and cannot be inferred here, so it is asked
+ * for. The default stays the card, because that is where five of the six call
+ * sites are and a default that silently changed them would trade this bug for
+ * a quieter one.
+ */
+test("on the page's own ground it does not use the card's colour", () => {
+  const { container } = render(
+    <ProvenanceLine source={SOURCE} network="CDIP" surface="page" />,
+  );
+
+  const line = container.querySelector("p");
+  expect(line?.getAttribute("class")).toContain("text-fog");
+  expect(line?.getAttribute("class")).not.toContain("text-white");
+});
+
+test("on a card it keeps the colour measured against that card", () => {
+  const { container } = render(
+    <ProvenanceLine source={SOURCE} network="CDIP" />,
+  );
+
+  expect(container.querySelector("p")?.getAttribute("class")).toContain(
+    "text-white/55",
+  );
+});

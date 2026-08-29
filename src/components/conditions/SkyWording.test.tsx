@@ -194,4 +194,46 @@ describe("when there are no words", () => {
 
     expect(said.size).toBe(3);
   });
+
+  /**
+   * The regression. This panel renders onto the page's own cream ground, and
+   * both of these printed the reading card's colour there -- white at 55%,
+   * which paints 1.03:1 on cream. The words were in the DOM and the same
+   * colour as the paper.
+   *
+   * The absence half is the worse one and is asserted first: a beach outside
+   * the grid, or a quiet forecast endpoint, would have explained itself in
+   * invisible text, which is the silent failure this component's own docstring
+   * says it exists to prevent.
+   */
+  test("the absence is printed in a colour that is legible on the page", () => {
+    const { container } = render(
+      <SkyWording
+        view={
+          {
+            beachName: "Somewhere inland",
+            cell: null,
+            state: { kind: "no-cell", reason: "no cell was bound" },
+          } as SkyWordingView
+        }
+        localDate={TODAY}
+      />,
+    );
+
+    const said = container.querySelector("p");
+    expect(said?.getAttribute("class")).toContain("text-fog");
+    expect(said?.getAttribute("class")).not.toContain("text-white");
+  });
+
+  test("the attribution is printed in a colour that is legible on the page", () => {
+    const { container } = render(
+      <SkyWording view={view([DAYTIME])} localDate={TODAY} />,
+    );
+
+    const lines = [...container.querySelectorAll("p")].map((p) =>
+      p.getAttribute("class"),
+    );
+    expect(lines.some((cls) => cls?.includes("text-fog"))).toBe(true);
+    expect(lines.every((cls) => !cls?.includes("text-white"))).toBe(true);
+  });
 });

@@ -371,6 +371,26 @@ test("a row's source is printed once, not once per day", () => {
   expect(screen.getAllByText(/MOP line D0498/)).toHaveLength(1);
 });
 
+/**
+ * The regression, and it is older than the day view that found it.
+ *
+ * The grid sits on the page's own cream ground rather than on a reading card,
+ * and `ProvenanceLine` printed the card's colour unconditionally -- white at
+ * 55%, which paints #fdfcfb on #faf8f5, a measured 1.03:1. Both of these lines
+ * shipped invisible. Nothing was missing and nothing errored; the text was the
+ * colour of the paper, which is why no gate and no reader reported it.
+ */
+test("a row's source is printed in a colour that is legible on the page", () => {
+  const { container } = renderGrid({ rows: [TIDE_ROW, WAVE_ROW] });
+
+  const line = [...container.querySelectorAll("p")].find((each) =>
+    each.textContent?.includes("MOP line D0498"),
+  );
+
+  expect(line?.getAttribute("class")).toContain("text-fog");
+  expect(line?.getAttribute("class")).not.toContain("text-white");
+});
+
 test("the source sits under the days, not inside them", () => {
   const { container } = renderGrid({ rows: [TIDE_ROW, WAVE_ROW] });
 
