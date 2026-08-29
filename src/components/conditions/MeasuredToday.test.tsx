@@ -191,6 +191,39 @@ test("a buoy reporting no water temperature says so rather than omitting it", ()
   expect(screen.getByText("Water")).toBeDefined();
 });
 
+/**
+ * The height bands, pinned the way the temperature and wind bands beside them
+ * already were. They are this site's own wording for a published measurement
+ * rather than a standard, so nothing upstream asserts them and this is the only
+ * place they can be.
+ *
+ * Two of the five were unasserted while this lived on the wave card, and the
+ * two were the ends -- flat water and a large sea, which are the readings a
+ * parent is most likely to be checking for. Added here rather than left as they
+ * were found.
+ */
+test("every wave height band has its own words", () => {
+  const bands: [number, string][] = [
+    [0.4, "close to flat"],
+    [1.5, "about knee to thigh high"],
+    [2.62, "about waist high"],
+    [3.8, "overhead for a child"],
+    [6.2, "large"],
+  ];
+
+  for (const [heightFt, words] of bands) {
+    const { unmount } = render(
+      <MeasuredToday
+        when="today"
+        readings={readings({ waves: { state: { ...WAVE_READING, heightFt } } })}
+      />,
+    );
+
+    expect(screen.getByText(`${words}.`)).toBeDefined();
+    unmount();
+  }
+});
+
 test("a nearby buoy is credited without a distance", () => {
   render(<MeasuredToday when="today" readings={readings()} />);
 

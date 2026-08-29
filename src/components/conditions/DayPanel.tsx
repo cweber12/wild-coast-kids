@@ -325,9 +325,9 @@ export async function DayPanel({ slug }: { slug: string }) {
     /*
       Tide first, always, and the order is the tab order.
 
-      It is the page's lead product -- the first row of the week and the first
-      card above it -- and it is what a reader without a script gets, since the
-      server renders the first tab. Reordering to put a series with data first
+      It is the page's lead product -- the first row of the week above -- and it
+      is what a reader without a script gets, since the server renders the first
+      tab. Reordering to put a series with data first
       would be a rule nobody could see from the page.
     */
     const series: HourSeries[] = [

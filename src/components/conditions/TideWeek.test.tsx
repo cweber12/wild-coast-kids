@@ -25,10 +25,10 @@ test("a reading leads with the daylight low, time first", () => {
  * header now, so there is no second figure for it to distinguish this one
  * from.
  *
- * The figure is not gone from the site: `TideToday` prints "Lowest all day"
- * for today, and `WeekPanel` says in a sentence beneath the grid where the
- * other six went. Asserted here as an absence because restoring it will look
- * like restoring information.
+ * The figure is not gone from the site: the day view below draws all twenty-four
+ * hours with night shaded, so every day's overnight low is there as a dip, and
+ * `WeekPanel` says so in a sentence beneath the grid. Asserted here as an
+ * absence because restoring it will look like restoring information.
  */
 test("the day's own lowest is not in this cell", () => {
   const { container } = render(
@@ -43,8 +43,8 @@ test("the day's own lowest is not in this cell", () => {
 });
 
 test("a negative height keeps its sign, which is the figure a tidepooler reads", () => {
-  // Rounded to one decimal, the same as the now-band's card, so the two places
-  // this station's height appears cannot quote it differently.
+  // Rounded to one decimal, the same as the day chart's own axis, so the two
+  // places this station's height appears cannot quote it differently.
   render(
     <TideWeek
       state={{
@@ -120,7 +120,7 @@ test("a day the window did not cover says so rather than rendering a blank", () 
 });
 
 /**
- * ADR-0015. The row carried 🐚 to match the now-band's card, and at the 10px a
+ * ADR-0015. The row carried 🐚 to match the tide card the page then had, and at the 10px a
  * week label is set in it rendered as a grey smudge on the pale cell -- the
  * exact pale-on-pale failure the card was given a dark surface to escape. The
  * row is named in words instead, so there is no glyph here to keep in step.

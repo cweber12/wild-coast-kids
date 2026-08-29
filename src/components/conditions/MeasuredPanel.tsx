@@ -1,8 +1,8 @@
 /**
  * The seam between the two instruments and the markup: read, render.
  *
- * The same thin shape `TidePanel` established and `WeekPanel` and `DayPanel`
- * follow. Everything with a judgement in it sits on one side or the other,
+ * The same thin shape `WeekPanel` and `DayPanel` keep. Everything with a
+ * judgement in it sits on one side or the other,
  * where it can be tested without a network -- composing the readings is
  * `lib/conditions.ts` and the wording is `MeasuredToday`.
  *

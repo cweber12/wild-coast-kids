@@ -30,7 +30,7 @@ export const GRID_NETWORK = "National Weather Service, San Diego";
  * card there is no measurement beside this for a reader to confuse it with. The
  * clause is here anyway, because the row sits under a tide row of astronomical
  * predictions and beside a wave row of model output, and "forecast" is the word
- * that separates all three from the readings on the cards above.
+ * that separates all three from the measurements in the day below.
  */
 export const GRID_MODEL_NOTE = "a forecast, not a reading taken at the beach";
 

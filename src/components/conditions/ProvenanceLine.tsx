@@ -16,21 +16,22 @@
  *
  * **The distance is worded here, and rounded by the caller.** Those are two
  * decisions and they were handed out as one. `distance` arrived "already
- * worded by the caller", which is right for the rounding -- `TideToday`'s 5 km
- * threshold, `WavesToday`'s 10 km one and `WindToday`'s sub-10 km decimal each
- * have a reason recorded where they are made -- and wrong for the phrasing,
- * which drifted immediately into four wordings of one fact across three
- * components. On `fiesta-island`, where air and sky bind to the same station,
+ * worded by the caller", which is right for the rounding -- the buoy's 10 km
+ * threshold and the air station's sub-10 km decimal each have a reason
+ * recorded where they are made -- and wrong for the phrasing, which drifted
+ * immediately into four wordings of one fact across three components. On
+ * `fiesta-island`, where air and sky bound to the same station,
  * one card printed "San Diego Airport · 4.7 km from this beach" and "San Diego
  * Airport · 4.7 km away" 80px apart. So this takes the number and prints the
  * sentence: same drift `ReadingCard` and `ReservedSlot` both cite in their
  * docstrings as the reason to share a component at all.
  *
- * **The note is not decoration.** Some stations are far enough away that the
- * distance alone understates the situation, and `TideToday` records why that is
- * disclosed rather than buried: it "is the difference between a prediction for
- * this shore and the nearest one anybody publishes". A caller passes that
- * clause here rather than dropping it.
+ * **The note is not decoration.** Some sources are far enough away that the
+ * distance alone understates the situation. The tide card recorded why that is
+ * disclosed rather than buried -- it "is the difference between a prediction for
+ * this shore and the nearest one anybody publishes" -- and the MOP line's own
+ * clause carries the same weight now that the card has gone. A caller passes
+ * that clause here rather than dropping it.
  */
 
 import { CARD_MUTED, PAGE_MUTED } from "./cardText";
@@ -74,9 +75,10 @@ type ProvenanceLineProps = {
    * Nothing failed: the markup was right, the attribution was right, and the
    * text was the colour of the paper.
    *
-   * `"card"` by default because five of the six call sites are inside
-   * `ReadingCard`, and a default that changed them would trade a visible bug
-   * for a quiet one. A caller outside a card says so.
+   * `"card"` by default because that is where this component started and where
+   * the measured block still renders it, and a default that changed those would
+   * trade a visible bug for a quiet one. A caller outside a card says so, and
+   * two of the four call sites now do.
    */
   surface?: "card" | "page";
 };

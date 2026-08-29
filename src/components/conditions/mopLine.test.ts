@@ -24,7 +24,7 @@ describe("mopLineDistanceKm", () => {
     expect(mopLineDistanceKm(910)).toBe("0.9");
   });
 
-  test("withholds nothing above a threshold, unlike the now-cards", () => {
+  test("withholds nothing above a threshold, unlike the measured cards", () => {
     // The buoy and station cards hide a distance under theirs because it is
     // noise beside the reading. This one is the answer to the question the
     // forecast invites: is the model's point nearer than the buoy?

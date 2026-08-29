@@ -1,7 +1,8 @@
 /**
  * The seam between the reads and the week grid: read, compose, render.
  *
- * The same thin shape `TidePanel` established, with one addition it earns —
+ * The same thin shape every panel on this page keeps, with one addition it
+ * earns —
  * turning view models into grid rows. That mapping is here rather than in
  * `WeekGrid` because the grid must not know what a tide is, and it is here
  * rather than in `lib/conditions.ts` because which glyph marks a row and what a
@@ -351,13 +352,25 @@ export async function WeekPanel({ slug }: { slug: string }) {
   */
   notes.push(
     "This week shows what falls between sunrise and sunset. Lows and swells " +
-      "overnight are real and often bigger — today's are on the cards above.",
+      "overnight are real and often bigger — the day below draws the whole " +
+      "twenty-four hours, with night shaded.",
   );
 
+  /*
+    The upstream reason is printed here now rather than pointed at.
+
+    It used to say "the card above says what went wrong", and that was true
+    while the tide card stood above the grid: the card shared this exact
+    request, so it carried the detail behind its own disclosure and repeating
+    it here would have been one outage described twice. The card is gone with
+    the rest of the slab, and a sentence pointing at nothing is worse than no
+    sentence -- so this one carries the detail, in the shape `DayPanel`'s
+    `absenceFor` already uses for the same kind of failure.
+  */
   if (view.state.kind === "unavailable") {
     notes.push(
       "We could not get this week's tide predictions from NOAA just now. " +
-        "Nothing is wrong with the beach — the card above says what went wrong.",
+        `Nothing is wrong with the beach. ${view.state.detail}`,
     );
   }
   /*

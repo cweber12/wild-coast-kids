@@ -410,6 +410,16 @@ test("a NOAA outage costs the tide row, not the whole grid", async () => {
   render(await WeekPanel({ slug: "la-jolla-shores-beach" }));
 
   expect(screen.getByText(/could not get this week/i)).toBeDefined();
+  // The upstream reason, printed rather than pointed at. This note used to say
+  // "the card above says what went wrong", which was true while the tide card
+  // shared this request and stood above the grid. That card is gone, so a note
+  // that still delegated would leave the only account of the outage nowhere on
+  // the page -- the hour-by-hour tab below is a different request and can be
+  // perfectly healthy while this one is not.
+  expect(
+    screen.getByText(/NOAA returned HTTP 503 for station 9410230/),
+  ).toBeDefined();
+  expect(screen.queryByText(/the card above/)).toBeNull();
   // The reason the columns come from the daylight read: it is computed here and
   // cannot fail, so the week still stands and still answers a question.
   expect(screen.getByText("Tue, Aug 18")).toBeDefined();
@@ -531,7 +541,7 @@ test("the wave row is attributed once, beneath the grid, not seven times", async
     "CDIP, Scripps Institution of Oceanography",
   );
   // The distance is what lets a reader see the model's point is nearer than
-  // the buoy the card above reads. A decimal, because every line is under a km.
+  // the buoy the day panel below reads. A decimal, every line being under a km.
   expect(attributions[0].textContent).toContain("about 0.3 km from this beach");
   expect(attributions[0].textContent).toContain(
     "a model of the swell at 10 m depth, not a measurement",
@@ -721,7 +731,11 @@ test("the week says it shows only the daylight window, once", async () => {
     screen.getAllByText(/shows what falls between sunrise and sunset/i),
   ).toHaveLength(1);
   // And says where the missing figure went, rather than only that it is gone.
-  expect(screen.getByText(/today's are on the cards above/i)).toBeDefined();
+  // It pointed at the tide card until that card came off the page; it points
+  // at the day chart now, which is where an overnight low is actually drawn.
+  expect(
+    screen.getByText(/the day below draws the whole twenty-four hours/i),
+  ).toBeDefined();
 });
 
 test("the scope sentence stands whether or not a feed also failed", async () => {

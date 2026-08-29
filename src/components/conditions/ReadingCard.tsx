@@ -47,8 +47,8 @@
  *
  * **The figure slot is never empty.** A caller with nothing to lead on passes
  * null and gets no slot at all, rather than a blank one — an empty space where a
- * number goes reads as a fault, which is the same reason `WindToday` refuses to
- * render an empty primary.
+ * number goes reads as a fault, which is the same reason the air card refuses
+ * to render an empty primary.
  */
 
 import type { ReactNode } from "react";
@@ -58,13 +58,13 @@ type ReadingCardProps = {
   emoji: string;
   /** The heading's own id. Callers own it, because they own the anchor. */
   headingId: string;
-  /** What this reading is. Short: three of these sit side by side. */
+  /** What this reading is. Short: these sit side by side. */
   title: string;
   /**
    * Which beach, for the accessible name only.
    *
-   * Three cards in a row would each repeat the same beach, and a constant
-   * printed three times is noise — the page header and the chooser already say
+   * Cards in a row would each repeat the same beach, and a constant printed
+   * more than once is noise — the page header and the chooser already say
    * which beach this is. But a landmark named only "Air" loses that context for
    * someone navigating by region, who does not read the page top to bottom. So
    * it stays in the accessible name and leaves the layout.
@@ -97,9 +97,9 @@ export function ReadingCard({
   children,
 }: ReadingCardProps) {
   return (
-    // flex-col so a card fills the height of its row in the now-band. Three
-    // cards of unequal content otherwise leave two ragged surfaces beside the
-    // tallest, which reads as three different components rather than one row.
+    // flex-col so a card fills the height of its row in the measured block.
+    // Cards of unequal content otherwise leave a ragged surface beside the
+    // taller one, which reads as two different components rather than one row.
     <section
       aria-label={context !== null ? `${title} · ${context}` : title}
       className="rounded-card flex h-full flex-col bg-dark px-6 py-4"

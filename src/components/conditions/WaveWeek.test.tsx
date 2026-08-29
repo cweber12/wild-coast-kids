@@ -28,9 +28,9 @@ test("the daylight swell leads: time, then height and period", () => {
  * ADR-0023, the counterpart of the assertion in `TideWeek.test.tsx`. The day's
  * own biggest fell outside daylight on six of seven days measured -- four of
  * those at 11 PM or 2 AM -- so the cell carried it under an "all day" prefix
- * and the label had to say which figure was which. It is on the card above for
- * today and in the day view for the rest; here it is an absence, because
- * restoring it will look like restoring information.
+ * and the label had to say which figure was which. It is in the day view now,
+ * drawn rather than printed; here it is an absence, because restoring it will
+ * look like restoring information.
  */
 test("the day's own biggest is not in this cell", () => {
   const { container } = render(<WaveWeek day={{ daylight: DAYLIGHT }} />);
@@ -39,7 +39,7 @@ test("the day's own biggest is not in this cell", () => {
   expect(container.textContent).not.toContain("all day");
 });
 
-test("the height keeps one decimal, matching the card above", () => {
+test("the height keeps one decimal, matching the measured height below", () => {
   render(
     <WaveWeek
       day={{
