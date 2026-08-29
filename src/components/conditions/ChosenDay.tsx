@@ -2,8 +2,10 @@
  * The one day of the seven this region is showing.
  *
  * **It holds no reads and makes no choices about the data.** `DayPanel` does
- * all five reads on the server and hands over seven finished days -- their
- * series, their words, their absences. This picks one. That split is what lets
+ * every read on the server and hands over seven finished days -- their series,
+ * their words, their absences, and what was measured. This picks one. Today's
+ * measured block arrives as a suspended node rather than a resolved one, which
+ * changes nothing here: it is a `ReactNode` either way. That split is what lets
  * the whole week ship from the first render, which is the point: choosing
  * Thursday costs no request, because every feed here already returns the week
  * in one call and the page has been holding it since it loaded.
@@ -55,6 +57,17 @@ export type DayView = {
   series: HourSeries[];
   /** The publisher's own wording for this day, already rendered. */
   wording: ReactNode;
+  /**
+   * What was measured on this day, already rendered: two cards on today, and
+   * on the other six a sentence saying nothing has been measured about a day
+   * that has not happened.
+   *
+   * A finished node for the same reason `wording` is one. The measurements are
+   * server reads and this is a client component, so the alternative is fetching
+   * from the client -- and the decision about which day carries them belongs
+   * with the daylight read that knows which day is today, not here.
+   */
+  measured: ReactNode;
 };
 
 export function ChosenDay({ days }: { days: readonly DayView[] }) {
@@ -105,6 +118,18 @@ export function ChosenDay({ days }: { days: readonly DayView[] }) {
         cloudDescription={day.cloudDescription}
         nowMs={day.nowMs}
       />
+
+      {/*
+        Under the chart, which is the order the brief lists this region in:
+        heading, sky wording, chart, and today's measured block.
+
+        It also keeps the chart still. The block is two cards on today and one
+        sentence on the other six, so putting it above would move the plot up
+        and down the page as a reader steps across the week -- and comparing
+        one day's curve with the next is the whole reason the week is the
+        selector.
+      */}
+      <div className="mt-6">{day.measured}</div>
     </>
   );
 }

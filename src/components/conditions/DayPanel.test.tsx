@@ -1,6 +1,7 @@
 import { beforeEach, expect, test, vi } from "vitest";
 import { fireEvent, render, screen } from "@testing-library/react";
 import { localMidnightOf } from "@/lib/pacific-time";
+import { SelectedDayProvider, useSelectedDay } from "./selectedDay";
 
 const readSkyWording = vi.fn();
 const readDaylightWeek = vi.fn();
@@ -15,6 +16,21 @@ vi.mock("@/lib/conditions", () => ({
   readSkyWeek,
   readWaveWeek,
   readGridpointWeek,
+}));
+
+/**
+ * The measured block's own reads live behind `MeasuredPanel`, on a Suspense
+ * boundary of their own, so they are mocked at the component rather than at
+ * `@/lib/conditions` -- which is also what proves the boundary is real: a
+ * panel folded into `DayPanel`'s `Promise.all` could not be stubbed this way.
+ *
+ * It returns a promise that never settles by default, so the fallback renders
+ * and the loading line can be read. `measuredPanel.mockReturnValue` gives a
+ * test the resolved form.
+ */
+const measuredPanel = vi.fn();
+vi.mock("./MeasuredPanel", () => ({
+  MeasuredPanel: (props: { slug: string }) => measuredPanel(props),
 }));
 
 const { DayPanel } = await import("./DayPanel");
@@ -199,6 +215,8 @@ beforeEach(() => {
   readSkyWeek.mockReset();
   readWaveWeek.mockReset();
   readGridpointWeek.mockReset();
+  measuredPanel.mockReset();
+  measuredPanel.mockImplementation(() => <p>the measured block</p>);
   daylight([TODAY, TOMORROW]);
   tideWeek([TODAY, TOMORROW]);
   waveWeek([TODAY, TOMORROW]);
@@ -568,4 +586,104 @@ test("the four tabs are in the order the page leads with", async () => {
       tab.getAttribute("data-series-tab"),
     ),
   ).toEqual(["tide", "swell", "wind", "temperature"]);
+});
+
+/* =========================================================================
+ * The measured block
+ * ========================================================================= */
+
+/**
+ * A real click through the real provider, so the branch under test is the one
+ * a reader reaches by choosing a day in the week above. `WeekGrid` is the
+ * control on the page; this is the smallest thing that speaks its API, and it
+ * keeps this file from having to mount the grid to test the panel.
+ */
+function ChooseDay({ date }: { date: string }) {
+  const { choose } = useSelectedDay();
+  return (
+    <button type="button" onClick={() => choose(date)}>
+      choose that day
+    </button>
+  );
+}
+
+async function renderChoosing(date: string) {
+  const rendered = render(
+    <SelectedDayProvider>
+      <ChooseDay date={date} />
+      {await DayPanel({ slug: "la-jolla-shores-beach" })}
+    </SelectedDayProvider>,
+  );
+  fireEvent.click(screen.getByText("choose that day"));
+  return rendered;
+}
+
+test("today carries the measured block, and it is asked for this beach", async () => {
+  render(await DayPanel({ slug: "la-jolla-shores-beach" }));
+
+  expect(screen.getByText("the measured block")).toBeDefined();
+  expect(measuredPanel).toHaveBeenCalledWith({
+    slug: "la-jolla-shores-beach",
+  });
+});
+
+test("a day that has not happened says so rather than showing nothing", async () => {
+  // The other six get a sentence and no request at all. An empty region under
+  // a chart full of curves reads as a load that did not finish, which is the
+  // silent failure this page is built to avoid.
+  await renderChoosing(TOMORROW);
+
+  expect(screen.queryByText("the measured block")).toBeNull();
+  expect(
+    screen.getByText(/Nothing has been measured for Mon, Aug 17/),
+  ).toBeDefined();
+});
+
+test("the absence names the day, the way every other sentence here does", async () => {
+  // `WORDS` above takes a `when` for exactly this reason: "nothing has been
+  // measured today" printed under a heading reading `Mon, Aug 17` is not a
+  // hedge, it is false.
+  await renderChoosing(TOMORROW);
+
+  const sentence = screen.getByText(/Nothing has been measured/);
+  expect(sentence.textContent).not.toContain("today");
+  expect(sentence.textContent).toContain("Mon, Aug 17");
+});
+
+test("the measured block waits on its own boundary, not on the chart's", async () => {
+  // The two instruments are a second set of feeds and they draw no part of the
+  // plot. Folded into this panel's own `Promise.all`, a slow buoy would hold
+  // up a curve it has nothing to do with; on its own boundary it holds up
+  // itself, and the chart is already drawn behind the fallback.
+  measuredPanel.mockImplementation(() => {
+    throw new Promise(() => {});
+  });
+
+  const { container } = render(
+    await DayPanel({ slug: "la-jolla-shores-beach" }),
+  );
+
+  expect(
+    screen.getByText("Reading the buoy and the air station…"),
+  ).toBeDefined();
+  expect(curve(container)).not.toBeNull();
+});
+
+/**
+ * `CONTEXT.md`'s `Conditions` entry ends `_Avoid_: weather, forecast, surf
+ * report`, and a loading line is the easiest place on this page for one of
+ * those to reappear. `ConditionsSection.test.tsx` checks the fallbacks it owns;
+ * this one is nested inside the day region, where that check cannot see it.
+ */
+test("the measured block's loading line uses no word the glossary rejects", async () => {
+  measuredPanel.mockImplementation(() => {
+    throw new Promise(() => {});
+  });
+
+  render(await DayPanel({ slug: "la-jolla-shores-beach" }));
+
+  const line = screen.getByText(/^Reading /).textContent ?? "";
+  expect(line.toLowerCase()).not.toContain("weather");
+  expect(line.toLowerCase()).not.toContain("forecast");
+  expect(line.toLowerCase()).not.toContain("surf report");
 });
