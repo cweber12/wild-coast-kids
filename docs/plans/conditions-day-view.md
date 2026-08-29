@@ -322,6 +322,282 @@ thickening of the line. The mechanism starts earning its keep at the swell's
 now carries the whole day's hours beside its daylight `thirds`, which is the
 read ADR-0024's successor will want.
 
+## Addendum, 2026-08-28: the wash leaves the week cell
+
+Dated rather than woven in, per this repo's rule that a plan in flight gains
+addenda and never has its history rewritten. This one **does** change a decision
+above, which the 2026-08-28 addendum before it did not, so it is worth being
+exact about which half moved.
+
+**Reviewed on the page, the cloud wash on the sparkline read as confusing.**
+Asked what the shape at the top of each day was, the first reading was that the
+curve _was_ the cloud. Two grey layers of similar weight in a 21px frame have to
+be separated before either says anything, and the fact a reader takes from seven
+of these — which day is calmer, and whether the dip is at night — is carried
+entirely by the curve and the night bands.
+
+**"Cloud and daylight are layers, not tabs" is unchanged.** That decision is
+about what _kind_ of thing cloud is, and cloud is still a layer and still not a
+tab. What it never settled is at what _size_ a layer earns its place, and the
+answer is now: the day chart, not the week cell.
+
+**What did change is ADR-0025's "the same two background layers".** One layer is
+shared and one is not. Night is drawn at both zoom levels; cloud only where
+there is height for it. That is a weaker guarantee than "the sparkline and the
+chart are legible as the same instrument because the backgrounds never change",
+and the weakening is recorded in ADR-0026 rather than absorbed. What still holds
+the two together is the shared `SparkPoint` type and the shared night band.
+
+**#171's width ladder had already found this and it was not read that way.**
+Every row of that table from 110px down is a sentence about two grey layers
+being hard to tell apart — recorded as a fact about width, and at least as much
+a fact about there being two of them. `MIN_USEFUL_SPARK_WIDTH_PX` stays at 110
+as a bound rather than a fitted threshold: removing a competing layer cannot make
+the remaining one harder to see, and the floor does not bind at a 133px cell
+anyway.
+
+**The swell question this raises is not answered here.** Whether the week cell
+should show swell as well as tide — as a second shape, as a second line, or by
+following the day chart's selected tab — is decided in #172 alongside the tabs,
+because two of the three options only exist once the tabs do.
+
+## Addendum, 2026-08-28: what the day chart's review changed
+
+Dated rather than woven in. Three faults were found by rendering the chart
+rather than by reasoning about it, and one request reversed a recorded decision.
+
+**Cloud left the plot frame entirely, which is its third arrangement.** ADR-0026
+took the wash off the sparkline on the grounds that a 21px cell had no room for
+two grey fields. Built as a full-height wash on the day chart it had exactly the
+same fault, because the fault was never about height: night and cloud were two
+greys of similar weight over the same ground. Rebuilt as a strip inside the top
+of the frame it still crossed the night band, since night runs the plot's full
+height. Only a band _above_ the frame makes the two independent. It is labelled
+to the left and keyed with swatches against percentages — never words, because
+ADR-0024 measured a banded word contradicting the National Weather Service on
+three days of six, and since this PR the publisher's own wording prints directly
+above the chart, so the contradiction would now be visible in one glance.
+
+**Every axis label became markup.** An SVG `<text>` scales with the viewBox: a
+label reading 10px at 1536 renders about 4px at 375. Measured, and invisible to
+every test in the suite, because jsdom applies no stylesheets. The SVG now holds
+only geometry, which also keeps its scaling uniform so a mark stays a circle.
+
+**The chart wears the site's furniture**, which is where the brief says to
+answer "plain": the loud register belongs to the chrome and the plot stays
+quiet. It reuses the week grid's own today-cell treatment rather than inventing
+one. The single addition inside the frame is a fill under the curve, in the
+row's own colour — per product and never per value, which is what keeps it clear
+of ADR-0009.
+
+**The plot became interactive, and that reverses the brief.** See ADR-0027,
+which separates the two objections the original rule had bundled: hover is still
+refused, hiding is still refused, and interaction that only adds is now allowed
+under four stated conditions. **The rejection of scrubbed compass needles above
+still stands** — it survives on its own argument about meaning, not on the hover
+one, and #173 should read it as binding.
+
+**Measured on the built page**, 1536×639 and 375×812:
+
+|      | chart     | day region | labels | hour column |
+| ---- | --------- | ---------- | ------ | ----------- |
+| 1536 | 806 × 246 | 557        | 10px   | 33.6px      |
+| 375  | 283 × 87  | 434        | 10px   | 9.9px       |
+
+The chart's width is capped: uncapped it drew 440px tall at 1536, and a single
+curve does not want a third of a screen. The space that leaves on the right is
+where #173's map goes. **The 87px height at 375 is thin and is recorded rather
+than fixed** — one aspect ratio cannot serve 283px and 806px, and the tabs slice
+is where mobile behaviour is addressed.
+
+## Addendum, 2026-08-28: the two questions the tabs were waiting on
+
+Dated rather than woven in. Both were left open deliberately — one until the
+day chart existed, one until the ADR that binds it came due — and both are
+answered here before the tabs are built, because the second one decides how
+much of the page the tab state has to reach.
+
+**The cloud row keeps its thirds.** `.design/conditions-day-view/DESIGN_BRIEF.md`
+lists `SkyWeek` as _Modify — "Thirds give way to the cloud wash carried on every
+sparkline"_, and that is a conditional rather than a decision: **the condition
+expired.** ADR-0026 took the wash off the sparkline, so there is no wash on the
+week for the thirds to give way to, and cutting the row now would leave the week
+saying nothing at all about the sky.
+
+The duplication objection is real and is answered rather than dismissed. Once
+the week becomes the selector, the day chart's cloud band covers whichever day
+is chosen, so the thirds and the band do describe the same forecast. What the
+band cannot do is put Sunday's morning beside Tuesday's: it draws one day. That
+is the same argument that rejected **compress the week to a bare day strip**
+above — cross-day comparison is the week's entire job — and it is why two
+readings of one product at two zoom levels is the design rather than an
+oversight.
+
+So the ADR due at the end of this half supersedes **ADR-0024's reach and not its
+row**: the day view carries a curve where the week carries three means, and
+ADR-0024's own warning — that "anything that restores a single daylight figure
+to this row reverses this" — is untouched, because nothing is restored and
+nothing is removed.
+
+**The week's sparkline does not follow the selected tab, and that is the
+brief's third decision not to survive the page.** _Key Interactions_ says
+selecting a tab redraws "the foreground series and every sparkline in the week
+above, together — that simultaneity is the whole point of principle 1".
+
+It does not work, and the reason is the tab bar's home. The bar sits in the
+chart's own header band, **below** the week. On the wind tab the grid would
+draw seven wind curves sitting directly above figures reading `LOW TIDE 3:13 PM
+1.6 ft`, with nothing in the cell saying the shape had changed variable — and
+ADR-0023 measured that this cell has no room for a label, which is the whole
+reason the shape works there at all. `DaySpark` and ADR-0025 both put it in the
+same words: the shape draws the hours the figure beside it was selected _out
+of_. A shape that stops agreeing with the figures under it is not a second view
+of one instrument; it is a fourth product with no label.
+
+**Two alternatives were weighed rather than assumed.** _Move the tab bar above
+the week_, so it visibly governs both regions: rejected because the bar is the
+chart's own chrome, the week's rows are not tabbed, and it would put a control
+for the day panel above the region that selects the day. _Give the week a
+second shape for swell_, stacked and labelled by the row it sits over, so a
+shape always agrees with a figure: rejected on height — about 30px back onto a
+grid ADR-0023 and ADR-0026 each spent a decision shortening, to gain a
+comparison the swell row's figures already support.
+
+**What this costs is principle 1, narrowed a third time, and it is worth
+stating plainly.** ADR-0025 claimed one series shape and the same two
+background layers. ADR-0026 corrected that to one shared background layer and
+one not. This narrows it again: **the two plots share a point type, a night
+band, and one product.** The week is the tide's shape at a glance; the chart is
+four products at reading size. What holds them together is `SparkPoint`,
+`dayFrame` and the tide — and that is a smaller claim than the brief made,
+recorded here rather than absorbed.
+
+## Addendum, 2026-08-28: what the tabs measured
+
+Dated rather than woven in. Four figures, one of which corrects a figure in the
+addendum above.
+
+**The recorded 375 measurement does not reproduce, and it was never this work's
+to lose.** The addendum on the day chart's review records the plot as `283 × 87`
+at 375. Measured again on the built page — first on this branch, then on the
+base commit before any of this landed, with the same script — both give
+**237 × 72**. The base was measured first, deliberately: a height regression is
+only this work's if the branch it came from did not already have it, and this
+one did. The earlier figure is left where it is, as the dated record it is; what
+is corrected is the belief that the chart at 375 was 87px, because the decision
+this slice was handed rests on that number and 72 is a worse problem than 87.
+
+**One aspect ratio genuinely cannot serve this range, which the plan asserted
+and this measured.** The frame is 3.27:1, so its height is whatever its width
+divides to:
+
+| viewport | plot      | tab bar          |
+| -------- | --------- | ---------------- |
+| 1536     | 806 × 246 | 4 × 213px, 1 row |
+| 768      | 582 × 178 | 4 × 157px, 1 row |
+| 375      | 237 × 72  | 4 × 70px, 1 row  |
+| 320      | 182 × 56  | 4 × 57px, 1 row  |
+
+A ratio flat enough to hold 246px at 806 wide gives 72px at 237 wide; a ratio
+tall enough to give a phone a chart draws a third of a laptop screen. There is
+no third number.
+
+**So the frame changes shape rather than size, which is what the brief asked
+for.** Below `sm` it is 2:1 and the drawing stretches to fill it; above `sm`
+nothing happens at all, because `h-auto` takes the box's height from the viewBox
+and the box's aspect already _is_ the drawing's. Re-measured after the change:
+**1536 stays 806 × 246 exactly**, 768 stays 582 × 178, 375 goes to **237 × 119**
+and 320 to **182 × 91**. The frame reviewed at 1536 is untouched, which is the
+property that made this the version worth building rather than capping the
+chart's width — capping would have narrowed the desktop plot by a third now, to
+reserve space for a map that has not been built yet.
+
+The cost is `preserveAspectRatio="none"` on the plot, which this component's own
+docstring had ruled out on the grounds that a published point should stay a
+circle. Below `sm` a mark renders about 2px across and 3.3px tall rather than
+2px square, and two pixels is not a shape anybody reads; above `sm` there is no
+stretch at all. The 72px frame was the larger loss.
+
+**The brief's mobile sentence is wrong about the tabs, and measurably so.** It
+says "four tabs at 44px touch targets do not fit one row at 375px". ADR-0004's
+floor is a _height_ — `TOUCH_TARGET` is `min-h-11` and nothing else — and four
+tabs render 70 × 44px in one row at 375 with no overflow, 57 × 44px at 320. The
+sentence was reasoning about a 44px width nothing in this repo asks for.
+
+**One thing the screenshots found that no measurement would have.** At 375 the
+tide's twenty-four published-point marks — a 2px dot inside a 5px white ring,
+9.9px apart — read as gaps in the curve rather than as marks on it, and the
+curve came out looking dashed. On this plot dashed already means something else:
+the "now" rule is dashed exactly so it cannot be mistaken for a series. So a
+series with more marks than the width can separate drops them below `sm`, at a
+threshold the spacing sets rather than taste.
+
+It is a degrade rather than a loss, and the direction is what makes it one: the
+series that trip it are the hourly ones, whose marks say "hourly" — the least
+surprising cadence on the page. The swell's eight and a gridpoint block's four
+stay under the threshold and keep their marks at every width, so the distinction
+a reader actually needs, between an hourly model and a coarser one, is the one
+that survives. **This is the third arrangement of the marks and the second time
+a review of the rendered thing moved them** — #171 recorded that they are
+invisible in a 21px sparkline and correctly so.
+
+## Addendum, 2026-08-29: #172 ships in two pull requests
+
+Dated rather than woven in. **The Sequencing section below says three pull
+requests. It is four**, and the fourth is the second half of #172. The issue is
+not re-cut and no slice changed; what changed is how much of it arrives at once.
+
+**The measurement that decided it.** At the commit that finished the week
+coupling the branch stood 13 commits and 9,559 changed lines against
+`origin/main` — 3,461 of source, 3,284 of test, 2,300 of captured fixture and
+514 of prose. CLAUDE.md's guide is "~400 changed lines or ~5 slices", at which
+point a plan should be split at a dependency boundary rather than shipped whole.
+Six of `TASKS.md`'s nine PR 2 tasks were done at that point and no single one of
+them overran: the list was scoped past the guide when it was written, which is
+worth saying because it means the split is not a slice going wrong.
+
+**Where it is cut.** After _the week becomes the selector_ — the point at which
+the region is whole. The day panel draws four series for any of seven days, the
+week chooses which, and the page works with nothing further landing.
+
+That boundary is the only one available. Cutting earlier separates the chart
+from its tabs, or the tabs from the week that drives them, and neither half
+reads as a finished thing alone: `HourChart` with one tab was shippable while it
+was all that existed and is not shippable now, because the branch would be
+offering a component it has already outgrown.
+
+What is left over is not chart work at all. `MeasuredToday` and the removal of
+the slab move three measurements into the day and take three cards off the page
+— a change to what the page _is_, rather than to what the day panel can draw,
+and reviewable on its own terms by somebody who has already accepted the first.
+
+**Which ADR goes with which half, and it is not an even split.**
+
+_The day carries a curve, and the week keeps its thirds_ goes with the first
+half. Everything it records is built there: the chart's cloud band, and
+ADR-0024's deferred `shortForecast` read, which the sky-wording slice took.
+Holding it back would ship the discharge of a deferred decision with nothing in
+`docs/adr/` saying it had been discharged.
+
+_A forecast may sit beside a measurement without displacing it_ goes with the
+second. It records a decision `MeasuredToday` takes, and written before that
+component exists it would be an ADR about code nobody can read.
+
+**That leaves a gap in the first half, named here rather than found later.**
+From the moment the wind and temperature tabs land, the page carries two winds
+and two air temperatures — the cell's forecast in the day panel, the station's
+measurement in the third card — and no ADR explains why both. That is exactly
+the duplication ADR-0019 deferred, and the decision is genuinely not taken until
+something is built that could have displaced one of them. It is recorded here
+and in the first PR's body until then.
+
+**The second half does not start until the first merges.** CLAUDE.md: "Do not
+start an issue whose blocker has not merged." The first half's code is the
+ground the remaining slices stand on — `MeasuredToday` has to fit the seven-day
+`DayView` this half introduced, not the today-only region `TASKS.md` was written
+against — and rebasing half-finished work onto a moved blocker is how a verified
+slice quietly stops being verified.
+
 ## Out of scope
 
 The sighting layer (#121). Visibility, in any form. A rain tab. A

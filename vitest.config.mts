@@ -160,11 +160,43 @@ export default defineConfig({
       // Nothing new is excluded and nothing was excluded to reach these. The
       // six 0% entry-plumbing files named above still drag all four figures
       // down in plain sight.
+      //
+      // RAISED 2026-08-29, all four, by the day view's second slice (#172,
+      // first half). The same easy case as the entry above and the same
+      // signature -- all four moving the same way, both halves of every ratio
+      // growing, and the numerators growing faster:
+      //
+      //   statements 2377/2689  86.91 -> 88.39
+      //   branches   1608/1818  88.09 -> 88.44
+      //   functions   567/604   93.21 -> 93.87
+      //   lines      2154/2446  86.57 -> 88.06
+      //
+      // Nine files arrived and seven were modified, and the ones that moved
+      // these figures are the ones with rules in them: nws-forecast.ts, the
+      // shortForecast parser (97.3% statements); nws-gridpoint.ts, extended
+      // from one series to five (97.8%); conditions.ts, which gained
+      // readSkyWording and the day-shaped gridpoint and wave reads (98.5%);
+      // and the four presentational components HourChart, DayPanel,
+      // SkyWording and ChosenDay, which are pure by construction and testable
+      // without a network for that reason. HourChart alone is 1,031 lines at
+      // 99.0% statements.
+      //
+      // **Branches rose least of the four, and that is worth knowing rather
+      // than smoothing over.** They went 87.62 -> 88.09 -> 88.44 across the
+      // two slices while statements went 86.16 -> 88.39, because a chart is a
+      // large amount of straight-line drawing hung off a small number of
+      // decisions, and every absence path this work added -- four tabs' worth
+      // of no-station, unavailable, out-of-reach and declared-but-empty -- is
+      // a branch that has to be reached by its own test to count. They all
+      // are; the ratio moves slowly because the denominator moved too.
+      //
+      // Nothing new is excluded. The same six 0% files still drag all four
+      // down, and this slice added none.
       thresholds: {
-        statements: 86.91,
-        branches: 88.09,
-        functions: 93.21,
-        lines: 86.57,
+        statements: 88.39,
+        branches: 88.44,
+        functions: 93.87,
+        lines: 88.06,
       },
     },
   },

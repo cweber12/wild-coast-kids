@@ -32,10 +32,17 @@ import {
 } from "./pacific-time";
 import { lowestLowBetween, lowestLowOn } from "./tide-day";
 import type { MopWaveRow } from "./mop-forecast";
-import type { SkyCoverHour, WeatherHour } from "./nws-gridpoint";
+import type {
+  GridpointHour,
+  GridpointSeries,
+  SkyCoverHour,
+  WeatherHour,
+} from "./nws-gridpoint";
+import type { ForecastPeriod } from "./nws-forecast";
 import {
   fetchGridForecast,
   fetchHourlyTide,
+  fetchSkyWording,
   fetchLatestNdbcAir,
   fetchLatestObservation,
   fetchLatestWave,
@@ -663,6 +670,21 @@ export interface DaylightWeekDay extends WeekDayFrame {
  */
 export interface DaylightWeekView {
   beachName: string;
+  /**
+   * The instant these days were computed from -- "now", as the render saw it.
+   *
+   * Carried out rather than left for a consumer to ask a clock for, because a
+   * component that called `Date.now()` would be reading one during render:
+   * impure, refused by this repo's lint rules, and untestable without faking
+   * time. The day chart's "now" line is the only thing that wants it so far,
+   * and it wants exactly this instant -- the one the days themselves were
+   * derived from -- so that the line cannot land on a day the array does not
+   * think is today.
+   *
+   * It is this read that carries it because this is the read that cannot fail.
+   * A "now" that arrived with the tide would vanish when NOAA did.
+   */
+  atMs: number;
   days: DaylightWeekDay[];
 }
 
@@ -693,6 +715,7 @@ export function readDaylightWeek(
 
   return {
     beachName: beach.name,
+    atMs: nowMs,
     days: weekOfDays(nowMs).map((frame) => {
       const { sunriseMs, sunsetMs } = daylight.get(frame.localDate)!;
       return {
@@ -971,6 +994,25 @@ export interface WaveReading {
 }
 
 /**
+ * One hour of a drawn swell series.
+ *
+ * **`published` is the whole reason this is not a `TideHeight`.** NOAA answers
+ * `interval=h` with a height for every hour, so every point of a tide curve is
+ * its own; CDIP publishes on a three-hour grid, so five hours in every eight
+ * here are a line this repo drew between two of theirs. The flag is what lets a
+ * plot mark one and not the other, which is the difference between showing a
+ * reader the model's resolution and telling them about it.
+ */
+export interface WaveHour {
+  /** Start of the hour, epoch milliseconds UTC. */
+  atMs: number;
+  /** Significant wave height in feet, CDIP's own or interpolated between two. */
+  heightFt: number;
+  /** True when CDIP issued an estimate for this instant. */
+  published: boolean;
+}
+
+/**
  * One day of the week grid's wave row: the swell a reader can be there for, and
  * the day's own if that is a different estimate.
  *
@@ -982,6 +1024,21 @@ export interface WaveReading {
 export interface WaveWeekDay extends WeekDayFrame {
   daylight: WaveReading | null;
   allDay: WaveReading | null;
+  /**
+   * Every hour of this day the forecast covers, oldest first, for the day
+   * chart's swell tab.
+   *
+   * **The whole day, where `daylight` and `allDay` are selections out of it** —
+   * the same relationship `TideHourlyDay.hours` has to the figure ADR-0023
+   * selects, and the reason the curve does not reverse that decision. It is
+   * built across the run rather than from this day's own rows, because in
+   * Pacific time CDIP's grid lands at 02:00 and the hours before it are
+   * interpolated from the previous day's last estimate.
+   *
+   * Ragged rather than padded: the far end of the week runs out of forecast,
+   * and a padded hour would be a drawn zero.
+   */
+  hours: readonly WaveHour[];
 }
 
 /**
@@ -1039,6 +1096,75 @@ function rowsByDate(
     const standing = byDate.get(localDate);
     if (standing === undefined) byDate.set(localDate, [row]);
     else standing.push(row);
+  }
+  return byDate;
+}
+
+/**
+ * How far apart CDIP's estimates stand, and therefore how wide a gap this repo
+ * is willing to draw across.
+ *
+ * Three hours. The committed fixture publishes at 00, 03, 06, 09, 12, 15, 18
+ * and 21 UTC without exception, and MOP's own documentation calls it a
+ * three-hour grid. It is named here rather than derived from the run because a
+ * run whose middle was flagged out would derive the wrong cadence from its own
+ * damage — which is exactly the case this constant exists to catch.
+ */
+const MOP_STEP_MS = 3 * 3_600_000;
+
+/**
+ * The run as hourly points: CDIP's own estimates, and the hours between them.
+ *
+ * **A gap wider than the grid is not bridged.** `flaggedOut` counts estimates
+ * this repo refused, and refusing one leaves a six- or nine-hour hole in the
+ * run. Filling it would put a value on every hour of a stretch the model said
+ * nothing usable about, and the day chart would let a reader select one and
+ * read it off. The curve still crosses the hole — a polyline joins whatever it
+ * is given, and the same is true of the tide — but nothing inside it claims a
+ * figure.
+ *
+ * **The hours are whole hours of Pacific time and that is not a coincidence.**
+ * The grid is UTC and this coast's offset is a whole number of hours, so every
+ * published estimate already lands on the hour a reader's clock shows. Nothing
+ * here rounds an instant; if that offset ever stopped being whole, the
+ * published points would simply keep their own instants and the interpolated
+ * ones would fall between them.
+ */
+function hourlyWaveHeights(rows: readonly MopWaveRow[]): WaveHour[] {
+  const hours: WaveHour[] = [];
+
+  rows.forEach((row, index) => {
+    hours.push({ atMs: row.atMs, heightFt: row.heightFt, published: true });
+
+    const next = rows[index + 1];
+    if (next === undefined) return;
+
+    const spanMs = next.atMs - row.atMs;
+    if (spanMs <= 0 || spanMs > MOP_STEP_MS) return;
+
+    for (let atMs = row.atMs + 3_600_000; atMs < next.atMs; atMs += 3_600_000) {
+      const through = (atMs - row.atMs) / spanMs;
+      hours.push({
+        atMs,
+        heightFt: row.heightFt + (next.heightFt - row.heightFt) * through,
+        published: false,
+      });
+    }
+  });
+
+  return hours.sort((a, b) => a.atMs - b.atMs);
+}
+
+/** Every hour of the interpolated run, keyed by the Pacific date it falls on. */
+function waveHoursByDate(
+  hours: readonly WaveHour[],
+): ReadonlyMap<string, WaveHour[]> {
+  const byDate = new Map<string, WaveHour[]>();
+  for (const hour of hours) {
+    const localDate = localDateOf(hour.atMs);
+    const standing = byDate.get(localDate);
+    if (standing === undefined) byDate.set(localDate, [hour]);
+    else standing.push(hour);
   }
   return byDate;
 }
@@ -1158,6 +1284,12 @@ export async function readWaveWeek(
   const byDate = rowsByDate(result.forecast.rows);
   const daylight = daylightByDate(beach, nowMs);
 
+  // Interpolated across the whole run and bucketed after, not bucketed and
+  // interpolated per day. In Pacific time the grid lands at 02:00, so a day's
+  // first two hours are drawn from the previous day's last estimate and a
+  // per-day pass would leave every morning short.
+  const hoursByDate = waveHoursByDate(hourlyWaveHeights(result.forecast.rows));
+
   // The slack in the window and the forecast's own reach both put estimates
   // outside the seven columns. Building from `weekOfDays` rather than from the
   // rows is what keeps this row agreeing with the tide and daylight rows about
@@ -1167,7 +1299,15 @@ export async function readWaveWeek(
       byDate.get(frame.localDate) ?? [],
       daylight.get(frame.localDate)!,
     );
-    return readings === null ? [] : [{ ...frame, ...readings }];
+    return readings === null
+      ? []
+      : [
+          {
+            ...frame,
+            ...readings,
+            hours: hoursByDate.get(frame.localDate) ?? [],
+          },
+        ];
   });
 
   return { ...binding, state: { kind: "week", days } };
@@ -1396,6 +1536,333 @@ export async function readSkyWeek(
       daylight.get(frame.localDate)!,
     );
     return reading === null ? [] : [{ ...frame, hours, ...reading }];
+  });
+
+  return { ...binding, state: { kind: "week", days } };
+}
+
+/* =========================================================================
+ * The week's wind and air temperature, from the same forecast cell
+ * ========================================================================= */
+
+/**
+ * One of the cell's series for one day: the hours, or the reason there are
+ * none.
+ *
+ * **Two absences that must not be collapsed.** `absent` is the parser's word
+ * for a series this cell does not forecast at all — declared and empty, which
+ * is what `visibility` does at every cell on every request. An empty `hours`
+ * inside `published` is a day the run did not reach, which is a forecast doing
+ * what forecasts do. A plot owes a different sentence to each, and a plot that
+ * drew a flat line at zero for either would make the strongest claim available
+ * out of the weakest fact it had.
+ */
+export type GridDaySeries =
+  | { kind: "published"; hours: readonly GridpointHour[] }
+  | { kind: "absent"; reason: string };
+
+/** One day of the cell's wind and air temperature. */
+export interface GridpointWeekDay extends WeekDayFrame {
+  /** Wind speed in miles per hour. */
+  windMph: GridDaySeries;
+  /** Air temperature in Fahrenheit. */
+  airTempF: GridDaySeries;
+}
+
+/**
+ * What the day chart's wind and temperature tabs are drawn from.
+ *
+ * **A sibling of `readSkyWeek` rather than a field on it**, and the split is
+ * ADR-0020's rather than a preference. That decision took the sky off the air
+ * card because requiring one source to supply every value let the scarcest of
+ * them decide for the rest; a `SkyWeekView` carrying the wind would put the
+ * same coupling back one layer up, under a name that says sky.
+ *
+ * **It costs no second request.** `fetchGridForecast` is a `next.revalidate`
+ * fetch for a URL this page already asks for, so the two reads share one
+ * response and one outage. What they do not share is a shape: this one is
+ * ragged per series, where the cloud row is ragged per day.
+ */
+export interface GridpointWeekView {
+  beachName: string;
+  /** null exactly when the state is `no-cell`. */
+  cell: { id: string; elevationM: number | null } | null;
+  state:
+    | { kind: "week"; days: GridpointWeekDay[] }
+    | { kind: "no-cell"; reason: string }
+    | { kind: "unavailable"; detail: string; drift: boolean };
+}
+
+/** One series' hours, bucketed by the Pacific date each falls on. */
+function gridHoursByDate(
+  series: GridpointSeries,
+): ReadonlyMap<string, GridpointHour[]> {
+  const byDate = new Map<string, GridpointHour[]>();
+  if (series.kind === "absent") return byDate;
+  for (const hour of series.hours) {
+    const localDate = localDateOf(hour.atMs);
+    const standing = byDate.get(localDate);
+    if (standing === undefined) byDate.set(localDate, [hour]);
+    else standing.push(hour);
+  }
+  return byDate;
+}
+
+/**
+ * One day's slice of one series, keeping the parser's absence where there is
+ * one.
+ *
+ * A cell that does not forecast the wind does not forecast it on Tuesday
+ * either, so the reason is repeated on every day rather than being hoisted to
+ * the view: the consumer draws one day at a time and the sentence has to be
+ * where it is read.
+ */
+function gridDaySeries(
+  series: GridpointSeries,
+  byDate: ReadonlyMap<string, GridpointHour[]>,
+  localDate: string,
+): GridDaySeries {
+  return series.kind === "absent"
+    ? series
+    : { kind: "published", hours: byDate.get(localDate) ?? [] };
+}
+
+/**
+ * Read a week of the cell's wind and air temperature for one beach.
+ *
+ * **Every day is returned, including the ones with no hours**, which is
+ * `readHourlyTide`'s treatment rather than `readSkyWeek`'s. The cloud row draws
+ * no cell where it has nothing; a day chart always has a day to draw and owes
+ * the reader a sentence about the tab they chose.
+ *
+ * Throws only when the slug is not in the inventory.
+ */
+export async function readGridpointWeek(
+  slug: string,
+  nowMs: number = Date.now(),
+): Promise<GridpointWeekView> {
+  const beach = beachBySlug(slug);
+  if (!beach) {
+    throw new Error(
+      `readGridpointWeek: no beach in the inventory with slug "${slug}".`,
+    );
+  }
+
+  if (beach.grid_cell === null) {
+    return {
+      beachName: beach.name,
+      cell: null,
+      state: {
+        kind: "no-cell",
+        reason:
+          beach.grid_cell_null_reason ??
+          "the join bound no forecast cell to this beach, and recorded no reason",
+      },
+    };
+  }
+
+  const binding = {
+    beachName: beach.name,
+    cell: { id: beach.grid_cell, elevationM: beach.grid_cell_elevation_m },
+  };
+
+  const result = await fetchGridForecast(beach.grid_cell);
+  if (result.kind === "unavailable") {
+    return {
+      ...binding,
+      state: {
+        kind: "unavailable",
+        detail: result.reason,
+        drift: result.drift,
+      },
+    };
+  }
+
+  const windByDate = gridHoursByDate(result.forecast.windMph);
+  const tempByDate = gridHoursByDate(result.forecast.airTempF);
+
+  const days = weekOfDays(nowMs).map((frame) => ({
+    ...frame,
+    windMph: gridDaySeries(
+      result.forecast.windMph,
+      windByDate,
+      frame.localDate,
+    ),
+    airTempF: gridDaySeries(
+      result.forecast.airTempF,
+      tempByDate,
+      frame.localDate,
+    ),
+  }));
+
+  return { ...binding, state: { kind: "week", days } };
+}
+
+/** One day of the publisher's own wording for the sky. */
+export interface SkyWordingDay extends WeekDayFrame {
+  /**
+   * The publisher's own name for the period these words describe.
+   *
+   * Printed beside the words rather than dropped, because it is what makes the
+   * fallback below honest: on a day whose daytime half has already ended, the
+   * reader is told they are reading "Tonight" and not this afternoon.
+   */
+  periodName: string;
+  /** True when this is the daylight half of the publisher's own day. */
+  isDaytime: boolean;
+  /**
+   * The forecaster's own words, exactly as published.
+   *
+   * "Patchy Fog then Mostly Sunny". Never reworded, never banded, never
+   * shortened: ADR-0009 forbids this site forming a forecaster's judgement, and
+   * ADR-0024 measured a computed band word disagreeing with this very field on
+   * three days of six.
+   */
+  words: string;
+}
+
+/**
+ * What the day panel's sky line needs.
+ *
+ * The same three states the cloud row carries, meaning the same things, for the
+ * reason `SkyWeekView` gives: a cell that cannot be reached is one fact about
+ * the feed and not seven facts about seven days. It is a **separate** view from
+ * `SkyWeekView` rather than a field on it, because it comes from a separate
+ * request that fails separately -- which is the second outage path ADR-0024
+ * named as the cost of taking this read at all.
+ *
+ * **A union, rather than a `cell` that may be null beside any state.** The
+ * views beside this one carry "null exactly when the state is `no-cell`" as a
+ * comment and leave the compiler unable to help. A consumer then writes a null
+ * check for a case that cannot arise, and that unreachable branch is dead code
+ * the coverage floor is right to refuse -- which is exactly how this type came
+ * to be written this way. Saying it in the type costs nothing and deletes the
+ * check. The older views are left alone: moving them is a refactor with its own
+ * reasons, not a side effect of this one.
+ */
+export type SkyWordingView =
+  | {
+      beachName: string;
+      cell: { id: string; elevationM: number | null };
+      state:
+        | { kind: "week"; days: SkyWordingDay[] }
+        | { kind: "unavailable"; detail: string; drift: boolean };
+    }
+  | {
+      beachName: string;
+      cell: null;
+      state: { kind: "no-cell"; reason: string };
+    };
+
+/**
+ * The period whose words a day should be described by.
+ *
+ * **The daytime half, and the night half only when the daytime one has gone.**
+ * A day panel is about a trip, and a trip happens in the day. But the product
+ * does not run backwards: by evening, today's daytime period has dropped out of
+ * the payload and only "Tonight" remains. Returning nothing then would put a
+ * named absence on a day the National Weather Service has perfectly good words
+ * for; returning the night period silently would print "Patchy Fog" as though
+ * it described the afternoon. So the period is returned with its own name, and
+ * the panel prints that name.
+ *
+ * Null when no period covers the day at all, which is what the far end of the
+ * week does as the product's reach runs out.
+ */
+function wordingOn(periods: readonly ForecastPeriod[]): ForecastPeriod | null {
+  if (periods.length === 0) return null;
+  return periods.find((period) => period.isDaytime) ?? periods[0];
+}
+
+/**
+ * The week's forecast wording for one beach, from the publisher's own words.
+ *
+ * **This is ADR-0024's deferred read, taken where it said it should be.** That
+ * decision printed three cloud means and deliberately computed no band word,
+ * because banding the mean on the National Weather Service's own scale
+ * contradicted the National Weather Service on three days of six. It named
+ * `shortForecast` as the right answer and deferred it: "a day view is planned
+ * that will want that read anyway, and taking it once, in the shape that view
+ * needs, is better than taking it twice." This is that view and this is that
+ * shape.
+ *
+ * A second request to the same agency, and therefore a second outage. It fails
+ * apart from `readSkyWeek` on purpose: the numbers and the words are separate
+ * products, and a day when the office has issued one and not the other must
+ * show the one it has.
+ *
+ * `nowMs` is injected for the reason every read here injects it: day selection
+ * is asserted against fixed instants and no clock is read during a render.
+ */
+export async function readSkyWording(
+  slug: string,
+  nowMs: number = Date.now(),
+): Promise<SkyWordingView> {
+  const beach = beachBySlug(slug);
+  if (!beach) {
+    throw new Error(
+      `readSkyWording: no beach in the inventory with slug "${slug}".`,
+    );
+  }
+
+  if (beach.grid_cell === null) {
+    return {
+      beachName: beach.name,
+      cell: null,
+      state: {
+        kind: "no-cell",
+        reason:
+          beach.grid_cell_null_reason ??
+          "the join bound no forecast cell to this beach, and recorded no reason",
+      },
+    };
+  }
+
+  const binding = {
+    beachName: beach.name,
+    cell: { id: beach.grid_cell, elevationM: beach.grid_cell_elevation_m },
+  };
+
+  const result = await fetchSkyWording(beach.grid_cell);
+  if (result.kind === "unavailable") {
+    return {
+      ...binding,
+      state: {
+        kind: "unavailable",
+        detail: result.reason,
+        drift: result.drift,
+      },
+    };
+  }
+
+  // Bucketed by the Pacific date each period *starts* on, which is what puts
+  // "Saturday Night" on Saturday rather than on Sunday. A night period runs
+  // past midnight by construction, so bucketing by its end would move every
+  // one of them a day forward.
+  const byDate = new Map<string, ForecastPeriod[]>();
+  for (const period of result.forecast.periods) {
+    const localDate = localDateOf(period.startMs);
+    const standing = byDate.get(localDate);
+    if (standing === undefined) byDate.set(localDate, [period]);
+    else standing.push(period);
+  }
+
+  // Built from `weekOfDays` rather than from the payload's own periods, so this
+  // line cannot disagree with the rows above it about which day is Tuesday.
+  // Ragged like the cloud row: a day the product did not reach is dropped, and
+  // the panel says so rather than being handed an empty string to print.
+  const days = weekOfDays(nowMs).flatMap((frame) => {
+    const period = wordingOn(byDate.get(frame.localDate) ?? []);
+    return period === null
+      ? []
+      : [
+          {
+            ...frame,
+            periodName: period.name,
+            isDaytime: period.isDaytime,
+            words: period.shortForecast,
+          },
+        ];
   });
 
   return { ...binding, state: { kind: "week", days } };

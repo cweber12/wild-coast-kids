@@ -32,3 +32,26 @@ export const CARD_PROSE = "text-white/75";
 
 /** Present but subordinate: provenance lines, stat labels. */
 export const CARD_MUTED = "text-white/55";
+
+/**
+ * The same subordinate role on the page's own ground, where the two above are
+ * invisible.
+ *
+ * **This file is named for the card because that is where these roles started,
+ * and one of them has left.** `ProvenanceLine` was a card component; the week
+ * grid and the day panel now render it on `--color-cream` directly, and the
+ * colour measured against `--color-dark` went with it. White at 55% over cream
+ * paints #fdfcfb on #faf8f5 -- **1.03:1**, read off the built page. The line was
+ * present, correct, attributed and the same colour as the paper.
+ *
+ * `text-fog` rather than a new token: #6b5f7d on #faf8f5 is **5.56:1**, it is
+ * already this page's subordinate text everywhere else, and inventing a fourth
+ * grey would be two names for one decision -- the drift the whole of this
+ * file's docstring above is about.
+ *
+ * The floor these are held to is 4.5:1 and not the 3:1 large-text allowance:
+ * every role here renders at 13px or 16px. `cardText.test.ts` computes all four
+ * pairings rather than trusting the figures written here, which is what would
+ * have caught the invisible line the day it was rendered.
+ */
+export const PAGE_MUTED = "text-fog";

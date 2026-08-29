@@ -9,8 +9,10 @@ Date: 2026-08-28
 this list defaults to Foundation → Core UI → Interactions → Polish. CLAUDE.md
 forbids that shape: _"Slices are vertical: each cuts a complete path through
 every layer rather than delivering one layer across the whole feature."_ So the
-grouping below is three PRs, each of which is a complete path a reader can see,
-and each task inside one is a commit.
+grouping below is by PR, each of which is a complete path a reader can see, and
+each task inside one is a commit. It was three PRs when this was written and is
+four: PR 2 outgrew review and was cut in half on 2026-08-29, which is recorded
+where the cut is rather than here.
 
 **The brief's PR 1 has been re-cut.** It proposed "the data" — hourly tide,
 gridpoint wind and temperature, series assembly — landing together. That PR
@@ -28,8 +30,10 @@ work can be verified at all.
 
 **Gates:** `format`, `lint`, `typecheck`, `adr-numbers`, `test`, `build`,
 `stylesheet` — one command, `npm run gate`. The coverage floor is real and
-ratchets: statements 86.16, branches 87.62, functions 92.62. New code without
-tests fails the run.
+ratchets, so new code without tests fails the run. **The figures are in
+`vitest.config.mts` and are not repeated here**: this list quoted them once and
+they were stale within a day, because every PR below has a slice whose whole
+job is to move them.
 
 **ADR numbers are not claimed here.** The `adr-numbers` gate exists because two
 decisions shared ADR-0008 for two days, and a number reserved in a plan has gone
@@ -101,12 +105,20 @@ improvement on its own even if nothing after it is ever built.
 
 ---
 
-## PR 2 — The day opens
+## PR 2a — The day opens
 
 The chart, its tabs, the coupling, and the merged measurements. The largest of
 the three; split further at a slice boundary if it outgrows review.
 
-- [ ] **Gridpoint wind and temperature.** Extend `nws-gridpoint.ts` to read
+**It outgrew review, and was split — 2026-08-29.** The sentence above
+anticipated this and the measurement is in the plan file's addendum of that
+date: 13 commits and 9,559 changed lines against CLAUDE.md's guide of ~5 slices
+or ~400. The four remaining tasks are PR 2b below, unchanged except for where
+they sit and which ADR sits with which half. The cut is after _the week becomes
+the selector_, because that is where the day region is whole: four series, seven
+days, and a week that chooses between them.
+
+- [x] **Gridpoint wind and temperature.** Extend `nws-gridpoint.ts` to read
       `windSpeed`, `windDirection`, `windGust`, `temperature` and
       `apparentTemperature`, with the same unit pinning and expand-to-hourly
       treatment `skyCover` already gets. **Capture a new fixture** — the committed
@@ -119,7 +131,7 @@ the three; split further at a slice boundary if it outgrows review.
       still refused; three-hour and six-hour intervals still expand to hourly
       steps without gaps.
 
-- [ ] **The publisher's own sky wording.** Read
+- [x] **The publisher's own sky wording.** Read
       `/gridpoints/{cell}/forecast` — 14 day/night periods, 13 KB — for
       `shortForecast`, and render it above the plot. This discharges ADR-0024's
       deferred read, which its own text said belonged here. A second request means
@@ -130,7 +142,7 @@ the three; split further at a slice boundary if it outgrows review.
       than falling back to a computed word; the day/night period is matched to the
       selected day rather than assumed to be first.
 
-- [ ] **`HourChart`, tide only.** The plot frame: hours across, the value axis,
+- [x] **`HourChart`, tide only.** The plot frame: hours across, the value axis,
       night shading, cloud wash, published-point marks, and the "now" line on
       today. One tab, so it is shippable and reviewable before the other three
       exist. _New component. Shares its series shape and its two background layers
@@ -141,18 +153,31 @@ the three; split further at a slice boundary if it outgrows review.
       appears on today and on no other day; an unavailable series renders its
       reason, not an empty frame.
 
-- [ ] **The four tabs.** Tide, swell, wind, temperature. Selecting one redraws
+- [x] **The four tabs.** Tide, swell, wind, temperature. Selecting one redraws
       the foreground series; the background layers do not change. Client
       component, with a `noscript` equivalent following `BeachSelector`'s
       precedent. 44px touch targets below `md` via `TOUCH_TARGET`, not
       hand-written padding. _Modifies `HourChart`._
+      **Built without the `noscript`, deliberately.** ADR-0027 settled that
+      question for this component after this list was written: a `noscript`
+      equivalent has to contain what it falls back _to_, and the other three
+      series are not on the page in any other form — so it would be four
+      stacked charts, which is the alternative the tabs exist instead of. The
+      honest fallback is the one the hour controls already take: no bar at all,
+      and the band names the series that was drawn. The direction the line
+      above was protecting — that nobody gets a control which silently does
+      nothing — is kept; the mechanism is not.
+      Also built beyond it: the swell needed an hourly series `readWaveWeek`
+      did not carry, and the wind and temperature needed a day-shaped read of
+      the cell, so this task reached `conditions.ts` and `nws-gridpoint.ts` as
+      well as `HourChart`.
       **Tests assert:** each tab draws its own series and its own units; a tab
       whose feed is quiet says why rather than drawing a flat line; the swell tab
       marks all 8 published points across the day and does not claim hourly
       resolution; keyboard operation reaches every tab and the focus ring is the
       site's own.
 
-- [ ] **The week becomes the selector.** Choosing a day redraws the panel below.
+- [x] **The week becomes the selector.** Choosing a day redraws the panel below.
       All seven days ship from the first render, so switching costs no request.
       The selected cell is marked by more than colour. Today is selected on
       arrival. `noscript` renders today's panel and leaves the week grid — which
@@ -161,6 +186,45 @@ the three; split further at a slice boundary if it outgrows review.
       **Tests assert:** activating a day changes the panel's day; the selected
       state is conveyed without colour; `revalidate = 900` and the empty
       `generateStaticParams` are unchanged, because the day never enters the URL.
+      **The fallback is what this line describes and not a `<noscript>` tag.**
+      Nothing dead is rendered without a script — the day headers are plain text
+      rather than buttons — so there is nothing for a `noscript` block to
+      replace. The week grid is whole and the panel shows today, which is what
+      the sentence above asks for.
+      **What "no request" costs, measured:** the page goes 209,923 to 260,518
+      bytes uncompressed, 43,250 gzipped, for six more days of four series.
+      That is the trade the brief chose over a loading state per click.
+
+- [x] **ADR: the day carries a curve, and the week keeps its thirds.**
+      Supersedes ADR-0024's **reach** and not its row, and that distinction is
+      the whole of the decision. Keeps ADR-0024's finding: one number does not
+      describe a burn-off day, and a curve does not reduce to one number.
+      Records that ADR-0024's deferred `shortForecast` read is taken in this PR,
+      as it said it should be. _ADR-0024 warns that "anything that restores a
+      single daylight figure to this row reverses this" — a continuous curve is
+      more resolution, not less, and the ADR must say so explicitly or it will
+      read as a reversal._
+      **Retitled 2026-08-29, and the title was the finding.** This task was
+      "ADR: cloud thirds give way to a curve", which names work that was
+      considered and then decided against — the plan's addendum of 2026-08-28,
+      _the two questions the tabs were waiting on_, settled that the row stays,
+      because ADR-0026 took the wash off the sparkline and cutting the row would
+      leave the week saying nothing at all about the sky. An ADR written under
+      the old title would contradict a decision recorded in the file it cites.
+
+- [x] **Coverage floor.** As PR 1.
+
+---
+
+## PR 2b — The measurements move in
+
+The three now-cards absorbed into the day panel, and the slab they sat in
+removed. What was left of PR 2 after the 2026-08-29 split, with one ADR traded
+for the other.
+
+**Blocked on PR 2a, and not merely by convention.** `MeasuredToday` has to fit
+the day region that PR introduced, which is not the region this list was written
+against — see the note on the task itself.
 
 - [ ] **`MeasuredToday`.** The three cards' content, merged into today's panel:
       water temperature, the buoy's wave height, the station's wind and gust, the
@@ -172,6 +236,19 @@ the three; split further at a slice boundary if it outgrows review.
       no-station, unavailable, no-reading — and the two that look alike stay
       distinct; each figure still names the station that supplied it, per
       ADR-0010; the distant-station disclosure still fires past 5,000 m.
+      **The region is any of seven days now, and this task was written when it
+      was today.** PR 2a's last slice made the week the selector, so "today
+      only" became a property of one `DayView` rather than of the region. Two
+      consequences, neither of them in the sentence above. `DayView` has no
+      `isToday`: it carries `nowMs: number | null`, non-null on exactly one day,
+      which is a coincidence of construction rather than a stated contract — so
+      an explicit field is more honest than a `nowMs !== null` test. And the
+      three reads this needs (`readTodaysLowestLow`, `readLatestWaves`,
+      `readLatestAir`) are measurements of _now_, so they belong to today's
+      `DayView` and to no other: follow the `wording` field's precedent, where
+      `DayPanel` renders `<SkyWording …/>` per day on the server and hands
+      `ChosenDay` a finished `ReactNode`, rather than making `MeasuredToday` a
+      client component.
 
 - [ ] **Remove the slab and reorder the page.** `ConditionsSection` loses the
       three-card grid and the standalone reserved slot; the order becomes header,
@@ -188,15 +265,12 @@ the three; split further at a slice boundary if it outgrows review.
       ADR-0019 declined to decide whether wind and temperature could move from the
       air station to the grid cell. Record that this design does not move them —
       today shows both, each attributed — which is the outcome ADR-0019 was
-      protecting.
-
-- [ ] **ADR: cloud thirds give way to a curve.** Supersedes ADR-0024's mechanism
-      and keeps its finding: one number does not describe a burn-off day, and a
-      curve does not reduce to one number. Note that ADR-0024's deferred
-      `shortForecast` read is taken in this PR, as it said it should be. _ADR-0024
-      warns that "anything that restores a single daylight figure to this row
-      reverses this" — a continuous curve is more resolution, not less, and the
-      ADR must say so explicitly or it will read as a reversal._
+      protecting. **It is this half's ADR and not PR 2a's**, because the
+      decision is not taken until something exists that could have displaced
+      them: from the wind and temperature tabs landing until this merges, the
+      page carries two winds and two air temperatures with nothing in
+      `docs/adr/` explaining why both. The plan's addendum of 2026-08-29 records
+      that gap.
 
 - [ ] **Coverage floor.** As PR 1.
 

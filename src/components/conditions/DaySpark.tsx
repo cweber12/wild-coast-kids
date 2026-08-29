@@ -1,6 +1,17 @@
 /**
- * One day drawn as a shape: the full twenty-four hours, night shaded, cloud
- * washed across, and the model's own published points marked.
+ * One day drawn as a shape: the full twenty-four hours, night shaded, and the
+ * model's own published points marked.
+ *
+ * **Cloud is not drawn here, and that is a decision rather than an omission.**
+ * This shape carried a cloud wash for one review and it was read as confusing:
+ * at 21px tall a grey wash and a grey night band are two grey things competing
+ * in a frame with room for one, and the reader has to work out which is which
+ * before the curve says anything. #171's own width measurement had already
+ * found the same edge from the other side -- what failed first as the cell
+ * narrowed was "the night bands are still separable from the cloud wash",
+ * which is a sentence about two layers being hard to tell apart. The wash
+ * belongs to the day chart, where there is height to carry it. See the ADR
+ * beside this one.
  *
  * **This fulfils ADR-0023 rather than reversing it.** That decision dropped the
  * day's own extreme from six cells of seven "until a day view carries them",
@@ -13,11 +24,12 @@
  * reversal has read it backwards.
  *
  * **Presentational and pure.** It takes a series and renders it. No fetch, no
- * clock, no knowledge of what a tide is: `atMs` and `value`, and the two
- * background layers as instants. That is what makes every branch here --
- * including the absent ones -- assertable without a network, and it is what
- * lets the same shape be drawn large in the day chart later without the two
- * drifting apart.
+ * clock, no knowledge of what a tide is: `atMs` and `value`, and the night as
+ * two instants. That is what makes every branch here -- including the absent
+ * ones -- assertable without a network, and it is what lets the same shape be
+ * drawn large in the day chart later without the two drifting apart. What is
+ * shared with that chart is `SparkPoint` and the night band; the cloud wash is
+ * the day chart's alone.
  *
  * **Hand-rolled SVG**, per ADR-0025: three runtime dependencies are a guarded
  * budget, the largest series in this design is 196 points, and this has to
@@ -40,17 +52,19 @@
  * clamped point is a drawn lie; they are impossible instead, the range being
  * derived from the same points.
  *
- * **The two background layers name themselves in the DOM.** A `<rect>` is
- * otherwise anonymous, and this plot has three kinds of them; `data-night` and
- * `data-cloud-percent` say which is which, in the markup, for anyone reading
- * the page as well as for the tests. Nothing else here needs one -- the curve
- * is the only `<path>` and a mark is the only `<circle>`.
+ * **The night bands name themselves in the DOM.** A `<rect>` is otherwise
+ * anonymous, and `data-night` says which end of the day this one is, in the
+ * markup, for anyone reading the page as well as for the tests. Nothing else
+ * here needs one -- the curve is the only `<path>` and a mark is the only
+ * `<circle>`.
  *
  * **An empty series is words, never a line at zero.** A curve is a stronger
  * claim than a figure: a flat line at zero says the sea did something, where a
  * named absence says we were not told. This is the same rule `TideWeek` follows
  * for its figures, one register down.
  */
+
+import { nightBands } from "./dayFrame";
 
 /** One point on a drawn series. */
 export type SparkPoint = {
@@ -88,16 +102,6 @@ export type DaySparkProps = {
    */
   lowValue: number;
   highValue: number;
-  /**
-   * Cloud cover per forecast hour, 0 to 100, as a wash behind the series.
-   *
-   * A layer rather than a series of its own, because it is the condition the
-   * selected variable happens in rather than a competitor to it. Empty draws
-   * nothing, and an hour the forecast did not reach gets no wash -- which is
-   * why the wash has a floor: a published 0% must not render identically to an
-   * hour nobody forecast.
-   */
-  cloud?: readonly SparkPoint[];
   /**
    * The spoken equivalent of this shape.
    *
@@ -145,9 +149,6 @@ const HEIGHT = 30;
  */
 const PAD = 3;
 
-/** One hour, which is how wide a cloud hour's wash is drawn. */
-const HOUR_MS = 3_600_000;
-
 /**
  * Narrower than this and the shape stops being a shape.
  *
@@ -172,25 +173,20 @@ const HOUR_MS = 3_600_000;
  * points that would be 24px, and the measurement says the layers fail at four
  * times that. The guess was about the curve and the answer is about the bands.
  *
+ * **That ladder was measured on a frame that still drew a cloud wash, and this
+ * one does not.** So 110 is now a bound rather than a fitted threshold: every
+ * row above is about telling two grey layers apart, and taking one of them
+ * away cannot make the remaining one harder to see. The floor holds and is
+ * merely no longer tight. It is left un-retightened because it does not bind
+ * -- see below -- and a re-measured figure that changes no behaviour would be
+ * a number moved for its own sake.
+ *
  * **It does not bind today**, and that is a measurement rather than a hope: the
  * narrowest cell this grid renders is 133px, at exactly 1280 where seven
  * columns begin. `WeekGrid` carries that figure and the rule that enforces
  * this, because the breakpoints that could invalidate it are its.
  */
 export const MIN_USEFUL_SPARK_WIDTH_PX = 110;
-
-/**
- * Cloud opacity, floored.
- *
- * The floor is the honest part. Cloud is drawn as a wash whose weight is the
- * percentage, so a cleanly-forecast 0% would render at zero opacity and be
- * indistinguishable from an hour the forecast never reached. They are different
- * facts -- one is a clear sky, the other is silence -- and this page does not
- * let an absence pass for a reading.
- */
-function cloudOpacity(percent: number): number {
-  return 0.05 + 0.3 * (Math.min(100, Math.max(0, percent)) / 100);
-}
 
 export function DaySpark({
   startMs,
@@ -200,7 +196,6 @@ export function DaySpark({
   sunsetMs,
   lowValue,
   highValue,
-  cloud = [],
   description,
   absence,
 }: DaySparkProps) {
@@ -224,15 +219,9 @@ export function DaySpark({
       ? HEIGHT / 2
       : HEIGHT - PAD - ((value - lowValue) / spanValue) * (HEIGHT - 2 * PAD);
 
-  /** Clipped to the day, so a band starting before dawn does not run off the frame. */
-  const band = (fromMs: number, toMs: number) => {
-    const from = Math.max(x(fromMs), 0);
-    const to = Math.min(x(toMs), WIDTH);
-    return to <= from ? null : { x: from, width: to - from };
-  };
-
-  const beforeDawn = band(startMs, sunriseMs);
-  const afterDusk = band(sunsetMs, endMs);
+  // Shared with `HourChart` rather than repeated, so the two plots cannot come
+  // to disagree about where night is. See `dayFrame.ts` and ADR-0026.
+  const bands = nightBands({ startMs, endMs, sunriseMs, sunsetMs }, x, WIDTH);
 
   const path = points
     .map(
@@ -249,57 +238,22 @@ export function DaySpark({
       className="block h-auto w-full"
     >
       {/*
-        Cloud first, night over it. A cloudy night is still night, so the shade
-        sits on top of the wash rather than beside it -- two layers that both
-        lightened the frame would say the small hours were the clearest part of
-        the day.
-
-        One rect per forecast hour rather than one across the run. An hour the
-        forecast did not reach then draws nothing, where a rect stretched to the
-        next point it *did* reach would claim cloud for hours nobody published.
-      */}
-      {cloud.map((hour) => {
-        const rect = band(hour.atMs, hour.atMs + HOUR_MS);
-        return rect === null ? null : (
-          <rect
-            key={hour.atMs}
-            x={rect.x}
-            width={rect.width}
-            y={0}
-            height={HEIGHT}
-            className="fill-fog"
-            fillOpacity={cloudOpacity(hour.value)}
-            data-cloud-percent={hour.value}
-          />
-        );
-      })}
-
-      {/*
         Night is astronomy and cannot fail, which is why it is drawn rather than
         labelled: the dip a reader is looking for is the one ADR-0023 had to
         drop, and "it is at night" is the whole reason it was dropped. Two bands
         rather than one, because a day starts and ends in the dark.
       */}
-      {beforeDawn !== null && (
+      {bands.map((band) => (
         <rect
-          x={beforeDawn.x}
-          width={beforeDawn.width}
+          key={band.side}
+          x={band.x}
+          width={band.width}
           y={0}
           height={HEIGHT}
           className="fill-dark/12"
-          data-night="before-dawn"
+          data-night={band.side}
         />
-      )}
-      {afterDusk !== null && (
-        <rect
-          x={afterDusk.x}
-          width={afterDusk.width}
-          y={0}
-          height={HEIGHT}
-          className="fill-dark/12"
-          data-night="after-dusk"
-        />
-      )}
+      ))}
 
       {/*
         `TIDE_TONE`'s ocean, measured at 8.5:1 on this cell in `weekTone.ts` --

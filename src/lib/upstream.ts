@@ -80,6 +80,13 @@ import {
   parseGridpointForecast,
 } from "./nws-gridpoint";
 import {
+  NwsForecastDriftError,
+  NwsForecastNoDataError,
+  parseSkyWording,
+  type SkyWordingForecast,
+  skyWordingUrl,
+} from "./nws-forecast";
+import {
   NwsObservationDriftError,
   NwsObservationNoDataError,
   parseNwsObservation,
@@ -748,6 +755,96 @@ export async function fetchGridForecast(
     if (cause instanceof NwsGridpointDriftError)
       return unavailable(cause.message, true);
     if (cause instanceof NwsGridpointNoDataError)
+      return unavailable(cause.message);
+    return unavailable(cause instanceof Error ? cause.message : String(cause));
+  }
+}
+
+/**
+ * One hour, matching the gridpoint numbers this wording accompanies.
+ *
+ * Its own constant rather than a reuse of `GRID_FORECAST_REVALIDATE_SECONDS`,
+ * following the one-per-product convention above: these are two products at two
+ * URLs, and a day when the office reissues the words on a different cadence
+ * from the grid is a day when one number would have to move for both.
+ */
+export const SKY_WORDING_REVALIDATE_SECONDS = 3600;
+
+export type SkyWordingResult =
+  | { kind: "ok"; forecast: SkyWordingForecast; url: string }
+  | { kind: "unavailable"; reason: string; drift: boolean; url: string };
+
+/**
+ * Fetch the National Weather Service's own words for one cell's sky.
+ *
+ * Never throws.
+ *
+ * THE SECOND OUTAGE PATH, AND IT IS REQUIRED RATHER THAN OPTIONAL. ADR-0024
+ * deferred this read partly because it is "a second request, a second failure
+ * mode, a second provenance line". This is that second failure mode, kept apart
+ * from `fetchGridForecast`'s: the numbers and the words are separate products,
+ * and a day when the office has issued one and not the other must show the one
+ * it has rather than neither.
+ *
+ * The 404 means the same thing it means next door -- the cell binding has gone
+ * stale and wants re-probing, not that the sky is unknown.
+ */
+export async function fetchSkyWording(
+  cellId: string,
+): Promise<SkyWordingResult> {
+  const url = skyWordingUrl(cellId);
+
+  const unavailable = (reason: string, drift = false): SkyWordingResult => ({
+    kind: "unavailable",
+    reason,
+    drift,
+    url,
+  });
+
+  let response: Response;
+  try {
+    response = await fetch(url, {
+      headers: { "User-Agent": USER_AGENT },
+      next: { revalidate: SKY_WORDING_REVALIDATE_SECONDS },
+    });
+  } catch (cause) {
+    return unavailable(
+      `The request to the National Weather Service for the forecast wording at cell ` +
+        `${cellId} did not complete: ` +
+        `${cause instanceof Error ? cause.message : String(cause)}`,
+    );
+  }
+
+  if (response.status === 404) {
+    return unavailable(
+      `The National Weather Service publishes no worded forecast for cell ${cellId}. The ` +
+        `grid has moved and the cell binding needs re-probing.`,
+      true,
+    );
+  }
+  if (!response.ok) {
+    return unavailable(
+      `The National Weather Service returned HTTP ${response.status} for the forecast ` +
+        `wording at cell ${cellId}.`,
+    );
+  }
+
+  let payload: unknown;
+  try {
+    payload = await response.json();
+  } catch (cause) {
+    return unavailable(
+      `The National Weather Service's forecast wording for cell ${cellId} was not JSON: ` +
+        `${cause instanceof Error ? cause.message : String(cause)}`,
+    );
+  }
+
+  try {
+    return { kind: "ok", forecast: parseSkyWording(payload, cellId), url };
+  } catch (cause) {
+    if (cause instanceof NwsForecastDriftError)
+      return unavailable(cause.message, true);
+    if (cause instanceof NwsForecastNoDataError)
       return unavailable(cause.message);
     return unavailable(cause instanceof Error ? cause.message : String(cause));
   }

@@ -69,6 +69,10 @@ export const AT_RULES = [
     prelude: "@container not (min-width:134px)",
     why: "WeekGrid drops the day shape below the width it stops reading at, measured on the built page at 110px of shape plus the 24px of padding around it — the border is outside it because a container query resolves against the content box. The class name stays in the markup whether or not Tailwind registered the container variant, so jsdom cannot see this fail and only the emitted at-rule proves the rule exists. It does not fire today — the narrowest cell the grid renders is 158.8px -- which is exactly why nothing else would notice it going missing",
   },
+  {
+    prelude: "@media not all and (min-width:40rem)",
+    why: "HourChart changes shape rather than size on a phone: below `sm` the plot frame is 2:1 and the drawing stretches to fill it, because its own 3.27:1 renders 72px at 375 against 246px at 1536 — one ratio cannot serve both, measured on the built page. The same at-rule drops a dense series' published-point marks, whose white rings read as gaps in the curve at that width. Both are `max-sm:` classes, and a class name sits in the markup whether or not Tailwind emitted a rule for it, so jsdom finds it either way and only the built stylesheet proves the rule exists",
+  },
 ];
 
 /** Utilities that must appear *and* emit at least one declaration. */

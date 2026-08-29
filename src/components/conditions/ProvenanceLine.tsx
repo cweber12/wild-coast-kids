@@ -33,7 +33,7 @@
  * clause here rather than dropping it.
  */
 
-import { CARD_MUTED } from "./cardText";
+import { CARD_MUTED, PAGE_MUTED } from "./cardText";
 
 type ProvenanceLineProps = {
   /** What the figure names it, ready to print. Never a callsign turned into prose — see #87. */
@@ -63,6 +63,22 @@ type ProvenanceLineProps = {
   note?: string | null;
   /** What these figures are, when a card carries more than one source. */
   label?: string | null;
+  /**
+   * Which ground this line is printed on, because the colour differs and this
+   * component cannot see where it was rendered.
+   *
+   * **It is asked for rather than inferred, and that is the whole of the fix
+   * for a line nobody could read.** This printed `CARD_MUTED` unconditionally
+   * -- white at 55%, measured against the reading card's `bg-dark` -- and two
+   * callers render it straight onto `--color-cream`, where it paints 1.03:1.
+   * Nothing failed: the markup was right, the attribution was right, and the
+   * text was the colour of the paper.
+   *
+   * `"card"` by default because five of the six call sites are inside
+   * `ReadingCard`, and a default that changed them would trade a visible bug
+   * for a quiet one. A caller outside a card says so.
+   */
+  surface?: "card" | "page";
 };
 
 export function ProvenanceLine({
@@ -71,9 +87,12 @@ export function ProvenanceLine({
   distanceKm = null,
   note = null,
   label = null,
+  surface = "card",
 }: ProvenanceLineProps) {
   return (
-    <p className={`text-2xs leading-relaxed ${CARD_MUTED}`}>
+    <p
+      className={`text-2xs leading-relaxed ${surface === "page" ? PAGE_MUTED : CARD_MUTED}`}
+    >
       {label !== null && <span className="font-extrabold">{label} </span>}
       {source}
       {network !== null ? ` · ${network}` : ""}

@@ -81,9 +81,10 @@ function skyWeek(
           typeof cloud === "number"
             ? { am: cloud, mid: cloud, eve: cloud }
             : cloud,
-        // The whole day's hours, which is the layer the shape washes across.
-        // A flat 40% here, because what these tests are about is whether a
-        // wash appears and where -- not what the sky is doing.
+        // The whole day's hours. Nothing in this grid draws them any more --
+        // the wash came off the shape after review -- but `readSkyWeek` still
+        // returns them, and the day chart is what will want them. A flat 40%,
+        // because no test here is about what the sky is doing.
         hours: Array.from({ length: 24 }, (_, hour) => ({
           atMs: localMidnightOf(DATES[index].localDate) + hour * HOUR_MS,
           percent: 40,
@@ -921,13 +922,21 @@ test("every day is drawn against one scale, so the week can be compared", async 
   expect(second).toBeLessThan(first / 2);
 });
 
-test("the cloud wash comes from the sky read, and its absence draws nothing", async () => {
+test("the sky read no longer reaches the shape at all, in either direction", async () => {
+  // It used to supply the wash. That layer came off after review -- two grey
+  // layers in a 21px frame is one too many -- so a cloud outage now costs the
+  // grid its cloud row and nothing else, where before it also stripped a layer
+  // out of seven shapes.
   readWeekOfLowestLows.mockResolvedValue(tideWeek(tideDay(0, "6:41 PM", 0.9)));
 
-  const withCloud = render(await WeekPanel({ slug: "la-jolla-shores-beach" }));
+  const withSky = render(await WeekPanel({ slug: "la-jolla-shores-beach" }));
   expect(
-    withCloud.container.querySelectorAll("[data-cloud-percent]").length,
-  ).toBeGreaterThan(0);
+    withSky.container.querySelectorAll("[data-cloud-percent]"),
+  ).toHaveLength(0);
+  const drawn = sparkPaths(withSky.container).map((path) =>
+    path.getAttribute("d"),
+  );
+  expect(drawn.length).toBeGreaterThan(0);
 
   readSkyWeek.mockResolvedValue({
     beachName: BINDING.beachName,
@@ -936,13 +945,16 @@ test("the cloud wash comes from the sky read, and its absence draws nothing", as
   });
 
   const without = render(await WeekPanel({ slug: "la-jolla-shores-beach" }));
-  // The shape is still drawn; only the layer the National Weather Service
-  // supplies is missing, and a missing wash is not a clear sky.
+  // Byte for byte the same curves. A sky outage that changed the shape would
+  // mean the wash had crept back in under another name.
+  expect(
+    sparkPaths(without.container).map((path) => path.getAttribute("d")),
+  ).toEqual(drawn);
   expect(
     without.container.querySelectorAll("[data-cloud-percent]"),
   ).toHaveLength(0);
   // Both days still drawn: the columns come from the daylight read, which
-  // cannot fail, and the cloud outage takes only its own layer.
+  // cannot fail.
   expect(
     within(without.container).getAllByLabelText(/^Tide through /),
   ).toHaveLength(2);
