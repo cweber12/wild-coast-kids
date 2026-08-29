@@ -598,6 +598,130 @@ ground the remaining slices stand on — `MeasuredToday` has to fit the seven-da
 against — and rebasing half-finished work onto a moved blocker is how a verified
 slice quietly stops being verified.
 
+## Addendum, 2026-08-29: what the measurements found on the way in
+
+Dated rather than woven in. This is the second half of #172 — `MeasuredToday`,
+the slab's removal, ADR-0029 and the floor — and it settled four things the
+addendum above left open, turned up one regression, and noticed one defect it
+did not fix.
+
+**The measured block is two cards, and that follows from ADR-0010 rather than
+being a layout preference.** One card was the obvious shape and it does not
+work: two provenances behind one _panel_ is what ADR-0010 permits and two
+behind one _sentence_ is what it refuses, so merging the buoy's "about waist
+high" with the station's "Warm, with a gentle breeze" into one plain-words line
+is the forbidden shape exactly. Once each source keeps its own sentence it also
+needs its own lead figure, and `ReadingCard` has one slot for one. So the sea
+keeps 🏄 and its height and the air keeps 💨 and its temperature, two across
+from `sm`, and every state and every sentence of the two cards they came from
+survives verbatim.
+
+**They stay on `bg-dark`.** The surface was a real decision and the brief did
+not specify one. `CARD_PROSE` and `CARD_MUTED` are measured against that
+surface and against nothing else — white at 55% on the page's cream ground is
+1.03:1, the bug #175's last commit fixed in three places — so keeping the card
+keeps those figures true without a new role. It also carries principle 2 in
+form: a dark block of stated figures beside a light drawn curve, which is what
+"a model is drawn; a measurement is stated" looks like at a glance. Measured on
+the built page at 1536×639 with the painted pixels rather than the CSS tree:
+provenance in the card **5.96:1**, card prose **10.02:1**, stat label
+**5.96:1**, and the absence sentence on the page ground **5.57:1**. The first
+two reproduce `cardText.ts`'s own documented figures exactly, which is what says
+the method was right.
+
+The alternative — the block on the page ground — would have needed a new
+`PAGE_PROSE` role measured and added to `cardText.test.ts`, and it would have
+left `ReadingCard`, `CARD_PROSE` and `CARD_MUTED` with no callers at all.
+
+**Only what was measured moved in.** `TASKS.md` said `MeasuredToday` absorbs
+three cards; the brief's own inventory row for it says "water temp, buoy wave
+height, station wind and gust, station air temp" and names no tide. The second
+reading is the one that ships. The tide card's lowest daylight low is NOAA's
+prediction and prints in the week grid's today column; the wave card's MOP
+block is CDIP's model and the swell tab draws the whole of it. A predicted
+figure inside a block whose entire claim is that these numbers came off an
+instrument would say the opposite of what the block is for — which ADR-0029
+then states as a rule, and it is the rule that licensed deleting both.
+
+`readTodaysLowestLow` went with the tide card, its only caller.
+
+**Two figures left the page as figures, deliberately.** The tide's "Lowest all
+day" — the 3 AM lower low — and CDIP's "Biggest all day" are now the dip in a
+curve the chart draws across all twenty-four hours with night shaded. That is
+what this brief asked the day view to be for and what ADR-0023 was promised
+when it dropped them from the grid. Three pieces of rendered copy pointed at
+the cards for those figures and had to name the chart instead rather than be
+left pointing at nothing.
+
+**`DayView` gained `measured` and not `isToday`.** The handoff for this half
+proposed an explicit `isToday`, on the argument that `nowMs !== null` is a
+coincidence of construction rather than a stated contract — which is true. It
+turned out not to be needed: following the `wording` field's precedent means
+`DayPanel` decides on the server, where `day.isToday` is already in hand from
+the daylight read, and hands `ChosenDay` a finished node. Nothing downstream
+asks. A field no consumer reads would have been the speculative flexibility
+CLAUDE.md rules out, so the honest version of that advice is the one taken.
+
+**Three Suspense boundaries became one, inside the day region.** The buoy and
+the air station used to paint independently in the band at the top of the page.
+They are one block now and appear together, so the slower feed sets when both
+arrive. What is bought is that the block is a block; what is kept is that
+neither read throws — each returns its own state — so one going quiet costs its
+own card and can only delay the other, never empty it. `MeasuredPanel` holds
+that boundary rather than joining `DayPanel`'s five reads, because those five
+draw the chart and these two do not.
+
+### The regression, and how it was found
+
+**Taking the tide card off the page took the only attribution the tide had.**
+Seven tide cells in the grid and the day chart's entire tide curve were
+suddenly published by nobody, which is the one thing ADR-0010 ends by
+forbidding. The wave and cloud rows have always carried their own lines; the
+tide row delegated to the card, which read the same station through the same
+request, and the delegation had nothing left to point at.
+
+**No test failed and none could have.** The card's own suite asserted the
+attribution and was deleted with the card. It was found by building `main` and
+the branch, rendering both at 1536×639 and diffing `document.body.innerText`:
+"La Jolla (Scripps Institution Wharf) · NOAA Tides & Currents" was on one page
+and on no part of the other. That diff is worth repeating on any slice that
+removes a region — every other line it turned up was accounted for by the two
+cards, one live buoy figure that moved between the two captures, and the copy
+this work deliberately reworded.
+
+`tideStation.ts` is the fix: the third module of the shape `mopLine.ts` and
+`gridCell.ts` already have, so the grid's three rows are attributed from three
+places that read alike. It carries the 5 km disclosure threshold that came off
+the card with everything else.
+
+### Noticed and not fixed
+
+**`HourChart` prints "today" on every day.** The line under the plot reads
+`Low 1.0 ft, high 5.4 ft today.` beneath a heading reading `Mon, Aug 31`. It
+arrived with the chart in #175 and is the exact failure the `WORDS`/`when`
+discipline exists to prevent — `HourChart` takes no day name, so the sentence
+has nowhere to get one. It is more visible now, because the measured block's
+absence sentence names the day correctly four lines below it. Not fixed here:
+it belongs to a different branch, and it needs a decision about whether the
+component takes a `when` or the sentence moves up to `DayPanel`.
+
+**The measured block is wider than the chart above it.** The chart is capped at
+944px of a 1440px column — deliberately, per the addendum above, because the
+space on its right is where #173's map goes — and the two cards run the full
+width. At `xl` after #173 the chart and the map together will fill that width
+and the cards will line up under them. Recorded rather than fixed, and it is
+the first thing the design review should look at if that reading is wrong.
+
+### The floor moved twice
+
+Both moves are in `vitest.config.mts` with their arithmetic. The deletion is
+reason 2 — covered code removed, numerator falling by no more than the
+denominator on all four — and it had to land in the same commit as the deletion,
+because a slice that lowers coverage cannot leave the gate green otherwise.
+The regression fix then moved all four back up. `TASKS.md`'s separate "coverage
+floor" task for this half is therefore done inside two other slices rather than
+in one of its own.
+
 ## Out of scope
 
 The sighting layer (#121). Visibility, in any form. A rain tab. A

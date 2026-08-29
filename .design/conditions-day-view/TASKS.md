@@ -226,7 +226,7 @@ for the other.
 the day region that PR introduced, which is not the region this list was written
 against — see the note on the task itself.
 
-- [ ] **`MeasuredToday`.** The three cards' content, merged into today's panel:
+- [x] **`MeasuredToday`.** The three cards' content, merged into today's panel:
       water temperature, the buoy's wave height, the station's wind and gust, the
       station's air temperature — each with its station and distance. Today only;
       the other six days say plainly that nothing has been measured about a day
@@ -250,7 +250,7 @@ against — see the note on the task itself.
       `ChosenDay` a finished `ReactNode`, rather than making `MeasuredToday` a
       client component.
 
-- [ ] **Remove the slab and reorder the page.** `ConditionsSection` loses the
+- [x] **Remove the slab and reorder the page.** `ConditionsSection` loses the
       three-card grid and the standalone reserved slot; the order becomes header,
       week, day. `TidePanel`, `WavePanel` and `WindPanel` stop being page-level
       cards and their reads move behind the day panel. `TideToday`, `WavesToday`
@@ -261,7 +261,7 @@ against — see the note on the task itself.
       three suspense boundaries still fail apart, so one quiet agency does not hold
       up the others.
 
-- [ ] **ADR: a forecast may sit beside a measurement without displacing it.**
+- [x] **ADR: a forecast may sit beside a measurement without displacing it.**
       ADR-0019 declined to decide whether wind and temperature could move from the
       air station to the grid cell. Record that this design does not move them —
       today shows both, each attributed — which is the outcome ADR-0019 was
@@ -272,7 +272,17 @@ against — see the note on the task itself.
       `docs/adr/` explaining why both. The plan's addendum of 2026-08-29 records
       that gap.
 
-- [ ] **Coverage floor.** As PR 1.
+- [x] **Coverage floor.** Done inside the two slices that moved it rather
+      than in one of its own: a slice that lowers coverage cannot leave the
+      gate green without moving the floor in the same commit, and the
+      regression fix that followed moved all four back up. Both moves carry
+      their arithmetic in `vitest.config.mts`.
+
+**Two things this half decided that the tasks above did not say.** The measured block is **two cards on `bg-dark`**, not one and not on the page ground: ADR-0010 refuses two provenances behind one sentence, so each source keeps its own plain-words line and therefore its own lead figure, and the card's colours are the ones already measured against that surface. And only what was **measured** moved in — the tide's lowest daylight low is NOAA's prediction and prints in the week's today column, CDIP's peak is drawn in full by the swell tab, and ADR-0029 states the rule that licensed dropping both. `readTodaysLowestLow` went with the tide card.
+
+**What the removal broke, and it was not in any task.** The tide card was the only place the page named its tide station, so taking it off left seven grid cells and the day chart's tide curve published by nobody. Found by diffing the rendered text of `main` against the branch, not by a test — the card's suite asserted it and was deleted with the card. `tideStation.ts` and three regression tests put it back on the week's tide row. **Run that diff on any slice that removes a region.**
+
+**Noticed, not filed, not fixed.** `HourChart` prints "today" in its summary line on all seven days, which arrived with the chart in #175. It needs a decision about where the day's name comes from, so it belongs to its own branch.
 
 ---
 
