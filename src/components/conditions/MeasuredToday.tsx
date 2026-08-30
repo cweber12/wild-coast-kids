@@ -43,6 +43,7 @@
  */
 
 import type { AirView, WavesView } from "@/lib/conditions";
+import { compassWords } from "./bearing";
 import { CARD_PROSE, PAGE_MUTED } from "./cardText";
 import { DISCLOSURE_TARGET } from "./disclosure";
 import { ProvenanceLine } from "./ProvenanceLine";
@@ -247,28 +248,6 @@ function SeaCard({ beachName, buoy, state }: WavesView) {
  * written to stop.
  */
 const CALM_MPH = 1;
-
-const COMPASS = [
-  "north",
-  "north-east",
-  "east",
-  "south-east",
-  "south",
-  "south-west",
-  "west",
-  "north-west",
-] as const;
-
-/**
- * Plain words for a direction in degrees true.
- *
- * METAR publishes the direction the wind blows *from*, which is why the caller
- * says "from the". Naming it as the direction it blows towards would reverse
- * every reading on the page.
- */
-function compassWords(degreesTrue: number): string {
-  return COMPASS[Math.round(degreesTrue / 45) % 8];
-}
 
 /**
  * How far the station is, in kilometres, rounded.
