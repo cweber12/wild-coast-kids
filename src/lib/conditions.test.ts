@@ -1430,10 +1430,11 @@ test("an hour the forecast did not reach is absent rather than zero", async () =
  * readGridpointWeek
  * ========================================================================= */
 
-/** The cell answering with a wind and a temperature series, or an absence. */
+/** The cell answering with a wind, a direction and a temperature, or an absence. */
 function gridSeriesOk(
   windMph: unknown,
   airTempF: unknown = { kind: "published", hours: [] },
+  windDirDegT: unknown = { kind: "published", hours: [] },
 ) {
   fetchGridForecast.mockResolvedValue({
     kind: "ok",
@@ -1444,7 +1445,7 @@ function gridSeriesOk(
       windMph,
       airTempF,
       gustMph: { kind: "published", hours: [] },
-      windDirDegT: { kind: "published", hours: [] },
+      windDirDegT,
       apparentTempF: { kind: "published", hours: [] },
     },
     url: "https://example.invalid",
@@ -1551,6 +1552,64 @@ test("all seven days are returned even when the run reaches none of them", async
 
   if (view.state.kind !== "week") throw new Error("expected a week");
   expect(view.state.days).toHaveLength(7);
+});
+
+test("the cell's wind direction is bucketed by Pacific day like its speed is", async () => {
+  // The compass reads a day of directions, so a run bucketed by position
+  // rather than by date would draw Tuesday's needle on Monday's map.
+  gridSeriesOk(
+    { kind: "published", hours: [] },
+    { kind: "published", hours: [] },
+    {
+      kind: "published",
+      hours: [
+        { atMs: hourUtc(18, 0), value: 281, published: true },
+        { atMs: hourUtc(19, 0), value: 340, published: true },
+      ],
+    },
+  );
+
+  const view = await readGridpointWeek(BEACH, NOON_PACIFIC_20260817);
+
+  if (view.state.kind !== "week") throw new Error("expected a week");
+  const [today, tomorrow] = view.state.days;
+  expect(today.windDirDegT).toEqual({
+    kind: "published",
+    hours: [{ atMs: hourUtc(18, 0), value: 281, published: true }],
+  });
+  expect(tomorrow.windDirDegT).toEqual({
+    kind: "published",
+    hours: [{ atMs: hourUtc(19, 0), value: 340, published: true }],
+  });
+});
+
+test("a cell that publishes no wind direction still publishes its speed", async () => {
+  // The same asymmetry the other two series have, and the one that matters for
+  // the compass: a needle with no bearing is withheld, and the wind tab keeps
+  // its curve. Collapsing the two would take a drawn chart off the page over a
+  // needle nobody asked for.
+  gridSeriesOk(
+    {
+      kind: "published",
+      hours: [{ atMs: hourUtc(18, 0), value: 8, published: true }],
+    },
+    { kind: "published", hours: [] },
+    {
+      kind: "absent",
+      reason:
+        "SGX/54,21: the National Weather Service declares windDirection and published no values.",
+    },
+  );
+
+  const view = await readGridpointWeek(BEACH, NOON_PACIFIC_20260817);
+
+  if (view.state.kind !== "week") throw new Error("expected a week");
+  expect(view.state.days[0].windDirDegT).toEqual({
+    kind: "absent",
+    reason:
+      "SGX/54,21: the National Weather Service declares windDirection and published no values.",
+  });
+  expect(view.state.days[0].windMph.kind).toBe("published");
 });
 
 test("a beach with no forecast cell is a permanent fact, not an outage", async () => {

@@ -1472,10 +1472,25 @@ export type GridDaySeries =
   | { kind: "published"; hours: readonly GridpointHour[] }
   | { kind: "absent"; reason: string };
 
-/** One day of the cell's wind and air temperature. */
+/** One day of the cell's wind, its direction, and air temperature. */
 export interface GridpointWeekDay extends WeekDayFrame {
   /** Wind speed in miles per hour. */
   windMph: GridDaySeries;
+  /**
+   * Wind direction in degrees true, the direction it blows *from*.
+   *
+   * **Hours rather than a bearing for the day**, because how a day of
+   * directions becomes one is a presentation decision and this is the read.
+   * The compass weights them by speed and takes the circular mean over the
+   * daylight window; a different consumer could want the whole day, or the
+   * envelope, or nothing. Carrying the hours keeps every one of those a change
+   * to a component rather than a change to what is read.
+   *
+   * Its own series and not a field on `windMph`'s hours, which is the shape the
+   * parser publishes and the shape the absences need: a cell can declare a
+   * speed and no direction, and the two owe different sentences.
+   */
+  windDirDegT: GridDaySeries;
   /** Air temperature in Fahrenheit. */
   airTempF: GridDaySeries;
 }
@@ -1590,6 +1605,7 @@ export async function readGridpointWeek(
   }
 
   const windByDate = gridHoursByDate(result.forecast.windMph);
+  const dirByDate = gridHoursByDate(result.forecast.windDirDegT);
   const tempByDate = gridHoursByDate(result.forecast.airTempF);
 
   const days = weekOfDays(nowMs).map((frame) => ({
@@ -1597,6 +1613,11 @@ export async function readGridpointWeek(
     windMph: gridDaySeries(
       result.forecast.windMph,
       windByDate,
+      frame.localDate,
+    ),
+    windDirDegT: gridDaySeries(
+      result.forecast.windDirDegT,
+      dirByDate,
       frame.localDate,
     ),
     airTempF: gridDaySeries(
