@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { GridDaySeries } from "@/lib/conditions";
-import { gridWindReadings, needleFrom } from "./compass";
+import { gridWindReadings, needleFrom } from "./needles";
 
 /** 2026-08-17 in Pacific: sunrise 06:15, sunset 19:30, as epoch milliseconds. */
 const SUNRISE = Date.UTC(2026, 7, 17, 13, 15);

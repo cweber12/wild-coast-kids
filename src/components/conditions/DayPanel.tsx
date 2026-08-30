@@ -67,6 +67,14 @@ import type { HourSeries } from "./HourChart";
 import { MeasuredPanel } from "./MeasuredPanel";
 import { MeasuredToday } from "./MeasuredToday";
 import { ReservedSlot } from "../ui/ReservedSlot";
+import { DayCompass, DayCompassSources, type CompassDay } from "./DayCompass";
+import {
+  GRID_MODEL_NOTE,
+  GRID_NETWORK,
+  GRID_SOURCE,
+  gridCellCaveat,
+} from "./gridCell";
+import { gridWindReadings, needleFrom } from "./needles";
 import { ShoreMap } from "./ShoreMap";
 import { shoreViewFor } from "./shore";
 import { SkyWording } from "./SkyWording";
@@ -510,6 +518,65 @@ export async function DayPanel({ slug }: { slug: string }) {
   const beach = beachBySlug(slug);
   const shore = beach === null ? null : shoreViewFor(beach);
 
+  /*
+    Seven days of needles, built beside the seven days of series rather than
+    inside them.
+
+    The map is one picture for the whole week and the needles are not, so they
+    travel separately: `DayCompass` is the client island that picks the chosen
+    day's pair out of these, and the coast underneath stays a single
+    server-rendered drawing. Putting them inside `DayView` would mean seven
+    copies of the map to vary two numbers.
+
+    The window is this day's own daylight, which is the design brief's word for
+    it and is load-bearing rather than decorative: the committed run swings
+    across north in its first three hours, and a day measured end to end
+    reports an arc nobody could have stood in.
+  */
+  const cellNote = [
+    GRID_MODEL_NOTE,
+    gridCellCaveat(grid.cell?.elevationM ?? null),
+  ]
+    .filter((part): part is string => part !== null)
+    .join("; ");
+
+  const compassDays: CompassDay[] = daylight.days.map((day) => {
+    const gridDay =
+      grid.state.kind === "week"
+        ? grid.state.days.find((each) => each.localDate === day.localDate)
+        : undefined;
+
+    const wind =
+      gridDay === undefined
+        ? null
+        : needleFrom(
+            gridWindReadings(
+              gridDay.windDirDegT,
+              gridDay.windMph,
+              day.sunriseMs,
+              day.sunsetMs,
+            ),
+          );
+
+    return {
+      localDate: day.localDate,
+      needles:
+        wind === null
+          ? []
+          : [
+              {
+                kind: "wind" as const,
+                label: "Wind",
+                fromDegT: wind.fromDegT,
+                spreadDeg: wind.spreadDeg,
+                source: GRID_SOURCE,
+                network: GRID_NETWORK,
+                note: cellNote,
+              },
+            ],
+    };
+  });
+
   return (
     <section aria-labelledby="day-panel-heading">
       <ChosenDay
@@ -523,6 +590,8 @@ export async function DayPanel({ slug }: { slug: string }) {
                 absence="We cannot place this beach on a map: every source we have for it is at the same point."
                 noCoast="The coastline this site traces is the open coast, and it does not reach this beach."
                 coastCredit={`Shore traced from CDIP's model lines, which run a few hundred metres offshore — so the water fades in rather than stopping at a shoreline.`}
+                compass={<DayCompass days={compassDays} />}
+                compassSources={<DayCompassSources days={compassDays} />}
               />
               {/*
                 The sighting layer from #121, reserved *on* the map rather than

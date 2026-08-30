@@ -8,6 +8,13 @@
  * `bearing.ts` under both of them owns the circular arithmetic and knows
  * nothing about either.
  *
+ * **Named for the needles rather than for the compass**, which is `shore.ts`
+ * sitting beside `ShoreMap.tsx` under a different word rather than a different
+ * case. `compass.ts` beside `Compass.tsx` is one file on a case-insensitive
+ * filesystem: the imports resolved to each other on Windows, every test in the
+ * drawing's suite failed with an undefined component, and Linux CI would have
+ * passed the pair without noticing.
+ *
  * **Daylight, not the whole day**, which is the design brief's word and is
  * doing real work rather than being a nicety. The committed gridpoint run
  * swings across north in its first three hours -- 340, 20, 150 -- and a day

@@ -1,5 +1,6 @@
 import { expect, test } from "vitest";
 import { render, screen } from "@testing-library/react";
+import { projectionFor } from "@/lib/coastline";
 import { ShoreMap, type ShoreMarker } from "./ShoreMap";
 
 /** A short run of coast running due north, west-facing like the real one. */
@@ -259,4 +260,81 @@ test("the drawn coast names what it was drawn from", () => {
   // Nothing to attribute when nothing is drawn.
   const bare = render(<ShoreMap {...PROPS} coast={[]} />).container;
   expect(bare.textContent).not.toContain(PROPS.coastCredit);
+});
+
+test("the dial is anchored on the beach, not in the middle of the frame", () => {
+  // The frame is sized by the sources, so at `mission-beach` a station nine
+  // kilometres away puts the frame's centre out in the county. A dial there
+  // would draw needles arriving at open water rather than at the sand.
+  const { container } = render(
+    <ShoreMap {...PROPS} compass={<circle data-test-dial="" r={1} />} />,
+  );
+
+  const anchor = container.querySelector("svg [data-compass-anchor]")!;
+  const project = projectionFor(BOUNDS, { width: 100, height: 100 });
+  const middle = PROPS.segment[Math.floor(PROPS.segment.length / 2)];
+  const at = project(middle.lat, middle.lon);
+
+  expect(anchor.getAttribute("transform")).toBe(
+    `translate(${at.x.toFixed(2)} ${at.y.toFixed(2)})`,
+  );
+  expect(anchor.querySelector("[data-test-dial]")).not.toBeNull();
+});
+
+test("a beach the coast does not reach gets its markers and no dial", () => {
+  // Cole's rule, and the reason for it: a bearing is worth reading against a
+  // coastline and is a bare gauge without one -- which is the anti-reference
+  // the brief opens with. 23 of 51 beaches are in this state.
+  //
+  // The segment here is the beach's own two ends and NOT null, because that is
+  // what `shore.ts` draws on 22 of those 23: with no coast to mark a run of, a
+  // chord is the only thing that says where the beach is. Written with a null
+  // segment this test passes with the coast check deleted, which is what
+  // mutating it revealed -- it was asserting `mission-bay-vacation-isle`, the
+  // one beach of the 23 whose ends coincide, and nothing about the other 22.
+  const { container } = render(
+    <ShoreMap
+      {...PROPS}
+      coast={[]}
+      segment={[
+        { lat: 32.77, lon: -117.24 },
+        { lat: 32.78, lon: -117.235 },
+      ]}
+      compass={<circle data-test-dial="" r={1} />}
+      compassSources={<p>Wind, from the west, 281°</p>}
+    />,
+  );
+
+  expect(container.querySelector("[data-compass-anchor]")).toBeNull();
+  expect(container.querySelector("[data-test-dial]")).toBeNull();
+  expect(screen.queryByText("Wind, from the west, 281°")).toBeNull();
+  // The markers are the part that works without a coastline, and they stay.
+  expect(screen.getByText(/Buoy Scripps Nearshore/)).toBeTruthy();
+});
+
+test("a beach whose two ends are one point gets no dial either", () => {
+  // `mission-bay-vacation-isle`, whose segment upper equals its lower, so
+  // there is neither a coast nor a chord to stand a dial on.
+  const { container } = render(
+    <ShoreMap
+      {...PROPS}
+      coast={[]}
+      segment={null}
+      compass={<circle data-test-dial="" r={1} />}
+    />,
+  );
+
+  expect(container.querySelector("[data-compass-anchor]")).toBeNull();
+});
+
+test("the needles' sources are listed beside the picture with the markers'", () => {
+  render(
+    <ShoreMap
+      {...PROPS}
+      compass={<circle data-test-dial="" r={1} />}
+      compassSources={<p>Wind, from the west, 281°</p>}
+    />,
+  );
+
+  expect(screen.getByText("Wind, from the west, 281°")).toBeTruthy();
 });

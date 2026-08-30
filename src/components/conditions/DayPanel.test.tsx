@@ -140,6 +140,7 @@ function gridWeek(
   overrides: {
     windMph?: { kind: "absent"; reason: string };
     airTempF?: { kind: "absent"; reason: string };
+    windDirDegT?: { kind: "absent"; reason: string };
   } = {},
 ) {
   const hours = (localDate: string, base: number) => ({
@@ -147,6 +148,24 @@ function gridWeek(
     hours: Array.from({ length: 24 }, (_, hour) => ({
       atMs: localMidnightOf(localDate) + hour * HOUR,
       value: base + Math.floor(hour / 6) * 3,
+      published: hour % 6 === 0,
+    })),
+  });
+
+  /**
+   * One steady bearing all day, and a different one per day.
+   *
+   * Steady so the resultant is exactly the number written here and the
+   * assertion can be an equality rather than a range -- the circular mean has
+   * its own tests, and this one is about whether the wiring reaches the page.
+   * Different per day because a dial showing the wrong day is otherwise
+   * invisible, which is the failure the whole client island exists around.
+   */
+  const directions = (localDate: string) => ({
+    kind: "published" as const,
+    hours: Array.from({ length: 24 }, (_, hour) => ({
+      atMs: localMidnightOf(localDate) + hour * HOUR,
+      value: localDate === TODAY ? 180 : 270,
       published: hour % 6 === 0,
     })),
   });
@@ -162,6 +181,7 @@ function gridWeek(
         dateLabel: "Mon, Aug 17",
         isToday: localDate === TODAY,
         windMph: overrides.windMph ?? hours(localDate, 5),
+        windDirDegT: overrides.windDirDegT ?? directions(localDate),
         airTempF: overrides.airTempF ?? hours(localDate, 64),
       })),
     },
@@ -731,4 +751,67 @@ test("the slot says what the layer will show, not what was found", async () => {
     "Will show octopus, nudibranchs, sea hares and leopard sharks logged " +
       "near this beach in the past week",
   );
+});
+
+test("the map carries a dial for the day the reader chose", async () => {
+  // The map is one picture for the whole week and the needles are not, so the
+  // coast stays server-rendered and only the dial moves. Asserted through the
+  // words rather than through the drawing, because the words are what a reader
+  // not looking at the picture is given.
+  const dates = [TODAY, TOMORROW];
+  daylight(dates);
+  tideWeek(dates);
+  waveWeek(dates);
+  skyWeek(dates);
+  gridWeek(dates);
+  wordingWeek(
+    dates.map((localDate) => ({
+      localDate,
+      periodName: "Today",
+      words: "Patchy Fog",
+    })),
+  );
+
+  const { container } = render(
+    <SelectedDayProvider>
+      {await DayPanel({ slug: "la-jolla-shores-beach" })}
+    </SelectedDayProvider>,
+  );
+
+  expect(container.querySelector("[data-needle='wind']")).not.toBeNull();
+
+  // Scoped to the needle's own row. The sky wording names the same cell a few
+  // hundred pixels up, which is ADR-0029's permitted duplication and is why an
+  // unscoped query for that sentence finds two.
+  const row = screen.getByText(/^Wind, from the south, 180°/).closest("li")!;
+  expect(row.textContent).toContain(
+    "this beach's own grid cell · National Weather Service, San Diego",
+  );
+});
+
+test("a cell that publishes no wind direction draws no dial", async () => {
+  // The needle goes and the map stays: the four markers are what ADR-0010 asked
+  // for and they do not depend on a bearing.
+  const dates = [TODAY];
+  daylight(dates);
+  tideWeek(dates);
+  waveWeek(dates);
+  skyWeek(dates);
+  gridWeek(dates, {
+    windDirDegT: {
+      kind: "absent",
+      reason: "the cell declares windDirection and published no values",
+    },
+  });
+  wordingWeek([{ localDate: TODAY, periodName: "Today", words: "Patchy Fog" }]);
+
+  const { container } = render(
+    <SelectedDayProvider>
+      {await DayPanel({ slug: "la-jolla-shores-beach" })}
+    </SelectedDayProvider>,
+  );
+
+  expect(container.querySelector("[data-needle='wind']")).toBeNull();
+  expect(screen.queryByText(/Wind, from the/)).toBeNull();
+  expect(screen.getByText(/Buoy Scripps Nearshore/)).toBeDefined();
 });

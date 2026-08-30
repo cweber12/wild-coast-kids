@@ -42,6 +42,7 @@
  * adjective away from a warning.
  */
 
+import type { ReactNode } from "react";
 import type { Bounds, Position, ShorePoint } from "@/lib/coastline";
 import { projectionFor } from "@/lib/coastline";
 import { ProvenanceLine } from "./ProvenanceLine";
@@ -104,6 +105,37 @@ export type ShoreMapProps = {
    * know that from looking.
    */
   coastCredit: string;
+  /**
+   * The dial, already rendered, placed in the map's own drawing space.
+   *
+   * A slot rather than data, because the needles change with the day a reader
+   * picks and this picture does not: the map is built once on the server and
+   * this is the one part of it that varies. `DayCompass` is what fills it.
+   *
+   * It is translated onto the beach's own stretch of coast rather than left at
+   * the frame's middle, because the frame is sized by the sources -- at
+   * `mission-beach` a station nine kilometres away puts the middle of the frame
+   * out in the county, and needles arriving there arrive at nothing.
+   *
+   * Withheld along with everything else when there is no coast to read a
+   * bearing against. See `compassSources`.
+   */
+  compass?: ReactNode;
+  /**
+   * What the dial says, listed with the markers' own names below the picture.
+   *
+   * Two slots and not one, because these are the same split every marker on
+   * this map already has: a shape inside the frame, a name outside it. The
+   * `<svg>` is one `role="img"`, so nothing drawn inside it reaches the
+   * accessibility tree and this block is the dial's text equivalent rather than
+   * a caption on it.
+   *
+   * **Both halves go together, and go together with the coast.** A dial drawn
+   * with its sources missing is an unattributed figure; sources printed under a
+   * map with no dial name a needle nobody can see. On the 23 beaches the traced
+   * coast does not reach, neither is rendered.
+   */
+  compassSources?: ReactNode;
 };
 
 /**
@@ -258,6 +290,8 @@ export function ShoreMap({
   absence,
   noCoast,
   coastCredit,
+  compass = null,
+  compassSources = null,
 }: ShoreMapProps) {
   if (bounds === null) {
     return <p className="text-2xs text-fog italic">{absence}</p>;
@@ -283,6 +317,24 @@ export function ShoreMap({
       project(bounds.north, bounds.west).y) /
     ((bounds.north - bounds.south) * METRES_PER_DEGREE_LAT);
   const fade = MODEL_LINE_OFFSET_M * unitsPerMetre;
+
+  /*
+    Where the dial stands: the middle of the beach's own drawn stretch.
+
+    Null wherever that stretch is not a run of the coast, which is exactly the
+    23 beaches the traced coastline does not reach. That is not an
+    implementation detail standing in for the rule -- a bearing read against no
+    shoreline is the bare gauge the brief's anti-references open with -- but the
+    two conditions are the same one, so the map cannot draw a dial it has
+    nothing to draw it against.
+  */
+  const anchor =
+    compass === null || !hasCoast || segment === null || segment.length < 2
+      ? null
+      : (() => {
+          const middle = segment[Math.floor(segment.length / 2)];
+          return project(middle.lat, middle.lon);
+        })();
 
   const missing = MISSING_SOURCES.filter(
     ([kind]) => !markers.some((marker) => marker.kind === kind),
@@ -368,6 +420,21 @@ export function ShoreMap({
         {markers.map((marker) => (
           <Mark key={marker.kind} marker={marker} project={project} />
         ))}
+
+        {/*
+          Last, so the needles sit over the markers rather than under them. Two
+          of the four sources are often within a few hundred metres of the sand
+          -- at La Jolla the tide gauge and the air station share a pier -- so a
+          dial drawn first would have its shaft interrupted by them.
+        */}
+        {anchor !== null && (
+          <g
+            transform={`translate(${anchor.x.toFixed(2)} ${anchor.y.toFixed(2)})`}
+            data-compass-anchor=""
+          >
+            {compass}
+          </g>
+        )}
       </svg>
 
       {hasCoast ? (
@@ -403,6 +470,8 @@ export function ShoreMap({
           </li>
         ))}
       </ul>
+
+      {anchor !== null && compassSources}
     </div>
   );
 }
