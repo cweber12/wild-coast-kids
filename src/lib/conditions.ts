@@ -921,6 +921,20 @@ export interface WaveHour {
   heightFt: number;
   /** True when CDIP issued an estimate for this instant. */
   published: boolean;
+  /**
+   * Peak direction in degrees true, and `null` on every drawn hour.
+   *
+   * **A bearing is not interpolable the way a height is**, and the arithmetic
+   * that gets a height right gets a direction exactly backwards: halfway
+   * between 350 and 10 is 0, and averaging them as numbers says 180 -- due
+   * south, the reverse of both. Circular interpolation would answer that, and
+   * would be this repo drawing a figure between two the model published, which
+   * is the thing `published` exists to keep visible.
+   *
+   * So the hours between CDIP's estimates carry a height, because a curve needs
+   * one, and no direction, because a needle does not.
+   */
+  directionDegT: number | null;
 }
 
 /**
@@ -1045,7 +1059,12 @@ function hourlyWaveHeights(rows: readonly MopWaveRow[]): WaveHour[] {
   const hours: WaveHour[] = [];
 
   rows.forEach((row, index) => {
-    hours.push({ atMs: row.atMs, heightFt: row.heightFt, published: true });
+    hours.push({
+      atMs: row.atMs,
+      heightFt: row.heightFt,
+      published: true,
+      directionDegT: row.directionDegT,
+    });
 
     const next = rows[index + 1];
     if (next === undefined) return;
@@ -1059,6 +1078,7 @@ function hourlyWaveHeights(rows: readonly MopWaveRow[]): WaveHour[] {
         atMs,
         heightFt: row.heightFt + (next.heightFt - row.heightFt) * through,
         published: false,
+        directionDegT: null,
       });
     }
   });

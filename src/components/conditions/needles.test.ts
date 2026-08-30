@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { GridDaySeries } from "@/lib/conditions";
-import { gridWindReadings, needleFrom } from "./needles";
+import { gridWindReadings, needleFrom, swellReadings } from "./needles";
 
 /** 2026-08-17 in Pacific: sunrise 06:15, sunset 19:30, as epoch milliseconds. */
 const SUNRISE = Date.UTC(2026, 7, 17, 13, 15);
@@ -138,5 +138,53 @@ describe("needleFrom", () => {
         { degreesTrue: 270, weight: 5 },
       ]),
     ).toBeNull();
+  });
+});
+
+describe("swellReadings", () => {
+  const wave = (
+    atMs: number,
+    heightFt: number,
+    directionDegT: number | null,
+  ) => ({ atMs, heightFt, published: directionDegT !== null, directionDegT });
+
+  it("weights each of CDIP's bearings by the height that came with it", () => {
+    expect(
+      swellReadings(
+        [wave(hour(18), 3.2, 340), wave(hour(19), 1.5, 300)],
+        SUNRISE,
+        SUNSET,
+      ),
+    ).toEqual([
+      { degreesTrue: 340, weight: 3.2 },
+      { degreesTrue: 300, weight: 1.5 },
+    ]);
+  });
+
+  it("leaves out the hours this repo drew between CDIP's own", () => {
+    // Five hours in every eight of a swell curve are a line drawn between two
+    // estimates. They carry a height because a curve needs one and no bearing
+    // because a needle does not, and this is where that shows.
+    expect(
+      swellReadings(
+        [wave(hour(18), 3.2, 340), wave(hour(19), 2.8, null)],
+        SUNRISE,
+        SUNSET,
+      ),
+    ).toEqual([{ degreesTrue: 340, weight: 3.2 }]);
+  });
+
+  it("keeps only the hours inside the daylight window", () => {
+    expect(
+      swellReadings(
+        [wave(hour(9), 4, 200), wave(hour(18), 3.2, 340)],
+        SUNRISE,
+        SUNSET,
+      ),
+    ).toEqual([{ degreesTrue: 340, weight: 3.2 }]);
+  });
+
+  it("has nothing to read from a day with no estimates in daylight", () => {
+    expect(swellReadings([], SUNRISE, SUNSET)).toEqual([]);
   });
 });

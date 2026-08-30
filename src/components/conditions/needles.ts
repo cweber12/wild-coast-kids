@@ -22,7 +22,7 @@
  * rule for the week's figures is the same one: what a reader can be there for.
  */
 
-import type { GridDaySeries } from "@/lib/conditions";
+import type { GridDaySeries, WaveHour } from "@/lib/conditions";
 import { bearingSpread, resultantBearing } from "./bearing";
 import type { WeightedBearing } from "./bearing";
 
@@ -63,6 +63,34 @@ export function gridWindReadings(
     const speed = speedAt.get(hour.atMs);
     if (speed === undefined) continue;
     readings.push({ degreesTrue: hour.value, weight: speed });
+  }
+  return readings;
+}
+
+/**
+ * One day of the swell, as bearings weighted by the height that came with them.
+ *
+ * **Only CDIP's own estimates**, which is the same distinction the swell curve
+ * draws with a mark and this reads off `directionDegT` being null. Five hours
+ * in every eight of that curve are a line this repo drew between two
+ * published points: they carry a height, because a polyline needs one at every
+ * hour, and no bearing, because halfway between 350 and 10 is not 180 and
+ * pretending otherwise would put a needle on a number nobody issued.
+ *
+ * Weighted by height for the same reason the wind is weighted by speed: a
+ * quarter-foot of leftover chop from the south should not pull the needle off
+ * the four-foot north-west swell a reader came to find.
+ */
+export function swellReadings(
+  hours: readonly WaveHour[],
+  sunriseMs: number,
+  sunsetMs: number,
+): readonly WeightedBearing[] {
+  const readings: WeightedBearing[] = [];
+  for (const hour of hours) {
+    if (hour.directionDegT === null) continue;
+    if (hour.atMs < sunriseMs || hour.atMs >= sunsetMs) continue;
+    readings.push({ degreesTrue: hour.directionDegT, weight: hour.heightFt });
   }
   return readings;
 }

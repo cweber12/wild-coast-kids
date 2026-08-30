@@ -67,6 +67,7 @@ import type { HourSeries } from "./HourChart";
 import { MeasuredPanel } from "./MeasuredPanel";
 import { MeasuredToday } from "./MeasuredToday";
 import { ReservedSlot } from "../ui/ReservedSlot";
+import type { CompassNeedle } from "./Compass";
 import { DayCompass, DayCompassSources, type CompassDay } from "./DayCompass";
 import {
   GRID_MODEL_NOTE,
@@ -74,7 +75,8 @@ import {
   GRID_SOURCE,
   gridCellCaveat,
 } from "./gridCell";
-import { gridWindReadings, needleFrom } from "./needles";
+import { MOP_MODEL_NOTE, MOP_NETWORK, mopLineSource } from "./mopLine";
+import { gridWindReadings, needleFrom, swellReadings } from "./needles";
 import { ShoreMap } from "./ShoreMap";
 import { shoreViewFor } from "./shore";
 import { SkyWording } from "./SkyWording";
@@ -546,6 +548,11 @@ export async function DayPanel({ slug }: { slug: string }) {
         ? grid.state.days.find((each) => each.localDate === day.localDate)
         : undefined;
 
+    const swellDay =
+      waves.state.kind === "week"
+        ? waves.state.days.find((each) => each.localDate === day.localDate)
+        : undefined;
+
     const wind =
       gridDay === undefined
         ? null
@@ -558,23 +565,46 @@ export async function DayPanel({ slug }: { slug: string }) {
             ),
           );
 
-    return {
-      localDate: day.localDate,
-      needles:
-        wind === null
-          ? []
-          : [
-              {
-                kind: "wind" as const,
-                label: "Wind",
-                fromDegT: wind.fromDegT,
-                spreadDeg: wind.spreadDeg,
-                source: GRID_SOURCE,
-                network: GRID_NETWORK,
-                note: cellNote,
-              },
-            ],
-    };
+    const swell =
+      swellDay === undefined || waves.line === null
+        ? null
+        : needleFrom(
+            swellReadings(swellDay.hours, day.sunriseMs, day.sunsetMs),
+          );
+
+    const needles: CompassNeedle[] = [];
+
+    /*
+      Wind first, and the order is the reading order rather than an accident.
+      It is the one a reader can feel standing on the sand, it is the needle
+      that changes most between days, and it is the one whose relationship to
+      the coast decides whether the water is choppy or glassy.
+    */
+    if (wind !== null) {
+      needles.push({
+        kind: "wind",
+        label: "Wind",
+        fromDegT: wind.fromDegT,
+        spreadDeg: wind.spreadDeg,
+        source: GRID_SOURCE,
+        network: GRID_NETWORK,
+        note: cellNote,
+      });
+    }
+
+    if (swell !== null && waves.line !== null) {
+      needles.push({
+        kind: "swell",
+        label: "Swell",
+        fromDegT: swell.fromDegT,
+        spreadDeg: swell.spreadDeg,
+        source: mopLineSource(waves.line.id),
+        network: MOP_NETWORK,
+        note: MOP_MODEL_NOTE,
+      });
+    }
+
+    return { localDate: day.localDate, needles };
   });
 
   return (

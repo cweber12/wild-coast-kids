@@ -673,13 +673,21 @@ test("an unknown slug is a coding error, not a quiet feed", async () => {
 
 /** Three-hourly rows for one Pacific day, in metres-converted feet. */
 function mopRows(
-  entries: { atMs: number; heightFt: number; periodS: number }[],
+  entries: {
+    atMs: number;
+    heightFt: number;
+    periodS: number;
+    directionDegT?: number;
+  }[],
 ) {
   fetchMopForecast.mockResolvedValue({
     kind: "ok",
     forecast: {
       lineId: "D0498",
-      rows: entries.map((entry) => ({ ...entry, directionDegT: 270 })),
+      rows: entries.map((entry) => ({
+        directionDegT: 270,
+        ...entry,
+      })),
       flaggedOut: 0,
     },
     url: "https://example.invalid",
@@ -909,10 +917,51 @@ test("the day carries every hour of it, drawn between CDIP's own estimates", asy
 
   if (view.state.kind !== "week") throw new Error("expected a week");
   expect(view.state.days[0].hours).toEqual([
-    { atMs: pacificHour(0, 2), heightFt: 2, published: true },
-    { atMs: pacificHour(0, 3), heightFt: 3, published: false },
-    { atMs: pacificHour(0, 4), heightFt: 4, published: false },
-    { atMs: pacificHour(0, 5), heightFt: 5, published: true },
+    {
+      atMs: pacificHour(0, 2),
+      heightFt: 2,
+      published: true,
+      directionDegT: 270,
+    },
+    {
+      atMs: pacificHour(0, 3),
+      heightFt: 3,
+      published: false,
+      directionDegT: null,
+    },
+    {
+      atMs: pacificHour(0, 4),
+      heightFt: 4,
+      published: false,
+      directionDegT: null,
+    },
+    {
+      atMs: pacificHour(0, 5),
+      heightFt: 5,
+      published: true,
+      directionDegT: 270,
+    },
+  ]);
+});
+
+test("only CDIP's own estimates carry a direction, never the hours between", async () => {
+  // A bearing cannot be interpolated the way a height can: halfway between 350
+  // and 10 is 0, and the arithmetic that gets a height right says 180 -- due
+  // south, the reverse of both. So the drawn hours carry a height and no
+  // direction, which is the same distinction `published` already makes.
+  mopRows([
+    { atMs: pacificHour(0, 2), heightFt: 2, periodS: 14, directionDegT: 350 },
+    { atMs: pacificHour(0, 5), heightFt: 5, periodS: 14, directionDegT: 10 },
+  ]);
+
+  const view = await readWaveWeek(BEACH, NOON_PACIFIC_20260817);
+
+  if (view.state.kind !== "week") throw new Error("expected a week");
+  expect(view.state.days[0].hours.map((hour) => hour.directionDegT)).toEqual([
+    350,
+    null,
+    null,
+    10,
   ]);
 });
 
@@ -931,9 +980,24 @@ test("the hours before the grid's first estimate come from the day before", asyn
   if (view.state.kind !== "week") throw new Error("expected a week");
   const today = view.state.days.find((day) => day.localDate === "2026-08-17");
   expect(today?.hours).toEqual([
-    { atMs: pacificHour(0, 0), heightFt: 2, published: false },
-    { atMs: pacificHour(0, 1), heightFt: 3, published: false },
-    { atMs: pacificHour(0, 2), heightFt: 4, published: true },
+    {
+      atMs: pacificHour(0, 0),
+      heightFt: 2,
+      published: false,
+      directionDegT: null,
+    },
+    {
+      atMs: pacificHour(0, 1),
+      heightFt: 3,
+      published: false,
+      directionDegT: null,
+    },
+    {
+      atMs: pacificHour(0, 2),
+      heightFt: 4,
+      published: true,
+      directionDegT: 270,
+    },
   ]);
 });
 
@@ -951,8 +1015,18 @@ test("a gap wider than the grid is left empty rather than drawn across", async (
 
   if (view.state.kind !== "week") throw new Error("expected a week");
   expect(view.state.days[0].hours).toEqual([
-    { atMs: pacificHour(0, 2), heightFt: 2, published: true },
-    { atMs: pacificHour(0, 11), heightFt: 8, published: true },
+    {
+      atMs: pacificHour(0, 2),
+      heightFt: 2,
+      published: true,
+      directionDegT: 270,
+    },
+    {
+      atMs: pacificHour(0, 11),
+      heightFt: 8,
+      published: true,
+      directionDegT: 270,
+    },
   ]);
 });
 

@@ -124,6 +124,10 @@ function waveWeek(dates: string[]) {
           atMs: localMidnightOf(localDate) + hour * HOUR,
           heightFt: 1.5 + Math.sin((hour / 24) * 2 * Math.PI) / 2,
           published: hour % 3 === 2,
+          // CDIP's own estimates carry a bearing; the hours drawn between them
+          // carry none, which is what the swell needle reads. Steady, so the
+          // resultant is exactly this and the assertion can be an equality.
+          directionDegT: hour % 3 === 2 ? 315 : null,
         })),
       })),
     },
@@ -814,4 +818,62 @@ test("a cell that publishes no wind direction draws no dial", async () => {
   expect(container.querySelector("[data-needle='wind']")).toBeNull();
   expect(screen.queryByText(/Wind, from the/)).toBeNull();
   expect(screen.getByText(/Buoy Scripps Nearshore/)).toBeDefined();
+});
+
+test("the dial carries a second needle for the swell, from its own publisher", async () => {
+  // One dial, two publishers -- `StatGroup`'s one-group-one-source contract
+  // broken on purpose and answered the way `WeekGrid` answers it, with a
+  // provenance line per row rather than by splitting the component.
+  const dates = [TODAY];
+  daylight(dates);
+  tideWeek(dates);
+  waveWeek(dates);
+  skyWeek(dates);
+  gridWeek(dates);
+  wordingWeek([{ localDate: TODAY, periodName: "Today", words: "Patchy Fog" }]);
+
+  const { container } = render(
+    <SelectedDayProvider>
+      {await DayPanel({ slug: "la-jolla-shores-beach" })}
+    </SelectedDayProvider>,
+  );
+
+  expect(container.querySelectorAll("[data-needle]")).toHaveLength(2);
+
+  const row = screen
+    .getByText(/^Swell, from the north-west, 315°/)
+    .closest("li")!;
+  expect(row.textContent).toContain("MOP line D0481");
+  expect(row.textContent).toContain(
+    "CDIP, Scripps Institution of Oceanography",
+  );
+});
+
+test("a beach with no swell model keeps its wind needle", async () => {
+  // 26 of 51 beaches bind no MOP line. The dial loses a needle and keeps the
+  // one it has, rather than the pair going down together.
+  const dates = [TODAY];
+  daylight(dates);
+  tideWeek(dates);
+  readWaveWeek.mockResolvedValue({
+    beachName: BINDING.beachName,
+    line: null,
+    state: {
+      kind: "no-line",
+      reason: "no MOP line is computed for this beach",
+    },
+  });
+  skyWeek(dates);
+  gridWeek(dates);
+  wordingWeek([{ localDate: TODAY, periodName: "Today", words: "Patchy Fog" }]);
+
+  const { container } = render(
+    <SelectedDayProvider>
+      {await DayPanel({ slug: "la-jolla-shores-beach" })}
+    </SelectedDayProvider>,
+  );
+
+  expect(container.querySelectorAll("[data-needle]")).toHaveLength(1);
+  expect(screen.getByText(/^Wind, from the south, 180°/)).toBeDefined();
+  expect(screen.queryByText(/^Swell, from/)).toBeNull();
 });

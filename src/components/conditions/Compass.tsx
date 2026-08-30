@@ -59,20 +59,12 @@ export type CompassNeedle = {
 };
 
 /**
- * How far out the needle's tail stands, in the map's own plot units.
+ * The ring, in the map's own plot units.
  *
- * A quarter of the hundred-unit frame, so the dial reads as an instrument sat
- * on the beach rather than as a second picture covering the coast. Exported
- * because the tests check the tail lands on the bearing, and a test that
- * hard-coded the number would pass after somebody changed it here.
+ * Just under a third of the hundred-unit frame, so the dial reads as an
+ * instrument sat on the beach rather than a second picture covering the coast.
  */
-export const DIAL_RADIUS = 26;
-
-/** Where the head stops, short of the beach so the segment stays visible. */
-const HEAD_RADIUS = 7;
-
-/** The arc sits just outside the tails, where it crowds nothing. */
-const ARC_RADIUS = DIAL_RADIUS + 4;
+const RING_RADIUS = 30;
 
 /**
  * Plot coordinates for a bearing at a radius, with north up.
@@ -91,22 +83,81 @@ function at(degreesTrue: number, radius: number): { x: number; y: number } {
  *
  * The brief's rule, and the one a small graphic breaks most easily: the whole
  * dial is a few dozen pixels, and a reader who cannot separate two hues would
- * be left with two identical strokes. The wind is a thin line with an open
- * head; the swell is a heavier tapered blade. Colour reinforces the pair and
- * carries none of it.
+ * be left with two identical strokes.
+ *
+ * **Open against solid, and thin against heavy.** The wind is a light shaft
+ * under a hollow chevron, the swell a heavy one under a filled blade. Both
+ * differences survive greyscale, which is the test that matters: colour
+ * reinforces the pair and carries none of it. It also reads as what each is --
+ * air is the lighter mark and water the heavier one.
+ *
+ * **And each runs on its own track, which is not decoration.** Built with one
+ * radius for both, a day whose wind and swell came from the same quarter drew
+ * the two needles exactly on top of each other: the page said two things and
+ * showed one, and nothing failed. At La Jolla that is an ordinary day rather
+ * than an edge case -- the swell runs west to north-west and the afternoon
+ * wind west to south-west -- and it was found by looking at the picture.
+ *
+ * So the wind reaches from the ring almost to the sand and the swell occupies
+ * the middle of that span, leaving the wind's outer and inner stretches always
+ * exposed. The lengths differ as a consequence and carry no meaning: the two
+ * are a speed and a height, in different units, and nothing on this dial
+ * invites them to be compared as quantities.
  */
 const NEEDLES: Record<
   CompassNeedleKind,
-  { stroke: string; fill: string; width: number; head: number }
+  {
+    stroke: string;
+    fill: string;
+    /** Where the arc is drawn. Each kind has its own, so two never overlap. */
+    arc: number;
+    /**
+     * How solid the arc is, and the two are not the same number.
+     *
+     * **They are set to the same measured contrast, not to the same opacity**,
+     * because the two hues do not weigh the same. At 0.65 over the sea the
+     * ocean arc reads 3.60:1 from painted pixels and the purple one 2.77:1 --
+     * under the brief's 3:1 for a graphical object, on the same setting that
+     * cleared it for the other. Tuned by measurement, they land at 3.60 and
+     * 3.64.
+     */
+    arcOpacity: number;
+    /** Where the shaft starts, out at the bearing. */
+    tail: number;
+    /** Where it ends, pointing at the beach. */
+    head: number;
+    width: number;
+    /** Half the arrowhead's span across the shaft. */
+    barb: number;
+    solid: boolean;
+  }
 > = {
-  wind: { stroke: "stroke-ocean", fill: "fill-ocean", width: 1.4, head: 2.6 },
+  wind: {
+    stroke: "stroke-ocean",
+    fill: "fill-ocean",
+    arc: RING_RADIUS,
+    arcOpacity: 0.65,
+    tail: 28,
+    head: 3,
+    width: 1.4,
+    barb: 2.2,
+    solid: false,
+  },
   swell: {
     stroke: "stroke-purple-deep",
     fill: "fill-purple-deep",
+    arc: 24,
+    arcOpacity: 0.8,
+    tail: 22,
+    head: 8,
     width: 3,
-    head: 4,
+    barb: 3,
+    solid: true,
   },
 };
+
+/** The two needles' geometry, exported so tests read it rather than repeat it. */
+export const NEEDLE_TRACKS = NEEDLES;
 
 /**
  * The dial, drawn around whatever origin its parent translated it to.
@@ -125,7 +176,7 @@ export function Compass({ needles }: { needles: readonly CompassNeedle[] }) {
       <circle
         cx={0}
         cy={0}
-        r={ARC_RADIUS}
+        r={RING_RADIUS}
         fill="none"
         className="stroke-fog"
         strokeWidth={0.6}
@@ -133,32 +184,46 @@ export function Compass({ needles }: { needles: readonly CompassNeedle[] }) {
         vectorEffect="non-scaling-stroke"
       />
 
-      {needles.map((needle) => (
-        <Needle key={needle.kind} needle={needle} />
-      ))}
+      {/*
+        Heaviest first, so the light shaft is never the one underneath. The
+        list itself stays in reading order -- wind, then swell -- because that
+        is the order the sources below are read in, and drawing order is a
+        painting concern rather than a claim about which matters.
+      */}
+      {[...needles]
+        .sort((a, b) => NEEDLES[b.kind].width - NEEDLES[a.kind].width)
+        .map((needle) => (
+          <Needle key={needle.kind} needle={needle} />
+        ))}
     </g>
   );
 }
 
 function Needle({ needle }: { needle: CompassNeedle }) {
   const style = NEEDLES[needle.kind];
-  const tail = at(needle.fromDegT, DIAL_RADIUS);
-  const head = at(needle.fromDegT, HEAD_RADIUS);
+  const tail = at(needle.fromDegT, style.tail);
+  const head = at(needle.fromDegT, style.head);
+  const span = style.tail - style.head;
 
   /*
     The two barbs of the arrowhead, set back along the shaft and out to either
     side. Built from the same `at` conversion rather than from a rotation
     matrix, so there is one place in this file that knows which way north is.
   */
-  const barbBack = at(needle.fromDegT, HEAD_RADIUS + style.head * 1.6);
+  /*
+    The head is twice as long as it is wide across. Set back by less it draws
+    an obtuse blob rather than an arrow, which is what the swell's first
+    version did once its shaft was shortened to clear the wind's.
+  */
+  const barbBack = at(needle.fromDegT, style.head + style.barb * 2);
   const across = {
-    x: (tail.y - head.y) / DIAL_RADIUS,
-    y: (head.x - tail.x) / DIAL_RADIUS,
+    x: (tail.y - head.y) / span,
+    y: (head.x - tail.x) / span,
   };
   const barbs = [
-    `${(barbBack.x + across.x * style.head).toFixed(2)},${(barbBack.y + across.y * style.head).toFixed(2)}`,
+    `${(barbBack.x + across.x * style.barb).toFixed(2)},${(barbBack.y + across.y * style.barb).toFixed(2)}`,
     `${head.x.toFixed(2)},${head.y.toFixed(2)}`,
-    `${(barbBack.x - across.x * style.head).toFixed(2)},${(barbBack.y - across.y * style.head).toFixed(2)}`,
+    `${(barbBack.x - across.x * style.barb).toFixed(2)},${(barbBack.y - across.y * style.barb).toFixed(2)}`,
   ].join(" ");
 
   return (
@@ -177,11 +242,24 @@ function Needle({ needle }: { needle: CompassNeedle }) {
         data-needle={needle.kind}
       />
 
-      <polygon
-        points={barbs}
-        className={style.fill}
-        data-needle-head={needle.kind}
-      />
+      {style.solid ? (
+        <polygon
+          points={barbs}
+          className={style.fill}
+          data-needle-head={needle.kind}
+        />
+      ) : (
+        <polyline
+          points={barbs}
+          fill="none"
+          className={style.stroke}
+          strokeWidth={style.width}
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          vectorEffect="non-scaling-stroke"
+          data-needle-head={needle.kind}
+        />
+      )}
     </>
   );
 }
@@ -195,9 +273,10 @@ function Needle({ needle }: { needle: CompassNeedle }) {
  * two, and the arc says the same thing at the rim.
  */
 function Arc({ needle }: { needle: CompassNeedle }) {
+  const { arc: radius, arcOpacity, stroke } = NEEDLES[needle.kind];
   const half = needle.spreadDeg / 2;
-  const from = at(needle.fromDegT - half, ARC_RADIUS);
-  const to = at(needle.fromDegT + half, ARC_RADIUS);
+  const from = at(needle.fromDegT - half, radius);
+  const to = at(needle.fromDegT + half, radius);
 
   /*
     Which of the two arcs between the endpoints is meant. Without the flag a
@@ -213,12 +292,12 @@ function Arc({ needle }: { needle: CompassNeedle }) {
     <path
       d={
         `M${from.x.toFixed(2)} ${from.y.toFixed(2)} ` +
-        `A ${ARC_RADIUS} ${ARC_RADIUS} 0 ${largeArc} 1 ${to.x.toFixed(2)} ${to.y.toFixed(2)}`
+        `A ${radius} ${radius} 0 ${largeArc} 1 ${to.x.toFixed(2)} ${to.y.toFixed(2)}`
       }
       fill="none"
-      className={NEEDLES[needle.kind].stroke}
+      className={stroke}
       strokeWidth={4}
-      strokeOpacity={0.65}
+      strokeOpacity={arcOpacity}
       strokeLinecap="butt"
       vectorEffect="non-scaling-stroke"
       data-arc={needle.kind}
