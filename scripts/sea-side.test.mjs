@@ -1,10 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { checkSeaSide, coastFrom, sideOf } from "./sea-side.mjs";
+import { checkSeaSide, coastFrom, sideOf, WINDOW_MARGIN } from "./sea-side.mjs";
 import {
   coastline,
   sideOf as sideOfTs,
   boundsAround,
   windowAround,
+  SHORE_WINDOW_MARGIN,
 } from "../src/lib/coastline.ts";
 import MOP_LINES from "../src/data/mop-lines.json" with { type: "json" };
 import BEACHES from "../src/data/beaches.json" with { type: "json" };
@@ -157,5 +158,13 @@ describe("what the gate row prints", () => {
     expect(ok).toBe(true);
     expect(printed).toMatch(/3 bind no wave buoy/);
     expect(printed).not.toMatch(/no-buoy-0/);
+  });
+});
+
+describe("the window the map draws", () => {
+  it("is the window the checker measures", () => {
+    // A checker run against a different frame checks a different claim: a wider
+    // window reaches more coast and can change which segment is nearest a buoy.
+    expect(WINDOW_MARGIN).toBe(SHORE_WINDOW_MARGIN);
   });
 });

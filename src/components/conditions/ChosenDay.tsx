@@ -70,7 +70,21 @@ export type DayView = {
   measured: ReactNode;
 };
 
-export function ChosenDay({ days }: { days: readonly DayView[] }) {
+export function ChosenDay({
+  days,
+  map,
+}: {
+  days: readonly DayView[];
+  /**
+   * The shore map, already rendered.
+   *
+   * Outside `DayView` and not inside it, because the map does not change when a
+   * reader picks a different day: the beach, its coast and the four places its
+   * figures come from are the same on all seven. Seven copies of one picture
+   * would say the opposite, and would redraw it on every click.
+   */
+  map: ReactNode;
+}) {
   const { selected } = useSelectedDay();
   const showing = resolveSelected(
     selected,
@@ -108,16 +122,35 @@ export function ChosenDay({ days }: { days: readonly DayView[] }) {
         Only the foreground changes, which is what makes the four one instrument
         rather than four charts sharing a tile.
       */}
-      <HourChart
-        startMs={day.startMs}
-        endMs={day.endMs}
-        series={day.series}
-        sunriseMs={day.sunriseMs}
-        sunsetMs={day.sunsetMs}
-        cloud={day.cloud}
-        cloudDescription={day.cloudDescription}
-        nowMs={day.nowMs}
-      />
+      {/*
+        When and where, side by side, which is the brief's third principle as a
+        layout: "time on the left, place on the right". Two thirds and one third
+        from `xl`, because the chart plots twenty-four hours and needs the width
+        while the map is square.
+
+        Below `xl` they stack, chart first. The map does not go full width when
+        it does: it is square, so a 1,184px column would draw a 1,184px-tall
+        picture and push the measured block off the screen entirely. Capping the
+        width is what "the map beneath at a reduced height" comes to for a shape
+        that is as tall as it is wide.
+      */}
+      <div className="xl:flex xl:items-start xl:gap-6">
+        <div className="min-w-0 xl:basis-2/3">
+          <HourChart
+            startMs={day.startMs}
+            endMs={day.endMs}
+            series={day.series}
+            sunriseMs={day.sunriseMs}
+            sunsetMs={day.sunsetMs}
+            cloud={day.cloud}
+            cloudDescription={day.cloudDescription}
+            nowMs={day.nowMs}
+          />
+        </div>
+        <div className="mx-auto mt-6 w-full max-w-sm min-w-0 xl:mt-0 xl:max-w-none xl:basis-1/3">
+          {map}
+        </div>
+      </div>
 
       {/*
         Under the chart, which is the order the brief lists this region in:

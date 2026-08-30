@@ -42,7 +42,7 @@
  * adjective away from a warning.
  */
 
-import type { Bounds, Position, ShorePoint } from "@/lib/coastline";
+import type { Bounds, ShorePoint } from "@/lib/coastline";
 import { projectionFor } from "@/lib/coastline";
 import { ProvenanceLine } from "./ProvenanceLine";
 
@@ -77,8 +77,15 @@ export type ShoreMapProps = {
   coast: readonly ShorePoint[];
   /** The box the map covers, or null when there is nothing to frame. */
   bounds: Bounds | null;
-  /** This beach's own two ends, drawn heavier than the coast around it. */
-  segment: readonly [Position, Position] | null;
+  /**
+   * The run of `coast` this beach occupies, drawn heavier than the rest.
+   *
+   * A run and never the beach's two ends joined: `beaches.json` carries a
+   * bounding extent whose corners are not points on the MOP line, so a chord
+   * between them lands beside the shore at an angle to it and reads as a
+   * second, wrong coastline. `shore.ts` picks the run.
+   */
+  segment: readonly ShorePoint[] | null;
   markers: readonly ShoreMarker[];
   /** The spoken equivalent of the whole picture. */
   description: string;
@@ -117,34 +124,73 @@ const OFF_FRAME = 2 * Math.hypot(WIDTH, HEIGHT);
  */
 const MARKS: Record<
   ShoreMarkerKind,
-  "rect" | "polygon" | "circle" | "ellipse"
+  "square" | "triangle" | "diamond" | "ring"
 > = {
-  "mop-line": "rect",
-  "wave-buoy": "polygon",
-  "tide-station": "circle",
-  "air-station": "ellipse",
+  "mop-line": "square",
+  "wave-buoy": "triangle",
+  "tide-station": "diamond",
+  "air-station": "ring",
 };
 
 /**
- * The seaward normal of a walked run, in plot coordinates.
+ * Every marker is outlined in the page's own ground.
  *
- * `sideOf` in `lib/coastline.ts` answers this geographically and the `sea-side`
- * gate row proves the answer is "left of the walk" for every beach that can be
- * asked. Converting that to plot coordinates is the one place the flip matters:
- * `projectionFor` puts north at the top, so y grows southward, and the
- * geographic left of a walk appears on the other hand on screen. Left of
- * geographic (dx, dy) is (-dy, dx); with y flipped, a plot direction (px, py)
- * has its seaward normal at (py, -px).
+ * Two of the four sources are frequently the same place — at La Jolla the tide
+ * gauge is bolted to the pier the air station is on, 200 m apart in a 3.9 km
+ * frame — and two filled shapes at one point drew a single black smudge. A
+ * halo in the ground colour separates them, so a reader sees two markers on top
+ * of each other rather than one shape they cannot name. It is also the honest
+ * picture: those stations really are in the same place.
+ */
+const HALO = "stroke-cream";
+
+/**
+ * The sea, as a polygon closed off the edge of the frame.
+ *
+ * **Which side is seaward.** `sideOf` in `lib/coastline.ts` answers that
+ * geographically and the `sea-side` gate row proves the answer is "left of the
+ * walk" for every beach that can be asked. Converting to plot coordinates is
+ * the one place the flip matters: `projectionFor` puts north at the top, so y
+ * grows southward and the geographic left of a walk appears on the other hand
+ * on screen. Left of geographic (dx, dy) is (-dy, dx); with y flipped, a plot
+ * direction (px, py) has its seaward normal at (py, -px).
+ *
+ * **The polygon also runs on past both ends, and that is not decoration.**
+ * Closing straight from the last point to seaward and back to the first leaves
+ * a wedge of frame unshaded wherever the coast is not perpendicular to that
+ * normal — a diagonal edge of missing sea in a corner, which reads as a drawing
+ * error because it is one. Extending along the walk as well as out to sea puts
+ * both closing corners outside the frame in both directions, so the whole
+ * seaward half is covered whatever angle the shore runs at.
  *
  * Taken from the run's two ends rather than segment by segment: the polygon
- * only has to close on the correct side of the frame, and a per-segment normal
+ * only has to close on the right side of the frame, and a per-segment normal
  * would fold on itself at a bend.
  */
-function seaward(from: { x: number; y: number }, to: { x: number; y: number }) {
-  const px = to.x - from.x;
-  const py = to.y - from.y;
+function seaPath(
+  path: string,
+  drawn: readonly { x: number; y: number }[],
+): string {
+  const first = drawn[0];
+  const last = drawn[drawn.length - 1];
+
+  const px = last.x - first.x;
+  const py = last.y - first.y;
   const length = Math.hypot(px, py) || 1;
-  return { x: (py / length) * OFF_FRAME, y: (-px / length) * OFF_FRAME };
+
+  const walk = { x: (px / length) * OFF_FRAME, y: (py / length) * OFF_FRAME };
+  const sea = { x: (py / length) * OFF_FRAME, y: (-px / length) * OFF_FRAME };
+
+  const beyondEnd = { x: last.x + walk.x + sea.x, y: last.y + walk.y + sea.y };
+  const beforeStart = {
+    x: first.x - walk.x + sea.x,
+    y: first.y - walk.y + sea.y,
+  };
+
+  return (
+    `${path} L${beyondEnd.x.toFixed(2)} ${beyondEnd.y.toFixed(2)}` +
+    ` L${beforeStart.x.toFixed(2)} ${beforeStart.y.toFixed(2)} Z`
+  );
 }
 
 export function ShoreMap({
@@ -171,14 +217,7 @@ export function ShoreMap({
     )
     .join(" ");
 
-  const off = hasCoast ? seaward(drawn[0], drawn[drawn.length - 1]) : null;
-  const last = drawn[drawn.length - 1];
-  const first = drawn[0];
-  const sea =
-    off === null
-      ? null
-      : `${path} L${(last.x + off.x).toFixed(2)} ${(last.y + off.y).toFixed(2)}` +
-        ` L${(first.x + off.x).toFixed(2)} ${(first.y + off.y).toFixed(2)} Z`;
+  const sea = hasCoast ? seaPath(path, drawn) : null;
 
   const missing = MISSING_SOURCES.filter(
     ([kind]) => !markers.some((marker) => marker.kind === kind),
@@ -218,13 +257,19 @@ export function ShoreMap({
           rather than only hue: the two are the same ocean, so a reader who sees
           no colour still sees which part of the shore they chose.
         */}
-        {segment !== null && (
+        {segment !== null && segment.length > 1 && (
           <path
-            d={`M${project(segment[0].lat, segment[0].lon).x.toFixed(2)} ${project(segment[0].lat, segment[0].lon).y.toFixed(2)} L${project(segment[1].lat, segment[1].lon).x.toFixed(2)} ${project(segment[1].lat, segment[1].lon).y.toFixed(2)}`}
+            d={segment
+              .map((point, index) => {
+                const at = project(point.lat, point.lon);
+                return `${index === 0 ? "M" : "L"}${at.x.toFixed(2)} ${at.y.toFixed(2)}`;
+              })
+              .join(" ")}
             fill="none"
             className="stroke-purple-deep"
             strokeWidth={3.5}
             strokeLinecap="round"
+            strokeLinejoin="round"
             vectorEffect="non-scaling-stroke"
             data-segment=""
           />
@@ -283,10 +328,10 @@ const MISSING_SOURCES: readonly (readonly [ShoreMarkerKind, string])[] = [
 
 /** Drawn beside each name, and hidden from assistive tech: the list says it. */
 const GLYPHS: Record<ShoreMarkerKind, string> = {
-  "mop-line": "▪",
-  "wave-buoy": "▴",
-  "tide-station": "●",
-  "air-station": "⬬",
+  "mop-line": "◼",
+  "wave-buoy": "▲",
+  "tide-station": "◆",
+  "air-station": "◯",
 };
 
 function Mark({
@@ -298,40 +343,45 @@ function Mark({
 }) {
   const at = project(marker.lat, marker.lon);
   const shape = MARKS[marker.kind];
-  const size = 2.6;
+  const size = 2.4;
+  const common = {
+    "data-marker": marker.kind,
+    "data-shape": shape,
+    vectorEffect: "non-scaling-stroke" as const,
+  };
 
-  if (shape === "rect") {
+  if (shape === "square") {
     return (
       <rect
         x={at.x - size / 2}
         y={at.y - size / 2}
         width={size}
         height={size}
-        className="fill-ink"
-        data-marker={marker.kind}
+        className={`fill-ink ${HALO}`}
+        strokeWidth={1.2}
+        {...common}
       />
     );
   }
 
-  if (shape === "polygon") {
+  if (shape === "triangle") {
     return (
       <polygon
-        points={`${at.x},${at.y - size} ${at.x - size},${at.y + size * 0.7} ${at.x + size},${at.y + size * 0.7}`}
-        className="fill-ink"
-        data-marker={marker.kind}
+        points={`${at.x},${at.y - size} ${at.x - size},${at.y + size * 0.72} ${at.x + size},${at.y + size * 0.72}`}
+        className={`fill-ink ${HALO}`}
+        strokeWidth={1.2}
+        {...common}
       />
     );
   }
 
-  if (shape === "ellipse") {
+  if (shape === "diamond") {
     return (
-      <ellipse
-        cx={at.x}
-        cy={at.y}
-        rx={size}
-        ry={size * 0.55}
-        className="fill-ink"
-        data-marker={marker.kind}
+      <polygon
+        points={`${at.x},${at.y - size} ${at.x + size},${at.y} ${at.x},${at.y + size} ${at.x - size},${at.y}`}
+        className={`fill-ink ${HALO}`}
+        strokeWidth={1.2}
+        {...common}
       />
     );
   }
@@ -340,12 +390,11 @@ function Mark({
     <circle
       cx={at.x}
       cy={at.y}
-      r={size * 0.75}
+      r={size * 0.85}
       fill="none"
       className="stroke-ink"
-      strokeWidth={1.4}
-      vectorEffect="non-scaling-stroke"
-      data-marker={marker.kind}
+      strokeWidth={1.6}
+      {...common}
     />
   );
 }

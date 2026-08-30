@@ -308,3 +308,26 @@ export function sideOf(
   if (cross === 0) return null;
   return cross > 0 ? "left" : "right";
 }
+
+/**
+ * How much room a beach's map leaves around its sources, as a fraction of the
+ * larger span.
+ *
+ * Named here rather than at the call site because two things have to agree
+ * about it. `ShoreMap` frames the window it draws; the `sea-side` gate row
+ * checks which side of that window the water is on, and a wider frame reaches
+ * more coast and can change which segment is nearest a buoy. A checker run
+ * against a window the map does not draw would be checking a different claim.
+ *
+ * `scripts/sea-side.mjs` spells the number a second time, because it runs under
+ * plain node and cannot import this file; `sea-side.test.mjs` asserts the two
+ * are equal, so the pair cannot drift silently.
+ *
+ * 0.1 rather than more, measured. Raising it to reach the 23 beaches with no
+ * coast in frame costs the beaches that have one: at 0.1 La Jolla Shores fills
+ * 83 percent of its map's height, at 0.5 it fills 50 percent, and at 1.0 it
+ * fills 33 while Mission Beach's frame reaches 51 km. Half-fixing the bay
+ * beaches by shrinking every open-coast beach is the wrong trade, and the bay
+ * beaches are answered by saying so instead.
+ */
+export const SHORE_WINDOW_MARGIN = 0.1;

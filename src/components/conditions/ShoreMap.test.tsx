@@ -47,10 +47,9 @@ const MARKERS: ShoreMarker[] = [
 const PROPS = {
   coast: COAST,
   bounds: BOUNDS,
-  segment: [
-    { lat: 32.855, lon: -117.259 },
-    { lat: 32.884, lon: -117.253 },
-  ] as const,
+  // The middle two of the four, which is what a beach occupying part of the
+  // window looks like.
+  segment: COAST.slice(1, 3),
   markers: MARKERS,
   description: "A map of this beach and the four places its figures come from.",
   absence: "We cannot place this beach on a map.",
@@ -136,8 +135,11 @@ test("this beach's own stretch of shore is drawn apart from the rest", () => {
 test("markers differ in shape, not only in colour", () => {
   const { container } = render(<ShoreMap {...PROPS} />);
 
+  // The drawn shape rather than the SVG element: a diamond and a triangle are
+  // both <polygon>, so comparing tag names would call two different shapes the
+  // same and pass for the wrong reason.
   const shapes = [...container.querySelectorAll("[data-marker]")].map((node) =>
-    node.tagName.toLowerCase(),
+    node.getAttribute("data-shape"),
   );
 
   expect(shapes.length).toBe(MARKERS.length);

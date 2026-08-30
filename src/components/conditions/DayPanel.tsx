@@ -60,11 +60,14 @@ import {
   type WaveWeekDay,
   type WaveWeekView,
 } from "@/lib/conditions";
+import { beachBySlug } from "@/lib/beaches";
 import { localMidnightOf, addLocalDays } from "@/lib/pacific-time";
 import { ChosenDay, type DayView } from "./ChosenDay";
 import type { HourSeries } from "./HourChart";
 import { MeasuredPanel } from "./MeasuredPanel";
 import { MeasuredToday } from "./MeasuredToday";
+import { ShoreMap } from "./ShoreMap";
+import { shoreViewFor } from "./shore";
 import { SkyWording } from "./SkyWording";
 import { gridPoints, swellPoints, tidePoints } from "./series";
 
@@ -275,6 +278,22 @@ function cloudBandDescription(
   );
 }
 
+/**
+ * The spoken equivalent of the whole map.
+ *
+ * Says what the picture is and how many sources are on it, and nothing about
+ * what the shape of the coast means. A reader hearing this should learn the
+ * same thing a reader seeing it does: that these figures come from places, and
+ * roughly how many.
+ */
+function mapDescription(beachName: string, sources: number): string {
+  return (
+    `A map of ${beachName} and the ${sources} ` +
+    `${sources === 1 ? "place" : "places"} the figures on this page come from, ` +
+    `each drawn at its real distance from the beach.`
+  );
+}
+
 export async function DayPanel({ slug }: { slug: string }) {
   const daylight = readDaylightWeek(slug);
   const [hourly, waves, sky, grid, wording] = await Promise.all([
@@ -475,9 +494,36 @@ export async function DayPanel({ slug }: { slug: string }) {
     };
   });
 
+  /*
+    The map is built once and handed over, outside the seven days, because it
+    is the same picture on all seven: this beach, its coast, and the four places
+    its figures come from. It is also the one thing in this region that reads no
+    feed -- `beaches.json` and `mop-lines.json` are committed -- so it cannot go
+    quiet and does not belong behind a Suspense boundary.
+
+    A beach the inventory does not hold is not this component's error to invent
+    a map for: the route already answered that question before rendering, and
+    `beachBySlug` returning null here would mean the page is showing a beach it
+    does not have.
+  */
+  const beach = beachBySlug(slug);
+  const shore = beach === null ? null : shoreViewFor(beach);
+
   return (
     <section aria-labelledby="day-panel-heading">
-      <ChosenDay days={days} />
+      <ChosenDay
+        days={days}
+        map={
+          shore === null ? null : (
+            <ShoreMap
+              {...shore}
+              description={mapDescription(beach!.name, shore.markers.length)}
+              absence="We cannot place this beach on a map: every source we have for it is at the same point."
+              noCoast="The coastline this site traces is the open coast, and it does not reach this beach."
+            />
+          )
+        }
+      />
     </section>
   );
 }
