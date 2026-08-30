@@ -1,5 +1,6 @@
 import { expect, test } from "vitest";
 import { allBeaches, beachBySlug } from "@/lib/beaches";
+import type { ShorePoint } from "@/lib/coastline";
 import { shoreDistanceKm, shoreViewFor } from "./shore";
 
 /** The beach the page opens on, and the one with all four sources bound. */
@@ -142,10 +143,13 @@ test("this beach's stretch is a run of the drawn coast, not a chord across it", 
   // coastline and reads as a second, wrong shore -- which is what it drew.
   const view = shoreViewFor(LA_JOLLA);
   const ids = view.coast.map((point) => point.id);
+  // Where a coast is drawn the stretch is taken from it, so every point in it
+  // carries the line id that placed it.
+  const run = view.segment as readonly ShorePoint[];
 
-  expect(view.segment).not.toBeNull();
-  expect(view.segment!.length).toBeGreaterThan(1);
-  for (const point of view.segment!) {
+  expect(run).not.toBeNull();
+  expect(run.length).toBeGreaterThan(1);
+  for (const point of run) {
     expect(ids).toContain(point.id);
   }
 });
@@ -153,17 +157,34 @@ test("this beach's stretch is a run of the drawn coast, not a chord across it", 
 test("the stretch is contiguous, and shorter than the coast around it", () => {
   const view = shoreViewFor(LA_JOLLA);
   const ids = view.coast.map((point) => point.id);
-  const first = ids.indexOf(view.segment![0].id);
+  const run = view.segment as readonly ShorePoint[];
+  const first = ids.indexOf(run[0].id);
 
-  expect(view.segment!.map((point) => point.id)).toEqual(
-    ids.slice(first, first + view.segment!.length),
+  expect(run.map((point) => point.id)).toEqual(
+    ids.slice(first, first + run.length),
   );
-  expect(view.segment!.length).toBeLessThan(view.coast.length);
+  expect(run.length).toBeLessThan(view.coast.length);
 });
 
-test("a beach with no coast in frame has no stretch to mark", () => {
+test("a beach with no coast is still placed on its own map", () => {
+  // Without this the bay maps are two markers floating in an empty frame with
+  // nothing saying where the beach is, which is the one thing the picture has
+  // to show. The chord objection is about a stroke competing with a drawn
+  // shore; where no shore is drawn there is nothing to compete with, and the
+  // beach's own two ends are the best statement available.
   const view = shoreViewFor(beachBySlug("mission-bay-sail-bay")!);
+  const beach = beachBySlug("mission-bay-sail-bay")!;
 
   expect(view.coast).toEqual([]);
+  expect(view.segment).not.toBeNull();
+  expect(view.segment).toEqual([beach.segment.lower, beach.segment.upper]);
+});
+
+test("a beach with no coast and no extent has nothing to draw", () => {
+  // mission-bay-vacation-isle, whose upper equals its lower. One point is not a
+  // stretch of shore, and a stroke from a point to itself claims a beach with
+  // no length.
+  const view = shoreViewFor(beachBySlug("mission-bay-vacation-isle")!);
+
   expect(view.segment).toBeNull();
 });

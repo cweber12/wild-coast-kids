@@ -37,8 +37,13 @@ import { TIDE_NETWORK } from "./tideStation";
 export type ShoreView = {
   coast: readonly ShorePoint[];
   bounds: Bounds | null;
-  /** The run of `coast` this beach occupies, drawn heavier. Never a chord. */
-  segment: readonly ShorePoint[] | null;
+  /**
+   * Where this beach is, drawn heavier than anything around it.
+   *
+   * The run of `coast` it occupies where there is a coast, and its own two ends
+   * where there is not. See `beachStretch`.
+   */
+  segment: readonly Position[] | null;
   markers: readonly ShoreMarker[];
 };
 
@@ -73,9 +78,9 @@ export function shoreDistanceKm(metres: number | null): string | null {
 }
 
 /**
- * The stretch of drawn coast that is this beach, or null when there is none.
+ * Where this beach is on its own map, or null when it has no extent to draw.
  *
- * **A run of the polyline, never a chord between the segment's two ends.**
+ * **A run of the polyline, never a chord, wherever a coast is drawn.**
  * `beaches.json` carries the beach's bounding extent, and neither end is a
  * point on the MOP line: drawing a straight stroke between them puts a second,
  * heavier shore beside the real one at an angle to it, which is what it did the
@@ -86,11 +91,22 @@ export function shoreDistanceKm(metres: number | null): string | null {
  * two ends land on the same point, which is `mission-bay-vacation-isle`, whose
  * upper equals its lower.
  */
-function beachRun(
+function beachStretch(
   coast: readonly ShorePoint[],
   beach: Beach,
-): readonly ShorePoint[] | null {
-  if (coast.length < 2) return null;
+): readonly Position[] | null {
+  const { upper, lower } = beach.segment;
+  const hasExtent = upper.lat !== lower.lat || upper.lon !== lower.lon;
+
+  /*
+    No coast to mark a run of, so the beach's own two ends are drawn instead.
+    The objection to a chord is that it competes with a drawn shore at an angle
+    to it; where no shore is drawn there is nothing to compete with, and this is
+    the only thing that says where the beach is. Without it the 23 bay maps are
+    markers floating in an empty frame, which is the one question the picture
+    has to answer.
+  */
+  if (coast.length < 2) return hasExtent ? [lower, upper] : null;
 
   const nearest = (at: Position): number => {
     const lonScale = Math.cos((at.lat * Math.PI) / 180);
@@ -207,7 +223,7 @@ export function shoreViewFor(beach: Beach): ShoreView {
   return {
     coast,
     bounds,
-    segment: beachRun(coast, beach),
+    segment: beachStretch(coast, beach),
     markers,
   };
 }

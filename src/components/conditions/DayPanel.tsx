@@ -520,6 +520,7 @@ export async function DayPanel({ slug }: { slug: string }) {
               description={mapDescription(beach!.name, shore.markers.length)}
               absence="We cannot place this beach on a map: every source we have for it is at the same point."
               noCoast="The coastline this site traces is the open coast, and it does not reach this beach."
+              coastCredit={`Shore traced from CDIP's model lines, which run a few hundred metres offshore — so the water fades in rather than stopping at a shoreline.`}
             />
           )
         }

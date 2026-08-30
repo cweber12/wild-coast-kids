@@ -54,6 +54,8 @@ const PROPS = {
   description: "A map of this beach and the four places its figures come from.",
   absence: "We cannot place this beach on a map.",
   noCoast: "The coastline this site traces does not reach this beach.",
+  coastCredit:
+    "Coast traced from CDIP's MOP lines, which run a few hundred metres offshore.",
 };
 
 /** The provenance lines beside the picture, in order. */
@@ -157,14 +159,17 @@ test("the map says nothing the caller did not give it", () => {
     decoration.remove();
   }
 
-  // Exactly what ProvenanceLine composes from the fields it was handed.
-  const given = MARKERS.map(
-    (marker) =>
-      `${marker.source} · ${marker.network}` +
-      (marker.distanceKm
-        ? ` · about ${marker.distanceKm} km from this beach`
-        : ""),
-  ).join("");
+  // The credit for the drawn shore, then exactly what ProvenanceLine composes
+  // from the fields each marker was handed. Nothing else.
+  const given =
+    PROPS.coastCredit +
+    MARKERS.map(
+      (marker) =>
+        `${marker.source} · ${marker.network}` +
+        (marker.distanceKm
+          ? ` · about ${marker.distanceKm} km from this beach`
+          : ""),
+    ).join("");
 
   expect((container.textContent ?? "").replace(/\s/g, "")).toBe(
     given.replace(/\s/g, ""),
@@ -196,4 +201,62 @@ test("the shaded side is the one the wave buoy is on", () => {
   // Off-frame to the west, the same way the buoy sits from the coast.
   expect(Math.max(...closing)).toBeLessThan(Math.min(...coastXs));
   expect(buoyX).toBeLessThan(Math.max(...coastXs));
+});
+
+test("the sea fades away from the line rather than ending at it", () => {
+  // The line is CDIP's model line, 117 to 930 m offshore, not the shoreline --
+  // at La Jolla the tide gauge and the pier are both over water and both fall
+  // on its landward side. A hard edge would claim a boundary the data does not
+  // have, so the wash is transparent where the line is and opaque out to sea.
+  const { container } = render(<ShoreMap {...PROPS} />);
+
+  const sea = container.querySelector("[data-sea]")!;
+  const gradient = container.querySelector("linearGradient");
+
+  expect(gradient).toBeTruthy();
+  expect(sea.getAttribute("fill")).toBe(
+    `url(#${gradient!.getAttribute("id")})`,
+  );
+
+  const stops = [...gradient!.querySelectorAll("stop")].map((stop) =>
+    Number(stop.getAttribute("stop-opacity")),
+  );
+  expect(stops[0]).toBe(0);
+  expect(stops[stops.length - 1]).toBeGreaterThan(0);
+});
+
+test("the fade is a real distance, so it shrinks as the frame widens", () => {
+  // The blur stands for the offset itself, so on a 20 km frame it is a few
+  // units and on a 4 km frame it is a sixth of the picture. A fade measured in
+  // frame units instead would blur a wide map by kilometres.
+  const near = render(<ShoreMap {...PROPS} />).container;
+  const wide = render(
+    <ShoreMap
+      {...PROPS}
+      bounds={{ south: 32.6, north: 33.0, west: -117.5, east: -117.1 }}
+    />,
+  ).container;
+
+  const spread = (root: HTMLElement): number => {
+    const g = root.querySelector("linearGradient")!;
+    return Math.hypot(
+      Number(g.getAttribute("x2")) - Number(g.getAttribute("x1")),
+      Number(g.getAttribute("y2")) - Number(g.getAttribute("y1")),
+    );
+  };
+
+  expect(spread(wide)).toBeLessThan(spread(near));
+});
+
+test("the drawn coast names what it was drawn from", () => {
+  // The markers are attributed one by one and the shape they sit on was not,
+  // which is the defect this branch's own design review raised against the day
+  // chart. A line drawn from a published dataset is a figure like any other.
+  const { container } = render(<ShoreMap {...PROPS} />);
+
+  expect(screen.getByText(PROPS.coastCredit)).toBeTruthy();
+
+  // Nothing to attribute when nothing is drawn.
+  const bare = render(<ShoreMap {...PROPS} coast={[]} />).container;
+  expect(bare.textContent).not.toContain(PROPS.coastCredit);
 });

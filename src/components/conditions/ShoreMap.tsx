@@ -42,7 +42,7 @@
  * adjective away from a warning.
  */
 
-import type { Bounds, ShorePoint } from "@/lib/coastline";
+import type { Bounds, Position, ShorePoint } from "@/lib/coastline";
 import { projectionFor } from "@/lib/coastline";
 import { ProvenanceLine } from "./ProvenanceLine";
 
@@ -78,14 +78,15 @@ export type ShoreMapProps = {
   /** The box the map covers, or null when there is nothing to frame. */
   bounds: Bounds | null;
   /**
-   * The run of `coast` this beach occupies, drawn heavier than the rest.
+   * Where this beach is, drawn heavier than anything around it.
    *
-   * A run and never the beach's two ends joined: `beaches.json` carries a
-   * bounding extent whose corners are not points on the MOP line, so a chord
-   * between them lands beside the shore at an angle to it and reads as a
-   * second, wrong coastline. `shore.ts` picks the run.
+   * A run of `coast` wherever a coast is drawn, because a chord between the two
+   * ends `beaches.json` carries lands beside the shore at an angle to it and
+   * reads as a second, wrong coastline. On the 23 beaches with no coast in
+   * frame it is those two ends after all, because nothing else on the picture
+   * says where the beach is. `shore.ts` makes that choice.
    */
-  segment: readonly ShorePoint[] | null;
+  segment: readonly Position[] | null;
   markers: readonly ShoreMarker[];
   /** The spoken equivalent of the whole picture. */
   description: string;
@@ -93,6 +94,16 @@ export type ShoreMapProps = {
   absence: string;
   /** What to say when the traced coast does not reach this beach. */
   noCoast: string;
+  /**
+   * What the drawn shore was traced from, said once under the picture.
+   *
+   * The markers are attributed one at a time and the shape they sit on was not,
+   * which is ADR-0010's rule applied to everything except the largest thing on
+   * the map. It matters more here than for an ordinary figure, because the line
+   * is CDIP's model line rather than a shoreline and a reader has no way to
+   * know that from looking.
+   */
+  coastCredit: string;
 };
 
 /**
@@ -170,7 +181,11 @@ const HALO = "stroke-cream";
 function seaPath(
   path: string,
   drawn: readonly { x: number; y: number }[],
-): string {
+): {
+  d: string;
+  from: { x: number; y: number };
+  unit: { x: number; y: number };
+} {
   const first = drawn[0];
   const last = drawn[drawn.length - 1];
 
@@ -178,8 +193,9 @@ function seaPath(
   const py = last.y - first.y;
   const length = Math.hypot(px, py) || 1;
 
+  const unit = { x: py / length, y: -px / length };
   const walk = { x: (px / length) * OFF_FRAME, y: (py / length) * OFF_FRAME };
-  const sea = { x: (py / length) * OFF_FRAME, y: (-px / length) * OFF_FRAME };
+  const sea = { x: unit.x * OFF_FRAME, y: unit.y * OFF_FRAME };
 
   const beyondEnd = { x: last.x + walk.x + sea.x, y: last.y + walk.y + sea.y };
   const beforeStart = {
@@ -187,11 +203,51 @@ function seaPath(
     y: first.y - walk.y + sea.y,
   };
 
-  return (
-    `${path} L${beyondEnd.x.toFixed(2)} ${beyondEnd.y.toFixed(2)}` +
-    ` L${beforeStart.x.toFixed(2)} ${beforeStart.y.toFixed(2)} Z`
-  );
+  return {
+    d:
+      `${path} L${beyondEnd.x.toFixed(2)} ${beyondEnd.y.toFixed(2)}` +
+      ` L${beforeStart.x.toFixed(2)} ${beforeStart.y.toFixed(2)} Z`,
+    from: drawn[Math.floor(drawn.length / 2)],
+    unit,
+  };
 }
+
+/**
+ * How far offshore the drawn line actually is, in metres.
+ *
+ * **The line is not the shoreline, and this number is the difference.** CDIP's
+ * MOP lines are computed at 10 m depth, and measured across the 25 beaches that
+ * bind one they stand 117 to 930 m out, median 644. At La Jolla the line is
+ * about 310 m seaward of the beach's own coordinate — which is why the Scripps
+ * tide gauge and the pier it is bolted to, both of them over water, fall on the
+ * landward side of it.
+ *
+ * A hard sea-and-land edge would claim a boundary the data does not have, and
+ * would claim it most loudly at the beach the page opens on. So the wash is
+ * transparent where the line is and reaches full strength this far out: the
+ * picture says the sea is that way, and declines to say the edge is here.
+ *
+ * The median rather than the maximum, because it is the typical offset rather
+ * than the worst one, and a blur sized by the worst case would swallow the
+ * tightest frames. Held as a real distance so it scales with the map: a few
+ * units on `mission-beach`'s 20 km frame, a sixth of the picture on La Jolla's
+ * 3.9 km one.
+ */
+const MODEL_LINE_OFFSET_M = 644;
+
+/** Metres per degree of latitude, from the mean earth radius `scripts/geo.mjs` uses. */
+const METRES_PER_DEGREE_LAT = (2 * Math.PI * 6371008.8) / 360;
+
+/**
+ * One id, because a page carries one map.
+ *
+ * A gradient is referenced by id, so two maps in one document would share this
+ * one — which is fine, since they would want the same fade, and wrong only if
+ * they ever wanted different ones. `useId` is not available here: this renders
+ * on the server, which is ADR-0025's requirement for the page's primary
+ * content.
+ */
+const SEA_FADE_ID = "shore-map-sea";
 
 export function ShoreMap({
   coast,
@@ -201,6 +257,7 @@ export function ShoreMap({
   description,
   absence,
   noCoast,
+  coastCredit,
 }: ShoreMapProps) {
   if (bounds === null) {
     return <p className="text-2xs text-fog italic">{absence}</p>;
@@ -218,6 +275,14 @@ export function ShoreMap({
     .join(" ");
 
   const sea = hasCoast ? seaPath(path, drawn) : null;
+
+  // Plot units per metre, from the projection itself rather than from a second
+  // copy of its arithmetic, so the fade cannot drift from the drawing.
+  const unitsPerMetre =
+    (project(bounds.south, bounds.west).y -
+      project(bounds.north, bounds.west).y) /
+    ((bounds.north - bounds.south) * METRES_PER_DEGREE_LAT);
+  const fade = MODEL_LINE_OFFSET_M * unitsPerMetre;
 
   const missing = MISSING_SOURCES.filter(
     ([kind]) => !markers.some((marker) => marker.kind === kind),
@@ -237,7 +302,32 @@ export function ShoreMap({
           a legend -- and it is a flat tint rather than a shaded one, because
           shading implies depth and depth here would be invented.
         */}
-        {sea !== null && <path d={sea} className="fill-ocean/12" data-sea="" />}
+        {sea !== null && (
+          <>
+            <defs>
+              <linearGradient
+                id={SEA_FADE_ID}
+                gradientUnits="userSpaceOnUse"
+                x1={sea.from.x}
+                y1={sea.from.y}
+                x2={sea.from.x + sea.unit.x * fade}
+                y2={sea.from.y + sea.unit.y * fade}
+              >
+                <stop
+                  offset="0"
+                  stopColor="var(--color-ocean)"
+                  stopOpacity={0}
+                />
+                <stop
+                  offset="1"
+                  stopColor="var(--color-ocean)"
+                  stopOpacity={0.14}
+                />
+              </linearGradient>
+            </defs>
+            <path d={sea.d} fill={`url(#${SEA_FADE_ID})`} data-sea="" />
+          </>
+        )}
 
         {hasCoast && (
           <path
@@ -280,7 +370,11 @@ export function ShoreMap({
         ))}
       </svg>
 
-      {!hasCoast && <p className="text-2xs text-fog mt-2 italic">{noCoast}</p>}
+      {hasCoast ? (
+        <p className="text-2xs text-fog mt-2 italic">{coastCredit}</p>
+      ) : (
+        <p className="text-2xs text-fog mt-2 italic">{noCoast}</p>
+      )}
 
       {/*
         The names live beside the picture rather than on it. A label per marker
