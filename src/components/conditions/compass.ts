@@ -1,0 +1,86 @@
+/**
+ * What one day's needles are made of, assembled from the series the page
+ * already reads.
+ *
+ * The split is `shore.ts`'s, one instrument over: this half knows what a
+ * gridpoint hour is and turns a day of them into a bearing and an arc;
+ * `Compass` draws what it is handed and knows nothing about forecasts.
+ * `bearing.ts` under both of them owns the circular arithmetic and knows
+ * nothing about either.
+ *
+ * **Daylight, not the whole day**, which is the design brief's word and is
+ * doing real work rather than being a nicety. The committed gridpoint run
+ * swings across north in its first three hours -- 340, 20, 150 -- and a day
+ * measured end to end reports an arc no reader could have stood in. The plan's
+ * rule for the week's figures is the same one: what a reader can be there for.
+ */
+
+import type { GridDaySeries } from "@/lib/conditions";
+import { bearingSpread, resultantBearing } from "./bearing";
+import type { WeightedBearing } from "./bearing";
+
+/** One needle: where it came from, and how far it moved while doing so. */
+export type Needle = {
+  /** Degrees true it comes *from*, weighted by how much there was. */
+  fromDegT: number;
+  /** The arc containing every direction it blew from in daylight. */
+  spreadDeg: number;
+};
+
+/**
+ * One day of the cell's wind, as bearings weighted by the speed at that hour.
+ *
+ * **Joined on the instant, never on position.** Both series come gapless out of
+ * the same run today, so an index join would work and would put the wrong speed
+ * against the wrong bearing the first time one of them was short -- the same
+ * failure `readGridpointWeek` buckets by Pacific date to avoid rather than by
+ * counting hours.
+ *
+ * An hour missing from either series is not in the answer. There is no bearing
+ * to weight without a speed, and no speed to place without a bearing, and
+ * inventing either would be a drawn needle standing on one number.
+ */
+export function gridWindReadings(
+  directions: GridDaySeries,
+  speeds: GridDaySeries,
+  sunriseMs: number,
+  sunsetMs: number,
+): readonly WeightedBearing[] {
+  if (directions.kind !== "published" || speeds.kind !== "published") return [];
+
+  const speedAt = new Map(speeds.hours.map((hour) => [hour.atMs, hour.value]));
+
+  const readings: WeightedBearing[] = [];
+  for (const hour of directions.hours) {
+    if (hour.atMs < sunriseMs || hour.atMs >= sunsetMs) continue;
+    const speed = speedAt.get(hour.atMs);
+    if (speed === undefined) continue;
+    readings.push({ degreesTrue: hour.value, weight: speed });
+  }
+  return readings;
+}
+
+/**
+ * A day's readings as one needle, or nothing to draw.
+ *
+ * **Both numbers or neither.** An arc with no needle in it says the wind had a
+ * range and then declines to say where in that range it mostly sat, which is
+ * half an instrument and reads as a fault.
+ *
+ * One guard rather than two, and that is a finding rather than a style. Written
+ * as two sequential checks, whichever came second could never fire: a resultant
+ * implies a reading with something in it, which is exactly the condition a
+ * spread exists under. Mutating the second check left every test passing, which
+ * is how a branch that cannot be reached announces itself. This states the rule
+ * the needle actually has -- both numbers or neither -- without relying on an
+ * invariant proved in another module.
+ */
+export function needleFrom(
+  readings: readonly WeightedBearing[],
+): Needle | null {
+  const fromDegT = resultantBearing(readings);
+  const spreadDeg = bearingSpread(readings);
+  if (fromDegT === null || spreadDeg === null) return null;
+
+  return { fromDegT, spreadDeg };
+}
