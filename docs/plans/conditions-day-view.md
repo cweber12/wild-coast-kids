@@ -744,3 +744,98 @@ and the gates green.
 
 All three are `needs-human`: each produces an artifact whose success criterion is
 that it reads to a person, and no gate asserts that.
+
+## Addendum, 2026-08-30: what the map found in the geometry
+
+Dated rather than woven in. This is #173's first half — the coastline geometry,
+the `sea-side` gate row, `ShoreMap`, the sighting slot moving onto it, two ADRs
+and the two-column row. The compass is PR 3b. Four things here were not in the
+brief, `TASKS.md` or the plan above, and three of them are corrections to
+figures those documents assert.
+
+**`TASKS.md`'s sea-side claim is false as written, and the checker built to
+prove it is what found that.** "All 13 wave buoys fall on the left of the
+polyline walked south to north" fails at 12 of 13. Walked end to end the file
+is not monotonic: it wraps Point Loma, where 39 of its 1,209 steps run north to
+south, and buoy 46232 sits 22.9 km off that peninsula, matches a segment on the
+wrap, and lands on the right.
+
+It is the check that is wrong rather than the data. The map never asks the
+question that way — it asks inside one beach's window, where the coast runs one
+way — and asked that way the rule holds without exception. That is what
+shipped, and `scripts/sea-side.mjs` carries the reasoning.
+
+**Only 15 of 51 beaches can be asked the question at all**, because only 15
+bind a wave buoy. The gate row reports the other 36 grouped by reason with a
+count rather than as 36 identical lines, which would bury the one line that
+matters.
+
+**23 of 51 beaches have no coast in their window.** Every Mission Bay and San
+Diego Bay beach, between 2.6 and 5.4 km from the nearest MOP line, because that
+file traces the open coast only. The brief anticipated exactly one beach
+without a shore reference — `mission-bay-vacation-isle` — and it is 23.
+
+Widening the frames until the ocean appears was measured and rejected. At the
+0.1 margin the map ships with, La Jolla Shores fills 83 percent of its map's
+height; at 0.5 it fills 50 and `mission-bay-vacation-isle` finally reaches
+coast; at 1.0 it fills 33 and `mission-beach`'s frame reaches 51 km. Half-fixing
+the bay beaches by shrinking every open-coast beach is the wrong trade, and
+what arrives at 0.5 is a shoreline 5 km away that is not this beach's shore
+anyway. They get the markers, which is the part ADR-0010 asked for and the part
+that works without a coastline, and the map says the traced coast does not
+reach them.
+
+### The line is not the coast, which is the finding that changed the design
+
+**CDIP computes MOP lines at 10 m depth, and they sit offshore of the sand.**
+Across the 25 beaches that bind one: 117 m to 930 m, median 644. At La Jolla,
+measured directly, the line is about 310 m seaward of the beach's own committed
+coordinate.
+
+The consequence is visible on the beach the site opens on. The Scripps tide
+gauge and the Scripps Pier air station are both on a pier, both over water, and
+both **landward** of the drawn line — so a map with a hard sea-and-land edge
+drew two instruments that are in the ocean onto the beach.
+
+ADR-0030 is the decision: the wash fades over the measured offset rather than
+ending, the line names what it was traced from, and which side is seaward stays
+a checked fact because the offset makes the boundary imprecise rather than the
+question meaningless. It also records why shifting the line inland by the
+offset was refused — it would invent coordinates no publisher issued, and the
+offset is not constant.
+
+### What the frame is sized by, and why it looks wrong at first
+
+**The sources, not the beach.** `mission-beach`'s map is 20 km tall because one
+of its stations is 9 km away, so the beach occupies a fifth of its own map.
+That is the message rather than a defect: a frame comfortably filled by the
+sand would understate exactly the distance ADR-0010 exists to disclose. The
+tightest frame in the county is `shoreline-park` at 1.8 km and the widest
+`mission-beach` at 17 km before the margin.
+
+### Three things the picture got wrong, all found by looking at it
+
+None of the three was caught by a test first, and each has one now.
+
+**The sea polygon left an unshaded wedge.** Closing straight from the last
+point to seaward and back left a diagonal edge of missing sea in a corner
+wherever the shore was not perpendicular to that normal. It runs on past both
+ends now.
+
+**The beach's own stretch was a chord.** Drawn between the two ends
+`beaches.json` carries, neither of which is a point on the MOP line, it landed
+beside the shore at an angle and read as a second, wrong coastline. It is a run
+of the drawn polyline now — except on the 23 beaches with no coast, where the
+chord is the only thing that says where the beach is and is drawn after all.
+
+**Two markers drew one smudge.** At La Jolla the tide gauge is bolted to the
+pier the air station is on, 200 m apart in a 3.9 km frame. Every marker is
+outlined in the page's ground colour now, so overlapping sources read as two
+shapes rather than one blot.
+
+### Noticed and not fixed
+
+**`MeasuredToday`'s `roundedKm` and `shore.ts`'s `shoreDistanceKm` are the same
+rule spelled twice.** One decimal under 10 km, whole kilometres above. Lifting
+it into a shared module is a refactor of two files and belongs to its own
+slice; the duplication is recorded in both docstrings meanwhile.

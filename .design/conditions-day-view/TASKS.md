@@ -294,6 +294,19 @@ nothing the chart touches. **`Compass` is not independent** — it needs the
 gridpoint wind direction that PR 2's first task adds, so it cannot start until
 that has merged. `ShoreMap` can be built and reviewed before it.
 
+**Cut in two on 2026-08-30, at the compass**, the way PR 2 was cut the day
+before and for the same reason: eight tasks against CLAUDE.md's guide of about
+five slices. **PR 3a is everything except `Compass`** — the geometry, the
+checker, `ShoreMap`, the sighting slot moving onto it, the two ADRs, the row
+and the floor. It ends with a map a reader can see, so it is a complete path
+rather than a layer. **PR 3b is `Compass` alone**, which adds needles to a map
+that already exists and is vertical for the same reason.
+
+Two consequences of the cut. `docs/plans/conditions-day-view.md` is marked
+historical by **3b**, not by 3a, because 3b is now the last of the work that
+plan covers. And 3a says `Part of #173` rather than `Closes #173`, which is the
+form the condition actually supports.
+
 - [x] **Coastline geometry.** A module in `src/lib/` that de-duplicates
       consecutive identical points, windows the polyline around a beach, and
       projects lat/lon to plot coordinates. **The de-duplication is not
@@ -331,7 +344,7 @@ that has merged. `ShoreMap` can be built and reviewed before it.
       the open coast only. That is the number `ShoreMap` has to answer for, and
       it is 23 rather than the one degenerate beach the brief anticipated.
 
-- [ ] **`ShoreMap`.** This beach's coast drawn from the windowed polyline, its own
+- [x] **`ShoreMap`.** This beach's coast drawn from the windowed polyline, its own
       segment marked, the sea shaded, and the four sources plotted at their real
       distances — the MOP line, the wave buoy, the tide station, the air station.
       Distances come from `beaches.json`, which already holds them; nothing is
@@ -352,22 +365,24 @@ that has merged. `ShoreMap` can be built and reviewed before it.
       has an upper equal to its lower, renders without a shore reference and says
       why rather than drawing a confident wrong dial.
 
-- [ ] **The sighting layer stays reserved.** `ReservedSlot` moves inside the map:
+- [x] **The sighting layer stays reserved.** `ReservedSlot` moves inside the map:
       the frame is real content now, and what is coming is the sightings drawn on
       it. The copy names what lands there and carries no issue number, per the
       standing rule. _Reuses `ReservedSlot`._
 
-- [ ] **ADR: the map becomes real and reserves a layer.** Amends what a reserved
+- [x] **ADR: the map becomes real and reserves a layer.** Amends what a reserved
       slot is in this repo — a stand-in for content, which may now sit inside real
       content rather than instead of it. CONTEXT.md's `Reserved slot` entry is
       updated in the same PR, since it is the glossary that defines the term.
 
-- [ ] **The row.** Chart and map side by side at `xl` at roughly two thirds and
+- [x] **The row.** Chart and map side by side at `xl` at roughly two thirds and
       one third; stacked at `lg` with the map at reduced height; one column below
       that, chart then map. _Modifies `ConditionsSection`._ **Depends on:
       `HourChart` (PR 2), `ShoreMap`.**
 
-- [ ] **Coverage floor.** As PR 1.
+- [x] **Coverage floor.** As PR 1. Moved in PR 3a's last commit, and every
+      figure rose: this half added only tested code, and `coastline.ts` and
+      `shore.ts` each finished fully covered.
 
 ---
 
@@ -385,6 +400,9 @@ that has merged. `ShoreMap` can be built and reviewed before it.
       picks one word for each — the sparkline, the day panel, the dial, the shore
       map. The glossary is the thing kept current; a term used in three components
       under two names is the drift it exists to prevent.
+      **Three of the four landed in PR 3a**, plus `hour chart`, which the list
+      above did not name and which had the same problem. The **dial** is the one
+      left and belongs with the compass in PR 3b.
 
 - [ ] **Plan file.** `docs/plans/conditions-day-view.md`, committed as its own
       first commit before PR 1's first slice. Required here rather than optional:
@@ -394,7 +412,7 @@ that has merged. `ShoreMap` can be built and reviewed before it.
 
 ## Review
 
-- [ ] **Design review.** Run `/design-review` against the brief once PR 2 has
+- [x] **Design review.** Run `/design-review` against the brief once PR 2 has
       merged and there is something to look at. Capture at 1536×639 as well as the
       standard breakpoints — that is the viewport this is reviewed on, and a
       layout that only works taller is not finished.
