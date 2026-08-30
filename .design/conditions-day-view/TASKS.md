@@ -294,6 +294,9 @@ nothing the chart touches. **`Compass` is not independent** — it needs the
 gridpoint wind direction that PR 2's first task adds, so it cannot start until
 that has merged. `ShoreMap` can be built and reviewed before it.
 
+**Both halves have shipped.** PR 3a on 2026-08-30 (#178, `Part of #173`) and
+PR 3b after it, which closes #173 and marks the plan historical.
+
 **Cut in two on 2026-08-30, at the compass**, the way PR 2 was cut the day
 before and for the same reason: eight tasks against CLAUDE.md's guide of about
 five slices. **PR 3a is everything except `Compass`** — the geometry, the
@@ -354,7 +357,7 @@ form the condition actually supports.
       that marker and says so rather than plotting nothing silently; each marker
       names its source; the map draws no judgement, no depth and no hazard.
 
-- [ ] **`Compass`.** Two needles on the map: wind from, and swell from, each with
+- [x] **`Compass`.** Two needles on the map: wind from, and swell from, each with
       a translucent arc for the range it swings through during daylight. A
       provenance line per needle, following `WeekGrid`'s resolution rather than
       `StatGroup`'s contract. _New component, rendered onto `ShoreMap`._
@@ -364,6 +367,23 @@ form the condition actually supports.
       arc widens with the day's spread; `mission-bay-vacation-isle`, whose segment
       has an upper equal to its lower, renders without a shore reference and says
       why rather than drawing a confident wrong dial.
+      **The bearings are spoken beside the picture rather than in an accessible
+      name**, and that is the same choice `ShoreMap` already made for its
+      markers: the map is one `role="img"`, so nothing drawn inside it reaches
+      the accessibility tree. The row under the map states both bearings in
+      words and in degrees, and the spread where it is wide.
+      **The needle is speed-weighted, and the measurement is why.** Two days of
+      seven in the committed run have a daylight spread past 170 degrees -- 200
+      on one -- so an unweighted mean lets a 0 mph pre-dawn bearing count as
+      much as a 12 mph afternoon one. The resultant is weighted; the arc stays
+      the full envelope, because that is the honesty a bare needle lacks.
+      **Neither needle carries an interpolated bearing.** Five hours in every
+      eight of the swell curve are drawn between CDIP's estimates, and halfway
+      between 350 and 10 is 0 where the height arithmetic says 180.
+      **Two needles on one radius drew as one**, on any day the wind and the
+      swell came from the same quarter -- an ordinary day at La Jolla, not an
+      edge case. Each has its own track now. Found by looking at the built page,
+      not by a test, and it has one now.
 
 - [x] **The sighting layer stays reserved.** `ReservedSlot` moves inside the map:
       the frame is real content now, and what is coming is the sightings drawn on
@@ -388,7 +408,7 @@ form the condition actually supports.
 
 ## Across all three
 
-- [ ] **Accessibility pass.** Per PR, not saved to the end. Text equivalents for
+- [x] **Accessibility pass.** Per PR, not saved to the end. Text equivalents for
       the chart and the compass; every new colour pair measured rather than
       assumed — series strokes clear 3:1 as graphical objects and any text on them
       clears 4.5:1; colour never the only channel separating two series, night from
@@ -396,15 +416,15 @@ form the condition actually supports.
       `md`; the site's `currentColor` focus ring inherited, never redefined;
       `prefers-reduced-motion` respected if any transition is added.
 
-- [ ] **Domain language.** CONTEXT.md gains the terms this work introduces and
+- [x] **Domain language.** CONTEXT.md gains the terms this work introduces and
       picks one word for each — the sparkline, the day panel, the dial, the shore
       map. The glossary is the thing kept current; a term used in three components
       under two names is the drift it exists to prevent.
       **Three of the four landed in PR 3a**, plus `hour chart`, which the list
-      above did not name and which had the same problem. The **dial** is the one
-      left and belongs with the compass in PR 3b.
+      above did not name and which had the same problem. **`Dial` landed with
+      the compass in PR 3b**, and the glossary is complete for this work.
 
-- [ ] **Plan file.** `docs/plans/conditions-day-view.md`, committed as its own
+- [x] **Plan file.** `docs/plans/conditions-day-view.md`, committed as its own
       first commit before PR 1's first slice. Required here rather than optional:
       this will not finish in one sitting, and it turns on choices someone will
       re-litigate — the compass's home, the fate of the cards, the cadence
@@ -434,3 +454,17 @@ onto a moved blocker is how a verified slice quietly stops being verified.
 
 **Noticing is not filing.** The duplicate-coordinate finding goes in the PR body
 for the coastline slice, not into the tracker as a separate row.
+
+**Two modules whose names differ only in case are one file on Windows.**
+`compass.ts` beside `Compass.tsx` resolved to each other, every test in the
+drawing's suite failed with an undefined component, and Linux CI would have
+passed the pair without noticing. The assembler is `needles.ts`, which is what
+`shore.ts` beside `ShoreMap.tsx` had already established.
+
+**Contrast on this map is measured from painted pixels**, by screenshotting the
+page and reading it back through a canvas. The CSS tree returns transparent for
+everything drawn here. The dial's four pairs, measured over the sea, which is
+the darker ground: wind needle 7.22:1, wind arc 3.60:1, swell needle 5.93:1,
+swell arc 3.64:1. The two arcs are set to the same measured contrast rather
+than the same opacity -- at one setting the purple read 2.77:1 where the ocean
+read 3.60:1.

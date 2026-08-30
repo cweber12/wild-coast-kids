@@ -234,3 +234,13 @@ test("the two arcs never share a track either", () => {
 
   expect(radius("wind")).not.toBe(radius("swell"));
 });
+
+test("a day with no bearings gets no sources block, not an empty list", () => {
+  // Reachable through `DayCompassSources`, which hands over whatever the day
+  // has. An empty `<ul>` under the map would be a list heading nothing, and
+  // the map's own marker names are already directly above it.
+  const { container } = render(<CompassSources needles={[]} />);
+
+  expect(container.querySelector("ul")).toBeNull();
+  expect(container.textContent).toBe("");
+});

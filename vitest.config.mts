@@ -259,11 +259,23 @@ export default defineConfig({
       // widening the floor around them: `shoreDistanceKm` above 10 km, where
       // the furthest source in the inventory is 9.2 km, and `boundsAround`
       // returning null, which needs a beach whose every source is one point.
+      // RAISED 2026-08-30, the compass. All four rose, and every file this
+      // half added -- bearing.ts, needles.ts, Compass.tsx, DayCompass.tsx --
+      // finished at 100% on all four metrics, so none of them appears in the
+      // report's table at all.
+      //
+      // The two files it modified are named rather than absorbed. `ShoreMap`
+      // is 100% statements and 97.56% branches; the one uncovered branch is
+      // the `|| 1` in `Math.hypot(px, py) || 1`, the divide-by-zero guard for
+      // a drawn run whose two ends project to the same point. `DayPanel` is
+      // 97.53%, and its uncovered statement is the body of
+      // `WORDS.swell.outage` -- the sentence for a CDIP outage, which no test
+      // in that suite provokes.
       thresholds: {
-        statements: 89.18,
-        branches: 88.61,
-        functions: 94.09,
-        lines: 88.9,
+        statements: 89.58,
+        branches: 88.99,
+        functions: 94.34,
+        lines: 89.29,
       },
     },
   },
