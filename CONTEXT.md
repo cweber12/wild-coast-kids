@@ -202,3 +202,14 @@ their real distances. The line it draws is CDIP's model line rather than a
 shoreline, so the wash fades rather than ending at it (ADR-0030). It reads no
 feed — every position on it is committed.
 _Avoid_: locator, mini map, station map, chart (that word is the plot's)
+
+**Dial**:
+The compass drawn on the shore map: two needles standing out at the direction
+the wind and the swell come from and pointing in at the beach, each with a
+translucent arc for the range it swung through in daylight. It is read against
+the coast underneath it — a needle whose tail is over the shaded sea is onshore
+— which is why it sits on the map and not beside it. It carries two publishers
+on one drawing, one provenance line per needle (ADR-0032), and it is withheld
+on the 23 beaches the traced coast does not reach, where a bearing has nothing
+to be read against.
+_Avoid_: compass rose, wind rose, gauge, direction widget
