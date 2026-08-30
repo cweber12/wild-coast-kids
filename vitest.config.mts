@@ -259,11 +259,39 @@ export default defineConfig({
       // widening the floor around them: `shoreDistanceKm` above 10 km, where
       // the furthest source in the inventory is 9.2 km, and `boundsAround`
       // returning null, which needs a beach whose every source is one point.
+      // RAISED 2026-08-30, the compass. All four rose, and every file this
+      // half added -- bearing.ts, needles.ts, Compass.tsx, DayCompass.tsx --
+      // finished at 100% on all four metrics, so none of them appears in the
+      // report's table at all.
+      //
+      // The two files it modified are named rather than absorbed. `ShoreMap`
+      // is 100% statements and 97.56% branches; the one uncovered branch is
+      // the `|| 1` in `Math.hypot(px, py) || 1`, the divide-by-zero guard for
+      // a drawn run whose two ends project to the same point. `DayPanel` is
+      // 97.53%, and its uncovered statement is the body of
+      // `WORDS.swell.outage` -- the sentence for a CDIP outage, which no test
+      // in that suite provokes.
+      // LOWERED 2026-08-30 under REASON 2, when the map stopped plotting the
+      // four sources. Nothing became untested: `markersFor` and
+      // `shoreDistanceKm` in `shore.ts`, and `Mark`, `MARKS`, `GLYPHS` and
+      // `MISSING_SOURCES` in `ShoreMap.tsx`, were all fully covered and are
+      // deleted along with the tests that covered them. The surviving
+      // denominator is weighted further toward the 0% entry plumbing that has
+      // always dragged these figures down in plain sight.
+      //
+      // Every file this branch touched is still at 100% on all four metrics
+      // except two, and both are unchanged from the rise above: `ShoreMap` at
+      // 96.77% branches, whose one uncovered branch is the `|| 1`
+      // divide-by-zero guard for a drawn run whose ends project to one point,
+      // and `DayPanel` at 97.53% statements, whose uncovered statement is the
+      // sentence for a CDIP outage that suite does not provoke.
       thresholds: {
-        statements: 89.18,
-        branches: 88.61,
-        functions: 94.09,
-        lines: 88.9,
+        // Back up a hundredth of a point each when the needles gained their
+        // labels, which are covered like everything else in `Compass.tsx`.
+        statements: 89.44,
+        branches: 88.94,
+        functions: 94.28,
+        lines: 89.14,
       },
     },
   },

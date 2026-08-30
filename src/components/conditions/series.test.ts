@@ -44,10 +44,25 @@ test("the swell carries the read's own flag rather than a convenient constant", 
     daylight: null,
     allDay: null,
     hours: [
-      { atMs: START, heightFt: 2, published: true },
-      { atMs: START + HOUR, heightFt: 3, published: false },
-      { atMs: START + 2 * HOUR, heightFt: 4, published: false },
-      { atMs: START + 3 * HOUR, heightFt: 5, published: true },
+      { atMs: START, heightFt: 2, published: true, directionDegT: 340 },
+      {
+        atMs: START + HOUR,
+        heightFt: 3,
+        published: false,
+        directionDegT: null,
+      },
+      {
+        atMs: START + 2 * HOUR,
+        heightFt: 4,
+        published: false,
+        directionDegT: null,
+      },
+      {
+        atMs: START + 3 * HOUR,
+        heightFt: 5,
+        published: true,
+        directionDegT: 10,
+      },
     ],
   });
 

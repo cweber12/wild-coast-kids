@@ -67,6 +67,16 @@ import type { HourSeries } from "./HourChart";
 import { MeasuredPanel } from "./MeasuredPanel";
 import { MeasuredToday } from "./MeasuredToday";
 import { ReservedSlot } from "../ui/ReservedSlot";
+import type { CompassNeedle } from "./Compass";
+import { DayCompass, DayCompassSources, type CompassDay } from "./DayCompass";
+import {
+  GRID_MODEL_NOTE,
+  GRID_NETWORK,
+  GRID_SOURCE,
+  gridCellCaveat,
+} from "./gridCell";
+import { MOP_MODEL_NOTE, MOP_NETWORK, mopLineSource } from "./mopLine";
+import { gridWindReadings, needleFrom, swellReadings } from "./needles";
 import { ShoreMap } from "./ShoreMap";
 import { shoreViewFor } from "./shore";
 import { SkyWording } from "./SkyWording";
@@ -282,16 +292,16 @@ function cloudBandDescription(
 /**
  * The spoken equivalent of the whole map.
  *
- * Says what the picture is and how many sources are on it, and nothing about
- * what the shape of the coast means. A reader hearing this should learn the
- * same thing a reader seeing it does: that these figures come from places, and
- * roughly how many.
+ * Says what the picture is and nothing about what the shape of the coast
+ * means. A reader hearing this should learn the same thing a reader seeing it
+ * does: where this beach is on its own coast, and which side the water is on.
+ * The dial's own bearings are spoken separately, under the picture, because
+ * they change with the day and this does not.
  */
-function mapDescription(beachName: string, sources: number): string {
+function mapDescription(beachName: string): string {
   return (
-    `A map of ${beachName} and the ${sources} ` +
-    `${sources === 1 ? "place" : "places"} the figures on this page come from, ` +
-    `each drawn at its real distance from the beach.`
+    `A map of ${beachName}: its own stretch of coast drawn heavier than the ` +
+    `shore either side of it, and the open water shaded.`
   );
 }
 
@@ -497,10 +507,11 @@ export async function DayPanel({ slug }: { slug: string }) {
 
   /*
     The map is built once and handed over, outside the seven days, because it
-    is the same picture on all seven: this beach, its coast, and the four places
-    its figures come from. It is also the one thing in this region that reads no
-    feed -- `beaches.json` and `mop-lines.json` are committed -- so it cannot go
-    quiet and does not belong behind a Suspense boundary.
+    is the same picture on all seven: this beach, its own stretch of coast, and
+    the water beside it. Only the dial drawn on it changes with the day, and
+    that travels separately. It is also the one thing in this region that reads
+    no feed -- `beaches.json` and `mop-lines.json` are committed -- so it cannot
+    go quiet and does not belong behind a Suspense boundary.
 
     A beach the inventory does not hold is not this component's error to invent
     a map for: the route already answered that question before rendering, and
@@ -509,6 +520,93 @@ export async function DayPanel({ slug }: { slug: string }) {
   */
   const beach = beachBySlug(slug);
   const shore = beach === null ? null : shoreViewFor(beach);
+
+  /*
+    Seven days of needles, built beside the seven days of series rather than
+    inside them.
+
+    The map is one picture for the whole week and the needles are not, so they
+    travel separately: `DayCompass` is the client island that picks the chosen
+    day's pair out of these, and the coast underneath stays a single
+    server-rendered drawing. Putting them inside `DayView` would mean seven
+    copies of the map to vary two numbers.
+
+    The window is this day's own daylight, which is the design brief's word for
+    it and is load-bearing rather than decorative: the committed run swings
+    across north in its first three hours, and a day measured end to end
+    reports an arc nobody could have stood in.
+  */
+  const cellNote = [
+    GRID_MODEL_NOTE,
+    gridCellCaveat(grid.cell?.elevationM ?? null),
+  ]
+    .filter((part): part is string => part !== null)
+    .join("; ");
+
+  const compassDays: CompassDay[] = daylight.days.map((day) => {
+    const gridDay =
+      grid.state.kind === "week"
+        ? grid.state.days.find((each) => each.localDate === day.localDate)
+        : undefined;
+
+    const swellDay =
+      waves.state.kind === "week"
+        ? waves.state.days.find((each) => each.localDate === day.localDate)
+        : undefined;
+
+    const wind =
+      gridDay === undefined
+        ? null
+        : needleFrom(
+            gridWindReadings(
+              gridDay.windDirDegT,
+              gridDay.windMph,
+              day.sunriseMs,
+              day.sunsetMs,
+            ),
+          );
+
+    const swell =
+      swellDay === undefined || waves.line === null
+        ? null
+        : needleFrom(
+            swellReadings(swellDay.hours, day.sunriseMs, day.sunsetMs),
+          );
+
+    const needles: CompassNeedle[] = [];
+
+    /*
+      Wind first, and the order is the reading order rather than an accident.
+      It is the one a reader can feel standing on the sand, it is the needle
+      that changes most between days, and it is the one whose relationship to
+      the coast decides whether the water is choppy or glassy.
+    */
+    if (wind !== null) {
+      needles.push({
+        kind: "wind",
+        label: "Wind",
+        fromDegT: wind.fromDegT,
+        spreadDeg: wind.spreadDeg,
+        source: GRID_SOURCE,
+        network: GRID_NETWORK,
+        note: cellNote,
+      });
+    }
+
+    if (swell !== null && waves.line !== null) {
+      needles.push({
+        kind: "swell",
+        label: "Swell",
+        fromDegT: swell.fromDegT,
+        spreadDeg: swell.spreadDeg,
+        source: mopLineSource(waves.line.id),
+        network: MOP_NETWORK,
+        note: MOP_MODEL_NOTE,
+      });
+    }
+
+    return { localDate: day.localDate, needles };
+  });
 
   return (
     <section aria-labelledby="day-panel-heading">
@@ -519,10 +617,12 @@ export async function DayPanel({ slug }: { slug: string }) {
             <>
               <ShoreMap
                 {...shore}
-                description={mapDescription(beach!.name, shore.markers.length)}
-                absence="We cannot place this beach on a map: every source we have for it is at the same point."
+                description={mapDescription(beach!.name)}
+                absence="We cannot place this beach on a map: the coordinates we hold for it are all one point."
                 noCoast="The coastline this site traces is the open coast, and it does not reach this beach."
-                coastCredit={`Shore traced from CDIP's model lines, which run a few hundred metres offshore — so the water fades in rather than stopping at a shoreline.`}
+                coastCredit={`Shore traced from CDIP's model lines, which are computed a few hundred metres offshore — so the water's edge is drawn further out than the sand.`}
+                compass={<DayCompass days={compassDays} />}
+                compassSources={<DayCompassSources days={compassDays} />}
               />
               {/*
                 The sighting layer from #121, reserved *on* the map rather than

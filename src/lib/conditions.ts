@@ -921,6 +921,20 @@ export interface WaveHour {
   heightFt: number;
   /** True when CDIP issued an estimate for this instant. */
   published: boolean;
+  /**
+   * Peak direction in degrees true, and `null` on every drawn hour.
+   *
+   * **A bearing is not interpolable the way a height is**, and the arithmetic
+   * that gets a height right gets a direction exactly backwards: halfway
+   * between 350 and 10 is 0, and averaging them as numbers says 180 -- due
+   * south, the reverse of both. Circular interpolation would answer that, and
+   * would be this repo drawing a figure between two the model published, which
+   * is the thing `published` exists to keep visible.
+   *
+   * So the hours between CDIP's estimates carry a height, because a curve needs
+   * one, and no direction, because a needle does not.
+   */
+  directionDegT: number | null;
 }
 
 /**
@@ -1045,7 +1059,12 @@ function hourlyWaveHeights(rows: readonly MopWaveRow[]): WaveHour[] {
   const hours: WaveHour[] = [];
 
   rows.forEach((row, index) => {
-    hours.push({ atMs: row.atMs, heightFt: row.heightFt, published: true });
+    hours.push({
+      atMs: row.atMs,
+      heightFt: row.heightFt,
+      published: true,
+      directionDegT: row.directionDegT,
+    });
 
     const next = rows[index + 1];
     if (next === undefined) return;
@@ -1059,6 +1078,7 @@ function hourlyWaveHeights(rows: readonly MopWaveRow[]): WaveHour[] {
         atMs,
         heightFt: row.heightFt + (next.heightFt - row.heightFt) * through,
         published: false,
+        directionDegT: null,
       });
     }
   });
@@ -1472,10 +1492,25 @@ export type GridDaySeries =
   | { kind: "published"; hours: readonly GridpointHour[] }
   | { kind: "absent"; reason: string };
 
-/** One day of the cell's wind and air temperature. */
+/** One day of the cell's wind, its direction, and air temperature. */
 export interface GridpointWeekDay extends WeekDayFrame {
   /** Wind speed in miles per hour. */
   windMph: GridDaySeries;
+  /**
+   * Wind direction in degrees true, the direction it blows *from*.
+   *
+   * **Hours rather than a bearing for the day**, because how a day of
+   * directions becomes one is a presentation decision and this is the read.
+   * The compass weights them by speed and takes the circular mean over the
+   * daylight window; a different consumer could want the whole day, or the
+   * envelope, or nothing. Carrying the hours keeps every one of those a change
+   * to a component rather than a change to what is read.
+   *
+   * Its own series and not a field on `windMph`'s hours, which is the shape the
+   * parser publishes and the shape the absences need: a cell can declare a
+   * speed and no direction, and the two owe different sentences.
+   */
+  windDirDegT: GridDaySeries;
   /** Air temperature in Fahrenheit. */
   airTempF: GridDaySeries;
 }
@@ -1590,6 +1625,7 @@ export async function readGridpointWeek(
   }
 
   const windByDate = gridHoursByDate(result.forecast.windMph);
+  const dirByDate = gridHoursByDate(result.forecast.windDirDegT);
   const tempByDate = gridHoursByDate(result.forecast.airTempF);
 
   const days = weekOfDays(nowMs).map((frame) => ({
@@ -1597,6 +1633,11 @@ export async function readGridpointWeek(
     windMph: gridDaySeries(
       result.forecast.windMph,
       windByDate,
+      frame.localDate,
+    ),
+    windDirDegT: gridDaySeries(
+      result.forecast.windDirDegT,
+      dirByDate,
       frame.localDate,
     ),
     airTempF: gridDaySeries(

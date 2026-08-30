@@ -1,6 +1,15 @@
 # The conditions day view
 
-Planned 2026-08-28. In flight: #171, #172, #173.
+> **Historical.** Planned 2026-08-28, shipped across PRs #174, #175, #176, #178
+> and #184, the last of them on 2026-08-30. It records what was intended then,
+> not what the code does now, and is not maintained. See
+> [`README.md`](README.md).
+>
+> Six decisions in it are still binding and live in `docs/adr/` instead:
+> ADR-0027 (what a plot may be asked, and what the compass may not do),
+> ADR-0028, ADR-0029, ADR-0030 (the map draws a model line, not a shore),
+> ADR-0031 and ADR-0032 (one dial may carry two provenances). The addenda below
+> are dated and stay as they are, including the three figures they correct.
 
 Design record: `.design/conditions-day-view/DESIGN_BRIEF.md` for the problem and
 the aesthetic direction, `TASKS.md` for the slices and their test seams. This

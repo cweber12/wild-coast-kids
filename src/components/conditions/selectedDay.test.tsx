@@ -12,6 +12,7 @@ import { fireEvent, render, screen } from "@testing-library/react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { localMidnightOf } from "@/lib/pacific-time";
 import { ChosenDay, type DayView } from "./ChosenDay";
+import { DayCompassSources, type CompassDay } from "./DayCompass";
 import { SelectedDayProvider } from "./selectedDay";
 import { WeekGrid, type WeekDay, type WeekRow } from "./WeekGrid";
 import type { SparkPoint } from "./DaySpark";
@@ -95,7 +96,29 @@ function dayView(index: number): DayView {
 
 const VIEWS = DATES.map((_, index) => dayView(index));
 
-function renderBoth() {
+/**
+ * One needle per day, each from a different quarter.
+ *
+ * The dial travels beside the map rather than inside `DayView`, because the map
+ * is one picture for the whole week and the needles are not. That makes it a
+ * second consumer of the same choice, which is what this file exists to assert.
+ */
+const COMPASS_DAYS: CompassDay[] = DATES.map((localDate, index) => ({
+  localDate,
+  needles: [
+    {
+      kind: "wind",
+      label: "Wind",
+      fromDegT: [90, 180, 270][index],
+      spreadDeg: 20,
+      source: "this beach's own grid cell",
+      network: "National Weather Service, San Diego",
+      note: null,
+    },
+  ],
+}));
+
+function renderBoth(map: React.ReactNode = null) {
   return render(
     <SelectedDayProvider>
       <WeekGrid
@@ -104,7 +127,7 @@ function renderBoth() {
         days={DAYS}
         rows={[TIDE_ROW]}
       />
-      <ChosenDay days={VIEWS} map={null} />
+      <ChosenDay days={VIEWS} map={map} />
     </SelectedDayProvider>,
   );
 }
@@ -266,4 +289,25 @@ test("a region outside the provider shows its first day rather than failing", ()
   const { container } = render(<ChosenDay days={VIEWS} map={null} />);
 
   expect(drawnDay(container)).toBe(`Tide on ${DATES[0]}`);
+});
+
+test("the dial on the map follows the chosen day, and the map does not", () => {
+  // The second consumer of the one choice. The needles are per day and the
+  // coast is not, so the picture stays exactly where it was while the bearing
+  // under it changes -- which is the whole reason the compass is a client
+  // island inside a server-rendered map rather than seven copies of one.
+  const { container } = renderBoth(
+    <>
+      <p data-test-coast="">One coastline, drawn once</p>
+      <DayCompassSources days={COMPASS_DAYS} />
+    </>,
+  );
+
+  expect(screen.getByText(/from the east, 90°/)).toBeDefined();
+
+  fireEvent.click(container.querySelector(`[data-day-choice="${DATES[2]}"]`)!);
+
+  expect(screen.getByText(/from the west, 270°/)).toBeDefined();
+  expect(screen.queryByText(/from the east, 90°/)).toBeNull();
+  expect(screen.getByText("One coastline, drawn once")).toBeDefined();
 });
