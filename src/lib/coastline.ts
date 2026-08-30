@@ -235,3 +235,76 @@ export function withoutRepeats(
 
   return kept;
 }
+
+/** Which side of a walked polyline a position falls on, north being up. */
+export type Side = "left" | "right";
+
+/**
+ * The side of a run of coast a position falls on, or null when there is no run.
+ *
+ * **This is how the map knows which side to shade, and it is the one geometric
+ * claim on the page that is checked rather than assumed.** The county coast
+ * faces west and `mop-lines.json` runs south to north, so "left of the walk"
+ * and "out to sea" are the same side — and the `sea-side` gate row proves that
+ * against every committed wave buoy rather than leaving it to this comment.
+ *
+ * **Measured against the nearest segment, not the nearest point.** A vertex at
+ * a bend belongs to two segments pointing different ways, so picking by vertex
+ * picks an orientation by luck. The zero-length segments `withoutRepeats`
+ * removes are the same failure in its acute form: no length, no direction, and
+ * a side test that returns whatever the arithmetic produces.
+ *
+ * **The nearest segment must come from a window, not the whole county.** Walked
+ * end to end the file is not monotonic — it wraps Point Loma, and 39 of its
+ * 1,209 steps run north to south. Buoy 46232 sits 22.9 km off that peninsula
+ * and matches a segment on the wrap, where left is not seaward. Inside a
+ * beach's own window the question is well posed, which is the only place the
+ * map ever asks it.
+ *
+ * **Left here is geographic, not `x` and `y`.** `projectionFor` puts north at
+ * the top, so y grows southward and a caller drawing in plot coordinates sees
+ * this side on the other hand. Converting is the caller's job, once.
+ */
+export function sideOf(
+  points: readonly ShorePoint[],
+  at: Position,
+): Side | null {
+  const lonScale = Math.cos((at.lat * Math.PI) / 180);
+  const east = (lon: number): number => lon * lonScale;
+
+  let nearest = Infinity;
+  let cross = 0;
+
+  for (let index = 0; index < points.length - 1; index += 1) {
+    const from = points[index];
+    const to = points[index + 1];
+
+    const dx = east(to.lon) - east(from.lon);
+    const dy = to.lat - from.lat;
+    const length = dx * dx + dy * dy;
+    // Looks removable and is not. Without it a repeated point divides by zero,
+    // and the NaN that follows is swallowed by `distance < nearest` being false
+    // for NaN -- so the answer is right today by accident of one comparison
+    // operator. Deleting this passes every test in this file; that is a blind
+    // spot in the tests rather than evidence the line is dead.
+    if (length === 0) continue;
+
+    const px = east(at.lon) - east(from.lon);
+    const py = at.lat - from.lat;
+
+    // Clamped, so a position past an end measures to the end rather than to the
+    // segment's infinite line, which would run off across the land.
+    const along = Math.min(1, Math.max(0, (px * dx + py * dy) / length));
+    const offX = px - along * dx;
+    const offY = py - along * dy;
+    const distance = offX * offX + offY * offY;
+
+    if (distance < nearest) {
+      nearest = distance;
+      cross = dx * py - dy * px;
+    }
+  }
+
+  if (cross === 0) return null;
+  return cross > 0 ? "left" : "right";
+}

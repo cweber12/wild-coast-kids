@@ -26,6 +26,12 @@ export const GATES = [
   // in milliseconds. Two decisions shared ADR-0008 for two days while every
   // gate stayed green (#102). See docs/plans/adr-number-gate.md.
   { name: "adr-numbers", command: "node scripts/check-adr-numbers.mjs" },
+  // Reads only committed JSON, so it sits with adr-numbers above the expensive
+  // rows. ShoreMap shades the sea by a one-sentence rule about which way the
+  // MOP lines run, and a rule holding up a picture is what ADR-0021 says gets a
+  // checker. See scripts/sea-side.mjs for why the whole-county form of the
+  // check is the wrong one.
+  { name: "sea-side", command: "node scripts/check-sea-side.mjs" },
   // Runs with coverage so the floor in vitest.config.mts is enforced here:
   // Vitest exits non-zero when a threshold is missed, which is the third way
   // CLAUDE.md says this command must fail.

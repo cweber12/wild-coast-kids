@@ -294,7 +294,7 @@ nothing the chart touches. **`Compass` is not independent** — it needs the
 gridpoint wind direction that PR 2's first task adds, so it cannot start until
 that has merged. `ShoreMap` can be built and reviewed before it.
 
-- [ ] **Coastline geometry.** A module in `src/lib/` that de-duplicates
+- [x] **Coastline geometry.** A module in `src/lib/` that de-duplicates
       consecutive identical points, windows the polyline around a beach, and
       projects lat/lon to plot coordinates. **The de-duplication is not
       housekeeping**: 123 of the 1,210 MOP lines repeat their neighbour's
@@ -307,13 +307,29 @@ that has merged. `ShoreMap` can be built and reviewed before it.
       fails loudly; a zero-length segment is never returned; the projection is
       stable for a fixed window.
 
-- [ ] **Checker: which side is the sea.** With duplicates removed, all 13 wave
+- [x] **Checker: which side is the sea.** With duplicates removed, all 13 wave
       buoys fall on the left of the polyline walked south to north. That rule is
       load-bearing for the map's water shading and too important to assume, so it
       gets a script in the shape ADR-0021 established, plus a row in the gate
       table. _New script and gate row._ **Depends on: coastline geometry.**
       **Tests assert:** the checker fails when a buoy is moved to the wrong side,
       not merely when it errors.
+      **The sentence above is false as written, and the checker is what found
+      it.** Walked end to end the polyline is not monotonic: it wraps Point
+      Loma, and 39 of its 1,209 steps run north to south. Buoy 46232 sits
+      22.9 km off that peninsula, matches a segment on the wrap, and lands on
+      the **right**. So the whole-county form of the check fails — 12 of 13, not
+      13 of 13 — and it is the check that is wrong rather than the data, because
+      the map never asks the question that way. It asks inside one beach's
+      window, where the coast runs one way, and there the rule holds without
+      exception. That is what shipped.
+      **Two counts the task did not have, both measured.** Only **15 of 51**
+      beaches bind a wave buoy at all, so 36 cannot be asked the question — the
+      gate row reports them grouped rather than one line each. And **23 of 51**
+      have no coast in their window at all: every Mission Bay and San Diego Bay
+      beach, 2.6 to 5.4 km from the nearest MOP line, because this file traces
+      the open coast only. That is the number `ShoreMap` has to answer for, and
+      it is 23 rather than the one degenerate beach the brief anticipated.
 
 - [ ] **`ShoreMap`.** This beach's coast drawn from the windowed polyline, its own
       segment marked, the sea shaded, and the four sources plotted at their real

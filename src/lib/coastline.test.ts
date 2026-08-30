@@ -3,6 +3,7 @@ import {
   boundsAround,
   coastline,
   projectionFor,
+  sideOf,
   windowAround,
   withoutRepeats,
 } from "./coastline";
@@ -143,4 +144,54 @@ test("a box needs two distinct positions, and says so rather than collapsing", (
 
   expect(boundsAround([onePlace, onePlace], 0.1)).toBeNull();
   expect(boundsAround([], 0.1)).toBeNull();
+});
+
+test("west of a coast walked south to north is its seaward side", () => {
+  // The whole county coast faces west, and the file runs south to north, so
+  // "left of the walk" and "out to sea" are the same side. The map shades by
+  // this, so it is stated once here and checked against the committed buoys by
+  // the `sea-side` gate row rather than assumed.
+  const northward = [
+    { id: "D0001", lat: 32.0, lon: -117.0 },
+    { id: "D0002", lat: 32.1, lon: -117.0 },
+  ];
+
+  expect(sideOf(northward, { lat: 32.05, lon: -117.1 })).toBe("left");
+  expect(sideOf(northward, { lat: 32.05, lon: -116.9 })).toBe("right");
+});
+
+test("a run with no segment in it has no sides", () => {
+  // What a bay beach's window is: the traced coast does not reach it, so there
+  // is nothing to be on a side of. The map says so rather than shading a guess.
+  expect(sideOf([], { lat: 32.0, lon: -117.0 })).toBeNull();
+  expect(
+    sideOf([{ id: "D0001", lat: 32.0, lon: -117.0 }], {
+      lat: 32.0,
+      lon: -117.1,
+    }),
+  ).toBeNull();
+});
+
+test("a zero-length segment is stepped over rather than divided by", () => {
+  // withoutRepeats takes these out of the county coast, but sideOf is handed
+  // runs by callers and a repeat here would divide by zero and answer with a
+  // NaN that compares false both ways -- silently landward.
+  const withRepeat = [
+    { id: "D0001", lat: 32.0, lon: -117.0 },
+    { id: "D0002", lat: 32.0, lon: -117.0 },
+    { id: "D0003", lat: 32.1, lon: -117.0 },
+  ];
+
+  expect(sideOf(withRepeat, { lat: 32.05, lon: -117.1 })).toBe("left");
+});
+
+test("a position on the line itself is on neither side", () => {
+  // The MOP line a beach binds sits on this polyline, so this is the answer for
+  // the one marker that cannot be seaward or landward of the coast it traces.
+  const northward = [
+    { id: "D0001", lat: 32.0, lon: -117.0 },
+    { id: "D0002", lat: 32.1, lon: -117.0 },
+  ];
+
+  expect(sideOf(northward, { lat: 32.05, lon: -117.0 })).toBeNull();
 });
