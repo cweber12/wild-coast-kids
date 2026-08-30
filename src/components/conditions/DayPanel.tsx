@@ -66,6 +66,7 @@ import { ChosenDay, type DayView } from "./ChosenDay";
 import type { HourSeries } from "./HourChart";
 import { MeasuredPanel } from "./MeasuredPanel";
 import { MeasuredToday } from "./MeasuredToday";
+import { ReservedSlot } from "../ui/ReservedSlot";
 import { ShoreMap } from "./ShoreMap";
 import { shoreViewFor } from "./shore";
 import { SkyWording } from "./SkyWording";
@@ -515,13 +516,38 @@ export async function DayPanel({ slug }: { slug: string }) {
         days={days}
         map={
           shore === null ? null : (
-            <ShoreMap
-              {...shore}
-              description={mapDescription(beach!.name, shore.markers.length)}
-              absence="We cannot place this beach on a map: every source we have for it is at the same point."
-              noCoast="The coastline this site traces is the open coast, and it does not reach this beach."
-              coastCredit={`Shore traced from CDIP's model lines, which run a few hundred metres offshore — so the water fades in rather than stopping at a shoreline.`}
-            />
+            <>
+              <ShoreMap
+                {...shore}
+                description={mapDescription(beach!.name, shore.markers.length)}
+                absence="We cannot place this beach on a map: every source we have for it is at the same point."
+                noCoast="The coastline this site traces is the open coast, and it does not reach this beach."
+                coastCredit={`Shore traced from CDIP's model lines, which run a few hundred metres offshore — so the water fades in rather than stopping at a shoreline.`}
+              />
+              {/*
+                The sighting layer from #121, reserved *on* the map rather than
+                instead of it. Until this slice the slot stood where a map would
+                go and said a map was coming; the map is here, so what is
+                reserved is the layer drawn on it, and the copy says that.
+
+                The three claims this copy has always had to make are unchanged.
+                iNaturalist records where people with phones went rather than
+                where animals are, so the slot promises a record of reports and
+                never a survey; and it says what the layer *will* show rather
+                than what was found, because no such report exists yet. Those
+                are asserted in this panel's tests now rather than the section's,
+                which mocks this component and would pass while the slot said
+                nothing at all. No issue number, per the standing rule.
+              */}
+              <div className="mt-4">
+                <ReservedSlot
+                  emoji="🐙"
+                  headline="Sightings will be drawn on this map."
+                  detail="Will show octopus, nudibranchs, sea hares and leopard sharks logged near this beach in the past week — reported by naturalists, not surveyed by us."
+                  density="row"
+                />
+              </div>
+            </>
           )
         }
       />
