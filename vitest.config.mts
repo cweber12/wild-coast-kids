@@ -271,11 +271,25 @@ export default defineConfig({
       // 97.53%, and its uncovered statement is the body of
       // `WORDS.swell.outage` -- the sentence for a CDIP outage, which no test
       // in that suite provokes.
+      // LOWERED 2026-08-30 under REASON 2, when the map stopped plotting the
+      // four sources. Nothing became untested: `markersFor` and
+      // `shoreDistanceKm` in `shore.ts`, and `Mark`, `MARKS`, `GLYPHS` and
+      // `MISSING_SOURCES` in `ShoreMap.tsx`, were all fully covered and are
+      // deleted along with the tests that covered them. The surviving
+      // denominator is weighted further toward the 0% entry plumbing that has
+      // always dragged these figures down in plain sight.
+      //
+      // Every file this branch touched is still at 100% on all four metrics
+      // except two, and both are unchanged from the rise above: `ShoreMap` at
+      // 96.77% branches, whose one uncovered branch is the `|| 1`
+      // divide-by-zero guard for a drawn run whose ends project to one point,
+      // and `DayPanel` at 97.53% statements, whose uncovered statement is the
+      // sentence for a CDIP outage that suite does not provoke.
       thresholds: {
-        statements: 89.58,
-        branches: 88.99,
-        functions: 94.34,
-        lines: 89.29,
+        statements: 89.43,
+        branches: 88.92,
+        functions: 94.27,
+        lines: 89.13,
       },
     },
   },

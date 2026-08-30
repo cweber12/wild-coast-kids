@@ -196,11 +196,13 @@ cloud as a band above, one of four series drawn at a time behind four tabs.
 _Avoid_: graph, the plot, day chart, timeline
 
 **Shore map**:
-The square picture beside the hour chart: this beach's stretch of coast, the
-sea washed in beside it, and the four sources its figures come from plotted at
-their real distances. The line it draws is CDIP's model line rather than a
-shoreline, so the wash fades rather than ending at it (ADR-0030). It reads no
-feed — every position on it is committed.
+The square picture beside the hour chart: this beach's own stretch of coast
+drawn heavier than the shore either side of it, and the open water washed in
+beside it. **It plots no stations, buoys or model lines** — it draws a place,
+not an inventory, and every source on the page is named in words under the
+group it belongs to (ADR-0033). The line it draws is CDIP's model line rather
+than a shoreline, which the sentence under it says. It reads no feed — every
+position on it is committed.
 _Avoid_: locator, mini map, station map, chart (that word is the plot's)
 
 **Dial**:

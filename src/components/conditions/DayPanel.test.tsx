@@ -794,8 +794,8 @@ test("the map carries a dial for the day the reader chose", async () => {
 });
 
 test("a cell that publishes no wind direction draws no dial", async () => {
-  // The needle goes and the map stays: the four markers are what ADR-0010 asked
-  // for and they do not depend on a bearing.
+  // The needle goes and the map stays. The picture is about where this beach
+  // is, which does not depend on a bearing.
   const dates = [TODAY];
   daylight(dates);
   tideWeek(dates);
@@ -817,7 +817,10 @@ test("a cell that publishes no wind direction draws no dial", async () => {
 
   expect(container.querySelector("[data-needle='wind']")).toBeNull();
   expect(screen.queryByText(/Wind, from the/)).toBeNull();
-  expect(screen.getByText(/Buoy Scripps Nearshore/)).toBeDefined();
+  // The map itself is unaffected: it draws a place, and a place does not stop
+  // existing because a forecast cell went quiet about the wind.
+  expect(container.querySelector("[data-coast]")).not.toBeNull();
+  expect(container.querySelector("[data-segment]")).not.toBeNull();
 });
 
 test("the dial carries a second needle for the swell, from its own publisher", async () => {

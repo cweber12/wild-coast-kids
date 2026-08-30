@@ -292,16 +292,16 @@ function cloudBandDescription(
 /**
  * The spoken equivalent of the whole map.
  *
- * Says what the picture is and how many sources are on it, and nothing about
- * what the shape of the coast means. A reader hearing this should learn the
- * same thing a reader seeing it does: that these figures come from places, and
- * roughly how many.
+ * Says what the picture is and nothing about what the shape of the coast
+ * means. A reader hearing this should learn the same thing a reader seeing it
+ * does: where this beach is on its own coast, and which side the water is on.
+ * The dial's own bearings are spoken separately, under the picture, because
+ * they change with the day and this does not.
  */
-function mapDescription(beachName: string, sources: number): string {
+function mapDescription(beachName: string): string {
   return (
-    `A map of ${beachName} and the ${sources} ` +
-    `${sources === 1 ? "place" : "places"} the figures on this page come from, ` +
-    `each drawn at its real distance from the beach.`
+    `A map of ${beachName}: its own stretch of coast drawn heavier than the ` +
+    `shore either side of it, and the open water shaded.`
   );
 }
 
@@ -507,10 +507,11 @@ export async function DayPanel({ slug }: { slug: string }) {
 
   /*
     The map is built once and handed over, outside the seven days, because it
-    is the same picture on all seven: this beach, its coast, and the four places
-    its figures come from. It is also the one thing in this region that reads no
-    feed -- `beaches.json` and `mop-lines.json` are committed -- so it cannot go
-    quiet and does not belong behind a Suspense boundary.
+    is the same picture on all seven: this beach, its own stretch of coast, and
+    the water beside it. Only the dial drawn on it changes with the day, and
+    that travels separately. It is also the one thing in this region that reads
+    no feed -- `beaches.json` and `mop-lines.json` are committed -- so it cannot
+    go quiet and does not belong behind a Suspense boundary.
 
     A beach the inventory does not hold is not this component's error to invent
     a map for: the route already answered that question before rendering, and
@@ -616,10 +617,10 @@ export async function DayPanel({ slug }: { slug: string }) {
             <>
               <ShoreMap
                 {...shore}
-                description={mapDescription(beach!.name, shore.markers.length)}
-                absence="We cannot place this beach on a map: every source we have for it is at the same point."
+                description={mapDescription(beach!.name)}
+                absence="We cannot place this beach on a map: the coordinates we hold for it are all one point."
                 noCoast="The coastline this site traces is the open coast, and it does not reach this beach."
-                coastCredit={`Shore traced from CDIP's model lines, which run a few hundred metres offshore — so the water fades in rather than stopping at a shoreline.`}
+                coastCredit={`Shore traced from CDIP's model lines, which are computed a few hundred metres offshore — so the water's edge is drawn further out than the sand.`}
                 compass={<DayCompass days={compassDays} />}
                 compassSources={<DayCompassSources days={compassDays} />}
               />

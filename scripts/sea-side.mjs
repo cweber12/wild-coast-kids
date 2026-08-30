@@ -140,7 +140,23 @@ export function sideOf(points, at) {
   return cross > 0 ? "left" : "right";
 }
 
-/** Everything one beach puts on its map, so the window is the one drawn. */
+/**
+ * A window wide enough for the question to have an answer.
+ *
+ * **This is deliberately wider than the window the map draws**, and it stopped
+ * being the same one when the map stopped plotting the four sources. The map is
+ * framed on the beach and the line off it now; this keeps the buoy in frame,
+ * because the buoy is the only ground truth there is for which side the water
+ * is on, and a window that excludes it leaves the side test matching a distant
+ * point against a short run of coast. Asked that way it fails at 10 of 15 --
+ * measured, not guessed.
+ *
+ * The property proven is about the polyline and not about the frame: walked
+ * south to north, this coast has the sea on its left. `boundsAround` grows with
+ * the points it is given, so the map's window is contained in this one and its
+ * run of coast is a contiguous sub-run of the run checked here. A sub-run walks
+ * the same way, which is what `ShoreMap`'s shading depends on.
+ */
 function positionsFor(beach, tables) {
   const positions = [beach.segment.upper, beach.segment.lower];
 
