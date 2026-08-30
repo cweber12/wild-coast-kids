@@ -137,10 +137,10 @@ const NEEDLES: Record<
     fill: "fill-ocean",
     arc: RING_RADIUS,
     arcOpacity: 0.65,
-    tail: 28,
+    tail: 26,
     head: 3,
-    width: 1.4,
-    barb: 2.2,
+    width: 1.3,
+    barb: 1.7,
     solid: false,
   },
   swell: {
@@ -148,10 +148,10 @@ const NEEDLES: Record<
     fill: "fill-purple-deep",
     arc: 24,
     arcOpacity: 0.8,
-    tail: 22,
+    tail: 21,
     head: 8,
-    width: 3,
-    barb: 3,
+    width: 2.4,
+    barb: 2.2,
     solid: true,
   },
 };
@@ -211,11 +211,14 @@ function Needle({ needle }: { needle: CompassNeedle }) {
     matrix, so there is one place in this file that knows which way north is.
   */
   /*
-    The head is twice as long as it is wide across. Set back by less it draws
-    an obtuse blob rather than an arrow, which is what the swell's first
-    version did once its shaft was shortened to clear the wind's.
+    The head is two and a half times as long as it is wide across.
+
+    Set back by less it draws an obtuse blob rather than an arrow, which is
+    what the swell's first version did once its shaft was shortened to clear
+    the wind's -- reviewed on the built page and called tacky, correctly. A
+    long, narrow head reads as a direction; a squat one reads as a shape.
   */
-  const barbBack = at(needle.fromDegT, style.head + style.barb * 2);
+  const barbBack = at(needle.fromDegT, style.head + style.barb * 2.5);
   const across = {
     x: (tail.y - head.y) / span,
     y: (head.x - tail.x) / span,
@@ -260,7 +263,71 @@ function Needle({ needle }: { needle: CompassNeedle }) {
           data-needle-head={needle.kind}
         />
       )}
+
+      <Label needle={needle} tail={tail} />
     </>
+  );
+}
+
+/**
+ * Where the needle's own word sits, out beyond its tail.
+ *
+ * **Two arrows over a coastline do not say which is which**, and this map has
+ * no legend by design — a boxed legend is one of the brief's anti-references,
+ * and the design review already named the cloud legend as the only element
+ * inside a frame that is chrome rather than data. A word at the tail is not a
+ * legend: it is the label on the thing itself, which is what a legend is a
+ * substitute for.
+ *
+ * **Horizontal, never rotated with its needle.** A label turned to follow a
+ * bearing is upside down for half the compass. It is anchored away from the
+ * dial instead — a needle out to the west puts its word further west — so the
+ * text runs outward and never crosses the picture.
+ *
+ * The size is in plot units rather than in the page's `text-2xs`, because a CSS
+ * pixel inside a hundred-unit viewBox is a hundredth of the map. 3.2 units is
+ * about 15px on the widest map this page draws and 10.5px on the narrowest, at
+ * 375 — which keeps it at ADR-0024's floor rather than under it.
+ */
+function Label({
+  needle,
+  tail,
+}: {
+  needle: CompassNeedle;
+  tail: { x: number; y: number };
+}) {
+  /*
+    Outside the arc, not just outside the tail. Set at the tail the word landed
+    on its own arc's track and the halo punched a hole through it -- visible on
+    the built page and picked up by the contrast probe, which kept sampling the
+    label's ink where it was looking for the band.
+  */
+  const out = at(needle.fromDegT, NEEDLES[needle.kind].arc + 4);
+  const eastward = tail.x >= 0;
+
+  return (
+    <text
+      x={Number(out.x.toFixed(2))}
+      y={Number(out.y.toFixed(2))}
+      textAnchor={eastward ? "start" : "end"}
+      dominantBaseline="middle"
+      fontSize={3.2}
+      className={`fill-ink stroke-cream uppercase ${
+        needle.kind === "wind" ? "font-bold" : "font-extrabold"
+      }`}
+      /*
+        A halo, not a badge. It exists so the word survives being drawn over
+        the coastline or the wash, and at 2.5 it read as a chip stuck on the
+        map -- which is the boxed legend this dial is meant not to have. 1.2 is
+        enough to separate the letters from what is behind them.
+      */
+      strokeWidth={1.2}
+      paintOrder="stroke"
+      strokeLinejoin="round"
+      data-needle-label={needle.kind}
+    >
+      {needle.label}
+    </text>
   );
 }
 

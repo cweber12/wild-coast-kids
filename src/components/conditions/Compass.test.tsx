@@ -244,3 +244,53 @@ test("a day with no bearings gets no sources block, not an empty list", () => {
   expect(container.querySelector("ul")).toBeNull();
   expect(container.textContent).toBe("");
 });
+
+test("each needle is labelled on the dial, so it says what it is", () => {
+  // Reviewed on the built page, two arrows over a coastline did not say which
+  // was which and there is no legend on this map by design. The label is the
+  // page's own 10px register, set at the needle's tail where the eye starts.
+  const container = dial([
+    { ...WIND, kind: "wind", fromDegT: 90, spreadDeg: 0 },
+    { ...WIND, kind: "swell", label: "Swell", fromDegT: 270, spreadDeg: 0 },
+  ]);
+
+  // Keyed rather than ordered: the dial paints heaviest-first so the light
+  // shaft is never underneath, which puts the swell's markup ahead of the
+  // wind's. Nothing reads that order -- the `<svg>` is one `role="img"` -- so
+  // asserting it would pin a painting decision as if it were a reading one.
+  const textOf = (kind: string) =>
+    container.querySelector(`[data-needle-label="${kind}"]`)?.textContent;
+
+  expect(textOf("wind")).toBe("Wind");
+  expect(textOf("swell")).toBe("Swell");
+});
+
+test("a label sits at its own needle's tail, not at the other one's", () => {
+  const container = dial([
+    { ...WIND, kind: "wind", fromDegT: 90, spreadDeg: 0 },
+    { ...WIND, kind: "swell", label: "Swell", fromDegT: 270, spreadDeg: 0 },
+  ]);
+
+  const at = (kind: string) =>
+    Number(
+      container
+        .querySelector(`[data-needle-label="${kind}"]`)!
+        .getAttribute("x"),
+    );
+
+  // Wind comes from the east, swell from the west, so the labels are on
+  // opposite sides of the beach.
+  expect(at("wind")).toBeGreaterThan(0);
+  expect(at("swell")).toBeLessThan(0);
+});
+
+test("the label reads left to right whichever way the needle points", () => {
+  // A label rotated with its needle is upside down for half the compass. These
+  // are set horizontally and anchored away from the dial, so a bearing in the
+  // west does not push its own word across the picture.
+  const container = dial([{ ...WIND, kind: "wind", fromDegT: 270 }]);
+
+  const label = container.querySelector('[data-needle-label="wind"]')!;
+  expect(label.getAttribute("transform")).toBeNull();
+  expect(label.getAttribute("text-anchor")).toBe("end");
+});

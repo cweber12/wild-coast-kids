@@ -286,10 +286,12 @@ export default defineConfig({
       // and `DayPanel` at 97.53% statements, whose uncovered statement is the
       // sentence for a CDIP outage that suite does not provoke.
       thresholds: {
-        statements: 89.43,
-        branches: 88.92,
-        functions: 94.27,
-        lines: 89.13,
+        // Back up a hundredth of a point each when the needles gained their
+        // labels, which are covered like everything else in `Compass.tsx`.
+        statements: 89.44,
+        branches: 88.94,
+        functions: 94.28,
+        lines: 89.14,
       },
     },
   },
