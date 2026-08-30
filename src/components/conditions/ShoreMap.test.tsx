@@ -20,24 +20,27 @@ const BOUNDS = {
 const MARKERS: ShoreMarker[] = [
   {
     kind: "mop-line",
-    name: "MOP line D0498",
+    source: "MOP line D0498",
+    network: "CDIP, Scripps Institution of Oceanography",
+    distanceKm: "0.3",
     lat: 32.862,
     lon: -117.261,
-    distance: "about 0.3 km from this beach",
   },
   {
     kind: "wave-buoy",
-    name: "Buoy Scripps Nearshore",
+    source: "Buoy Scripps Nearshore",
+    network: "NDBC",
+    distanceKm: "1.6",
     lat: 32.868,
     lon: -117.267,
-    distance: "about 1.6 km from this beach",
   },
   {
     kind: "tide-station",
-    name: "La Jolla (Scripps Institution Wharf)",
+    source: "La Jolla (Scripps Institution Wharf)",
+    network: "NOAA Tides & Currents",
+    distanceKm: null,
     lat: 32.867,
     lon: -117.257,
-    distance: "about 1.4 km from this beach",
   },
 ];
 
@@ -54,11 +57,19 @@ const PROPS = {
   noCoast: "The coastline this site traces does not reach this beach.",
 };
 
+/** The provenance lines beside the picture, in order. */
+function credits(container: HTMLElement): string[] {
+  return [...container.querySelectorAll("li p")].map(
+    (node) => node.textContent ?? "",
+  );
+}
+
 test("every marker names the source it stands for", () => {
-  render(<ShoreMap {...PROPS} />);
+  const { container } = render(<ShoreMap {...PROPS} />);
+  const lines = credits(container);
 
   for (const marker of MARKERS) {
-    expect(screen.getByText(marker.name)).toBeTruthy();
+    expect(lines.some((line) => line.startsWith(marker.source))).toBe(true);
   }
 });
 
@@ -66,14 +77,14 @@ test("a beach with no MOP line draws no MOP marker and does not silently omit it
   // 26 of the 51 committed beaches bind no MOP line. The marker cannot be
   // drawn, and a map that simply lacked it would read as a map of a beach that
   // has one somewhere off-frame.
-  render(
+  const { container } = render(
     <ShoreMap
       {...PROPS}
       markers={MARKERS.filter((marker) => marker.kind !== "mop-line")}
     />,
   );
 
-  expect(screen.queryByText("MOP line D0498")).toBeNull();
+  expect(credits(container).some((line) => line.includes("D0498"))).toBe(false);
   expect(screen.getByText(/no swell model/i)).toBeTruthy();
 });
 
@@ -81,10 +92,14 @@ test("a beach the traced coast does not reach keeps its markers and says so", ()
   // 23 of the 51 are in Mission Bay or San Diego Bay, 2.6 to 5.4 km from the
   // nearest MOP line. They still get the markers, which is what ADR-0010 asks
   // the map to draw; what they do not get is a shoreline invented for them.
-  render(<ShoreMap {...PROPS} coast={[]} />);
+  const { container } = render(<ShoreMap {...PROPS} coast={[]} />);
 
   expect(screen.getByText(PROPS.noCoast)).toBeTruthy();
-  expect(screen.getByText("Buoy Scripps Nearshore")).toBeTruthy();
+  expect(
+    credits(container).some((line) =>
+      line.startsWith("Buoy Scripps Nearshore"),
+    ),
+  ).toBe(true);
 });
 
 test("no box to draw is a sentence, never an empty frame", () => {
@@ -140,8 +155,13 @@ test("the map says nothing the caller did not give it", () => {
     decoration.remove();
   }
 
+  // Exactly what ProvenanceLine composes from the fields it was handed.
   const given = MARKERS.map(
-    (marker) => `${marker.name} · ${marker.distance}`,
+    (marker) =>
+      `${marker.source} · ${marker.network}` +
+      (marker.distanceKm
+        ? ` · about ${marker.distanceKm} km from this beach`
+        : ""),
   ).join("");
 
   expect((container.textContent ?? "").replace(/\s/g, "")).toBe(

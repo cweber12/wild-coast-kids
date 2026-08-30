@@ -44,20 +44,32 @@
 
 import type { Bounds, Position, ShorePoint } from "@/lib/coastline";
 import { projectionFor } from "@/lib/coastline";
+import { ProvenanceLine } from "./ProvenanceLine";
 
 /** Which source a marker stands for. The list is closed on purpose. */
 export type ShoreMarkerKind =
   "mop-line" | "wave-buoy" | "tide-station" | "air-station";
 
-/** One plotted source, named and measured by the caller. */
+/**
+ * One plotted source, named and measured by the caller.
+ *
+ * The three text fields are `ProvenanceLine`'s own, passed through rather than
+ * reworded. That component is this repo's single owner of how "how far away" is
+ * said, and a map that spelled "about 1.4 km from this beach" itself would be
+ * a fifth place for that phrasing to drift — which is the whole reason it was
+ * made one component. The brief's inventory says as much: `ProvenanceLine`,
+ * reuse, unchanged, "used per needle, per series and per map marker".
+ */
 export type ShoreMarker = {
   kind: ShoreMarkerKind;
-  /** What this source is called, in the caller's own words. */
-  name: string;
+  /** What the figure names it, ready to print. Never a callsign turned into prose. */
+  source: string;
+  /** Who publishes it, or null where the binding genuinely does not know. */
+  network?: string | null;
+  /** Kilometres, already rounded by the caller's own threshold, or null. */
+  distanceKm?: string | null;
   lat: number;
   lon: number;
-  /** How far off, already worded. `ProvenanceLine` owns that phrasing. */
-  distance: string;
 };
 
 export type ShoreMapProps = {
@@ -234,13 +246,16 @@ export function ShoreMap({
       */}
       <ul className="mt-2 flex flex-col gap-1">
         {markers.map((marker) => (
-          <li key={marker.kind} className="text-2xs text-fog leading-normal">
-            <span aria-hidden="true" className="mr-1.5 inline-block">
+          <li key={marker.kind} className="flex items-baseline gap-1.5">
+            <span aria-hidden="true" className="text-2xs">
               {GLYPHS[marker.kind]}
             </span>
-            <span>{marker.name}</span>
-            {" · "}
-            {marker.distance}
+            <ProvenanceLine
+              source={marker.source}
+              network={marker.network ?? null}
+              distanceKm={marker.distanceKm ?? null}
+              surface="page"
+            />
           </li>
         ))}
         {missing.map(([kind, sentence]) => (
