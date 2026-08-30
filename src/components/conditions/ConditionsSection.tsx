@@ -17,7 +17,6 @@ import {
 import { BeachSelector } from "./BeachSelector";
 import { ConditionsNotes } from "./ConditionsNotes";
 import { DayPanel } from "./DayPanel";
-import { ReservedSlot } from "../ui/ReservedSlot";
 import { SelectedDayProvider } from "./selectedDay";
 import { WeekPanel } from "./WeekPanel";
 
@@ -161,23 +160,6 @@ export function ConditionsSection({ slug }: { slug: string }) {
           </Suspense>
         </div>
       </SelectedDayProvider>
-
-      {/*
-        The sighting map is specified in #121 and deferred, so the page says
-        what lands here rather than being silent about it — the standing use of
-        a reserved slot in this repo. It comes out in the slice that fills it,
-        because a slot removed early leaves the page promising less than it did.
-
-        Sized into the space the map will occupy, so the layout around it is
-        designed rather than discovered when the map arrives.
-      */}
-      <div className="mb-9">
-        <ReservedSlot
-          emoji="🗺️"
-          headline="A map of what people have found here is coming."
-          detail="Will show octopus, nudibranchs, sea hares and leopard sharks logged near this beach in the past week — reported by naturalists, not surveyed by us."
-        />
-      </div>
 
       {/*
         One block for everything true of every reading — the datum, what a buoy

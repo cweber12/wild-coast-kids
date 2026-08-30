@@ -242,11 +242,28 @@ export default defineConfig({
       //
       // The figures below are these, not the ones in the block above, which
       // are kept because they are what the deletion on its own cost.
+      //
+      // 2026-08-30, #173's first half: the shore map, its assembler and the
+      // coastline geometry beneath them. All four rise, which is what a slice
+      // that adds only tested code does -- coastline.ts and shore.ts each
+      // finished fully covered, and the numerator grew faster than the
+      // denominator on every row.
+      //
+      //   statements 2368/2677 -> 2639/2959   88.45 -> 89.18
+      //   branches   1573/1779 -> 1696/1914   88.42 -> 88.61
+      //   functions   564/601  ->  606/644    93.84 -> 94.09
+      //   lines      2143/2434 -> 2388/2686   88.04 -> 88.90
+      //
+      // Two branches in this work are unreachable through the committed data
+      // and are covered by calling their functions directly rather than by
+      // widening the floor around them: `shoreDistanceKm` above 10 km, where
+      // the furthest source in the inventory is 9.2 km, and `boundsAround`
+      // returning null, which needs a beach whose every source is one point.
       thresholds: {
-        statements: 88.45,
-        branches: 88.42,
-        functions: 93.84,
-        lines: 88.04,
+        statements: 89.18,
+        branches: 88.61,
+        functions: 94.09,
+        lines: 88.9,
       },
     },
   },

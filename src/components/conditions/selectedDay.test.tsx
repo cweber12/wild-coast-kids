@@ -104,7 +104,7 @@ function renderBoth() {
         days={DAYS}
         rows={[TIDE_ROW]}
       />
-      <ChosenDay days={VIEWS} />
+      <ChosenDay days={VIEWS} map={null} />
     </SelectedDayProvider>,
   );
 }
@@ -238,7 +238,7 @@ test("without a script the week is whole and offers no control", () => {
         days={DAYS}
         rows={[TIDE_ROW]}
       />
-      <ChosenDay days={VIEWS} />
+      <ChosenDay days={VIEWS} map={null} />
     </SelectedDayProvider>,
   );
 
@@ -263,7 +263,7 @@ test("a region outside the provider shows its first day rather than failing", ()
   // rendered without a provider is the state a reader without JavaScript is
   // already in, and turning that into an error would make a degraded page a
   // blank one.
-  const { container } = render(<ChosenDay days={VIEWS} />);
+  const { container } = render(<ChosenDay days={VIEWS} map={null} />);
 
   expect(drawnDay(container)).toBe(`Tide on ${DATES[0]}`);
 });

@@ -465,7 +465,12 @@ export function HourChart({
     the cloud band, which is context for a frame that is not being drawn.
   */
   const shell = (body: React.ReactNode) => (
-    <div className="max-w-4xl overflow-hidden rounded-box border-[1.5px] border-ocean bg-white/60">
+    /*
+      `xl:max-w-none` because from that width the day row puts the map beside
+      this and the column is the constraint. The cap still does its job below
+      `xl`, where an uncapped chart on a full-width column drew 440px tall.
+    */
+    <div className="max-w-4xl overflow-hidden rounded-box border-[1.5px] border-ocean bg-white/60 xl:max-w-none">
       <div className="border-b-[1.5px] border-ocean bg-ocean px-4 py-2">
         {band}
       </div>

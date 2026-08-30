@@ -687,3 +687,48 @@ test("the measured block's loading line uses no word the glossary rejects", asyn
   expect(line.toLowerCase()).not.toContain("forecast");
   expect(line.toLowerCase()).not.toContain("surf report");
 });
+
+/**
+ * The sighting layer from #121, reserved on the map rather than instead of it.
+ *
+ * These three tests moved here with the slot. They were in
+ * `ConditionsSection.test.tsx`, which mocks this component — so left there they
+ * would pass whatever the slot said, including nothing.
+ */
+test("the day names the sighting layer as coming rather than staying silent", async () => {
+  // A reader can tell the difference between a feature that is coming and one
+  // that was never considered. That is the whole point of a reserved slot, and
+  // the map arriving is what changes the copy from "a map is coming" to "the
+  // sightings are coming, on this map".
+  render(await DayPanel({ slug: "la-jolla-shores-beach" }));
+
+  expect(screen.getByText(/Sightings will be drawn on this map/)).toBeDefined();
+});
+
+test("the slot promises a record of reports, never a survey", async () => {
+  // The claim the layer is allowed to make, fixed in the copy before it exists.
+  // iNaturalist records where people with phones went, not where animals are,
+  // and a slot promising a density surface would commit the page to something
+  // the data cannot support (#121).
+  render(await DayPanel({ slug: "la-jolla-shores-beach" }));
+
+  expect(
+    screen.getByText(/reported by naturalists, not surveyed by us/),
+  ).toBeDefined();
+});
+
+test("the slot says what the layer will show, not what was found", async () => {
+  // The tense is the claim. Named animals, a named window and a named place in
+  // the past tense read as a report of what was found here, and no such report
+  // exists. On a page whose discipline is that every figure names its station
+  // and nothing unmeasured is asserted, this is the one sentence a skimming
+  // reader could come away believing.
+  render(await DayPanel({ slug: "la-jolla-shores-beach" }));
+
+  const slot = screen.getByText(/Sightings will be drawn on this map/);
+
+  expect(slot.textContent).toContain(
+    "Will show octopus, nudibranchs, sea hares and leopard sharks logged " +
+      "near this beach in the past week",
+  );
+});

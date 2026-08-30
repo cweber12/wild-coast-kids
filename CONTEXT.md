@@ -41,6 +41,10 @@ _Avoid_: email list, mailing list, the community, the loop
 A labeled stand-in for content that has been decided on but not yet written or
 built — a schedule, a booking scheduler, the conditions tool. Renders as a
 dashed frame with an emoji and a "coming soon" line naming what lands there.
+It may stand **instead of** the content, which is where five of the six sit, or
+**inside** content that already exists, holding open a layer of it rather than
+the whole — the sightings on the shore map (ADR-0031). Either way it names what
+lands there and never an issue number.
 _Avoid_: coming-soon box, empty state, placeholder (that word is taken, below)
 
 **Placeholder**:
@@ -170,3 +174,31 @@ calls it what it is: "MOP line D0498". A beach binds one for the week ahead and
 a wave buoy for now; the two are separate joins over separate tables and refuse
 the same water.
 _Avoid_: MOP station, model buoy, virtual buoy, forecast point
+
+**Sparkline**:
+The 24-hour shape drawn behind the figures in one cell of the week grid. It
+draws the tide, with night shaded, at a range shared across all seven days so
+the cells stay comparable. It carries no cloud (ADR-0026) and does not follow
+the day chart's tab — the week is the tide's shape at a glance, and the chart
+is four products at reading size.
+_Avoid_: mini chart, thumbnail, micro graph, spark
+
+**Day panel**:
+The region below the week, showing one chosen day: its heading, the
+publisher's sky wording, the hour chart, the shore map, and — on today alone —
+what was measured. The week grid is the control that picks which day; the panel
+is what redraws.
+_Avoid_: day view, detail panel, today panel (it is any of seven days)
+
+**Hour chart**:
+The large plot inside the day panel: twenty-four hours across, night shaded,
+cloud as a band above, one of four series drawn at a time behind four tabs.
+_Avoid_: graph, the plot, day chart, timeline
+
+**Shore map**:
+The square picture beside the hour chart: this beach's stretch of coast, the
+sea washed in beside it, and the four sources its figures come from plotted at
+their real distances. The line it draws is CDIP's model line rather than a
+shoreline, so the wash fades rather than ending at it (ADR-0030). It reads no
+feed — every position on it is committed.
+_Avoid_: locator, mini map, station map, chart (that word is the plot's)
