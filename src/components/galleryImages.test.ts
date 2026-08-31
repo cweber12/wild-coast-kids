@@ -117,7 +117,7 @@ const FRAME_SIZES: Record<string, { width: number; height: number }> = {
   "/gallery/kids-with-portraits.jpg": { width: 1200, height: 1600 },
   "/gallery/neon-marker-robots.jpg": { width: 1200, height: 1600 },
   "/gallery/cherry-blossom-brushwork.jpg": { width: 1600, height: 1200 },
-  "/gallery/framed-artwork-overhead.jpg": { width: 1600, height: 1247 },
+  "/gallery/framed-artwork-overhead.jpg": { width: 1370, height: 1247 },
   "/gallery/eeyore-and-balloon.jpg": { width: 1200, height: 1600 },
   "/gallery/cactus-collage.jpg": { width: 1200, height: 1600 },
   "/gallery/sumi-e-sun-and-bamboo.jpg": { width: 1200, height: 1600 },

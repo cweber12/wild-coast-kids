@@ -91,13 +91,18 @@ export const GALLERY_IMAGES: GalleryImage[] = [
   },
   {
     src: "/gallery/framed-artwork-overhead.jpg",
-    alt: "Six finished pieces laid out on kraft paper, a child's finger pointing at the one with the balloon",
+    alt: "Five finished pieces laid out on kraft paper, a child's finger pointing at the one with the balloon",
     aspect: "wide",
     // The one crop here that loses something either way: both rows of work
-    // plus the pointing hand are taller than a 16:9 band. Slightly above
-    // centre keeps the hand and the whole lower row, and takes the loss off
-    // the top edges of the upper two.
-    crop: "50% 45%",
+    // plus the pointing hand are taller than a 16:9 band, and there is less to
+    // go round than there was. The frame lost 230px off its left edge in #185,
+    // taking with it a piece hand-lettered with a child's name, so the band is
+    // 771px of 1247 rather than 900 of 1247. Low enough to keep the pointing
+    // hand and all three of the lower row, which puts the loss on the top
+    // edges of the upper two. Rendered at 25 through 85 and looked: below 55
+    // the hand is a fingertip in the corner rather than a gesture, and above
+    // 75 the bottom third goes to bare kraft paper.
+    crop: "50% 65%",
   },
   {
     src: "/gallery/eeyore-and-balloon.jpg",
