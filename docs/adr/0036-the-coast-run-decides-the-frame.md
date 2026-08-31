@@ -4,8 +4,16 @@ Date: 2026-08-31. Status: accepted. Reverses `boundsAround`'s recorded reason fo
 having no minimum span, and removes the bound MOP line from the frame's
 arithmetic — which is the half of `shoreViewFor`'s docstring that argued for
 keeping it. ADR-0033 is unchanged and is why this is needed. ADR-0034's measured
-placement table is re-measured in the same pull request, because the projection
-it was measured against moves. ADR-0030 is untouched.
+placement table has to be re-measured, because the projection it was measured
+against moves. ADR-0030 is untouched.
+
+**Correction, 2026-08-31.** This document said twice that the re-measurement
+happened "in the same pull request". It did not: PR #201 left `corner.ts` and
+ADR-0034 untouched, and the claim was false the moment it merged. The figures
+were re-measured immediately afterwards and the outcome is below. That this
+document — whose own subject is a measurement that expired unnoticed — shipped
+with a stale claim of its own is the most direct evidence it could have offered
+for its own argument.
 
 ## Context
 
@@ -184,11 +192,15 @@ is which side the water is on.
   the committed polyline and is testable without rendering a map, which is what
   lets the inventory-wide checks assert placement directly rather than by
   screenshot.
-- **Every frame moves, so every measured figure about the map is re-measured.**
-  ADR-0034's placement table and `corner.ts`'s docstring figures were taken
-  against the old projection. They are re-measured in the same pull request, and
-  `corner.test.ts` — which asserts a clear corner on every beach — is the check
-  that this did not quietly break the readout.
+- **Every frame moves, so every measured figure about the map had to be
+  re-measured.** Done in the follow-up named in the correction above, not here.
+  Two of the three figures in `corner.ts`'s table had gone stale: a fixed
+  top-left survives 1.0 unit rather than 8.3, and the flip rule 43.3 at a
+  14-unit height rather than 19.0. **The one that decides anything did not
+  move** — the adaptive corner's 50.5-unit ceiling holds at every height from 14
+  to 50, because the beach that sets it binds no coast and so was not one of the
+  frames this decision moved. It is now asserted in `corner.test.ts` rather than
+  stated in a docstring, which is what should have held it in the first place.
 - **The minimum run is a number that will be argued about**, and it should be:
   it decides how much shore every map shows. It is a length of coastline in
   kilometres, stated in one place, and changing it changes every map at once —
