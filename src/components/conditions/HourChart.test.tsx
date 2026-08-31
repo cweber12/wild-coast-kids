@@ -461,6 +461,91 @@ describe("published points", () => {
   });
 });
 
+describe("the fill under the curve", () => {
+  /** The `url(#…)` the area points at, or null when it points at nothing. */
+  function fillRef(container: HTMLElement): string | null {
+    const fill = container.querySelector("[data-area]")?.getAttribute("fill");
+    return fill?.match(/^url\(#(.+)\)$/)?.[1] ?? null;
+  }
+
+  /**
+   * The gradient an area actually resolves to, found by id rather than by
+   * being the only one in the document.
+   *
+   * A reference to an id nothing defines paints nothing at all, which looks
+   * exactly like a fade that works and is the trap `ShoreMap` fell into -- nine
+   * of its ten tests passed with the sea shaded over the land. So the id is
+   * followed rather than assumed to land somewhere.
+   */
+  function gradientFor(container: HTMLElement): Element | null {
+    const id = fillRef(container);
+    if (id === null) return null;
+    return (
+      [...container.querySelectorAll("linearGradient")].find(
+        (each) => each.getAttribute("id") === id,
+      ) ?? null
+    );
+  }
+
+  test("the area is filled with a gradient, not a flat colour", () => {
+    // A flat fill closed to the foot of the frame asserts a quantity the axis
+    // has explicitly disclaimed: the range is this day's own, so the foot is
+    // 74.0 °F on the temperature tab and the fill draws a 3 °F day as a
+    // mountain.
+    const { container } = render(<HourChart {...PROPS} />);
+
+    const area = container.querySelector("[data-area]");
+    expect(area).not.toBeNull();
+    expect(fillRef(container)).not.toBeNull();
+    // `?? ""` because the fixed version carries no class at all, and
+    // `not.toContain` on null throws rather than passing.
+    expect(area?.getAttribute("class") ?? "").not.toContain("fill-ocean");
+  });
+
+  test("the gradient it points at is really in the document", () => {
+    const { container } = render(<HourChart {...PROPS} />);
+
+    expect(gradientFor(container)).not.toBeNull();
+  });
+
+  test("the gradient ends fully transparent, so the frame's foot is bare", () => {
+    // The hard edge at the foot is the part that reads as a quantity. Anything
+    // above zero there is still a baseline being asserted.
+    const { container } = render(<HourChart {...PROPS} />);
+
+    const stops = [...(gradientFor(container)?.querySelectorAll("stop") ?? [])];
+    expect(stops.length).toBeGreaterThanOrEqual(2);
+    expect(Number(stops[stops.length - 1].getAttribute("stop-opacity"))).toBe(
+      0,
+    );
+    // And it is a fade rather than a fill that is transparent throughout: the
+    // body the fill was added for has to survive the fix for the foot.
+    expect(Number(stops[0].getAttribute("stop-opacity"))).toBeGreaterThan(0);
+  });
+
+  test("two charts on one page do not share a gradient", () => {
+    // Duplicate SVG ids resolve to whichever the document sees first, so a
+    // literal id would silently bind every chart on the page to one gradient.
+    const { container } = render(
+      <>
+        <HourChart {...PROPS} />
+        <HourChart {...PROPS} />
+      </>,
+    );
+
+    const ids = [...container.querySelectorAll("linearGradient")].map((each) =>
+      each.getAttribute("id"),
+    );
+
+    // Both halves, because `expect(first).not.toBeNull()` is satisfied by the
+    // `undefined` a chart that rendered no gradient at all would give, and two
+    // of those compare equal -- a test that fails for the wrong reason today
+    // and passes for the wrong reason tomorrow.
+    expect(ids).toHaveLength(2);
+    expect(new Set(ids).size).toBe(2);
+  });
+});
+
 describe("when there is no series", () => {
   test("an unavailable series renders its reason, not an empty frame", () => {
     // A curve is a stronger claim than a figure: a flat line at zero says the

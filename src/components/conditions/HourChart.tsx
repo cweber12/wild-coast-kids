@@ -238,6 +238,27 @@ const CLOUD_H = 14;
 const PAD = 8;
 
 /**
+ * The fill's strength where the curve is, fading to nothing at the frame's foot.
+ *
+ * **Higher than the 12% the flat fill used, and that is arithmetic rather than
+ * taste.** A gradient from 12% to transparent averages about 6% across the
+ * shape, which is half the ink the flat fill had — so fixing the foot by fading
+ * would have quietly undone the thing the fill was added for, and left the plot
+ * reading as the empty field with a thread across it that the review objected
+ * to. 24% at the curve averages about the same 12% the shape carried before,
+ * so the body is preserved and only the hard edge along the bottom goes.
+ *
+ * The bottom stop is zero and not "nearly zero". Anything above it is still an
+ * edge along the frame's foot, and the edge is the part that reads as a
+ * quantity. Ruled 2026-08-29 in the day view's design review, finding 2, which
+ * also records the two alternatives that were rejected: dropping the fill where
+ * the floor is not near zero, which would have made four tabs look like two
+ * chart styles, and labelling the floor as a floor, which answers a problem of
+ * form with words.
+ */
+const AREA_TOP_OPACITY = 0.24;
+
+/**
  * The plot frame's shape on a phone, where its own is too flat to read.
  *
  * **One aspect ratio cannot serve both ends of this range, and that is a
@@ -550,6 +571,9 @@ export function HourChart({
     )
     .join(" ");
 
+  /** What the publisher issued, which is what gets a mark. See `MARKS_FIT_NARROW`. */
+  const publishedPoints = points.filter((point) => point.published);
+
   /**
    * The same curve, closed to the foot of the frame.
    *
@@ -558,20 +582,40 @@ export function HourChart({
    * objected to. A fill gives the series body and makes the shape legible at a
    * glance rather than only on inspection.
    *
-   * It is the row's own colour at a low opacity, which is what keeps it clear of
-   * ADR-0009: `weekTone.ts` records that what makes colour a verdict is
-   * *differential* colour, a green day beside a red one. Every hour of every day
-   * takes the same ocean whatever the tide is doing, so this asserts nothing
-   * about the water.
+   * It is the row's own colour, which is what keeps it clear of ADR-0009:
+   * `weekTone.ts` records that what makes colour a verdict is *differential*
+   * colour, a green day beside a red one. Every hour of every day takes the
+   * same ocean whatever the tide is doing, so this asserts nothing about the
+   * water.
+   *
+   * **What it is painted with, though, is not the colour it started as, and
+   * that is the fix for a second reading it was making anyway.** Flat at 12%
+   * and closed to `HEIGHT`, the shape had a hard edge along the bottom of the
+   * frame — and the frame's bottom is `lowValue`, not zero. On the temperature
+   * tab, where a day runs 74.0 to 77.0 °F, that drew three degrees as a
+   * mountain. The docstring above and the range's own both argued well and
+   * neither addressed the other: one is why the scale floats, the other is why
+   * there is a fill, and together they assert a baseline the axis disclaims.
+   *
+   * The gradient is the whole of the answer. See `AREA_TOP_OPACITY`.
    */
-  /** What the publisher issued, which is what gets a mark. See `MARKS_FIT_NARROW`. */
-  const publishedPoints = points.filter((point) => point.published);
-
   const areaPath =
     points.length < 2
       ? null
       : `${path} L${x(points[points.length - 1].atMs).toFixed(2)} ${HEIGHT} ` +
         `L${x(points[0].atMs).toFixed(2)} ${HEIGHT} Z`;
+
+  /**
+   * The gradient's own id, per rendered chart.
+   *
+   * From the same `useId` the tabs take theirs from rather than a second call:
+   * one instance, one identity. A literal would be a duplicate SVG id the
+   * moment two charts are on a page — and duplicates resolve to whichever the
+   * document sees first, so every chart would silently paint through the first
+   * one's gradient. React 19 emits `_R_0_`-shaped ids, which need no escaping
+   * inside `url(#…)`.
+   */
+  const areaFillId = `${tabIds}area`;
 
   /** The now line, only when this day is today and the instant is inside it. */
   const nowX =
@@ -800,6 +844,43 @@ export function HourChart({
               className="block h-auto w-full max-sm:h-full"
             >
               {/*
+                The fill's fade, running the frame's height rather than the
+                shape's own box.
+
+                `gradientUnits="userSpaceOnUse"` so the stops are pinned to the
+                frame: y=0 is the top of the plot and y=HEIGHT is its foot,
+                whatever the area's bounding box happens to be on this tab. The
+                default maps 0..1 onto the shape instead, which would move the
+                fade with the data and is the kind of coupling this plot spent
+                three revisions removing from the cloud layer.
+
+                `currentColor` rather than a colour, and `text-ocean` rather
+                than `var(--color-ocean)`: a stop takes no Tailwind fill
+                utility, and every colour in this repo is named by a class so
+                that ADR-0006's scanner can see it. The class is a literal
+                string in `src/`, which is what makes the `stylesheet` gate's
+                reading hold.
+              */}
+              <defs>
+                <linearGradient
+                  id={areaFillId}
+                  className="text-ocean"
+                  gradientUnits="userSpaceOnUse"
+                  x1={0}
+                  y1={0}
+                  x2={0}
+                  y2={HEIGHT}
+                >
+                  <stop
+                    offset="0"
+                    stopColor="currentColor"
+                    stopOpacity={AREA_TOP_OPACITY}
+                  />
+                  <stop offset="1" stopColor="currentColor" stopOpacity={0} />
+                </linearGradient>
+              </defs>
+
+              {/*
               Night, full height, the ground the whole day is drawn on. It is
               the only shading inside this frame: cloud has its own band above,
               so nothing here has to be told apart from anything else by shade.
@@ -819,8 +900,7 @@ export function HourChart({
               {areaPath !== null && (
                 <path
                   d={areaPath}
-                  className="fill-ocean"
-                  fillOpacity={0.12}
+                  fill={`url(#${areaFillId})`}
                   stroke="none"
                   data-area
                 />
