@@ -46,8 +46,8 @@ test("every tile crops around its own anchor", () => {
   render(<GallerySection />);
 
   // The seam for the one decision that is per photograph. object-cover throws
-  // away 44% to 58% of a portrait frame's height, and the default keeps the
-  // middle — which loses the stegosaurus, who sits in the bottom third of his
+  // away 44% of a portrait frame's height and the default keeps the middle —
+  // which loses the sumi-e card, whose subject sits in the top third of its
   // frame. jsdom has no stylesheet, so a class name here would assert only
   // that a string was spelled; an inline objectPosition it reads back exactly.
   for (const { alt, crop } of GALLERY_IMAGES) {
