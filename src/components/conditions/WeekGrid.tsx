@@ -673,8 +673,27 @@ export function WeekGrid({
             narrow and the slots said it was wide, in adjacent bands of the
             same section. Three across beside four days is close enough that
             neither band contradicts the other.
+
+            **And it is a rule about three, so it is asked for only when there
+            are three.** The band held three when that was written and holds
+            one now, which rendered a 472px dashed box in a 1440px band with
+            968px empty beside it, under a full-width seven-column grid. A grid
+            with one child is a valid grid, so nothing failed.
+
+            The threshold is three rather than two. At two slots a three-column
+            grid leaves one column empty -- the same fault, a third smaller --
+            where two full-width rows say exactly what is there. That also
+            keeps this to one literal class: a count interpolated into
+            `lg:grid-cols-${n}` compiles to nothing under ADR-0006's opt-in
+            source detection and would fail only at a width no test runs at.
+
+            Padding `reserved` to three would be the other way to make the
+            container match, and it would be a lie: two more dashed boxes
+            announcing nothing are worse than the empty ground they fill.
           */}
-          <div className="grid gap-3 lg:grid-cols-3">
+          <div
+            className={`grid gap-3 ${reserved.length > 2 ? "lg:grid-cols-3" : ""}`}
+          >
             {reserved.map((slot) => (
               <ReservedSlot key={slot.headline} {...slot} density="row" />
             ))}

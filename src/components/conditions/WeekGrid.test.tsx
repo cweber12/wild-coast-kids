@@ -47,6 +47,31 @@ const RESERVED = [
   },
 ];
 
+/**
+ * The band at the width it was laid out for.
+ *
+ * Three across is a rule about three, and asserting it needs three to assert it
+ * against. The one-slot `RESERVED` above is what the page actually hands over
+ * today, and the two fixtures are the two halves of the same claim: the band
+ * takes the shape of what it holds.
+ *
+ * The first headline is shared with `RESERVED` so one helper finds the band in
+ * both.
+ */
+const RESERVED_THREE = [
+  RESERVED[0],
+  {
+    emoji: "🌡️",
+    headline: "A water temperature is coming.",
+    detail: "The buoy reports one, and the page does not carry it yet.",
+  },
+  {
+    emoji: "🏖️",
+    headline: "A surf zone forecast is coming.",
+    detail: "Rip current risk, issued for this stretch of coast.",
+  },
+];
+
 function renderGrid(overrides: Partial<Parameters<typeof WeekGrid>[0]> = {}) {
   return render(
     <WeekGrid
@@ -215,7 +240,11 @@ test("the reserved band says it belongs to the week above it", () => {
 });
 
 test("the reserved band steps at the same width the days do", () => {
-  renderGrid({ reserved: RESERVED });
+  // Three slots, because three across is what this asserts. It was written
+  // when `RESERVED` held three and kept passing when the array shrank to one,
+  // at which point it was asserting a three-column grid around a single box --
+  // the defect, pinned as if it were the contract.
+  renderGrid({ reserved: RESERVED_THREE });
 
   // `lg` is where the days above first go wider than two. Three slots side by
   // side from 640px gave roughly 26 characters over five ragged lines at 768,
@@ -224,6 +253,18 @@ test("the reserved band steps at the same width the days do", () => {
   const band = reservedSlot()?.parentElement;
   expect(band?.className).toContain("lg:grid-cols-3");
   expect(band?.className).not.toContain("sm:grid-cols-3");
+});
+
+test("a band holding one slot is not laid out for three", () => {
+  // At 1536 the three-column band renders a 472px dashed box with 968px empty
+  // to its right, directly under a full-width seven-column grid. The layout is
+  // still correct for the case it was written for -- three products, side by
+  // side -- and wrong for the case it is in, and nothing failed because a grid
+  // with one child is a valid grid.
+  renderGrid({ reserved: RESERVED });
+
+  expect(RESERVED).toHaveLength(1);
+  expect(reservedSlot()?.parentElement?.className).not.toContain("grid-cols-3");
 });
 
 /**
