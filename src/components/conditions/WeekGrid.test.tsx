@@ -226,6 +226,18 @@ test("the reserved band steps at the same width the days do", () => {
   expect(band?.className).not.toContain("sm:grid-cols-3");
 });
 
+test("a band holding one slot is not laid out for three", () => {
+  // At 1536 the three-column band renders a 472px dashed box with 968px empty
+  // to its right, directly under a full-width seven-column grid. The layout is
+  // still correct for the case it was written for -- three products, side by
+  // side -- and wrong for the case it is in, and nothing failed because a grid
+  // with one child is a valid grid.
+  renderGrid({ reserved: RESERVED });
+
+  expect(RESERVED).toHaveLength(1);
+  expect(reservedSlot()?.parentElement?.className).not.toContain("grid-cols-3");
+});
+
 /**
  * ADR-0014, asserted where both ranks render inside one component. "The week
  * ahead" is a region and "Tue, Aug 18" is a day inside it, and the two were
