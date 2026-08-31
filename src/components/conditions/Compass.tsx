@@ -16,6 +16,18 @@
  * dial overflowed the edge. Reviewed on the built page it was distracting, and
  * it was covering its own subject. See ADR-0034.
  *
+ * **The rows state one hour, and the wedge behind them states the day.** They
+ * were a day aggregate while the chart beside them stated an hour, which is
+ * issue #193: two regions saying different things about one day, a few
+ * centimetres apart. ADR-0027 refused the obvious fix — a needle "whose meaning
+ * changes depending on what was last clicked" — and ADR-0035 supersedes that
+ * clause by removing the thing that changes, rather than by arguing with it.
+ * There is no day mode to switch out of: the arrow is the wind at one hour
+ * before any click as well as after every one, and the caption says which hour
+ * that is. What the day keeps is the wedge, which is the reading ADR-0034 built
+ * it for — a narrow one is a day that had a direction and a near-blob is a day
+ * that did not.
+ *
  * **The arrows still carry true bearings, and that is deliberate rather than
  * inherited.** The alternative considered was a corner block whose arrows are
  * decorative, with an animated field carrying direction instead. That field is
@@ -66,20 +78,41 @@ export type CompassNeedle = {
   kind: CompassNeedleKind;
   /** The needle's word, and the product's name: "Wind", "Swell". */
   label: string;
-  /** Degrees true it comes *from*, weighted by how much there was. */
+  /** Degrees true it came *from* at the hour this row is for. */
   fromDegT: number;
-  /** The arc it swung through in daylight. Zero draws no wedge. */
-  spreadDeg: number;
+  /**
+   * The day's daylight arc: where it sat, and how far it swung getting there.
+   *
+   * **Its own bearing rather than the arrow's, because it is a different
+   * statement.** The arrow is one hour and the wedge is the whole of that day's
+   * daylight, so a wedge centred on the arrow would be a band of the day's
+   * width drawn around an hour the day may never have averaged -- and it would
+   * move on every click, which is the needle ADR-0027 refuses and ADR-0035
+   * keeps refusing. Drawn from here, it is the same picture at every hour of
+   * one day, and at a night hour the arrow can leave it: that hour's wind came
+   * from a direction it never came from while the sun was up.
+   *
+   * `null` on a day with no published bearing inside daylight, which draws no
+   * wedge. The row still states the hour it has.
+   */
+  swing: { fromDegT: number; spreadDeg: number } | null;
   /**
    * How much of it there was, worded and rounded by the caller: "11.5 mph",
    * "3.4 ft · 14 s".
    *
    * **A string rather than a number, because the rounding is a decision made
-   * elsewhere and has to survive verbatim.** The swell's is `swellFigure`, so
-   * the week grid and this readout cannot print different numbers for Thursday;
-   * the wind's carries the precision issue #191 is about, and a component that
-   * re-rounded either would be a second opinion about a figure the page holds
-   * once. `ProvenanceLine.distanceKm` is a string for the same reason.
+   * elsewhere and has to survive verbatim.** The swell's is `swellFigure` and
+   * the wind's `windFigure`, which is where the precision issue #191 is about
+   * is settled; a component that re-rounded either would be a second opinion
+   * about a figure the page holds once. `ProvenanceLine.distanceKm` is a string
+   * for the same reason.
+   *
+   * **The week grid and this block may now print different numbers for one
+   * day**, and that reverses an invariant `DayPanel` used to state. The grid
+   * states the day's biggest daylight step and this states the hour a reader is
+   * looking at: two different facts, each named by its own caption and its own
+   * provenance line, which is the condition ADR-0010 and ADR-0029 set rather
+   * than an exception to them (ADR-0035).
    *
    * `null` where the source gave a direction and no magnitude, which is a
    * ragged forecast rather than a fault. The row then says what it knows.
@@ -210,16 +243,29 @@ const WIDE_SWING_DEG = 45;
  * does not use `sr-only`, and `ReadingCard` records why: the accessible-name
  * algorithm joins inline text nodes with no separator, so a visually-hidden
  * connective concatenates with its neighbours rather than reading as a phrase.
+ *
+ * **Each row names the hour, even though the caption above them has just said
+ * it.** `role="img"` takes a row out of the reading order as a single named
+ * thing, so a sentence that leaned on the line above it would be a sentence
+ * about no particular time wherever it is met on its own. The repetition is the
+ * price of rows that are their own spoken equivalent, which is what this block
+ * is instead of a picture with a description.
+ *
+ * **The figure is no longer "at its biggest".** It was the day's largest in
+ * daylight and it is now this hour's own, so the superlative would be a claim
+ * the row has stopped making. It moved to the wind's provenance label, where
+ * `windPeakLabel` states it with the hour it happened at (ADR-0035). The swing
+ * clause keeps "in daylight", because the wedge behind the arrow is still the
+ * day's daylight swing and does not follow the selection.
  */
-export function needleSentence(needle: CompassNeedle): string {
+export function needleSentence(needle: CompassNeedle, at: string): string {
   const swing =
-    needle.spreadDeg > WIDE_SWING_DEG
-      ? `, swinging through ${Math.round(needle.spreadDeg)}° in daylight`
+    needle.swing !== null && needle.swing.spreadDeg > WIDE_SWING_DEG
+      ? `, swinging through ${Math.round(needle.swing.spreadDeg)}° in daylight`
       : "";
-  const figure =
-    needle.figure === null ? "" : `, at its biggest ${needle.figure}`;
+  const figure = needle.figure === null ? "" : `, ${needle.figure}`;
   return (
-    `${needle.label}, from the ${compassWords(needle.fromDegT)}, ` +
+    `${needle.label} at ${at}, from the ${compassWords(needle.fromDegT)}, ` +
     `${Math.round(needle.fromDegT)}°${swing}${figure}`
   );
 }
@@ -231,7 +277,14 @@ export function needleSentence(needle: CompassNeedle): string {
  * is a question about the coastline underneath, which this component cannot
  * see. `ShoreMap` projects, asks `corner.ts` and positions this.
  */
-export function Compass({ needles }: { needles: readonly CompassNeedle[] }) {
+export function Compass({
+  needles,
+  caption,
+}: {
+  needles: readonly CompassNeedle[];
+  /** The hour these rows are for, worded by the caller: "3 PM". */
+  caption: string;
+}) {
   if (needles.length === 0) return null;
 
   /*
@@ -247,20 +300,37 @@ export function Compass({ needles }: { needles: readonly CompassNeedle[] }) {
     everywhere else. `corner.ts` records why that trade is available at all:
     the width is the whole constraint and the height costs nothing.
   */
+  /*
+    The caption is the hour, and it is above the rows rather than after them
+    because a figure is read against what it is for. It is always here: a block
+    that changed its numbers with nothing visible saying what they now mean is
+    the failure this page is least entitled to ship, and one that grew a line on
+    the first click would move the rows under a reader's eye.
+
+    Not `aria-live`. The chart's own readout is, and it announces the same
+    change; two live regions firing on one arrow-press means a keyboard reader
+    hears it twice (ADR-0035).
+  */
   return (
     <div className="flex flex-col gap-1" data-readout="">
+      <p
+        className="text-2xs text-ink leading-none font-extrabold tracking-wide tabular-nums"
+        data-readout-caption=""
+      >
+        {caption}
+      </p>
       {needles.map((needle) => (
-        <Row key={needle.kind} needle={needle} />
+        <Row key={needle.kind} needle={needle} at={caption} />
       ))}
     </div>
   );
 }
 
-function Row({ needle }: { needle: CompassNeedle }) {
+function Row({ needle, at }: { needle: CompassNeedle; at: string }) {
   return (
     <p
       role="img"
-      aria-label={needleSentence(needle)}
+      aria-label={needleSentence(needle, at)}
       className="text-2xs text-ink flex flex-wrap items-center gap-x-1 leading-none font-bold tabular-nums"
       data-readout-row={needle.kind}
     >
@@ -332,7 +402,9 @@ function Glyph({ needle }: { needle: CompassNeedle }) {
       aria-hidden="true"
       data-readout-glyph={needle.kind}
     >
-      {needle.spreadDeg > 0 && <Wedge needle={needle} />}
+      {needle.swing !== null && needle.swing.spreadDeg > 0 && (
+        <Wedge kind={needle.kind} swing={needle.swing} />
+      )}
 
       <line
         x1={Number(tail.x.toFixed(2))}
@@ -375,11 +447,17 @@ function Glyph({ needle }: { needle: CompassNeedle }) {
  * of a disc, and the difference is legible at 16px in a way an arc on a ring is
  * not.
  */
-function Wedge({ needle }: { needle: CompassNeedle }) {
-  const { fill, wedgeOpacity } = GLYPHS[needle.kind];
-  const half = needle.spreadDeg / 2;
-  const from = at(needle.fromDegT - half, WEDGE_RADIUS);
-  const to = at(needle.fromDegT + half, WEDGE_RADIUS);
+function Wedge({
+  kind,
+  swing,
+}: {
+  kind: CompassNeedleKind;
+  swing: { fromDegT: number; spreadDeg: number };
+}) {
+  const { fill, wedgeOpacity } = GLYPHS[kind];
+  const half = swing.spreadDeg / 2;
+  const from = at(swing.fromDegT - half, WEDGE_RADIUS);
+  const to = at(swing.fromDegT + half, WEDGE_RADIUS);
 
   /*
     Which of the two arcs between the endpoints is meant. Without the flag a
@@ -389,7 +467,7 @@ function Wedge({ needle }: { needle: CompassNeedle }) {
     The sweep flag is 1 because bearings increase clockwise and, in a space
     where y grows downward, a positive sweep is clockwise on screen.
   */
-  const largeArc = needle.spreadDeg > 180 ? 1 : 0;
+  const largeArc = swing.spreadDeg > 180 ? 1 : 0;
 
   return (
     <path
@@ -399,7 +477,7 @@ function Wedge({ needle }: { needle: CompassNeedle }) {
       }
       className={fill}
       fillOpacity={wedgeOpacity}
-      data-wedge={needle.kind}
+      data-wedge={kind}
     />
   );
 }

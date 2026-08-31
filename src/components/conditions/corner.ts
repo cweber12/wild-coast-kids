@@ -89,16 +89,28 @@ export interface PlotPoint {
  * this site to. At 124px that row is three lines, so two of them plus the
  * padding is 88px, which is 32.4 units of the 272px map a 320px viewport draws.
  *
- * **35 rather than 40, which is where the free range ends.** The height a box
- * declares decides how deep a band `cornerFor` searches, so a taller box is a
- * more cautious one and moves the readout off the top-left more often than the
- * ink requires. Measured across the inventory: 35 chooses the same corner as 30
- * on all 50 beaches that draw one, and 40 moves three more of them --
- * `pacific-beach`, `mission-bay-de-anza-cove` and `mission-bay-sea-world`. So
- * this is the smallest height that holds the tallest thing the rows can wrap
- * to, which is the least moving the geometry asks for.
+ * **40 rather than 35, and the caption is what spent the difference.** The
+ * block names the hour it is showing (ADR-0035), which is one more 10px line
+ * and one more 4px gap above the rows. Measured on the built page at 320px,
+ * with both rows forced to the longest thing they can say: 102px against the
+ * 88px the two rows and their padding came to, which is 37.5 units of that same
+ * 272px map. 35 units is 95.2px and would not hold it -- the ink would reach
+ * past the footprint `cornerFor` was asked to keep clear, which is the one
+ * failure nothing here draws an outline around.
+ *
+ * The cost is measured rather than assumed, because the height a box declares
+ * decides how deep a band `cornerFor` searches: a taller box is a more cautious
+ * one and moves the readout off the top-left more often than the ink requires.
+ * Across the inventory, 35 chooses the same corner as 30 on all 50 beaches that
+ * draw one, and 40 moves three of them -- `south-casa-beach-s-d` to the
+ * bottom-right, `mission-bay-de-anza-cove` and `mission-bay-sea-world` to the
+ * top-right. **Two of those three are not the beaches ADR-0035 named**: that
+ * measurement was taken before ADR-0036 reframed every map, and `pacific-beach`
+ * has stopped moving while `south-casa-beach-s-d` has started. The count is the
+ * same and so is the shape of the answer, which is the half of a measurement
+ * that survives a reframing.
  */
-export const READOUT_BOX: Box = { width: 50, height: 35 };
+export const READOUT_BOX: Box = { width: 50, height: 40 };
 
 /**
  * The order corners are tried in, and it is the reader's rather than the

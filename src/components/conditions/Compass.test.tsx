@@ -12,7 +12,7 @@ const WIND: CompassNeedle = {
   kind: "wind",
   label: "Wind",
   fromDegT: 281,
-  spreadDeg: 40,
+  swing: { fromDegT: 281, spreadDeg: 40 },
   figure: "11.5 mph",
   provenance: {
     label: "Biggest wind in daylight",
@@ -23,7 +23,7 @@ const WIND: CompassNeedle = {
 };
 
 function readout(needles: readonly CompassNeedle[]) {
-  const { container } = render(<Compass needles={needles} />);
+  const { container } = render(<Compass needles={needles} caption="3 PM" />);
   return container;
 }
 
@@ -34,7 +34,7 @@ test("the arrow's tail stands in the direction the wind comes from", () => {
   // Due east, on a glyph with north up: the tail is to the right of the middle
   // and level with it. A sign flip anywhere in the bearing-to-plot conversion
   // moves it to one of the other three sides, which is what this pins.
-  const container = readout([{ ...WIND, fromDegT: 90, spreadDeg: 0 }]);
+  const container = readout([{ ...WIND, fromDegT: 90, swing: null }]);
 
   const arrow = container.querySelector('[data-arrow="wind"]')!;
   expect(num(arrow, "x1")).toBeCloseTo(8, 4);
@@ -44,7 +44,7 @@ test("the arrow's tail stands in the direction the wind comes from", () => {
 test("north is up, not down", () => {
   // The other half of the same conversion, and the one a y-down drawing space
   // gets wrong: plot y grows southward, so due north is a negative y.
-  const container = readout([{ ...WIND, fromDegT: 0, spreadDeg: 0 }]);
+  const container = readout([{ ...WIND, fromDegT: 0, swing: null }]);
 
   const arrow = container.querySelector('[data-arrow="wind"]')!;
   expect(num(arrow, "x1")).toBeCloseTo(0, 4);
@@ -55,7 +55,7 @@ test("the arrow points the way the weather travels", () => {
   // Which end carries the head is the whole reading. Every feed this page reads
   // publishes the direction weather comes *from*, so an easterly wind is drawn
   // travelling west: tail in the east, head in the west.
-  const container = readout([{ ...WIND, fromDegT: 90, spreadDeg: 0 }]);
+  const container = readout([{ ...WIND, fromDegT: 90, swing: null }]);
 
   const arrow = container.querySelector('[data-arrow="wind"]')!;
   expect(num(arrow, "x1")).toBeGreaterThan(0);
@@ -68,8 +68,12 @@ test("the arrow points the way the weather travels", () => {
 });
 
 test("the wedge widens with the day's spread", () => {
-  const narrow = readout([{ ...WIND, fromDegT: 270, spreadDeg: 20 }]);
-  const wide = readout([{ ...WIND, fromDegT: 270, spreadDeg: 120 }]);
+  const narrow = readout([
+    { ...WIND, fromDegT: 270, swing: { fromDegT: 270, spreadDeg: 20 } },
+  ]);
+  const wide = readout([
+    { ...WIND, fromDegT: 270, swing: { fromDegT: 270, spreadDeg: 120 } },
+  ]);
 
   const ends = (container: Element) => {
     const d = container
@@ -91,7 +95,9 @@ test("the wedge is a cone from the middle, not a ring around it", () => {
   // The ring went with the dial. Its only stated justification was giving the
   // arc something to be a portion of, and at 16px that arc can no longer be
   // judged -- so what is left has to be readable as a filled shape.
-  const container = readout([{ ...WIND, fromDegT: 270, spreadDeg: 60 }]);
+  const container = readout([
+    { ...WIND, fromDegT: 270, swing: { fromDegT: 270, spreadDeg: 60 } },
+  ]);
 
   const wedge = container.querySelector('[data-wedge="wind"]')!;
   expect(wedge.getAttribute("d")).toMatch(/^M0 0 L/);
@@ -100,19 +106,78 @@ test("the wedge is a cone from the middle, not a ring around it", () => {
 });
 
 test("a day that never shifted gets no wedge rather than a zero-width one", () => {
-  const container = readout([{ ...WIND, spreadDeg: 0 }]);
+  const container = readout([
+    { ...WIND, swing: { fromDegT: 281, spreadDeg: 0 } },
+  ]);
 
   expect(container.querySelector('[data-wedge="wind"]')).toBeNull();
   expect(container.querySelector('[data-arrow="wind"]')).not.toBeNull();
 });
 
+test("a day with no daylight bearing at all draws the arrow and no wedge", () => {
+  // Null rather than a zero-width swing, and the same picture either way: there
+  // is nothing to say about where the day sat, and the hour still has an arrow.
+  const container = readout([{ ...WIND, swing: null }]);
+
+  expect(container.querySelector('[data-wedge="wind"]')).toBeNull();
+  expect(container.querySelector('[data-arrow="wind"]')).not.toBeNull();
+});
+
+test("the wedge is drawn from the day's bearing, not from the arrow's", () => {
+  // **The regression this caught in its own pull request.** Drawn from the
+  // arrow, a wedge is a band of the day's width centred on whatever hour was
+  // last clicked -- so it moves on every click, which is exactly the needle
+  // ADR-0027 refuses. The two bearings are far apart here, and the wedge sits
+  // on the day's: due north, so both its ends are above the middle.
+  const container = readout([
+    { ...WIND, fromDegT: 180, swing: { fromDegT: 0, spreadDeg: 40 } },
+  ]);
+
+  const d = container.querySelector('[data-wedge="wind"]')!.getAttribute("d")!;
+  const numbers = d.match(/-?\d+\.?\d*/g)!.map(Number);
+  expect(numbers[3]).toBeLessThan(0);
+  expect(numbers[numbers.length - 1]).toBeLessThan(0);
+
+  // And the arrow is still the hour's: due south, tail below the middle.
+  expect(
+    Number(container.querySelector('[data-arrow="wind"]')!.getAttribute("y1")),
+  ).toBeGreaterThan(0);
+});
+
 test("a spread wider than a half circle takes the long way round", () => {
   // The SVG flag that says which of the two arcs between two points is meant.
   // Without it a 200-degree swing draws as the 160-degree one it is not.
-  const container = readout([{ ...WIND, fromDegT: 214, spreadDeg: 200 }]);
+  const container = readout([
+    { ...WIND, fromDegT: 214, swing: { fromDegT: 214, spreadDeg: 200 } },
+  ]);
 
   const d = container.querySelector('[data-wedge="wind"]')!.getAttribute("d")!;
   expect(d).toMatch(/A [\d.]+ [\d.]+ 0 1 1 /);
+});
+
+test("the caption names the hour, above the rows it is for", () => {
+  // Always present, so the block never changes its numbers with nothing visible
+  // saying what they now mean -- and above the rows, because a figure is read
+  // against what it is for. It appears on no click, so the reserved box matches
+  // the ink in both states and the rows never move under a reader's eye.
+  const container = readout([WIND, { ...WIND, kind: "swell", label: "Swell" }]);
+
+  const caption = container.querySelector("[data-readout-caption]")!;
+  expect(caption.textContent).toBe("3 PM");
+  expect(
+    caption.compareDocumentPosition(
+      container.querySelector("[data-readout-row='wind']")!,
+    ) & Node.DOCUMENT_POSITION_FOLLOWING,
+  ).toBeTruthy();
+});
+
+test("the block is not a live region", () => {
+  // The chart's own readout is, and it announces the same change. Two live
+  // regions firing on one arrow-press means a keyboard reader hears it twice,
+  // which is the condition ADR-0035 accepts ADR-0027's fourth clause under.
+  const container = readout([WIND]);
+
+  expect(container.querySelector("[aria-live]")).toBeNull();
 });
 
 test("nothing is rendered when there is no needle to render", () => {
@@ -165,11 +230,11 @@ test("the row's accessible name is the sentence the visible row abbreviates", ()
   // `sr-only`, and `ReadingCard` records why: the accessible-name algorithm
   // joins inline text nodes with no separator, so a hidden connective would
   // concatenate with its neighbours rather than read as a phrase.
-  render(<Compass needles={[WIND]} />);
+  render(<Compass needles={[WIND]} caption="3 PM" />);
 
   expect(
     screen.getByRole("img", {
-      name: "Wind, from the west, 281°, at its biggest 11.5 mph",
+      name: "Wind at 3 PM, from the west, 281°, 11.5 mph",
     }),
   );
 });
@@ -179,19 +244,30 @@ test("a wide swing is spoken and a narrow one is not", () => {
   // than one is a swing the word cannot describe and a reader is owed the
   // number. The wedge shows it either way; the sentence states it only when
   // the word alone would mislead.
-  expect(needleSentence({ ...WIND, spreadDeg: 120 })).toBe(
-    "Wind, from the west, 281°, swinging through 120° in daylight, " +
-      "at its biggest 11.5 mph",
+  expect(
+    needleSentence(
+      { ...WIND, swing: { fromDegT: 281, spreadDeg: 120 } },
+      "3 PM",
+    ),
+  ).toBe(
+    "Wind at 3 PM, from the west, 281°, swinging through 120° in daylight, " +
+      "11.5 mph",
   );
-  expect(needleSentence({ ...WIND, spreadDeg: 30 })).toBe(
-    "Wind, from the west, 281°, at its biggest 11.5 mph",
-  );
+  expect(
+    needleSentence(
+      { ...WIND, swing: { fromDegT: 281, spreadDeg: 30 } },
+      "3 PM",
+    ),
+  ).toBe("Wind at 3 PM, from the west, 281°, 11.5 mph");
 });
 
 test("a row with no magnitude is spoken without one", () => {
-  expect(needleSentence({ ...WIND, spreadDeg: 30, figure: null })).toBe(
-    "Wind, from the west, 281°",
-  );
+  expect(
+    needleSentence(
+      { ...WIND, swing: { fromDegT: 281, spreadDeg: 30 }, figure: null },
+      "3 PM",
+    ),
+  ).toBe("Wind at 3 PM, from the west, 281°");
 });
 
 test("the glyph itself is not in the accessibility tree twice", () => {
@@ -211,8 +287,8 @@ test("the two rows differ in shape and in weight, not only in colour", () => {
   // glyph is the size at which two hues are the weakest way to tell two marks
   // apart, and these two are read as a pair, one above the other.
   const container = readout([
-    { ...WIND, kind: "wind", spreadDeg: 0 },
-    { ...WIND, kind: "swell", label: "Swell", fromDegT: 340, spreadDeg: 0 },
+    { ...WIND, kind: "wind", swing: null },
+    { ...WIND, kind: "swell", label: "Swell", fromDegT: 340, swing: null },
   ]);
 
   const windHead = container.querySelector('[data-arrow-head="wind"]')!;

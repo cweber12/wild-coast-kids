@@ -114,7 +114,7 @@
 "use client";
 
 import { useId, useState } from "react";
-import { hourOfDay, nightBands } from "./dayFrame";
+import { hourLabel, hourOfDay, nightBands } from "./dayFrame";
 import { useHydrated } from "./hydrated";
 import { resolveHour, useSelectedHour } from "./selectedHour";
 import type { SparkPoint } from "./DaySpark";
@@ -405,13 +405,6 @@ const CLOUD_KEY_STOPS: readonly number[] = [0, 50, 100];
  */
 function cloudOpacity(percent: number): number {
   return 0.12 + 0.55 * (Math.min(100, Math.max(0, percent)) / 100);
-}
-
-/** `0` to "12 AM", `13` to "1 PM". The axis speaks the reader's clock. */
-function hourLabel(hour: number): string {
-  if (hour === 0) return "12 AM";
-  if (hour === 12) return "12 PM";
-  return hour < 12 ? `${hour} AM` : `${hour - 12} PM`;
 }
 
 export function HourChart({

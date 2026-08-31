@@ -61,15 +61,20 @@ import {
   type WaveWeekView,
 } from "@/lib/conditions";
 import { beachBySlug } from "@/lib/beaches";
-import { localMidnightOf, addLocalDays } from "@/lib/pacific-time";
+import { localMidnightOf, addLocalDays, localTimeOf } from "@/lib/pacific-time";
 import { ChosenDay, type DayView } from "./ChosenDay";
 import type { HourSeries } from "./HourChart";
 import { MeasuredPanel } from "./MeasuredPanel";
 import { MeasuredToday } from "./MeasuredToday";
 import { ReservedSlot } from "../ui/ReservedSlot";
 import type { CompassNeedle } from "./Compass";
-import { DayCompass, DayCompassSources, type CompassDay } from "./DayCompass";
-import { hourOfDay } from "./dayFrame";
+import {
+  DayCompass,
+  DayCompassSources,
+  type CompassDay,
+  type CompassHour,
+} from "./DayCompass";
+import { hourLabel, hourOfDay } from "./dayFrame";
 import { SelectedHourProvider } from "./selectedHour";
 import {
   GRID_MODEL_NOTE,
@@ -77,6 +82,7 @@ import {
   GRID_SOURCE,
   gridCellCaveat,
   windFigure,
+  windPeakLabel,
 } from "./gridCell";
 import {
   MOP_MODEL_NOTE,
@@ -91,6 +97,10 @@ import {
   needleFrom,
   peakInDaylight,
   swellReadings,
+  swellStepByHour,
+  windByHour,
+  type HourlyWind,
+  type PublishedSwell,
 } from "./needles";
 import type { ProvenanceFacts } from "./ProvenanceLine";
 import { ShoreMap } from "./ShoreMap";
@@ -654,6 +664,17 @@ export async function DayPanel({ slug }: { slug: string }) {
         ? waves.state.days.find((each) => each.localDate === day.localDate)
         : undefined;
 
+    const line = waves.line;
+    const dayStartMs = localMidnightOf(day.localDate);
+
+    /*
+      The wedges, and they stay the day's on all seven days rather than becoming
+      the hour's. A wedge that meant daylight sometimes and midnight to midnight
+      at other times would be the ambiguity ADR-0035 took out of the arrow, put
+      back behind it. So at a night hour the arrow can sit outside its own
+      wedge, which is a true statement about that hour: the wind came from a
+      direction it never came from while the sun was up.
+    */
     const wind =
       gridDay === undefined
         ? null
@@ -667,104 +688,144 @@ export async function DayPanel({ slug }: { slug: string }) {
           );
 
     const swell =
-      swellDay === undefined || waves.line === null
+      swellDay === undefined || line === null
         ? null
         : needleFrom(
             swellReadings(swellDay.hours, day.sunriseMs, day.sunsetMs),
           );
 
     /*
-      How much of each there was, worded here because the copy on this page is
-      the caller's.
-
-      **Both are the largest thing the daylight window holds**, which is one
-      rule and is why the two rows can be labelled the same way. The swell's
-      selection is `readWaveWeek`'s and is a three-hour step CDIP published; the
-      wind's is made here out of hours the gridpoint publishes one by one, so
-      the wind figure is exact to the hour and the swell figure can sit up to
-      ninety minutes off its real peak. That difference is what the swell's
-      provenance line says and the wind's does not.
-
-      **One decimal on the wind, which is the precision the chart states.** Four
-      of the five places this page prints a wind figure use `toFixed(1)` and the
-      fifth uses `toFixed(0)`, which is issue #191 -- 11.5 spoken as 12 to the
-      one reader who cannot see the axis. This is a sixth statement of that
-      figure and it joins the four rather than the one, so #191 stays a defect
-      about `gridDescription` alone rather than gaining a second site.
+      And the arrows, which are each hour's own. The whole day rather than its
+      daylight half: a reader who steps to 3 AM is owed 3 AM's wind, and this
+      block is the only place on the page that hour's wind is stated at all.
     */
-    const windPeak =
+    const windHours =
       gridDay === undefined
-        ? null
-        : peakInDaylight(gridDay.windMph, day.sunriseMs, day.sunsetMs);
+        ? new Map<number, HourlyWind>()
+        : windByHour(gridDay.windDirDegT, gridDay.windMph, dayStartMs);
 
     /*
-      The swell's estimate, taken beside the needle rather than inside the
-      branch that pushes the row. `readWaveWeek` made this selection once and
-      the week grid prints the same object, which is what stops the map and the
-      grid stating different numbers for one day.
-    */
-    const reading = swellDay === undefined ? null : swellDay.daylight;
+      One attribution for the wind, shared by every hour, because nothing in it
+      varies by hour: the cell is the cell, and the label states the day's
+      biggest wind with the hour it happened at.
 
-    const needles: CompassNeedle[] = [];
+      **That figure is why this line changed shape.** It used to be the row's
+      own figure, and the rows now state an hour. The page has nowhere else to
+      put it -- ADR-0034 thought the week grid stated it too and ADR-0035
+      records that it does not -- so it moves here rather than being lost, which
+      is what ADR-0027's "only additively" condition asks. The provenance lines
+      sit outside the readout's box, so this costs none of the width that is the
+      block's whole constraint.
+    */
+    const windSource: ProvenanceFacts = {
+      label: windPeakLabel(
+        gridDay === undefined
+          ? null
+          : peakInDaylight(gridDay.windMph, day.sunriseMs, day.sunsetMs),
+      ),
+      source: GRID_SOURCE,
+      network: GRID_NETWORK,
+      /*
+        No distance, which is the omission the cloud row and the chart's own
+        cell line already make: a cell is a 2.5 km square of map with the beach
+        somewhere inside it, so "about n km from this beach" would be a figure
+        about nothing.
+      */
+      note: cellNote,
+    };
 
     /*
-      Wind first, and the order is the reading order rather than an accident.
-      It is the one a reader can feel standing on the sand, it is the needle
-      that changes most between days, and it is the one whose relationship to
-      the coast decides whether the water is choppy or glassy.
+      One swell row per published estimate rather than one per hour, shared by
+      the three hours that estimate speaks for. They are that one estimate
+      rather than three copies of it: the same height, the same period, the same
+      bearing and the same attribution, built once and handed to each.
+
+      **Its label lost the superlative the wind's kept**, which is not an
+      inconsistency between the two rows. The wind's line states the day's
+      biggest because nothing else on this page does; the day's biggest swell is
+      the week grid's own row, still there and still labelled. What this row
+      states is one estimate, and `swellStepNote` says which three hours it is
+      for -- so the bare word is not the unqualified figure `WaveWeek` warns
+      about, it is a figure whose own line names the step behind it.
     */
-    if (wind !== null) {
-      needles.push({
-        kind: "wind",
-        label: "Wind",
-        fromDegT: wind.fromDegT,
-        spreadDeg: wind.spreadDeg,
-        figure: windFigure(windPeak),
-        provenance: {
-          /*
-            The superlative is in the label, which is `WaveWeek`'s rule and its
-            reason: a single figure under the bare word invites a reader to take
-            it for the day's typical wind, which is the one thing it is not.
-
-            No distance, which is the omission the cloud row and the chart's own
-            cell line already make: a cell is a 2.5 km square of map with the
-            beach somewhere inside it, so "about n km from this beach" would be
-            a figure about nothing.
-          */
-          label: "Biggest wind in daylight",
-          source: GRID_SOURCE,
-          network: GRID_NETWORK,
-          note: cellNote,
-        },
-      });
+    const swellRowByHour = new Map<number, CompassNeedle>();
+    if (swellDay !== undefined && line !== null) {
+      const rows = new Map<PublishedSwell, CompassNeedle>();
+      for (const [hour, step] of swellStepByHour(swellDay.hours, dayStartMs)) {
+        let row = rows.get(step);
+        if (row === undefined) {
+          row = {
+            kind: "swell",
+            label: "Swell",
+            fromDegT: step.directionDegT,
+            swing: swell,
+            figure: swellFigure(step),
+            provenance: {
+              label: "Swell",
+              source: mopLineSource(line.id),
+              network: MOP_NETWORK,
+              distanceKm: mopLineDistanceKm(line.distanceM),
+              note: swellStepNote({ timeLabel: localTimeOf(step.atMs) }),
+            },
+          };
+          rows.set(step, row);
+        }
+        swellRowByHour.set(hour, row);
+      }
     }
 
-    if (swell !== null && waves.line !== null) {
-      needles.push({
-        kind: "swell",
-        label: "Swell",
-        fromDegT: swell.fromDegT,
-        spreadDeg: swell.spreadDeg,
-        figure: swellFigure(reading),
-        provenance: {
-          label: "Biggest swell in daylight",
-          source: mopLineSource(waves.line.id),
-          network: MOP_NETWORK,
-          distanceKm: mopLineDistanceKm(waves.line.distanceM),
-          /*
-            The step's own time, which used to be printed beside the figure and
-            belongs here instead. `WaveReading.timeLabel` is a bucket rather
-            than a peak located to the minute -- MOP publishes every three hours
-            -- so a reader owed the figure is also owed which three hours it is
-            for, and the readout has no room to say it. Withheld along with the
-            figure on a day the forecast does not reach.
-          */
-          note: swellStepNote(reading),
-        },
-      });
-    }
+    /*
+      Every hour either source can speak for, in the order a day runs. An hour
+      neither reaches is not an entry at all: a caption over two empty rows
+      would be a readout claiming to have said something.
 
-    return { localDate: day.localDate, needles };
+      Wind first within an hour, and the order is the reading order rather than
+      an accident. It is the one a reader can feel standing on the sand, it is
+      the needle that changes most from hour to hour, and it is the one whose
+      relationship to the coast decides whether the water is choppy or glassy.
+    */
+    const hours: CompassHour[] = [
+      ...new Set([...windHours.keys(), ...swellRowByHour.keys()]),
+    ]
+      .sort((first, second) => first - second)
+      .map((hour) => {
+        const needles: CompassNeedle[] = [];
+
+        const windAt = windHours.get(hour);
+        if (windAt !== undefined) {
+          needles.push({
+            kind: "wind",
+            label: "Wind",
+            fromDegT: windAt.fromDegT,
+            swing: wind,
+            /*
+              **One decimal on the wind, which is the precision the chart
+              states.** Four of the five places this page prints a wind figure
+              use `toFixed(1)` and the fifth uses `toFixed(0)`, which is issue
+              #191 -- 11.5 spoken as 12 to the one reader who cannot see the
+              axis. This is a sixth statement of that figure and it joins the
+              four rather than the one, so #191 stays a defect about
+              `gridDescription` alone rather than gaining a second site.
+            */
+            figure: windFigure(windAt.mph),
+            provenance: windSource,
+          });
+        }
+
+        const swellRow = swellRowByHour.get(hour);
+        if (swellRow !== undefined) needles.push(swellRow);
+
+        /*
+          The caption, worded through the same `hourLabel` the chart's axis
+          uses. One hour named twice on one screen has to be named the same way,
+          and the defect the two share on a DST day is better than the
+          disagreement they would have if each counted its own -- `dayFrame.ts`
+          says why it is inherited rather than forked.
+        */
+        return { hour, caption: hourLabel(hour), needles };
+      });
+
+    return { localDate: day.localDate, hours };
   });
 
   /*

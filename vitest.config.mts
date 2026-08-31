@@ -344,10 +344,35 @@ export default defineConfig({
         // numerator alone and reads identically in the failure message. The
         // other three are unmoved, because the slice deleted a condition rather
         // than a statement, a function or a line.
-        statements: 89.62,
-        branches: 89.3,
-        functions: 94.37,
-        lines: 89.32,
+        // RAISED 2026-08-31, all four, by the readout following the selected
+        // hour (#193). Both halves of every ratio grew and the numerators grew
+        // faster, which is the ordinary direction:
+        //
+        //   statements 2902/3224  89.62 -> 90.01
+        //   branches   1894/2114  89.30 -> 89.59
+        //   functions   661/699   94.37 -> 94.56
+        //   lines      2616/2915  89.32 -> 89.74
+        //
+        // **Two files this slice touched came back to 100% on all four after
+        // being read here, and neither was cleaned by a test.** `Compass.tsx`
+        // had one uncovered arm -- a `??` standing in for a swing the caller
+        // had already proved was there -- and `Wedge` taking the swing as its
+        // own prop deleted the branch instead of covering it. `needles.ts` had
+        // one uncovered statement, the check that a published wave hour carries
+        // both halves of an estimate; that one earned a test, because the type
+        // permits the state and this is the boundary that refuses it.
+        //
+        // The two files this slice modified and did not finish clean are named
+        // rather than absorbed, and every uncovered branch in both predates it:
+        // `DayPanel.tsx` at 98.14% statements and 94.31% branches, whose
+        // uncovered statement is the sentence for a CDIP outage that suite does
+        // not provoke, and `dayFrame.ts` at 87.5% branches, whose one uncovered
+        // arm is `nightBands` dropping a band with no width -- a polar summer,
+        // which this coast does not have.
+        statements: 90.01,
+        branches: 89.59,
+        functions: 94.56,
+        lines: 89.74,
       },
     },
   },

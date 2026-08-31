@@ -69,6 +69,29 @@ export function hourOfDay(atMs: number, dayStartMs: number): number {
 }
 
 /**
+ * `0` to "12 AM", `13` to "1 PM". The axis speaks the reader's clock.
+ *
+ * **Here rather than in the chart, because the readout on the map names the
+ * same hour.** `hourOfDay` is the one definition of which hour an instant falls
+ * in and this is the one definition of what to call it, and the pair belongs
+ * together for that function's own reason: the caption over the readout and the
+ * label under the plot are how a reader sees that two regions are showing one
+ * hour, and they can only be that if the words come from one place. `HourChart`
+ * is `"use client"` and the caption is worded on the server, so a module both
+ * can reach was the only place this could go in any case.
+ *
+ * **It reads its argument as a clock hour, which an index is not on the two
+ * days a year this coast changes offset** -- see `hourOfDay` above. Inherited
+ * rather than forked: the chart and the map are wrong together rather than
+ * disagreeing, and the fix stays a single-site one.
+ */
+export function hourLabel(hour: number): string {
+  if (hour === 0) return "12 AM";
+  if (hour === 12) return "12 PM";
+  return hour < 12 ? `${hour} AM` : `${hour - 12} PM`;
+}
+
+/**
  * The dark ends of one day, in the caller's own plot units.
  *
  * `x` maps an instant to a horizontal position and `width` is the frame's, so
