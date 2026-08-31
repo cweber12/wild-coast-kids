@@ -497,7 +497,9 @@ describe("the fill under the curve", () => {
     const area = container.querySelector("[data-area]");
     expect(area).not.toBeNull();
     expect(fillRef(container)).not.toBeNull();
-    expect(area?.getAttribute("class")).not.toContain("fill-ocean");
+    // `?? ""` because the fixed version carries no class at all, and
+    // `not.toContain` on null throws rather than passing.
+    expect(area?.getAttribute("class") ?? "").not.toContain("fill-ocean");
   });
 
   test("the gradient it points at is really in the document", () => {
