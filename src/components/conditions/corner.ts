@@ -104,11 +104,12 @@ export interface PlotPoint {
  * Across the inventory, 35 chooses the same corner as 30 on all 50 beaches that
  * draw one, and 40 moves three of them -- `south-casa-beach-s-d` to the
  * bottom-right, `mission-bay-de-anza-cove` and `mission-bay-sea-world` to the
- * top-right. **Two of those three are not the beaches ADR-0035 named**: that
- * measurement was taken before ADR-0036 reframed every map, and `pacific-beach`
- * has stopped moving while `south-casa-beach-s-d` has started. The count is the
- * same and so is the shape of the answer, which is the half of a measurement
- * that survives a reframing.
+ * top-right. **One of those three is not the beach ADR-0035 named**, because
+ * that list was measured before ADR-0036 reframed every map: it said
+ * `pacific-beach`, which now stands in the bottom-left at 30, 35 and 40 alike
+ * and so moves at no height at all, and `south-casa-beach-s-d` moves in its
+ * place. The count is the same and so is the shape of the answer, which is the
+ * half of a measurement that survives a reframing.
  */
 export const READOUT_BOX: Box = { width: 50, height: 40 };
 

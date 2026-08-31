@@ -5,7 +5,9 @@ compass may not follow the selected hour"**; the rest of that decision, includin
 all four of its conditions, is unchanged and still binds. Reverses `ChosenDay`'s
 rule that a chosen hour does not survive a day change. Adds the `Selected hour`
 entry to `CONTEXT.md`, updated in the same pull request. Corrects one sentence of
-ADR-0034, below. ADR-0032 and ADR-0034 are otherwise untouched.
+ADR-0034, below. ADR-0032 and ADR-0034 are otherwise untouched. Amended
+2026-08-31, after the box grew in #203, to correct one beach name in the last
+consequence; the decision is unchanged.
 
 ## Context
 
@@ -237,7 +239,15 @@ selection guide — and it would need a rule for the other three tabs.
   the condition ADR-0010 and ADR-0029 set rather than an exception to them.
 - **`READOUT_BOX` grows from 35 to 40 units** to hold the caption, which
   `corner.ts` measured as moving three beaches to a different corner:
-  `pacific-beach`, `mission-bay-de-anza-cove` and `mission-bay-sea-world`.
+  `south-casa-beach-s-d`, `mission-bay-de-anza-cove` and
+  `mission-bay-sea-world`. **This said `pacific-beach` rather than the first of
+  those**, from a measurement taken before ADR-0036 reframed every map. By the
+  time the box actually grew, `pacific-beach` stood in the bottom-left at 30, 35
+  and 40 alike — it moves at no height now — and `south-casa-beach-s-d` moved in
+  its place. One name; the same count; no consequence for the decision. It is
+  corrected here rather than left to be believed, and the figure is kept in
+  `corner.ts` with `corner.test.ts` pinning the width ceiling it is budgeted
+  against, so the next reframing fails a gate instead of ageing a sentence.
 - **This decision ships in two pull requests.** The context, the lift and the
   chart's arrival state land with this document; the readout's caption, its
   per-hour rows, the box growing and `periodS` land in the next one, and #194's
