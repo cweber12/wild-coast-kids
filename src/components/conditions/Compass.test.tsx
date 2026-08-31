@@ -13,9 +13,13 @@ const WIND: CompassNeedle = {
   label: "Wind",
   fromDegT: 281,
   spreadDeg: 40,
-  source: "this beach's own grid cell",
-  network: "National Weather Service, San Diego",
-  note: "a forecast, not a reading taken at the beach",
+  figure: "11.5 mph",
+  provenance: {
+    label: "Biggest wind in daylight",
+    source: "this beach's own grid cell",
+    network: "National Weather Service, San Diego",
+    note: "a forecast, not a reading taken at the beach",
+  },
 };
 
 function readout(needles: readonly CompassNeedle[]) {
@@ -117,12 +121,39 @@ test("nothing is rendered when there is no needle to render", () => {
   expect(container.querySelector("[data-readout]")).toBeNull();
 });
 
-test("the row states its word, the direction and the degrees", () => {
+test("the row states its word, the direction, the degrees and how much", () => {
   const container = readout([WIND]);
 
   expect(
     container.querySelector('[data-readout-label="wind"]')!.textContent,
   ).toBe("Wind");
+  expect(
+    container.querySelector('[data-readout-bearing="wind"]')!.textContent,
+  ).toBe("west 281°");
+  expect(
+    container.querySelector('[data-readout-figure="wind"]')!.textContent,
+  ).toBe("11.5 mph");
+});
+
+test("the figure is printed exactly as the caller worded it", () => {
+  // The rounding is a decision made upstream and has to survive verbatim: the
+  // swell's comes from `swellFigure`, so the week grid and this readout cannot
+  // print different numbers for one day, and the wind's carries the precision
+  // rule #191 is about.
+  const container = readout([
+    { ...WIND, kind: "swell", label: "Swell", figure: "3.4 ft · 14 s" },
+  ]);
+
+  expect(
+    container.querySelector('[data-readout-figure="swell"]')!.textContent,
+  ).toBe("3.4 ft · 14 s");
+});
+
+test("a source with a direction and no magnitude still says the direction", () => {
+  // A ragged forecast rather than a fault, so the row says what it knows.
+  const container = readout([{ ...WIND, figure: null }]);
+
+  expect(container.querySelector('[data-readout-figure="wind"]')).toBeNull();
   expect(
     container.querySelector('[data-readout-bearing="wind"]')!.textContent,
   ).toBe("west 281°");
@@ -136,7 +167,11 @@ test("the row's accessible name is the sentence the visible row abbreviates", ()
   // concatenate with its neighbours rather than read as a phrase.
   render(<Compass needles={[WIND]} />);
 
-  expect(screen.getByRole("img", { name: "Wind, from the west, 281°" }));
+  expect(
+    screen.getByRole("img", {
+      name: "Wind, from the west, 281°, at its biggest 11.5 mph",
+    }),
+  );
 });
 
 test("a wide swing is spoken and a narrow one is not", () => {
@@ -145,9 +180,16 @@ test("a wide swing is spoken and a narrow one is not", () => {
   // number. The wedge shows it either way; the sentence states it only when
   // the word alone would mislead.
   expect(needleSentence({ ...WIND, spreadDeg: 120 })).toBe(
-    "Wind, from the west, 281°, swinging through 120° in daylight",
+    "Wind, from the west, 281°, swinging through 120° in daylight, " +
+      "at its biggest 11.5 mph",
   );
   expect(needleSentence({ ...WIND, spreadDeg: 30 })).toBe(
+    "Wind, from the west, 281°, at its biggest 11.5 mph",
+  );
+});
+
+test("a row with no magnitude is spoken without one", () => {
+  expect(needleSentence({ ...WIND, spreadDeg: 30, figure: null })).toBe(
     "Wind, from the west, 281°",
   );
 });
@@ -215,25 +257,49 @@ test("the rows read in the order the sources beneath them do", () => {
   expect(kinds).toEqual(["wind", "swell"]);
 });
 
-test("the sources state the bearing in words and in degrees", () => {
-  render(<CompassSources needles={[WIND]} />);
+test("the sources say where the figures came from, not what they are", () => {
+  // The readout is HTML and is in the accessibility tree, so it is its own
+  // spoken equivalent. This block used to restate both bearings underneath it,
+  // which was a second statement of a figure the page already made.
+  const { container } = render(<CompassSources needles={[WIND]} />);
 
-  expect(screen.getByText(/Wind, from the west, 281°/)).toBeDefined();
+  expect(container.textContent).not.toContain("from the west");
+  expect(container.textContent).not.toContain("281°");
+  expect(screen.getByText(/this beach's own grid cell/)).toBeDefined();
 });
 
-test("the sources state a wide swing and pass over a narrow one", () => {
-  // The same rule the row's own sentence keeps, stated in the same words. It is
-  // in two places for this slice only: the sources block loses its bearing
-  // sentence in the next one, when the magnitudes arrive and it drops to bare
-  // provenance.
-  const { unmount } = render(
-    <CompassSources needles={[{ ...WIND, spreadDeg: 120 }]} />,
+test("each line says which of the two rows it attributes", () => {
+  // Two provenance lines under one picture have to say which is which, now
+  // that neither restates its own bearing.
+  render(
+    <CompassSources
+      needles={[
+        WIND,
+        {
+          ...WIND,
+          kind: "swell",
+          label: "Swell",
+          provenance: {
+            ...WIND.provenance,
+            label: "Biggest swell in daylight",
+          },
+        },
+      ]}
+    />,
   );
-  expect(screen.getByText(/swinging through 120° in daylight/)).toBeDefined();
-  unmount();
 
-  render(<CompassSources needles={[{ ...WIND, spreadDeg: 30 }]} />);
-  expect(screen.queryByText(/swinging through/)).toBeNull();
+  expect(screen.getByText("Biggest wind in daylight")).toBeDefined();
+  expect(screen.getByText("Biggest swell in daylight")).toBeDefined();
+});
+
+test("the superlative is stated rather than left to be inferred", () => {
+  // `WaveWeek`'s rule and its reason: a single figure under the bare word
+  // invites a reader to take it for the day's typical swell, which is the one
+  // thing it is not. The readout has no room for the word, so the attribution
+  // line beneath the picture carries it.
+  render(<CompassSources needles={[WIND]} />);
+
+  expect(screen.getByText("Biggest wind in daylight")).toBeDefined();
 });
 
 test("each needle carries its own publisher", () => {
@@ -246,34 +312,37 @@ test("each needle carries its own publisher", () => {
   ).toBeDefined();
 });
 
-test("the sources state both bearings, in words and in degrees", () => {
-  // The design brief's own example of what the map's text equivalent says.
+test("two publishers are attributed separately under one instrument", () => {
+  // ADR-0032: one instrument carrying two publishers is a deliberate break of
+  // `StatGroup`'s one-group-one-source contract, answered by a line per row
+  // rather than by splitting the instrument.
   render(
     <CompassSources
       needles={[
-        { ...WIND, kind: "wind", fromDegT: 281, spreadDeg: 20 },
+        WIND,
         {
           ...WIND,
           kind: "swell",
           label: "Swell",
-          fromDegT: 340,
-          spreadDeg: 20,
-          source: "MOP line D0498",
-          network: "CDIP, Scripps Institution of Oceanography",
+          provenance: {
+            label: "Biggest swell in daylight",
+            source: "MOP line D0498",
+            network: "CDIP, Scripps Institution of Oceanography",
+            distanceKm: "0.7",
+          },
         },
       ]}
     />,
   );
 
-  expect(screen.getByText(/Wind, from the west, 281°/)).toBeDefined();
-  expect(screen.getByText(/MOP line D0498 · CDIP/)).toBeDefined();
-
-  // 340 reads "north" and not "north-west", and this is where the eight-point
-  // rose costs something. The design brief's example name for this very
-  // bearing is "swell from the northwest, 340 degrees", which is a sixteen-
-  // point reading; `bearing.ts` records why the page has eight. The degrees
-  // are what carry the difference, and they are stated beside the word.
-  expect(screen.getByText(/Swell, from the north, 340°/)).toBeDefined();
+  expect(
+    screen.getByText(/this beach's own grid cell · National Weather Service/),
+  ).toBeDefined();
+  expect(
+    screen.getByText(
+      /MOP line D0498 · CDIP, Scripps Institution of Oceanography · about 0.7 km from this beach/,
+    ),
+  ).toBeDefined();
 });
 
 test("a day with no bearings gets no sources block, not an empty list", () => {

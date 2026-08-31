@@ -308,10 +308,32 @@ export default defineConfig({
         //
         // Nothing new is excluded. The same 0% entry-plumbing files named
         // above still drag all four down in plain sight.
-        statements: 89.57,
-        branches: 89.2,
-        functions: 94.34,
-        lines: 89.27,
+        //
+        // RAISED again 2026-08-31, all four, by the magnitudes joining the
+        // readout's rows. Both halves of every ratio grew and the numerators
+        // grew faster:
+        //
+        //   statements 2764/3084  89.57 -> 89.62
+        //   branches   1815/2032  89.20 -> 89.32
+        //   functions   638/676   94.34 -> 94.37
+        //   lines      2493/2791  89.27 -> 89.32
+        //
+        // **Branches went down before they went up, and the dip is the part
+        // worth recording.** Wording the two magnitudes inline in `DayPanel`
+        // added four branches for the same fact -- a source that gave a
+        // direction and no magnitude -- and none of them could be reached from
+        // that component: a wind needle exists only where the speeds and the
+        // bearings joined, so a null peak beside a drawn needle is not a state
+        // `DayPanel` can be put in. Moving the wording into `windFigure`,
+        // `swellFigure` and `swellStepNote` -- null in, null out, which is
+        // `mopLineDistanceKm`'s shape -- put each of those arms somewhere a
+        // unit test can call it. The alternative was four branches covered by
+        // nothing and explained here, which is what this file already carries
+        // too much of.
+        statements: 89.62,
+        branches: 89.32,
+        functions: 94.37,
+        lines: 89.32,
       },
     },
   },

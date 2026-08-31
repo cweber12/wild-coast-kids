@@ -1,5 +1,6 @@
 import { expect, test } from "vitest";
 import { render, screen } from "@testing-library/react";
+import { swellFigure } from "./mopLine";
 import { WaveWeek, WAVE_WEEK_ROW } from "./WaveWeek";
 
 const DAYLIGHT = { timeLabel: "2:00 PM", heightFt: 2.618, periodS: 13.333333 };
@@ -22,6 +23,17 @@ test("the daylight swell leads: time, then height and period", () => {
   const { container } = render(<WaveWeek day={{ daylight: DAYLIGHT }} />);
 
   expect(container.textContent).toContain("2:00 PM 2.6 ft · 13 s");
+});
+
+test("the figure is worded by the helper the shore map's readout also uses", () => {
+  // The map prints this same `WaveReading` -- the same three-hour step,
+  // selected once by `readWaveWeek` -- a screen away, so the two must not be
+  // able to state different numbers for one day. Asserted against
+  // `swellFigure` rather than against a literal, because a literal in both
+  // suites is exactly the pair of copies this is meant to rule out.
+  const { container } = render(<WaveWeek day={{ daylight: DAYLIGHT }} />);
+
+  expect(container.textContent).toContain(swellFigure(DAYLIGHT)!);
 });
 
 /**

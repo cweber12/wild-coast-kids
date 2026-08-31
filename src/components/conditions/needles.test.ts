@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 import type { GridDaySeries } from "@/lib/conditions";
-import { gridWindReadings, needleFrom, swellReadings } from "./needles";
+import {
+  gridWindReadings,
+  needleFrom,
+  peakInDaylight,
+  swellReadings,
+} from "./needles";
 
 /** 2026-08-17 in Pacific: sunrise 06:15, sunset 19:30, as epoch milliseconds. */
 const SUNRISE = Date.UTC(2026, 7, 17, 13, 15);
@@ -186,5 +191,61 @@ describe("swellReadings", () => {
 
   it("has nothing to read from a day with no estimates in daylight", () => {
     expect(swellReadings([], SUNRISE, SUNSET)).toEqual([]);
+  });
+});
+
+describe("peakInDaylight", () => {
+  it("takes the largest hour a reader could have been there for", () => {
+    // The wind's answer to `WaveReading`, and deliberately the same rule: the
+    // largest thing the daylight window holds.
+    expect(
+      peakInDaylight(
+        published([
+          { atMs: hour(14), value: 6 },
+          { atMs: hour(20), value: 11.5 },
+          { atMs: hour(23), value: 9 },
+        ]),
+        SUNRISE,
+        SUNSET,
+      ),
+    ).toBe(11.5);
+  });
+
+  it("passes over a bigger hour that falls outside daylight", () => {
+    // The whole point of the window. A 2 AM gust is not the day a reader is
+    // planning, and reporting it as the day's wind would be reporting weather
+    // nobody could stand in.
+    expect(
+      peakInDaylight(
+        published([
+          { atMs: hour(3), value: 30 },
+          { atMs: hour(20), value: 8 },
+        ]),
+        SUNRISE,
+        SUNSET,
+      ),
+    ).toBe(8);
+  });
+
+  it("has no answer where the cell declared none", () => {
+    expect(
+      peakInDaylight(
+        { kind: "absent", reason: "this cell publishes no wind speed" },
+        SUNRISE,
+        SUNSET,
+      ),
+    ).toBeNull();
+  });
+
+  it("has no answer on a day the forecast does not reach", () => {
+    // Null rather than zero. A ragged row is a forecast doing what forecasts
+    // do, and a zero would be a drawn calm nobody predicted.
+    expect(
+      peakInDaylight(
+        published([{ atMs: hour(3), value: 12 }]),
+        SUNRISE,
+        SUNSET,
+      ),
+    ).toBeNull();
   });
 });

@@ -10,9 +10,12 @@ function needle(fromDegT: number): CompassNeedle {
     label: "Wind",
     fromDegT,
     spreadDeg: 20,
-    source: "this beach's own grid cell",
-    network: "National Weather Service, San Diego",
-    note: null,
+    figure: "11.5 mph",
+    provenance: {
+      label: "Biggest wind in daylight",
+      source: "this beach's own grid cell",
+      network: "National Weather Service, San Diego",
+    },
   };
 }
 
@@ -27,11 +30,11 @@ test("the readout opens on the first day, which is today", () => {
   // construction. A readout that read a clock could disagree with the heading.
   render(
     <SelectedDayProvider>
-      <DayCompassSources days={DAYS} />
+      <DayCompass days={DAYS} />
     </SelectedDayProvider>,
   );
 
-  expect(screen.getByText(/from the east, 90°/)).toBeDefined();
+  expect(screen.getByRole("img", { name: /from the east, 90°/ })).toBeDefined();
 });
 
 test("a day the compass has nothing for renders no readout", () => {
@@ -59,7 +62,7 @@ test("the readout renders outside the provider, showing its first day", () => {
   // The provider's default is the null state rather than a throw, so a region
   // rendered outside it degrades to "the first day and no choice" -- which is
   // exactly the state a reader with no JavaScript is in.
-  render(<DayCompassSources days={DAYS} />);
+  render(<DayCompass days={DAYS} />);
 
-  expect(screen.getByText(/from the east, 90°/)).toBeDefined();
+  expect(screen.getByRole("img", { name: /from the east, 90°/ })).toBeDefined();
 });

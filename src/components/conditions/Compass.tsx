@@ -56,7 +56,7 @@
  */
 
 import { compassWords } from "./bearing";
-import { ProvenanceLine } from "./ProvenanceLine";
+import { ProvenanceLine, type ProvenanceFacts } from "./ProvenanceLine";
 
 /** Which source a needle stands for. The list is closed on purpose. */
 export type CompassNeedleKind = "wind" | "swell";
@@ -70,12 +70,32 @@ export type CompassNeedle = {
   fromDegT: number;
   /** The arc it swung through in daylight. Zero draws no wedge. */
   spreadDeg: number;
-  /** What the figure names its source, ready to print. */
-  source: string;
-  /** Who publishes it, or null where the binding does not know. */
-  network: string | null;
-  /** Why this source, when there is something to say. */
-  note: string | null;
+  /**
+   * How much of it there was, worded and rounded by the caller: "11.5 mph",
+   * "3.4 ft · 14 s".
+   *
+   * **A string rather than a number, because the rounding is a decision made
+   * elsewhere and has to survive verbatim.** The swell's is `swellFigure`, so
+   * the week grid and this readout cannot print different numbers for Thursday;
+   * the wind's carries the precision issue #191 is about, and a component that
+   * re-rounded either would be a second opinion about a figure the page holds
+   * once. `ProvenanceLine.distanceKm` is a string for the same reason.
+   *
+   * `null` where the source gave a direction and no magnitude, which is a
+   * ragged forecast rather than a fault. The row then says what it knows.
+   */
+  figure: string | null;
+  /**
+   * Where this row's figures came from, ready for `ProvenanceLine`.
+   *
+   * The whole record rather than its three most-used fields, because the label
+   * and the distance are load-bearing here: the label is what says which of two
+   * lines is the wind, now that neither restates its bearing, and it is where
+   * the superlative goes — `WaveWeek` records why "Swell" over a single figure
+   * invites a reader to take it for the day's typical swell, "which is the one
+   * thing it is not".
+   */
+  provenance: ProvenanceFacts;
 };
 
 /**
@@ -196,9 +216,11 @@ export function needleSentence(needle: CompassNeedle): string {
     needle.spreadDeg > WIDE_SWING_DEG
       ? `, swinging through ${Math.round(needle.spreadDeg)}° in daylight`
       : "";
+  const figure =
+    needle.figure === null ? "" : `, at its biggest ${needle.figure}`;
   return (
     `${needle.label}, from the ${compassWords(needle.fromDegT)}, ` +
-    `${Math.round(needle.fromDegT)}°${swing}`
+    `${Math.round(needle.fromDegT)}°${swing}${figure}`
   );
 }
 
@@ -248,7 +270,12 @@ function Row({ needle }: { needle: CompassNeedle }) {
       </span>{" "}
       <span className="whitespace-nowrap" data-readout-bearing={needle.kind}>
         {compassWords(needle.fromDegT)} {Math.round(needle.fromDegT)}°
-      </span>
+      </span>{" "}
+      {needle.figure !== null && (
+        <span className="whitespace-nowrap" data-readout-figure={needle.kind}>
+          {needle.figure}
+        </span>
+      )}
     </p>
   );
 }
@@ -378,17 +405,27 @@ function Wedge({ needle }: { needle: CompassNeedle }) {
 }
 
 /**
- * Where each figure came from, printed beneath the picture.
+ * Where each row's figures came from, printed beneath the picture.
  *
- * **Beside the picture rather than on it**, which is `ShoreMap`'s own rule and
- * has outlived the reason it was written for. It said this block was the dial's
- * text equivalent, because the `<svg>` is one `role="img"` and nothing drawn
- * inside it reaches the accessibility tree. The readout is HTML and is in that
- * tree, so it is its own equivalent; what is left here is attribution.
+ * **Attribution and nothing else, which is what the readout being HTML buys.**
+ * This block used to restate both bearings in words and degrees, because the
+ * `<svg>` is one `role="img"` and nothing drawn inside it reaches the
+ * accessibility tree, so the dial needed a text equivalent and this was it. The
+ * readout is in that tree and is its own equivalent, so the sentence was a
+ * second statement of a figure the page already made — and one place saying the
+ * numbers and one saying where they came from is the arrangement that leaves.
+ *
+ * **The label is doing the work the sentence used to.** Two provenance lines
+ * under one picture have to say which is which, and that is what
+ * `ProvenanceLine.label` is for. It also carries the superlative, which
+ * `WaveWeek` records is not optional: a single figure under the bare word
+ * "Swell" invites a reader to take it for the day's typical swell, "which is
+ * the one thing it is not". Both are the caller's words.
  *
  * One provenance line per needle, which is `WeekGrid`'s resolution rather than
  * `StatGroup`'s contract: one instrument carrying two publishers is a
- * deliberate break of one-group-one-source, answered by attributing each row.
+ * deliberate break of one-group-one-source, answered by attributing each row
+ * (ADR-0032).
  */
 export function CompassSources({
   needles,
@@ -401,19 +438,7 @@ export function CompassSources({
     <ul className="mt-2 flex flex-col gap-1">
       {needles.map((needle) => (
         <li key={needle.kind}>
-          <p className="text-2xs text-ink leading-normal">
-            {needle.label}, from the {compassWords(needle.fromDegT)},{" "}
-            {Math.round(needle.fromDegT)}°
-            {needle.spreadDeg > WIDE_SWING_DEG
-              ? ` — swinging through ${Math.round(needle.spreadDeg)}° in daylight`
-              : ""}
-          </p>
-          <ProvenanceLine
-            source={needle.source}
-            network={needle.network}
-            note={needle.note}
-            surface="page"
-          />
+          <ProvenanceLine {...needle.provenance} surface="page" />
         </li>
       ))}
     </ul>

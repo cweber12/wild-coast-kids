@@ -12,7 +12,7 @@ import { fireEvent, render, screen } from "@testing-library/react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { localMidnightOf } from "@/lib/pacific-time";
 import { ChosenDay, type DayView } from "./ChosenDay";
-import { DayCompassSources, type CompassDay } from "./DayCompass";
+import { DayCompass, type CompassDay } from "./DayCompass";
 import { SelectedDayProvider } from "./selectedDay";
 import { WeekGrid, type WeekDay, type WeekRow } from "./WeekGrid";
 import type { SparkPoint } from "./DaySpark";
@@ -119,9 +119,12 @@ const COMPASS_DAYS: CompassDay[] = DATES.map((localDate, index) => ({
       label: "Wind",
       fromDegT: [90, 180, 270][index],
       spreadDeg: 20,
-      source: "this beach's own grid cell",
-      network: "National Weather Service, San Diego",
-      note: null,
+      figure: "11.5 mph",
+      provenance: {
+        label: "Biggest wind in daylight",
+        source: "this beach's own grid cell",
+        network: "National Weather Service, San Diego",
+      },
     },
   ],
 }));
@@ -358,15 +361,17 @@ test("the readout on the map follows the chosen day, and the map does not", () =
   const { container } = renderBoth(
     <>
       <p data-test-coast="">One coastline, drawn once</p>
-      <DayCompassSources days={COMPASS_DAYS} />
+      <DayCompass days={COMPASS_DAYS} />
     </>,
   );
 
-  expect(screen.getByText(/from the east, 90°/)).toBeDefined();
+  expect(screen.getByRole("img", { name: /from the east, 90°/ })).toBeDefined();
 
   fireEvent.click(container.querySelector(`[data-day-choice="${DATES[2]}"]`)!);
 
-  expect(screen.getByText(/from the west, 270°/)).toBeDefined();
-  expect(screen.queryByText(/from the east, 90°/)).toBeNull();
+  expect(
+    screen.getByRole("img", { name: /from the west, 270°/ }),
+  ).toBeDefined();
+  expect(screen.queryByRole("img", { name: /from the east, 90°/ })).toBeNull();
   expect(screen.getByText("One coastline, drawn once")).toBeDefined();
 });

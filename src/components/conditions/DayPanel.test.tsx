@@ -784,13 +784,78 @@ test("the map carries a readout for the day the reader chose", async () => {
 
   expect(container.querySelector("[data-readout-row='wind']")).not.toBeNull();
 
-  // Scoped to the row's own provenance. The sky wording names the same cell a few
-  // hundred pixels up, which is ADR-0029's permitted duplication and is why an
-  // unscoped query for that sentence finds two.
-  const row = screen.getByText(/^Wind, from the south, 180°/).closest("li")!;
-  expect(row.textContent).toContain(
+  // The row itself is the spoken equivalent now, so the bearing is read off its
+  // accessible name rather than off a sentence beneath the picture.
+  expect(
+    screen.getByRole("img", { name: /^Wind, from the south, 180°/ }),
+  ).toBeDefined();
+
+  // Scoped to the row's own provenance. The sky wording names the same cell a
+  // few hundred pixels up, which is ADR-0029's permitted duplication and is why
+  // an unscoped query for that sentence finds two.
+  const line = screen.getByText(/^Biggest wind in daylight/).closest("li")!;
+  expect(line.textContent).toContain(
     "this beach's own grid cell · National Weather Service, San Diego",
   );
+});
+
+test("the wind row prints the strongest daylight hour, to one decimal", async () => {
+  // The cell's speeds step 5, 8, 11, 14 through four six-hour blocks and
+  // daylight runs 6:14 AM to 7:32 PM, so the last block's 14 is the largest
+  // hour a reader could be there for. The whole day would say the same here;
+  // what the window changes is a day whose peak is at 2 AM.
+  //
+  // One decimal because four of the five places this page prints a wind figure
+  // use it and the fifth is issue #191. A sixth statement joining the four is
+  // what keeps that issue about one function rather than two.
+  const dates = [TODAY];
+  daylight(dates);
+  tideWeek(dates);
+  waveWeek(dates);
+  skyWeek(dates);
+  gridWeek(dates);
+  wordingWeek([{ localDate: TODAY, periodName: "Today", words: "Patchy Fog" }]);
+
+  const { container } = render(
+    <SelectedDayProvider>
+      {await DayPanel({ slug: "la-jolla-shores-beach" })}
+    </SelectedDayProvider>,
+  );
+
+  expect(
+    container.querySelector("[data-readout-figure='wind']")!.textContent,
+  ).toBe("14.0 mph");
+});
+
+test("the swell row prints the same figure the week grid does", async () => {
+  // One `WaveReading`, selected once by `readWaveWeek` and worded once by
+  // `swellFigure`, so the map and the grid cannot state different numbers for
+  // one day. The step's own time is not beside the figure -- it is in the
+  // provenance line, because a three-hour step is not a peak located to the
+  // minute and the readout has no room to say so.
+  const dates = [TODAY];
+  daylight(dates);
+  tideWeek(dates);
+  waveWeek(dates);
+  skyWeek(dates);
+  gridWeek(dates);
+  wordingWeek([{ localDate: TODAY, periodName: "Today", words: "Patchy Fog" }]);
+
+  const { container } = render(
+    <SelectedDayProvider>
+      {await DayPanel({ slug: "la-jolla-shores-beach" })}
+    </SelectedDayProvider>,
+  );
+
+  expect(
+    container.querySelector("[data-readout-figure='swell']")!.textContent,
+  ).toBe("1.8 ft · 15 s");
+  expect(
+    container.querySelector("[data-readout-row='swell']")!.textContent,
+  ).not.toContain("11:00 AM");
+
+  const line = screen.getByText(/^Biggest swell in daylight/).closest("li")!;
+  expect(line.textContent).toContain("for the three-hour step at 11:00 AM");
 });
 
 test("a cell that publishes no wind direction draws no readout row", async () => {
@@ -842,14 +907,17 @@ test("the readout carries a second row for the swell, from its own publisher", a
   );
 
   expect(container.querySelectorAll("[data-readout-row]")).toHaveLength(2);
+  expect(
+    screen.getByRole("img", { name: /^Swell, from the north-west, 315°/ }),
+  ).toBeDefined();
 
-  const row = screen
-    .getByText(/^Swell, from the north-west, 315°/)
-    .closest("li")!;
-  expect(row.textContent).toContain("MOP line D0481");
-  expect(row.textContent).toContain(
+  const line = screen.getByText(/^Biggest swell in daylight/).closest("li")!;
+  expect(line.textContent).toContain("MOP line D0481");
+  expect(line.textContent).toContain(
     "CDIP, Scripps Institution of Oceanography",
   );
+  // The line the model stands on, which the readout itself has no room for.
+  expect(line.textContent).toContain("about 0.1 km from this beach");
 });
 
 test("a beach with no swell model keeps its wind row", async () => {
@@ -877,8 +945,11 @@ test("a beach with no swell model keeps its wind row", async () => {
   );
 
   expect(container.querySelectorAll("[data-readout-row]")).toHaveLength(1);
-  expect(screen.getByText(/^Wind, from the south, 180°/)).toBeDefined();
-  expect(screen.queryByText(/^Swell, from/)).toBeNull();
+  expect(
+    screen.getByRole("img", { name: /^Wind, from the south, 180°/ }),
+  ).toBeDefined();
+  expect(screen.queryByRole("img", { name: /^Swell, from/ })).toBeNull();
+  expect(screen.queryByText(/^Biggest swell in daylight/)).toBeNull();
 });
 
 /* =========================================================================

@@ -71,11 +71,21 @@ export interface PlotPoint {
  *
  * So the rows have vertical room to spend and none at all to spare across, and
  * that is why a row wraps rather than running on: at 10px, `SWELL south-west
- * 270°` is 147.6px against the 151.5px a 327px map leaves inside this box, and
- * a 320px viewport -- which ADR-0004 commits this site to -- leaves 124px. 30
- * units is 81.6px there, which holds two needles of two lines each.
+ * 270° 3.4 ft · 14 s` is 210.1px against the 151.5px a 327px map leaves inside
+ * this box, and the 124px a 320px viewport leaves -- a width ADR-0004 commits
+ * this site to. At 124px that row is three lines, so two of them plus the
+ * padding is 88px, which is 32.4 units of the 272px map a 320px viewport draws.
+ *
+ * **35 rather than 40, which is where the free range ends.** The height a box
+ * declares decides how deep a band `cornerFor` searches, so a taller box is a
+ * more cautious one and moves the readout off the top-left more often than the
+ * ink requires. Measured across the inventory: 35 chooses the same corner as 30
+ * on all 50 beaches that draw one, and 40 moves three more of them --
+ * `pacific-beach`, `mission-bay-de-anza-cove` and `mission-bay-sea-world`. So
+ * this is the smallest height that holds the tallest thing the rows can wrap
+ * to, which is the least moving the geometry asks for.
  */
-export const READOUT_BOX: Box = { width: 50, height: 30 };
+export const READOUT_BOX: Box = { width: 50, height: 35 };
 
 /**
  * The order corners are tried in, and it is the reader's rather than the
