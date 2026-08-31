@@ -2,11 +2,11 @@
  * The hour the page is showing, asserted at the seam that owns it.
  *
  * Neither component owns this behaviour. The chart offers the choice, the
- * default comes from a read neither of them makes, and -- once the readout
- * follows in the next pull request -- a second region answers the same fact.
- * `selectedDay.test.tsx` made the same argument for the day and this follows
- * it: render the real components inside the real provider, rather than testing
- * each half against a mock of the other and proving nothing about the pair.
+ * default comes from a read neither of them makes, and the readout on the map
+ * answers the same fact in a second region. `selectedDay.test.tsx` made the
+ * same argument for the day and this follows it: render the real components
+ * inside the real provider, rather than testing each half against a mock of
+ * the other and proving nothing about the pair.
  *
  * **The day is here too, because the two selections interact.** A chosen hour
  * has to survive a change of day, and that is a claim about both providers
@@ -14,10 +14,11 @@
  */
 
 import { expect, test } from "vitest";
-import { fireEvent, render } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { localMidnightOf } from "@/lib/pacific-time";
 import { ChosenDay, type DayView } from "./ChosenDay";
+import { DayCompass, type CompassDay } from "./DayCompass";
 import { SelectedDayProvider } from "./selectedDay";
 import { hourOfDay } from "./dayFrame";
 import { SelectedHourProvider, resolveHour } from "./selectedHour";
@@ -93,10 +94,60 @@ function dayView(index: number, tideHours = 24): DayView {
   };
 }
 
+/**
+ * The readout on the map, for the two hours these tests move between.
+ *
+ * Its bearings encode the hour rather than the day, which is the opposite of
+ * `selectedDay.test.tsx`'s fixture and for the mirrored reason: what can go
+ * wrong here is the map answering a different hour than the chart.
+ */
+const COMPASS_DAYS: CompassDay[] = DATES.map((localDate) => ({
+  localDate,
+  hours: [
+    {
+      hour: 9,
+      caption: "9 AM",
+      needles: [
+        {
+          kind: "wind",
+          label: "Wind",
+          fromDegT: 90,
+          swing: { fromDegT: 90, spreadDeg: 20 },
+          figure: "9.0 mph",
+          provenance: {
+            label: "Biggest wind in daylight, 14.0 mph at 6:00 PM",
+            source: "this beach's own grid cell",
+            network: "National Weather Service, San Diego",
+          },
+        },
+      ],
+    },
+    {
+      hour: 14,
+      caption: "2 PM",
+      needles: [
+        {
+          kind: "wind",
+          label: "Wind",
+          fromDegT: 270,
+          swing: { fromDegT: 270, spreadDeg: 20 },
+          figure: "14.0 mph",
+          provenance: {
+            label: "Biggest wind in daylight, 14.0 mph at 6:00 PM",
+            source: "this beach's own grid cell",
+            network: "National Weather Service, San Diego",
+          },
+        },
+      ],
+    },
+  ],
+}));
+
 /** The two providers nested the way `DayPanel` nests them. */
 function renderPage(
   currentHour: number | null,
   views = DATES.map((_, i) => dayView(i)),
+  map: React.ReactNode = null,
 ) {
   return render(
     <SelectedDayProvider>
@@ -107,9 +158,16 @@ function renderPage(
         rows={[TIDE_ROW]}
       />
       <SelectedHourProvider currentHour={currentHour}>
-        <ChosenDay days={views} map={null} />
+        <ChosenDay days={views} map={map} />
       </SelectedHourProvider>
     </SelectedDayProvider>,
+  );
+}
+
+/** What the map's readout says it is showing. */
+function caption(container: HTMLElement): string {
+  return (
+    container.querySelector("[data-readout-caption]")?.textContent ?? "nothing"
   );
 }
 
@@ -327,4 +385,48 @@ test("a chosen hour outranks the current one, and null falls back to it", () => 
   expect(resolveHour(null, null)).toBeNull();
   // Midnight is a real choice, not an absent one.
   expect(resolveHour(0, 14)).toBe(0);
+});
+
+test("the map's readout shows the hour the chart marks, before and after a click", () => {
+  // **The pair this whole change is about.** A reader stepping through the
+  // afternoon watched the chart's figures move while the wind and swell in the
+  // map's corner sat on a day aggregate -- two regions stating different things
+  // about one day, a few centimetres apart, which is issue #193.
+  //
+  // Both name the hour in the same words, because both print through
+  // `hourLabel`. That is what a reader has to see it with: the caption over the
+  // block and the sentence under the plot are the only visible statement that
+  // the two regions are showing one hour.
+  const { container } = renderPage(
+    14,
+    DATES.map((_, i) => dayView(i)),
+    <DayCompass days={COMPASS_DAYS} />,
+  );
+
+  expect(caption(container)).toBe("2 PM");
+  expect(readout(container)).toContain("2 PM");
+  expect(screen.getByRole("img", { name: /^Wind at 2 PM/ })).toBeDefined();
+
+  fireEvent.click(container.querySelector('[data-hour-column="9"]')!);
+
+  expect(caption(container)).toBe("9 AM");
+  expect(readout(container)).toContain("9 AM");
+  expect(screen.getByRole("img", { name: /^Wind at 9 AM/ })).toBeDefined();
+});
+
+test("the readout follows a chosen hour across a change of day", () => {
+  // The hour is shared, so this is the day selector moving one region and the
+  // hour selection holding in the other. A readout that reverted to now on
+  // every day change would undo the comparison the week selector exists for.
+  const { container } = renderPage(
+    14,
+    DATES.map((_, i) => dayView(i)),
+    <DayCompass days={COMPASS_DAYS} />,
+  );
+
+  fireEvent.click(container.querySelector('[data-hour-column="9"]')!);
+  fireEvent.click(container.querySelector(`[data-day-choice="${DATES[1]}"]`)!);
+
+  expect(caption(container)).toBe("9 AM");
+  expect(readout(container)).toContain("9 AM");
 });

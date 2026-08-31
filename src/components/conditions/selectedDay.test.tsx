@@ -114,23 +114,32 @@ const VIEWS = DATES.map((_, index) => dayView(index));
  */
 const COMPASS_DAYS: CompassDay[] = DATES.map((localDate, index) => ({
   localDate,
-  needles: [
+  hours: [
     {
-      kind: "wind",
-      label: "Wind",
-      fromDegT: [90, 180, 270][index],
-      spreadDeg: 20,
-      figure: "11.5 mph",
-      provenance: {
-        label: "Biggest wind in daylight",
-        source: "this beach's own grid cell",
-        network: "National Weather Service, San Diego",
-      },
+      hour: 14,
+      caption: "2 PM",
+      needles: [
+        {
+          kind: "wind",
+          label: "Wind",
+          fromDegT: [90, 180, 270][index],
+          swing: { fromDegT: [90, 180, 270][index], spreadDeg: 20 },
+          figure: "11.5 mph",
+          provenance: {
+            label: "Biggest wind in daylight, 11.5 mph at 6:00 PM",
+            source: "this beach's own grid cell",
+            network: "National Weather Service, San Diego",
+          },
+        },
+      ],
     },
   ],
 }));
 
-function renderBoth(map: React.ReactNode = null) {
+function renderBoth(
+  map: React.ReactNode = null,
+  currentHour: number | null = null,
+) {
   return render(
     <SelectedDayProvider>
       <WeekGrid
@@ -150,7 +159,7 @@ function renderBoth(map: React.ReactNode = null) {
         opens with no hour chosen. What the default does instead is
         `selectedHour.test.tsx`'s to assert.
       */}
-      <SelectedHourProvider currentHour={null}>
+      <SelectedHourProvider currentHour={currentHour}>
         <ChosenDay days={VIEWS} map={map} />
       </SelectedHourProvider>
     </SelectedDayProvider>,
@@ -385,6 +394,10 @@ test("the readout on the map follows the chosen day, and the map does not", () =
       <p data-test-coast="">One coastline, drawn once</p>
       <DayCompass days={COMPASS_DAYS} />
     </>,
+    // The one hour these days are built for. The readout needs one to show
+    // anything at all, and which hour it is is `selectedHour.test.tsx`'s
+    // question rather than this file's.
+    14,
   );
 
   expect(screen.getByRole("img", { name: /from the east, 90°/ })).toBeDefined();

@@ -222,13 +222,23 @@ source, each an arrow pointing the way the weather travels with a faint wedge
 behind it for the range that direction swung through in daylight, beside the
 word for the direction and its degrees. It is read against the coast in the same
 frame — an arrow crossing the shaded sea onto the land is onshore — which is why
-it is on the map and not beside it. **It lies over the picture rather than being
-drawn inside it** (ADR-0034): it is in the accessibility tree, so each row is
-its own spoken equivalent, and it covers nothing the map draws because the
-corner it stands in is measured per beach rather than fixed. It carries two
-publishers on one instrument, one provenance line per row (ADR-0032). **It is
-drawn on all 51 beaches**, including the 23 the traced coast does not reach:
-withholding it there left nearly half the inventory with no wind figure
-anywhere on the picture, and the objection it was withheld under was about a
-needle over an empty frame rather than about a labelled block.
+it is on the map and not beside it. **It states the selected hour, and a
+caption above the rows names it** (ADR-0035): the arrow is that hour's wind
+before any click as well as after every one, so there is no day mode for it to
+mean something different in. What stays the day's is the wedge behind it, which
+is why at a night hour the arrow can sit outside its own wedge. The swell row is
+the published estimate nearest that hour — height, period and direction off one
+of CDIP's own steps — and is withheld, with its provenance line, at an hour no
+estimate reaches. The day's biggest wind is not lost with the day: it is stated
+in the wind's provenance line, which is the only place this page says it at all.
+**It lies over the picture rather than being drawn inside it** (ADR-0034): it is
+in the accessibility tree, so each row is its own spoken equivalent, and it
+covers nothing the map draws because the corner it stands in is measured per
+beach rather than fixed. It is not a live region — the hour chart's readout
+already announces the change. It carries two publishers on one instrument, one
+provenance line per row (ADR-0032). **It is drawn on all 51 beaches**, including
+the 23 the traced coast does not reach: withholding it there left nearly half
+the inventory with no wind figure anywhere on the picture, and the objection it
+was withheld under was about a needle over an empty frame rather than about a
+labelled block.
 _Avoid_: dial, badge, compass rose, wind rose, gauge, direction widget, legend

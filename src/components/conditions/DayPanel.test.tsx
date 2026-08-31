@@ -124,9 +124,11 @@ function waveWeek(dates: string[]) {
           atMs: localMidnightOf(localDate) + hour * HOUR,
           heightFt: 1.5 + Math.sin((hour / 24) * 2 * Math.PI) / 2,
           published: hour % 3 === 2,
-          // CDIP's own estimates carry a bearing; the hours drawn between them
-          // carry none, which is what the swell needle reads. Steady, so the
-          // resultant is exactly this and the assertion can be an equality.
+          // CDIP's own estimates carry a bearing and a period; the hours drawn
+          // between them carry neither, which is what the swell needle and the
+          // readout's row read. Steady, so the resultant is exactly this and
+          // the assertion can be an equality.
+          periodS: hour % 3 === 2 ? 15 : null,
           directionDegT: hour % 3 === 2 ? 315 : null,
         })),
       })),
@@ -836,7 +838,7 @@ test("the map carries a readout for the day the reader chose", async () => {
   // The row itself is the spoken equivalent now, so the bearing is read off its
   // accessible name rather than off a sentence beneath the picture.
   expect(
-    screen.getByRole("img", { name: /^Wind, from the south, 180°/ }),
+    screen.getByRole("img", { name: /^Wind at 2 PM, from the south, 180°/ }),
   ).toBeDefined();
 
   // Scoped to the row's own provenance. The sky wording names the same cell a
@@ -848,15 +850,22 @@ test("the map carries a readout for the day the reader chose", async () => {
   );
 });
 
-test("the wind row prints the strongest daylight hour, to one decimal", async () => {
-  // The cell's speeds step 5, 8, 11, 14 through four six-hour blocks and
-  // daylight runs 6:14 AM to 7:32 PM, so the last block's 14 is the largest
-  // hour a reader could be there for. The whole day would say the same here;
-  // what the window changes is a day whose peak is at 2 AM.
+test("the wind row prints this hour's speed, and the day's biggest moves to the line beneath", async () => {
+  // The two halves of ADR-0035's wind. The cell's speeds step 5, 8, 11, 14
+  // through four six-hour blocks, so 2 PM is inside the third and the row says
+  // 11.0; daylight runs 6:14 AM to 7:32 PM, so the last block's 14 is the
+  // largest hour a reader could be there for and the provenance label says so
+  // with the hour it happened at.
   //
-  // One decimal because four of the five places this page prints a wind figure
-  // use it and the fifth is issue #191. A sixth statement joining the four is
-  // what keeps that issue about one function rather than two.
+  // **The label is the only place this page states that figure.** ADR-0034
+  // justified drawing the readout everywhere partly on the week grid stating
+  // the same one; it does not, and ADR-0035 records the correction. An hour
+  // instrument that simply dropped it would be a figure gone from the page
+  // with nothing announcing it.
+  //
+  // One decimal on both, because four of the five places this page prints a
+  // wind figure use it and the fifth is issue #191. A sixth statement joining
+  // the four is what keeps that issue about one function rather than two.
   const dates = [TODAY];
   daylight(dates);
   tideWeek(dates);
@@ -873,15 +882,81 @@ test("the wind row prints the strongest daylight hour, to one decimal", async ()
 
   expect(
     container.querySelector("[data-readout-figure='wind']")!.textContent,
-  ).toBe("14.0 mph");
+  ).toBe("11.0 mph");
+  expect(screen.getByText(/^Biggest wind in daylight/).textContent).toBe(
+    "Biggest wind in daylight, 14.0 mph at 6:00 PM ",
+  );
 });
 
-test("the swell row prints the same figure the week grid does", async () => {
-  // One `WaveReading`, selected once by `readWaveWeek` and worded once by
-  // `swellFigure`, so the map and the grid cannot state different numbers for
-  // one day. The step's own time is not beside the figure -- it is in the
-  // provenance line, because a three-hour step is not a peak located to the
-  // minute and the readout has no room to say so.
+test("the caption names the hour every row in the block is for", async () => {
+  // Always present, so the block never changes its numbers with nothing
+  // visible saying what they now mean -- and never grows a line on the first
+  // click, which would move the rows under a reader's eye.
+  const dates = [TODAY];
+  daylight(dates);
+  tideWeek(dates);
+  waveWeek(dates);
+  skyWeek(dates);
+  gridWeek(dates);
+  wordingWeek([{ localDate: TODAY, periodName: "Today", words: "Patchy Fog" }]);
+
+  const { container } = render(
+    <SelectedDayProvider>
+      {await DayPanel({ slug: "la-jolla-shores-beach" })}
+    </SelectedDayProvider>,
+  );
+
+  expect(container.querySelector("[data-readout-caption]")!.textContent).toBe(
+    "2 PM",
+  );
+  // The same words the chart's own readout uses, from the same function, so
+  // one hour named twice on one screen is named the same way.
+  expect(container.querySelector("[data-hour-readout]")!.textContent).toContain(
+    "2 PM",
+  );
+});
+
+test("the readout is not a live region, because the chart's already is", async () => {
+  // Two live regions firing on one arrow-press means a keyboard reader hears
+  // the same change twice. The chart's readout keeps the announcement because
+  // it is the region the control sits in.
+  const dates = [TODAY];
+  daylight(dates);
+  tideWeek(dates);
+  waveWeek(dates);
+  skyWeek(dates);
+  gridWeek(dates);
+  wordingWeek([{ localDate: TODAY, periodName: "Today", words: "Patchy Fog" }]);
+
+  const { container } = render(
+    <SelectedDayProvider>
+      {await DayPanel({ slug: "la-jolla-shores-beach" })}
+    </SelectedDayProvider>,
+  );
+
+  expect(
+    container.querySelector("[data-readout]")!.closest("[aria-live]"),
+  ).toBeNull();
+  expect(container.querySelectorAll("[aria-live]")).toHaveLength(1);
+});
+
+test("the swell row is the estimate nearest the hour, and states it whole", async () => {
+  // **This reverses an invariant `DayPanel` used to hold.** The row was the
+  // week grid's own `WaveReading` -- the day's biggest daylight step, 1.8 ft --
+  // so the two regions could not print different numbers for one day. They can
+  // now, and that is ADR-0035's stated cost: the grid states the day and the
+  // map states the hour a reader is looking at, each named by its own caption
+  // and its own provenance line, which is the condition ADR-0010 and ADR-0029
+  // set rather than an exception to them.
+  //
+  // Whole, off one published step: height, period and bearing all from the
+  // 2 PM estimate. Reading the fields off `WaveHour` one by one would take the
+  // height from this hour and the bearing from another, because only CDIP's own
+  // estimates carry a direction.
+  //
+  // The step's own time is not beside the figure -- it is in the provenance
+  // line, because a three-hour step is not a peak located to the minute and the
+  // readout has no room to say so.
   const dates = [TODAY];
   daylight(dates);
   tideWeek(dates);
@@ -898,13 +973,215 @@ test("the swell row prints the same figure the week grid does", async () => {
 
   expect(
     container.querySelector("[data-readout-figure='swell']")!.textContent,
-  ).toBe("1.8 ft · 15 s");
+  ).toBe("1.3 ft · 15 s");
+  // Not the day's selected estimate, which is what this row used to print.
   expect(
     container.querySelector("[data-readout-row='swell']")!.textContent,
-  ).not.toContain("11:00 AM");
+  ).not.toContain("1.8 ft");
+  expect(
+    container.querySelector("[data-readout-row='swell']")!.textContent,
+  ).not.toContain("2:00 PM");
 
-  const line = screen.getByText(/^Biggest swell in daylight/).closest("li")!;
-  expect(line.textContent).toContain("for the three-hour step at 11:00 AM");
+  const line = screen.getByText(/MOP line D0481/).closest("li")!;
+  expect(line.textContent).toContain("for the three-hour step at 2:00 PM");
+  // The superlative went with the day figure. What labels this line is the
+  // word, and what qualifies it is the step named at the end of it.
+  expect(line.querySelector("span")!.textContent).toBe("Swell ");
+});
+
+test("the rows follow the hour and the wedge behind them does not", async () => {
+  // **The two halves of ADR-0035 in one render.** The arrow and the figure are
+  // the hour a reader chose; the wedge is the day's daylight swing and stays
+  // put. A wedge that meant daylight sometimes and midnight to midnight at
+  // other times would be the ambiguity this decision took out of the arrow,
+  // moved to the mark behind it.
+  //
+  // The cell's speeds step through six-hour blocks, so 9 AM is inside the
+  // second and 2 PM the third.
+  const dates = [TODAY];
+  daylight(dates);
+  tideWeek(dates);
+  waveWeek(dates);
+  skyWeek(dates);
+  gridWeek(dates);
+  // A bearing that moves through the day, where the shared fixture holds one
+  // steady: a day that never turned has no wedge to hold still.
+  readGridpointWeek.mockResolvedValue({
+    beachName: BINDING.beachName,
+    cell: CELL,
+    state: {
+      kind: "week",
+      days: dates.map((localDate) => ({
+        localDate,
+        dayLabel: "Mon, Aug 17",
+        dateLabel: "Mon, Aug 17",
+        isToday: true,
+        windMph: {
+          kind: "published",
+          hours: Array.from({ length: 24 }, (_, hour) => ({
+            atMs: localMidnightOf(localDate) + hour * HOUR,
+            value: 5 + Math.floor(hour / 6) * 3,
+            published: hour % 6 === 0,
+          })),
+        },
+        windDirDegT: {
+          kind: "published",
+          hours: Array.from({ length: 24 }, (_, hour) => ({
+            atMs: localMidnightOf(localDate) + hour * HOUR,
+            value: 180 + (hour % 4) * 10,
+            published: hour % 6 === 0,
+          })),
+        },
+        airTempF: {
+          kind: "published",
+          hours: Array.from({ length: 24 }, (_, hour) => ({
+            atMs: localMidnightOf(localDate) + hour * HOUR,
+            value: 64,
+            published: hour % 6 === 0,
+          })),
+        },
+      })),
+    },
+  });
+  wordingWeek([{ localDate: TODAY, periodName: "Today", words: "Patchy Fog" }]);
+
+  const { container } = render(
+    <SelectedDayProvider>
+      {await DayPanel({ slug: "la-jolla-shores-beach" })}
+    </SelectedDayProvider>,
+  );
+
+  const wedge = () =>
+    container.querySelector("[data-wedge='wind']")!.getAttribute("d");
+  const arrow = () =>
+    container.querySelector("[data-arrow='wind']")!.getAttribute("x1");
+  const figure = () =>
+    container.querySelector("[data-readout-figure='wind']")!.textContent;
+
+  // 2 PM: 180 + (14 % 4) * 10, and the third six-hour block of speeds.
+  expect(figure()).toBe("11.0 mph");
+  expect(
+    screen.getByRole("img", { name: /^Wind at 2 PM, from the south, 200°/ }),
+  ).toBeDefined();
+  const dayWedge = wedge();
+  const afternoonArrow = arrow();
+
+  fireEvent.click(container.querySelector('[data-hour-column="9"]')!);
+
+  expect(container.querySelector("[data-readout-caption]")!.textContent).toBe(
+    "9 AM",
+  );
+  expect(figure()).toBe("8.0 mph");
+  expect(
+    screen.getByRole("img", { name: /^Wind at 9 AM, from the south, 190°/ }),
+  ).toBeDefined();
+  expect(arrow()).not.toBe(afternoonArrow);
+
+  // And the day behind it did not move.
+  expect(wedge()).toBe(dayWedge);
+});
+
+test("a day that never turned in daylight draws the arrow and no wedge", async () => {
+  // The wedge is the day's daylight swing, so a day with no published bearing
+  // inside daylight has none to draw -- and the row still states the hour's own
+  // estimate rather than going down with it. Zero draws no wedge, which is the
+  // same absence a settled day would show.
+  const dates = [TODAY];
+  daylight(dates, localMidnightOf(TODAY) + 2 * HOUR);
+  tideWeek(dates);
+  readWaveWeek.mockResolvedValue({
+    beachName: BINDING.beachName,
+    line: { id: "D0481", distanceM: 117 },
+    state: {
+      kind: "week",
+      days: dates.map((localDate) => ({
+        localDate,
+        dayLabel: "Mon, Aug 17",
+        dateLabel: "Mon, Aug 17",
+        isToday: true,
+        daylight: null,
+        allDay: null,
+        // One estimate, at 2 AM, hours before sunrise at 6:14.
+        hours: Array.from({ length: 24 }, (_, hour) => ({
+          atMs: localMidnightOf(localDate) + hour * HOUR,
+          heightFt: 1.5,
+          published: hour === 2,
+          periodS: hour === 2 ? 15 : null,
+          directionDegT: hour === 2 ? 315 : null,
+        })),
+      })),
+    },
+  });
+  skyWeek(dates);
+  gridWeek(dates);
+  wordingWeek([{ localDate: TODAY, periodName: "Today", words: "Patchy Fog" }]);
+
+  const { container } = render(
+    <SelectedDayProvider>
+      {await DayPanel({ slug: "la-jolla-shores-beach" })}
+    </SelectedDayProvider>,
+  );
+
+  expect(container.querySelector("[data-readout-row='swell']")).not.toBeNull();
+  expect(container.querySelector("[data-arrow='swell']")).not.toBeNull();
+  expect(container.querySelector("[data-wedge='swell']")).toBeNull();
+});
+
+test("an hour no estimate reaches loses the swell row and its line together", async () => {
+  // CDIP's grid lands at 02:00 Pacific, so midnight is two hours from the
+  // nearest estimate on either side -- the previous day's 23:00 belongs to the
+  // previous date -- and no estimate speaks for it. The row is withheld rather
+  // than reaching further back, and ADR-0032's rule takes the provenance line
+  // with it: an attribution with nothing above it names the publisher of a
+  // figure the page is not showing.
+  const dates = [TODAY];
+  daylight(dates, localMidnightOf(TODAY));
+  tideWeek(dates);
+  waveWeek(dates);
+  skyWeek(dates);
+  gridWeek(dates);
+  wordingWeek([{ localDate: TODAY, periodName: "Today", words: "Patchy Fog" }]);
+
+  const { container } = render(
+    <SelectedDayProvider>
+      {await DayPanel({ slug: "la-jolla-shores-beach" })}
+    </SelectedDayProvider>,
+  );
+
+  expect(container.querySelector("[data-readout-caption]")!.textContent).toBe(
+    "12 AM",
+  );
+  expect(container.querySelector("[data-readout-row='swell']")).toBeNull();
+  expect(screen.queryByText(/MOP line D0481/)).toBeNull();
+
+  // The wind is hourly, so the block keeps the row it can still stand behind.
+  expect(container.querySelector("[data-readout-row='wind']")).not.toBeNull();
+});
+
+test("an hour between two estimates takes the nearer of them", async () => {
+  // The rule that answers 1 AM at all: the estimate an hour away speaks for it,
+  // where "the last one at or before" -- which is what the plan wrote -- has
+  // nothing to say until 2 AM. Ninety minutes is half of CDIP's step, so the
+  // hour either side of an estimate is inside it and no hour is inside two.
+  const dates = [TODAY];
+  daylight(dates, localMidnightOf(TODAY) + HOUR);
+  tideWeek(dates);
+  waveWeek(dates);
+  skyWeek(dates);
+  gridWeek(dates);
+  wordingWeek([{ localDate: TODAY, periodName: "Today", words: "Patchy Fog" }]);
+
+  const { container } = render(
+    <SelectedDayProvider>
+      {await DayPanel({ slug: "la-jolla-shores-beach" })}
+    </SelectedDayProvider>,
+  );
+
+  expect(container.querySelector("[data-readout-caption]")!.textContent).toBe(
+    "1 AM",
+  );
+  const line = screen.getByText(/MOP line D0481/).closest("li")!;
+  expect(line.textContent).toContain("for the three-hour step at 2:00 AM");
 });
 
 test("a cell that publishes no wind direction draws no readout row", async () => {
@@ -930,7 +1207,7 @@ test("a cell that publishes no wind direction draws no readout row", async () =>
   );
 
   expect(container.querySelector("[data-readout-row='wind']")).toBeNull();
-  expect(screen.queryByText(/Wind, from the/)).toBeNull();
+  expect(screen.queryByRole("img", { name: /^Wind at/ })).toBeNull();
   // The map itself is unaffected: it draws a place, and a place does not stop
   // existing because a forecast cell went quiet about the wind.
   expect(container.querySelector("[data-coast]")).not.toBeNull();
@@ -957,10 +1234,12 @@ test("the readout carries a second row for the swell, from its own publisher", a
 
   expect(container.querySelectorAll("[data-readout-row]")).toHaveLength(2);
   expect(
-    screen.getByRole("img", { name: /^Swell, from the north-west, 315°/ }),
+    screen.getByRole("img", {
+      name: /^Swell at 2 PM, from the north-west, 315°/,
+    }),
   ).toBeDefined();
 
-  const line = screen.getByText(/^Biggest swell in daylight/).closest("li")!;
+  const line = screen.getByText(/MOP line D0481/).closest("li")!;
   expect(line.textContent).toContain("MOP line D0481");
   expect(line.textContent).toContain(
     "CDIP, Scripps Institution of Oceanography",
@@ -995,10 +1274,10 @@ test("a beach with no swell model keeps its wind row", async () => {
 
   expect(container.querySelectorAll("[data-readout-row]")).toHaveLength(1);
   expect(
-    screen.getByRole("img", { name: /^Wind, from the south, 180°/ }),
+    screen.getByRole("img", { name: /^Wind at 2 PM, from the south, 180°/ }),
   ).toBeDefined();
-  expect(screen.queryByRole("img", { name: /^Swell, from/ })).toBeNull();
-  expect(screen.queryByText(/^Biggest swell in daylight/)).toBeNull();
+  expect(screen.queryByRole("img", { name: /^Swell at/ })).toBeNull();
+  expect(screen.queryByText(/MOP line/)).toBeNull();
 });
 
 test("a beach the traced coast does not reach gains its wind row", async () => {
@@ -1035,11 +1314,14 @@ test("a beach the traced coast does not reach gains its wind row", async () => {
   expect(container.querySelector("[data-coast]")).toBeNull();
   expect(container.querySelector("[data-segment]")).not.toBeNull();
 
-  // And the figure it used to have nowhere to print.
+  // And the figures it used to have nowhere to print: this hour's, and the
+  // day's biggest on the line beneath.
   expect(
     container.querySelector("[data-readout-figure='wind']")!.textContent,
-  ).toBe("14.0 mph");
-  expect(screen.getByText(/^Biggest wind in daylight/)).toBeDefined();
+  ).toBe("11.0 mph");
+  expect(screen.getByText(/^Biggest wind in daylight/).textContent).toBe(
+    "Biggest wind in daylight, 14.0 mph at 6:00 PM ",
+  );
 });
 
 /* =========================================================================
