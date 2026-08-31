@@ -177,6 +177,57 @@ test("choosing a day in the week redraws the panel below", () => {
   expect(screen.queryByText(`Measured on ${DATES[0]}`)).toBeNull();
 });
 
+/**
+ * The sentence under the plot, which is the axis in words.
+ *
+ * Found by its own opening rather than by a test hook, because what is being
+ * asserted is the sentence a reader gets. A `data-` attribute would let the
+ * markup move and the words stay wrong.
+ */
+function summary(container: HTMLElement): string {
+  return (
+    [...container.querySelectorAll("p")].find((each) =>
+      each.textContent?.startsWith("Low "),
+    )?.textContent ?? ""
+  );
+}
+
+/** The heading's own name for the day, without the phrase that follows it. */
+function headingDay(container: HTMLElement): string {
+  return (
+    container
+      .querySelector("#day-panel-heading")
+      ?.textContent?.replace(", hour by hour", "") ?? ""
+  );
+}
+
+test("the summary names the day the heading names, not today", () => {
+  // The rule `WORDS` records: "Every sentence names the day, because the region
+  // is no longer always today." Every absence sentence in the region takes a
+  // `when` for this reason and so does the measured block; this one does not,
+  // so the page names the day correctly twice and falsely once inside about
+  // sixty pixels. It mis-states a figure and not only a date -- Wednesday's
+  // range called today's attributes Wednesday's tide to a reader standing in
+  // Monday.
+  const { container } = renderBoth();
+
+  fireEvent.click(container.querySelector(`[data-day-choice="${DATES[2]}"]`)!);
+
+  expect(headingDay(container)).toBe("Wed, Aug 19");
+  expect(summary(container)).toContain("Wed, Aug 19");
+  expect(summary(container)).not.toContain("today");
+});
+
+test("and it still says today on today, rather than a date for every day", () => {
+  // The other direction, because the cheap fix for the above is to print the
+  // label unconditionally -- which would put "Mon, Aug 17" under a heading
+  // reading "Today" and lose the one day the word is true of.
+  const { container } = renderBoth();
+
+  expect(headingDay(container)).toBe("Today");
+  expect(summary(container)).toContain("today");
+});
+
 test("switching costs no request, because every day was already here", () => {
   // The whole week ships from the first render. Nothing fetches on a click,
   // and the way to assert that without mocking the network is that the markup
