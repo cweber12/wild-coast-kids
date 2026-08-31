@@ -1,6 +1,7 @@
 import { expect, test } from "vitest";
 import { render, screen } from "@testing-library/react";
 import { projectionFor } from "@/lib/coastline";
+import { READOUT_BOX } from "./corner";
 import { ShoreMap } from "./ShoreMap";
 
 /** A short run of coast running due north, west-facing like the real one. */
@@ -149,26 +150,71 @@ test("the drawn coast names what it was drawn from", () => {
   expect(container).toBeTruthy();
 });
 
-test("the dial is anchored on the beach, not in the middle of the frame", () => {
-  // The frame is sized by the beach and the line off it, so the middle of the
-  // frame is near the beach but is not the beach. A dial there would draw
-  // needles arriving at open water rather than at the sand.
+test("the readout lies over the picture, not inside its drawing space", () => {
+  // ADR-0034. The dial used to be translated onto the beach's own stretch of
+  // coast, where it covered the one thing the map exists to show. This is an
+  // HTML overlay positioned against the map's box, so it is in the
+  // accessibility tree and its type is not measured in hundredths of a frame.
   const { container } = render(
-    <ShoreMap {...PROPS} compass={<circle data-test-dial="" r={1} />} />,
+    <ShoreMap {...PROPS} readout={<p data-test-readout="">Wind</p>} />,
   );
 
-  const anchor = container.querySelector("svg [data-compass-anchor]")!;
-  const project = projectionFor(BOUNDS, { width: 100, height: 100 });
-  const middle = PROPS.segment[Math.floor(PROPS.segment.length / 2)];
-  const at = project(middle.lat, middle.lon);
-
-  expect(anchor.getAttribute("transform")).toBe(
-    `translate(${at.x.toFixed(2)} ${at.y.toFixed(2)})`,
-  );
-  expect(anchor.querySelector("[data-test-dial]")).not.toBeNull();
+  expect(container.querySelector("svg [data-test-readout]")).toBeNull();
+  const overlay = container.querySelector("[data-readout-corner]")!;
+  expect(overlay.querySelector("[data-test-readout]")).not.toBeNull();
 });
 
-test("a beach the coast does not reach gets no dial", () => {
+test("the readout stands in a corner the coastline leaves free", () => {
+  // The corner is measured rather than fixed, and `corner.test.ts` holds that
+  // for the whole inventory. This is the wiring: whichever corner is chosen,
+  // the overlay is anchored to that corner's two sides and reserves the box
+  // `corner.ts` kept clear.
+  const { container } = render(
+    <ShoreMap {...PROPS} readout={<p data-test-readout="">Wind</p>} />,
+  );
+
+  const overlay = container.querySelector(
+    "[data-readout-corner]",
+  )! as HTMLElement;
+  const corner = overlay.getAttribute("data-readout-corner")!;
+
+  expect(["top-left", "top-right", "bottom-left", "bottom-right"]).toContain(
+    corner,
+  );
+  expect(overlay.style.width).toBe(`${READOUT_BOX.width}%`);
+  expect(overlay.style.maxHeight).toBe(`${READOUT_BOX.height}%`);
+
+  // This window's coast runs up the middle of the frame, so the top-left is
+  // free and the block stays where the reader's eye starts.
+  expect(corner).toBe("top-left");
+  expect(overlay.style.top).toBe("0px");
+  expect(overlay.style.left).toBe("0px");
+});
+
+test("the readout moves to the side the drawing leaves open", () => {
+  // A coast running through the top-left, which is the shape 21 of 47 beaches
+  // have and the reason the corner is not fixed.
+  const { container } = render(
+    <ShoreMap
+      {...PROPS}
+      coast={[
+        { id: "D0500", lat: 32.884, lon: -117.274 },
+        { id: "D0501", lat: 32.87, lon: -117.26 },
+        { id: "D0502", lat: 32.85, lon: -117.25 },
+      ]}
+      segment={[
+        { lat: 32.884, lon: -117.274 },
+        { lat: 32.87, lon: -117.26 },
+      ]}
+      readout={<p data-test-readout="">Wind</p>}
+    />,
+  );
+
+  const overlay = container.querySelector("[data-readout-corner]")!;
+  expect(overlay.getAttribute("data-readout-corner")).not.toBe("top-left");
+});
+
+test("a beach the coast does not reach gets no readout", () => {
   // Cole's rule, and the reason for it: a bearing is worth reading against a
   // coastline and is a bare gauge without one -- which is the anti-reference
   // the brief opens with. 23 of 51 beaches are in this state.
@@ -186,42 +232,59 @@ test("a beach the coast does not reach gets no dial", () => {
         { lat: 32.77, lon: -117.24 },
         { lat: 32.78, lon: -117.235 },
       ]}
-      compass={<circle data-test-dial="" r={1} />}
-      compassSources={<p>Wind, from the west, 281°</p>}
+      readout={<p data-test-readout="">Wind</p>}
+      readoutSources={<p>Wind, from the west, 281°</p>}
     />,
   );
 
-  expect(container.querySelector("[data-compass-anchor]")).toBeNull();
-  expect(container.querySelector("[data-test-dial]")).toBeNull();
+  expect(container.querySelector("[data-readout-corner]")).toBeNull();
+  expect(container.querySelector("[data-test-readout]")).toBeNull();
   expect(screen.queryByText("Wind, from the west, 281°")).toBeNull();
   // The beach is still placed, which is the one question the picture has to
   // answer when there is no shoreline to draw.
   expect(container.querySelector("[data-segment]")).not.toBeNull();
 });
 
-test("a beach whose two ends are one point gets no dial either", () => {
+test("a beach whose two ends are one point gets no readout either", () => {
   // `mission-bay-vacation-isle`, whose segment upper equals its lower, so
-  // there is neither a coast nor a chord to stand a dial on.
+  // there is neither a coast nor a chord on the picture.
   const { container } = render(
     <ShoreMap
       {...PROPS}
       coast={[]}
       segment={null}
-      compass={<circle data-test-dial="" r={1} />}
+      readout={<p data-test-readout="">Wind</p>}
     />,
   );
 
-  expect(container.querySelector("[data-compass-anchor]")).toBeNull();
+  expect(container.querySelector("[data-readout-corner]")).toBeNull();
 });
 
-test("the needles' sources are listed beneath the picture", () => {
+test("the readout's sources are listed beneath the picture", () => {
   render(
     <ShoreMap
       {...PROPS}
-      compass={<circle data-test-dial="" r={1} />}
-      compassSources={<p>Wind, from the west, 281°</p>}
+      readout={<p data-test-readout="">Wind</p>}
+      readoutSources={<p>Wind, from the west, 281°</p>}
     />,
   );
 
   expect(screen.getByText("Wind, from the west, 281°")).toBeTruthy();
+});
+
+test("the overlay is measured against the picture alone", () => {
+  // The wrapper the readout is positioned against holds the `<svg>` and nothing
+  // else. With the coast credit inside it the box would not be square, and the
+  // readout's footprint is stated in the map's own drawing units precisely
+  // because the two agree.
+  const { container } = render(
+    <ShoreMap {...PROPS} readout={<p data-test-readout="">Wind</p>} />,
+  );
+
+  const positioned = container.querySelector(
+    "[data-readout-corner]",
+  )!.parentElement!;
+
+  expect(positioned.querySelector("svg")).not.toBeNull();
+  expect(positioned.textContent).not.toContain(PROPS.coastCredit);
 });

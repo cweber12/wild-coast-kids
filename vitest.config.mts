@@ -286,12 +286,32 @@ export default defineConfig({
       // and `DayPanel` at 97.53% statements, whose uncovered statement is the
       // sentence for a CDIP outage that suite does not provoke.
       thresholds: {
-        // Back up a hundredth of a point each when the needles gained their
-        // labels, which are covered like everything else in `Compass.tsx`.
-        statements: 89.44,
-        branches: 88.94,
-        functions: 94.28,
-        lines: 89.14,
+        // RAISED 2026-08-31, all four, by the map's corner readout (#192).
+        // The ordinary direction and the easy case -- the signature is all
+        // four moving the same way, with both halves of every ratio growing
+        // and the numerators growing faster:
+        //
+        //   statements 2749/3069  89.44 -> 89.57
+        //   branches   1793/2010  88.94 -> 89.20
+        //   functions   634/672   94.28 -> 94.34
+        //   lines      2481/2779  89.14 -> 89.27
+        //
+        // `corner.ts` arrived at 100% on all four and does not appear in the
+        // report's table at all; `Compass.tsx` went back to 100% on all four
+        // as the dial's geometry left it. The two files this slice modified
+        // and did not finish clean are named rather than absorbed, and both
+        // are unchanged from before it: `ShoreMap.tsx` at 97.29% branches,
+        // whose one uncovered branch is the `|| 1` divide-by-zero guard for a
+        // drawn run whose ends project to the same point, and `DayPanel.tsx`
+        // at 97.7% statements, whose uncovered statement is the sentence for a
+        // CDIP outage that suite does not provoke.
+        //
+        // Nothing new is excluded. The same 0% entry-plumbing files named
+        // above still drag all four down in plain sight.
+        statements: 89.57,
+        branches: 89.2,
+        functions: 94.34,
+        lines: 89.27,
       },
     },
   },

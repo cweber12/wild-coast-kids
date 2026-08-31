@@ -306,7 +306,7 @@ function cloudBandDescription(
  * Says what the picture is and nothing about what the shape of the coast
  * means. A reader hearing this should learn the same thing a reader seeing it
  * does: where this beach is on its own coast, and which side the water is on.
- * The dial's own bearings are spoken separately, under the picture, because
+ * The readout's own bearings are spoken separately, in its own rows, because
  * they change with the day and this does not.
  */
 function mapDescription(beachName: string): string {
@@ -605,7 +605,7 @@ export async function DayPanel({ slug }: { slug: string }) {
   /*
     The map is built once and handed over, outside the seven days, because it
     is the same picture on all seven: this beach, its own stretch of coast, and
-    the water beside it. Only the dial drawn on it changes with the day, and
+    the water beside it. Only the readout laid over it changes with the day, and
     that travels separately. It is also the one thing in this region that reads
     no feed -- `beaches.json` and `mop-lines.json` are committed -- so it cannot
     go quiet and does not belong behind a Suspense boundary.
@@ -711,8 +711,8 @@ export async function DayPanel({ slug }: { slug: string }) {
                 absence="We cannot place this beach on a map: the coordinates we hold for it are all one point."
                 noCoast="The coastline this site traces is the open coast, and it does not reach this beach."
                 coastCredit={`Shore traced from CDIP's model lines, which are computed a few hundred metres offshore — so the water's edge is drawn further out than the sand.`}
-                compass={<DayCompass days={compassDays} />}
-                compassSources={<DayCompassSources days={compassDays} />}
+                readout={<DayCompass days={compassDays} />}
+                readoutSources={<DayCompassSources days={compassDays} />}
               />
               {/*
                 The sighting layer from #121, reserved *on* the map rather than

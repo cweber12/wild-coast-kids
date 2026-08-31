@@ -162,7 +162,7 @@ function gridWeek(
    * Steady so the resultant is exactly the number written here and the
    * assertion can be an equality rather than a range -- the circular mean has
    * its own tests, and this one is about whether the wiring reaches the page.
-   * Different per day because a dial showing the wrong day is otherwise
+   * Different per day because a readout showing the wrong day is otherwise
    * invisible, which is the failure the whole client island exists around.
    */
   const directions = (localDate: string) => ({
@@ -757,9 +757,9 @@ test("the slot says what the layer will show, not what was found", async () => {
   );
 });
 
-test("the map carries a dial for the day the reader chose", async () => {
-  // The map is one picture for the whole week and the needles are not, so the
-  // coast stays server-rendered and only the dial moves. Asserted through the
+test("the map carries a readout for the day the reader chose", async () => {
+  // The map is one picture for the whole week and the readout is not, so the
+  // coast stays server-rendered and only the readout moves. Asserted through the
   // words rather than through the drawing, because the words are what a reader
   // not looking at the picture is given.
   const dates = [TODAY, TOMORROW];
@@ -782,9 +782,9 @@ test("the map carries a dial for the day the reader chose", async () => {
     </SelectedDayProvider>,
   );
 
-  expect(container.querySelector("[data-needle='wind']")).not.toBeNull();
+  expect(container.querySelector("[data-readout-row='wind']")).not.toBeNull();
 
-  // Scoped to the needle's own row. The sky wording names the same cell a few
+  // Scoped to the row's own provenance. The sky wording names the same cell a few
   // hundred pixels up, which is ADR-0029's permitted duplication and is why an
   // unscoped query for that sentence finds two.
   const row = screen.getByText(/^Wind, from the south, 180°/).closest("li")!;
@@ -793,7 +793,7 @@ test("the map carries a dial for the day the reader chose", async () => {
   );
 });
 
-test("a cell that publishes no wind direction draws no dial", async () => {
+test("a cell that publishes no wind direction draws no readout row", async () => {
   // The needle goes and the map stays. The picture is about where this beach
   // is, which does not depend on a bearing.
   const dates = [TODAY];
@@ -815,7 +815,7 @@ test("a cell that publishes no wind direction draws no dial", async () => {
     </SelectedDayProvider>,
   );
 
-  expect(container.querySelector("[data-needle='wind']")).toBeNull();
+  expect(container.querySelector("[data-readout-row='wind']")).toBeNull();
   expect(screen.queryByText(/Wind, from the/)).toBeNull();
   // The map itself is unaffected: it draws a place, and a place does not stop
   // existing because a forecast cell went quiet about the wind.
@@ -823,8 +823,8 @@ test("a cell that publishes no wind direction draws no dial", async () => {
   expect(container.querySelector("[data-segment]")).not.toBeNull();
 });
 
-test("the dial carries a second needle for the swell, from its own publisher", async () => {
-  // One dial, two publishers -- `StatGroup`'s one-group-one-source contract
+test("the readout carries a second row for the swell, from its own publisher", async () => {
+  // One readout, two publishers -- `StatGroup`'s one-group-one-source contract
   // broken on purpose and answered the way `WeekGrid` answers it, with a
   // provenance line per row rather than by splitting the component.
   const dates = [TODAY];
@@ -841,7 +841,7 @@ test("the dial carries a second needle for the swell, from its own publisher", a
     </SelectedDayProvider>,
   );
 
-  expect(container.querySelectorAll("[data-needle]")).toHaveLength(2);
+  expect(container.querySelectorAll("[data-readout-row]")).toHaveLength(2);
 
   const row = screen
     .getByText(/^Swell, from the north-west, 315°/)
@@ -852,8 +852,8 @@ test("the dial carries a second needle for the swell, from its own publisher", a
   );
 });
 
-test("a beach with no swell model keeps its wind needle", async () => {
-  // 26 of 51 beaches bind no MOP line. The dial loses a needle and keeps the
+test("a beach with no swell model keeps its wind row", async () => {
+  // 26 of 51 beaches bind no MOP line. The readout loses a row and keeps the
   // one it has, rather than the pair going down together.
   const dates = [TODAY];
   daylight(dates);
@@ -876,7 +876,7 @@ test("a beach with no swell model keeps its wind needle", async () => {
     </SelectedDayProvider>,
   );
 
-  expect(container.querySelectorAll("[data-needle]")).toHaveLength(1);
+  expect(container.querySelectorAll("[data-readout-row]")).toHaveLength(1);
   expect(screen.getByText(/^Wind, from the south, 180°/)).toBeDefined();
   expect(screen.queryByText(/^Swell, from/)).toBeNull();
 });

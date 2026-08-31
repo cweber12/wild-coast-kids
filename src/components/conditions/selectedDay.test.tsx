@@ -107,7 +107,7 @@ const VIEWS = DATES.map((_, index) => dayView(index));
 /**
  * One needle per day, each from a different quarter.
  *
- * The dial travels beside the map rather than inside `DayView`, because the map
+ * The readout travels beside the map rather than inside `DayView`, because the map
  * is one picture for the whole week and the needles are not. That makes it a
  * second consumer of the same choice, which is what this file exists to assert.
  */
@@ -350,7 +350,7 @@ test("a region outside the provider shows its first day rather than failing", ()
   expect(drawnDay(container)).toBe(`Tide on ${DATES[0]}`);
 });
 
-test("the dial on the map follows the chosen day, and the map does not", () => {
+test("the readout on the map follows the chosen day, and the map does not", () => {
   // The second consumer of the one choice. The needles are per day and the
   // coast is not, so the picture stays exactly where it was while the bearing
   // under it changes -- which is the whole reason the compass is a client

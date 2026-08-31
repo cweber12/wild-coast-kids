@@ -21,10 +21,10 @@ const DAYS: CompassDay[] = [
   { localDate: "2026-08-18", needles: [needle(270)] },
 ];
 
-test("the dial opens on the first day, which is today", () => {
+test("the readout opens on the first day, which is today", () => {
   // The provider starts null and every consumer resolves it against its own
   // first column, so the server render and the first client render agree by
-  // construction. A dial that read a clock could disagree with the heading.
+  // construction. A readout that read a clock could disagree with the heading.
   render(
     <SelectedDayProvider>
       <DayCompassSources days={DAYS} />
@@ -34,14 +34,14 @@ test("the dial opens on the first day, which is today", () => {
   expect(screen.getByText(/from the east, 90°/)).toBeDefined();
 });
 
-test("a day the compass has nothing for draws no dial", () => {
+test("a day the compass has nothing for renders no readout", () => {
   const { container } = render(
     <SelectedDayProvider>
       <DayCompass days={[{ localDate: "2026-08-17", needles: [] }]} />
     </SelectedDayProvider>,
   );
 
-  expect(container.querySelector("[data-compass-dial]")).toBeNull();
+  expect(container.querySelector("[data-readout]")).toBeNull();
 });
 
 test("a beach with no days at all draws nothing rather than throwing", () => {
@@ -55,7 +55,7 @@ test("a beach with no days at all draws nothing rather than throwing", () => {
   expect(container.textContent).toBe("");
 });
 
-test("the dial renders outside the provider, showing its first day", () => {
+test("the readout renders outside the provider, showing its first day", () => {
   // The provider's default is the null state rather than a throw, so a region
   // rendered outside it degrades to "the first day and no choice" -- which is
   // exactly the state a reader with no JavaScript is in.

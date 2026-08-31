@@ -1,38 +1,58 @@
 /**
- * Where the wind and the swell come from, drawn on the beach they arrive at.
+ * Where the wind and the swell come from, read in the corner of the map they
+ * arrive at.
  *
- * **A bearing means nothing on its own, and that is why this is not a card.**
- * 281 degrees is a number. Drawn on the shore map, over a coastline a reader
- * can see, it becomes the thing they actually came for: whether the wind is
- * coming off the land or off the water. The design brief's third principle is
- * this component's whole justification -- "no dial floating beside a graph can
- * say which" -- and it is why `ShoreMap` hosts this rather than the day panel.
+ * **A bearing means nothing on its own, and that has not changed.** 281 degrees
+ * is a number; read in the same frame as a coastline a reader can see, it
+ * becomes the thing they came for — whether the wind is coming off the land or
+ * off the water. The design brief's third principle is still this component's
+ * justification, and it is still why `ShoreMap` hosts this rather than the day
+ * panel.
  *
- * **The needles point inward, at the beach.** Every feed this page reads
- * publishes the direction weather comes *from*, so the tail sits out at the
- * bearing and the head arrives at the sand. An arrow drawn the other way is the
- * same line saying the opposite thing, and a reader has no way to tell which
- * convention a drawing chose. This one is checkable against the map underneath
- * it: a needle whose tail is out over the shaded sea is onshore wind, which is
- * the reading the whole component exists to make possible.
+ * **What changed is that the instrument stopped covering the picture.** This
+ * was a dial: a ring 30 units across a 100-unit frame, two needles and two
+ * labels, anchored on the beach's own stretch of coast — so the coastline the
+ * needles were to be read against was underneath them, and on some beaches the
+ * dial overflowed the edge. Reviewed on the built page it was distracting, and
+ * it was covering its own subject. See ADR-0034.
  *
- * **The arc is the honesty.** A bare needle on a day the wind swung through 200
- * degrees would state a direction the day did not have. Measured across the
- * committed run, two days of seven have a daylight spread past 170 degrees and
- * four sit at 40 or less, so the two cases look completely different -- which is
- * the point. `bearing.ts` computes the arc; this draws it.
+ * **The arrows still carry true bearings, and that is deliberate rather than
+ * inherited.** The alternative considered was a corner block whose arrows are
+ * decorative, with an animated field carrying direction instead. That field is
+ * gated off under `prefers-reduced-motion`, so the map would say nothing
+ * directional at all to a reader who turned motion off — and directional is the
+ * one thing this map is for.
+ *
+ * **The arrow points the way the weather travels.** Every feed this page reads
+ * publishes the direction weather comes *from*, so the tail sits at that
+ * bearing and the head is opposite it. Drawn the other way it is the same line
+ * saying the reverse, and a reader has no way to tell which convention a
+ * drawing chose. This one is checkable against the map beside it: an arrow
+ * whose tail is out over the shaded sea is onshore wind, which is the reading
+ * the whole component exists to make possible.
+ *
+ * **The ring went and the arc became a wedge**, which is one change rather than
+ * two. The ring's only stated justification was that "an arc with nothing to be
+ * a portion of reads as a stray stroke rather than as a range" — so at corner
+ * size, where a 40° arc and a 50° arc on a 9px ring are the same picture, the
+ * arc it justified can no longer be judged and both go. A filled cone reads at
+ * 16px, and a 190° day drawing a near-blob is correct: that day had no
+ * direction. The wedge was rejected once, on the grounds that "a wedge covering
+ * a fifth of the map on a settled day and half of it on an unsettled one would
+ * hide the coast underneath". In a corner readout there is no coast underneath.
+ *
+ * **HTML, not SVG in plot units.** Plot-unit type was already at ADR-0024's
+ * 10px floor — 3.2 units is 10.5px on the 328px map a phone draws — and these
+ * rows carry four fields where the old label carried one word. The `<svg>` is
+ * one `role="img"`, so nothing drawn inside it reaches the accessibility tree
+ * at all; this block is in the tree, which is what makes it the text equivalent
+ * rather than a picture needing one. And it costs no vertical height, in a
+ * column already stacking a map, a coast credit, provenance rows and the
+ * sightings slot, reviewed in a 555px-tall stop.
  *
  * **Presentational and pure**, like `ShoreMap` and `DaySpark`. It takes needles
- * and draws them; it reads no feed, resolves no station and words nothing. The
- * sentences are the caller's.
- *
- * **The ring is chrome, and it is the one piece here that is.** The day view's
- * review already named the cloud legend as the only element inside a frame that
- * is not data, and this is a second. It earns it: an arc with nothing to be a
- * portion of reads as a stray stroke rather than as a range, and the
- * alternative -- labelled tick marks at the cardinals -- is the boxed legend
- * the brief lists as an anti-reference. One faint circle is the smallest thing
- * that makes the arc mean what it means.
+ * and renders them; it reads no feed, resolves no station and words nothing
+ * that is not arithmetic on what it was handed. The sentences are the caller's.
  */
 
 import { compassWords } from "./bearing";
@@ -48,7 +68,7 @@ export type CompassNeedle = {
   label: string;
   /** Degrees true it comes *from*, weighted by how much there was. */
   fromDegT: number;
-  /** The arc it swung through in daylight. Zero draws no arc. */
+  /** The arc it swung through in daylight. Zero draws no wedge. */
   spreadDeg: number;
   /** What the figure names its source, ready to print. */
   source: string;
@@ -59,19 +79,35 @@ export type CompassNeedle = {
 };
 
 /**
- * The ring, in the map's own plot units.
+ * The glyph's own drawing space, in its own units.
  *
- * Just under a third of the hundred-unit frame, so the dial reads as an
- * instrument sat on the beach rather than a second picture covering the coast.
+ * Its own frame rather than the map's: this is 16 CSS pixels of picture inside
+ * a row of text, so it is sized like an icon and knows nothing about the
+ * hundred-unit frame the coastline is drawn in. `ARM` leaves a margin inside
+ * the box for the arrowhead's barbs, which reach across the shaft.
  */
-const RING_RADIUS = 30;
+const GLYPH_UNITS = 20;
+const ARM = 8;
+
+/**
+ * The wedge reaches past the arrow's tail, and that is what makes a settled day
+ * readable.
+ *
+ * Drawn at the arrow's own radius, a 30-degree spread is a sliver lying under
+ * the shaft and is invisible at 16px -- looked at on the built page, the swell
+ * row appeared to have no wedge at all rather than a narrow one. Reaching 1.5
+ * units further out leaves a rim of it showing whatever the shaft covers, so
+ * the difference between a settled day and an unsettled one is a difference in
+ * the picture rather than between a picture and nothing.
+ */
+const WEDGE_RADIUS = 9.5;
 
 /**
  * Plot coordinates for a bearing at a radius, with north up.
  *
  * The one conversion in this file and the one worth stating: bearings run
  * clockwise from north, and plot y grows southward, so north is a *negative*
- * y. Writing it the intuitive way puts every needle upside down.
+ * y. Writing it the intuitive way puts every arrow upside down.
  */
 function at(degreesTrue: number, radius: number): { x: number; y: number } {
   const radians = (degreesTrue * Math.PI) / 180;
@@ -79,53 +115,33 @@ function at(degreesTrue: number, radius: number): { x: number; y: number } {
 }
 
 /**
- * The two needles differ in shape and in weight, never in colour alone.
+ * The two rows differ in shape and in weight, never in colour alone.
  *
- * The brief's rule, and the one a small graphic breaks most easily: the whole
- * dial is a few dozen pixels, and a reader who cannot separate two hues would
- * be left with two identical strokes.
+ * The brief's rule, kept even though each arrow now sits beside its own word
+ * and could lean on that. A 16px glyph is exactly the size at which two hues
+ * are the weakest thing to tell two marks apart, and the pair is read as a pair
+ * — one above the other — so a reader who cannot separate the colours would
+ * otherwise be comparing two identical arrows.
  *
  * **Open against solid, and thin against heavy.** The wind is a light shaft
  * under a hollow chevron, the swell a heavy one under a filled blade. Both
- * differences survive greyscale, which is the test that matters: colour
- * reinforces the pair and carries none of it. It also reads as what each is --
- * air is the lighter mark and water the heavier one.
+ * survive greyscale, which is the test that matters; colour reinforces the pair
+ * and carries none of it. It also reads as what each is — air is the lighter
+ * mark and water the heavier one.
  *
- * **And each runs on its own track, which is not decoration.** Built with one
- * radius for both, a day whose wind and swell came from the same quarter drew
- * the two needles exactly on top of each other: the page said two things and
- * showed one, and nothing failed. At La Jolla that is an ordinary day rather
- * than an edge case -- the swell runs west to north-west and the afternoon
- * wind west to south-west -- and it was found by looking at the picture.
- *
- * So the wind reaches from the ring almost to the sand and the swell occupies
- * the middle of that span, leaving the wind's outer and inner stretches always
- * exposed. The lengths differ as a consequence and carry no meaning: the two
- * are a speed and a height, in different units, and nothing on this dial
- * invites them to be compared as quantities.
+ * The lengths no longer differ. On the map the two needles ran on separate
+ * tracks so a day whose wind and swell came from one quarter could not draw
+ * them on top of each other — found by looking at the built page, and an
+ * ordinary day at La Jolla rather than an edge case. Two arrows in two labelled
+ * rows cannot overlap, so the tracks are gone with the dial that needed them.
  */
-const NEEDLES: Record<
+const GLYPHS: Record<
   CompassNeedleKind,
   {
     stroke: string;
     fill: string;
-    /** Where the arc is drawn. Each kind has its own, so two never overlap. */
-    arc: number;
-    /**
-     * How solid the arc is, and the two are not the same number.
-     *
-     * **They are set to the same measured contrast, not to the same opacity**,
-     * because the two hues do not weigh the same. At 0.65 over the sea the
-     * ocean arc reads 3.60:1 from painted pixels and the purple one 2.77:1 --
-     * under the brief's 3:1 for a graphical object, on the same setting that
-     * cleared it for the other. Tuned by measurement, they land at 3.60 and
-     * 3.64.
-     */
-    arcOpacity: number;
-    /** Where the shaft starts, out at the bearing. */
-    tail: number;
-    /** Where it ends, pointing at the beach. */
-    head: number;
+    /** How solid the wedge is. Faint: it is a range behind a reading. */
+    wedgeOpacity: number;
     width: number;
     /** Half the arrowhead's span across the shaft. */
     barb: number;
@@ -135,103 +151,161 @@ const NEEDLES: Record<
   wind: {
     stroke: "stroke-ocean",
     fill: "fill-ocean",
-    arc: RING_RADIUS,
-    arcOpacity: 0.65,
-    tail: 26,
-    head: 3,
-    width: 1.3,
-    barb: 1.7,
+    wedgeOpacity: 0.3,
+    width: 1.5,
+    barb: 1.9,
     solid: false,
   },
   swell: {
     stroke: "stroke-purple-deep",
     fill: "fill-purple-deep",
-    arc: 24,
-    arcOpacity: 0.8,
-    tail: 21,
-    head: 8,
-    width: 2.4,
-    barb: 2.2,
+    wedgeOpacity: 0.35,
+    width: 2,
+    barb: 2.6,
     solid: true,
   },
 };
 
-/** The two needles' geometry, exported so tests read it rather than repeat it. */
-export const NEEDLE_TRACKS = NEEDLES;
+/** The glyphs' geometry, exported so tests read it rather than repeat it. */
+export const NEEDLE_GLYPHS = GLYPHS;
 
 /**
- * The dial, drawn around whatever origin its parent translated it to.
+ * Beyond this, the eight-point word for a needle stops describing its own
+ * range.
  *
- * `ShoreMap` puts that origin on the beach's own stretch of coast rather than
- * at the middle of the frame, because the frame is sized by the sources: at
- * `mission-beach` a station nine kilometres away puts the frame's centre out in
- * the county somewhere, and a needle pointing at that would be pointing at
- * nothing.
+ * Not a threshold picked to suit the data: one compass point is exactly the
+ * width the words have, so a swing wider than one is a swing the words cannot
+ * describe and a reader is owed the number instead. It happens to separate the
+ * committed run cleanly — four days at 40 or 50, two past 170 — which is a check
+ * on the rule rather than the reason for it.
+ */
+const WIDE_SWING_DEG = 45;
+
+/**
+ * What one row says to a reader who is not looking at it.
+ *
+ * The visible row is abbreviated — a glyph, a word, a bearing — and this is the
+ * unabbreviated form. `role="img"` with a label is how `DaylightWeek` and
+ * `Placeholder` name a thing whose visible content is not its name; this repo
+ * does not use `sr-only`, and `ReadingCard` records why: the accessible-name
+ * algorithm joins inline text nodes with no separator, so a visually-hidden
+ * connective concatenates with its neighbours rather than reading as a phrase.
+ */
+export function needleSentence(needle: CompassNeedle): string {
+  const swing =
+    needle.spreadDeg > WIDE_SWING_DEG
+      ? `, swinging through ${Math.round(needle.spreadDeg)}° in daylight`
+      : "";
+  return (
+    `${needle.label}, from the ${compassWords(needle.fromDegT)}, ` +
+    `${Math.round(needle.fromDegT)}°${swing}`
+  );
+}
+
+/**
+ * The readout, laid over the corner of the map its caller chose.
+ *
+ * It renders the rows and nothing about where they stand: which corner is safe
+ * is a question about the coastline underneath, which this component cannot
+ * see. `ShoreMap` projects, asks `corner.ts` and positions this.
  */
 export function Compass({ needles }: { needles: readonly CompassNeedle[] }) {
   if (needles.length === 0) return null;
 
-  return (
-    <g data-compass-dial="">
-      <circle
-        cx={0}
-        cy={0}
-        r={RING_RADIUS}
-        fill="none"
-        className="stroke-fog"
-        strokeWidth={0.6}
-        strokeOpacity={0.45}
-        vectorEffect="non-scaling-stroke"
-      />
+  /*
+    The rows wrap rather than run on, which is ADR-0004's own resolution of the
+    same squeeze: content that no longer fits grows its container instead of
+    being clipped, because a taller block is a visible degradation and a line
+    running off the picture is an invisible one.
 
-      {/*
-        Heaviest first, so the light shaft is never the one underneath. The
-        list itself stays in reading order -- wind, then swell -- because that
-        is the order the sources below are read in, and drawing order is a
-        painting concern rather than a claim about which matters.
-      */}
-      {[...needles]
-        .sort((a, b) => NEEDLES[b.kind].width - NEEDLES[a.kind].width)
-        .map((needle) => (
-          <Needle key={needle.kind} needle={needle} />
-        ))}
-    </g>
+    It binds at 320 CSS px, which that ADR commits this site to. `SWELL
+    south-west 270°` is 147.6px at 10px against the 151.5px this box leaves
+    inside a 327px map and the 124px it leaves inside a 272px one -- so the
+    bearing drops under its own label at the narrow end and the row is one line
+    everywhere else. `corner.ts` records why that trade is available at all:
+    the width is the whole constraint and the height costs nothing.
+  */
+  return (
+    <div className="flex flex-col gap-1" data-readout="">
+      {needles.map((needle) => (
+        <Row key={needle.kind} needle={needle} />
+      ))}
+    </div>
   );
 }
 
-function Needle({ needle }: { needle: CompassNeedle }) {
-  const style = NEEDLES[needle.kind];
-  const tail = at(needle.fromDegT, style.tail);
-  const head = at(needle.fromDegT, style.head);
-  const span = style.tail - style.head;
+function Row({ needle }: { needle: CompassNeedle }) {
+  return (
+    <p
+      role="img"
+      aria-label={needleSentence(needle)}
+      className="text-2xs text-ink flex flex-wrap items-center gap-x-1 leading-none font-bold tabular-nums"
+      data-readout-row={needle.kind}
+    >
+      <Glyph needle={needle} />
+      <span className="uppercase" data-readout-label={needle.kind}>
+        {needle.label}
+      </span>{" "}
+      <span className="whitespace-nowrap" data-readout-bearing={needle.kind}>
+        {compassWords(needle.fromDegT)} {Math.round(needle.fromDegT)}°
+      </span>
+    </p>
+  );
+}
+
+/**
+ * One arrow and the band the direction moved through while the sun was up.
+ *
+ * A bare arrow on a day the wind swung through 200 degrees would state a
+ * direction the day did not have. Measured across the committed run, two days
+ * of seven have a daylight spread past 170 degrees and four sit at 40 or less,
+ * so the two cases look completely different — which is the point.
+ * `bearing.ts` computes the spread; this draws it.
+ */
+function Glyph({ needle }: { needle: CompassNeedle }) {
+  const style = GLYPHS[needle.kind];
+  const tail = at(needle.fromDegT, ARM);
+  const head = at(needle.fromDegT + 180, ARM);
 
   /*
     The two barbs of the arrowhead, set back along the shaft and out to either
     side. Built from the same `at` conversion rather than from a rotation
     matrix, so there is one place in this file that knows which way north is.
-  */
-  /*
-    The head is two and a half times as long as it is wide across.
 
-    Set back by less it draws an obtuse blob rather than an arrow, which is
-    what the swell's first version did once its shaft was shortened to clear
-    the wind's -- reviewed on the built page and called tacky, correctly. A
-    long, narrow head reads as a direction; a squat one reads as a shape.
+    The head is two and a half times as long as it is wide across. Set back by
+    less it draws an obtuse blob rather than an arrow, which is what the swell's
+    needle did once its shaft was shortened -- reviewed on the built page and
+    called tacky, correctly. A long, narrow head reads as a direction; a squat
+    one reads as a shape.
   */
-  const barbBack = at(needle.fromDegT, style.head + style.barb * 2.5);
+  const barbBack = at(needle.fromDegT + 180, ARM - style.barb * 2.2);
   const across = {
-    x: (tail.y - head.y) / span,
-    y: (head.x - tail.x) / span,
+    x: (tail.y - head.y) / (2 * ARM),
+    y: (head.x - tail.x) / (2 * ARM),
   };
+  const point = (x: number, y: number) => `${x.toFixed(2)},${y.toFixed(2)}`;
   const barbs = [
-    `${(barbBack.x + across.x * style.barb).toFixed(2)},${(barbBack.y + across.y * style.barb).toFixed(2)}`,
-    `${head.x.toFixed(2)},${head.y.toFixed(2)}`,
-    `${(barbBack.x - across.x * style.barb).toFixed(2)},${(barbBack.y - across.y * style.barb).toFixed(2)}`,
+    point(
+      barbBack.x + across.x * style.barb,
+      barbBack.y + across.y * style.barb,
+    ),
+    point(head.x, head.y),
+    point(
+      barbBack.x - across.x * style.barb,
+      barbBack.y - across.y * style.barb,
+    ),
   ].join(" ");
 
+  const half = GLYPH_UNITS / 2;
+
   return (
-    <>
-      {needle.spreadDeg > 0 && <Arc needle={needle} />}
+    <svg
+      viewBox={`${-half} ${-half} ${GLYPH_UNITS} ${GLYPH_UNITS}`}
+      className="h-4 w-4 shrink-0"
+      aria-hidden="true"
+      data-readout-glyph={needle.kind}
+    >
+      {needle.spreadDeg > 0 && <Wedge needle={needle} />}
 
       <line
         x1={Number(tail.x.toFixed(2))}
@@ -241,15 +315,14 @@ function Needle({ needle }: { needle: CompassNeedle }) {
         className={style.stroke}
         strokeWidth={style.width}
         strokeLinecap="round"
-        vectorEffect="non-scaling-stroke"
-        data-needle={needle.kind}
+        data-arrow={needle.kind}
       />
 
       {style.solid ? (
         <polygon
           points={barbs}
           className={style.fill}
-          data-needle-head={needle.kind}
+          data-arrow-head={needle.kind}
         />
       ) : (
         <polyline
@@ -259,96 +332,32 @@ function Needle({ needle }: { needle: CompassNeedle }) {
           strokeWidth={style.width}
           strokeLinecap="round"
           strokeLinejoin="round"
-          vectorEffect="non-scaling-stroke"
-          data-needle-head={needle.kind}
+          data-arrow-head={needle.kind}
         />
       )}
-
-      <Label needle={needle} tail={tail} />
-    </>
+    </svg>
   );
 }
 
 /**
- * Where the needle's own word sits, out beyond its tail.
+ * The band the direction moved through while the sun was up, as a filled cone.
  *
- * **Two arrows over a coastline do not say which is which**, and this map has
- * no legend by design — a boxed legend is one of the brief's anti-references,
- * and the design review already named the cloud legend as the only element
- * inside a frame that is chrome rather than data. A word at the tail is not a
- * legend: it is the label on the thing itself, which is what a legend is a
- * substitute for.
- *
- * **Horizontal, never rotated with its needle.** A label turned to follow a
- * bearing is upside down for half the compass. It is anchored away from the
- * dial instead — a needle out to the west puts its word further west — so the
- * text runs outward and never crosses the picture.
- *
- * The size is in plot units rather than in the page's `text-2xs`, because a CSS
- * pixel inside a hundred-unit viewBox is a hundredth of the map. 3.2 units is
- * about 15px on the widest map this page draws and 10.5px on the narrowest, at
- * 375 — which keeps it at ADR-0024's floor rather than under it.
+ * Behind the arrow's tail rather than around the whole glyph, because the
+ * spread is a range of directions the weather came *from* and the tail is where
+ * that is read. A settled day draws a splinter and an unsettled one draws most
+ * of a disc, and the difference is legible at 16px in a way an arc on a ring is
+ * not.
  */
-function Label({
-  needle,
-  tail,
-}: {
-  needle: CompassNeedle;
-  tail: { x: number; y: number };
-}) {
-  /*
-    Outside the arc, not just outside the tail. Set at the tail the word landed
-    on its own arc's track and the halo punched a hole through it -- visible on
-    the built page and picked up by the contrast probe, which kept sampling the
-    label's ink where it was looking for the band.
-  */
-  const out = at(needle.fromDegT, NEEDLES[needle.kind].arc + 4);
-  const eastward = tail.x >= 0;
-
-  return (
-    <text
-      x={Number(out.x.toFixed(2))}
-      y={Number(out.y.toFixed(2))}
-      textAnchor={eastward ? "start" : "end"}
-      dominantBaseline="middle"
-      fontSize={3.2}
-      className={`fill-ink stroke-cream uppercase ${
-        needle.kind === "wind" ? "font-bold" : "font-extrabold"
-      }`}
-      /*
-        A halo, not a badge. It exists so the word survives being drawn over
-        the coastline or the wash, and at 2.5 it read as a chip stuck on the
-        map -- which is the boxed legend this dial is meant not to have. 1.2 is
-        enough to separate the letters from what is behind them.
-      */
-      strokeWidth={1.2}
-      paintOrder="stroke"
-      strokeLinejoin="round"
-      data-needle-label={needle.kind}
-    >
-      {needle.label}
-    </text>
-  );
-}
-
-/**
- * The band the direction moved through while the sun was up.
- *
- * A stroked arc rather than a filled wedge from the centre. A wedge covering a
- * fifth of the map on a settled day and half of it on an unsettled one would
- * hide the coast underneath exactly when the reader most needs to compare the
- * two, and the arc says the same thing at the rim.
- */
-function Arc({ needle }: { needle: CompassNeedle }) {
-  const { arc: radius, arcOpacity, stroke } = NEEDLES[needle.kind];
+function Wedge({ needle }: { needle: CompassNeedle }) {
+  const { fill, wedgeOpacity } = GLYPHS[needle.kind];
   const half = needle.spreadDeg / 2;
-  const from = at(needle.fromDegT - half, radius);
-  const to = at(needle.fromDegT + half, radius);
+  const from = at(needle.fromDegT - half, WEDGE_RADIUS);
+  const to = at(needle.fromDegT + half, WEDGE_RADIUS);
 
   /*
     Which of the two arcs between the endpoints is meant. Without the flag a
-    200-degree swing draws as the 160-degree one on the other side of the dial,
-    which is not merely wrong but the opposite claim.
+    200-degree swing draws as the 160-degree one on the other side of the
+    glyph, which is not merely wrong but the opposite claim.
 
     The sweep flag is 1 because bearings increase clockwise and, in a space
     where y grows downward, a positive sweep is clockwise on screen.
@@ -358,44 +367,28 @@ function Arc({ needle }: { needle: CompassNeedle }) {
   return (
     <path
       d={
-        `M${from.x.toFixed(2)} ${from.y.toFixed(2)} ` +
-        `A ${radius} ${radius} 0 ${largeArc} 1 ${to.x.toFixed(2)} ${to.y.toFixed(2)}`
+        `M0 0 L${from.x.toFixed(2)} ${from.y.toFixed(2)} ` +
+        `A ${WEDGE_RADIUS} ${WEDGE_RADIUS} 0 ${largeArc} 1 ${to.x.toFixed(2)} ${to.y.toFixed(2)} Z`
       }
-      fill="none"
-      className={stroke}
-      strokeWidth={4}
-      strokeOpacity={arcOpacity}
-      strokeLinecap="butt"
-      vectorEffect="non-scaling-stroke"
-      data-arc={needle.kind}
+      className={fill}
+      fillOpacity={wedgeOpacity}
+      data-wedge={needle.kind}
     />
   );
 }
 
 /**
- * Beyond this, the eight-point word for the needle stops covering its own arc.
+ * Where each figure came from, printed beneath the picture.
  *
- * Not a threshold picked to suit the data: one compass point is exactly the
- * width the words have, so a swing wider than one is a swing the words cannot
- * describe and a reader is owed the number instead. It happens to separate the
- * committed run cleanly -- four days at 40 or 50, two past 170 -- which is a
- * check on the rule rather than the reason for it.
- */
-const WIDE_SWING_DEG = 45;
-
-/**
- * What the dial says, for a reader who is not looking at it.
- *
- * **Beside the picture rather than on it**, which is `ShoreMap`'s own rule for
- * its markers and for the same two reasons: a label inside a hundred-unit frame
- * either overlaps its neighbour or shrinks under the ten-pixel floor ADR-0024
- * refused to go below, and the map is one `role="img"` whose contents are not
- * in the accessibility tree at all. This block is the dial's text equivalent,
- * so it states both bearings in words and in degrees.
+ * **Beside the picture rather than on it**, which is `ShoreMap`'s own rule and
+ * has outlived the reason it was written for. It said this block was the dial's
+ * text equivalent, because the `<svg>` is one `role="img"` and nothing drawn
+ * inside it reaches the accessibility tree. The readout is HTML and is in that
+ * tree, so it is its own equivalent; what is left here is attribution.
  *
  * One provenance line per needle, which is `WeekGrid`'s resolution rather than
- * `StatGroup`'s contract: one dial carrying two publishers is a deliberate
- * break of one-group-one-source, answered by attributing each row.
+ * `StatGroup`'s contract: one instrument carrying two publishers is a
+ * deliberate break of one-group-one-source, answered by attributing each row.
  */
 export function CompassSources({
   needles,
