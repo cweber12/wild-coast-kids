@@ -361,3 +361,66 @@ against hour parameters rather than twice.
    in `ShoreMap`, the geometry module, the swell crest layer at true projected
    wavelength, and the reduced-motion freeze.
 8. The wind layer, unclipped, over the frame, reusing the geometry module.
+
+## Addendum — 2026-08-31: the corner is chosen per beach, because a fixed one has nowhere to stand
+
+**The seam found this before slice 2 started, which is what it was agreed
+for.** The decision above — "Fixed top-left on all 51 beaches, not a corner
+chosen per beach" — was to be held by a test walking every beach through
+`shoreViewFor`, projecting, and failing if the badge's box covers the drawn
+segment. Run first rather than last, that test says the fixed top-left cannot
+pass it.
+
+Measured across the inventory, as the widest badge each placement rule survives
+on its worst beach. The three figures are stable at every badge height between
+12 and 20 plot units:
+
+| placement                  | widest badge it survives | worst beach                    |
+| -------------------------- | ------------------------ | ------------------------------ |
+| fixed top-left             | **8.3 units**            | `childrens-pool`               |
+| top, side flips left/right | **19.0 units**           | `la-jolla-cove`                |
+| any of the four corners    | **50.5 units**           | `mission-bay-visitor-s-center` |
+
+8.3 units is about 27px on the 328px map a phone draws, against the 150–165px
+two rows of four fields need. At a realistic 46 × 14 the fixed top-left badge
+sits on the beach's own stretch on **21 of the 47 beaches that draw one**,
+including `la-jolla-shores-beach`, which is the default beach.
+
+**The cause is structural rather than unlucky, which is why no smaller badge
+escapes it.** On the 23 bay beaches the segment is a chord between the frame's
+own margin corners — `beachStretch` draws the beach's two ends where there is no
+coast to mark a run of — so it crosses the frame corner to corner and always
+blocks one diagonal pair. `childrens-pool` reads `tl=8, br=8, tr=92, bl=92`, and
+the pattern repeats down the bay list. A fixed corner is a coin toss taken 51
+times.
+
+**So the corner is chosen per beach.** The rejected alternative is adopted, and
+the reason it was rejected splits in two:
+
+- **"The same control jumps corners between beaches" stands**, and is the price.
+  It is paid against a badge that otherwise covers the subject of the picture on
+  nearly half the inventory. A reader sees one beach at a time, and the choice is
+  computed from committed data, so a given beach's corner never moves between
+  visits.
+- **"It becomes untestable in the useful direction — you can assert it moved,
+  not that it landed somewhere good" is wrong**, and is the half worth recording.
+  The property is exactly as assertable as the fixed version's: the box of the
+  corner this beach chose holds no drawn point. It is the _fixed_ rule that
+  cannot be verified, because it is false.
+
+**The assertion is also widened while it is being written.** The plan asked only
+that the badge clear the drawn segment. Measured, an adaptive corner clears the
+segment **and the whole windowed coastline** at 50 × 14 on every beach — 0 of 47
+with no corner available — so the test asserts both. The coast is the larger
+half of what the map exists to show, and there was no reason but arithmetic to
+leave it out; the arithmetic turned out not to charge for it.
+
+**What this costs the badge is a budget rather than a redesign.** 50 plot units
+is about 165px on the narrowest map, so the two rows have to stay compact. That
+is a constraint the fixed rule never surfaced because it failed long before
+reaching one.
+
+Everything else in this plan is unchanged. The ADR in slice 2 records the corner
+choice alongside the dial leaving the map, because both are the same decision
+seen from two sides: the readout stops covering the picture, and where it stands
+is what makes that true.
