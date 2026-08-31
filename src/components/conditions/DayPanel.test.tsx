@@ -958,6 +958,50 @@ test("the wind and the air temperature name the cell, on both their tabs", async
   expect(provenance(container)).toContain("Air temperature");
 });
 
+test("a beach with no tide station credits nobody rather than reaching through", async () => {
+  // `station` is null exactly in this state, and the four sources are composed
+  // once for the week -- before any tab knows whether it has a curve to
+  // attribute. An implementation that reached through the null would throw here
+  // instead of rendering the absence the reader is owed.
+  readHourlyTide.mockResolvedValue({
+    beachName: BINDING.beachName,
+    station: null,
+    state: {
+      kind: "no-station",
+      reason: "no station within 40 km of this beach publishes predictions",
+    },
+  });
+
+  const { container } = render(
+    await DayPanel({ slug: "la-jolla-shores-beach" }),
+  );
+
+  expect(screen.getByText(/no station within 40 km/)).toBeDefined();
+  expect(container.querySelector("[data-series-provenance]")).toBeNull();
+});
+
+test("a beach with no forecast cell leaves wind and temperature uncredited", async () => {
+  // The same for the third source. There is no curve on either tab to
+  // attribute, and no cell to name if there were.
+  readGridpointWeek.mockResolvedValue({
+    beachName: BINDING.beachName,
+    cell: null,
+    state: {
+      kind: "no-cell",
+      reason: "the forecast grid does not reach this beach",
+    },
+  });
+
+  const { container } = render(
+    await DayPanel({ slug: "la-jolla-shores-beach" }),
+  );
+
+  fireEvent.click(container.querySelector('[data-series-tab="wind"]')!);
+
+  expect(screen.getByText(/the forecast grid does not reach/)).toBeDefined();
+  expect(container.querySelector("[data-series-provenance]")).toBeNull();
+});
+
 test("the attribution survives choosing an hour", async () => {
   // ADR-0027 lets a plot be asked a question only additively: an interaction
   // may reveal what the page did not carry, and may never put something drawn

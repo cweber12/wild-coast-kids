@@ -99,3 +99,26 @@ test("the page's muted role clears the floor on the page", () => {
 test("the card's muted role is unreadable on the page, which is why two exist", () => {
   expect(contrast(painted(CARD_MUTED, CREAM), CREAM)).toBeLessThan(1.1);
 });
+
+/**
+ * The day chart's tile, which is a third ground and not the page's own.
+ *
+ * `HourChart`'s shell is `bg-white/60` over the page, so the provenance line
+ * beneath its plot is printed on cream lightened rather than on cream. It is
+ * the *lighter* of the two, which makes `CARD_MUTED` worse here than the 1.03:1
+ * it shipped at on cream and `PAGE_MUTED` slightly better -- but "slightly
+ * better than a figure measured somewhere else" is the reasoning that produced
+ * the invisible line in the first place, so this ground is computed rather than
+ * argued from the one next to it.
+ */
+const CHART = over(WHITE, 0.6, CREAM);
+
+test("the page's muted role clears the floor on the day chart's tile", () => {
+  expect(contrast(painted(PAGE_MUTED, CHART), CHART)).toBeGreaterThanOrEqual(
+    FLOOR,
+  );
+});
+
+test("the card's muted role would be invisible on the day chart's tile too", () => {
+  expect(contrast(painted(CARD_MUTED, CHART), CHART)).toBeLessThan(1.1);
+});

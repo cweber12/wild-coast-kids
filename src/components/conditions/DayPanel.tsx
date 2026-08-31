@@ -75,12 +75,23 @@ import {
   GRID_SOURCE,
   gridCellCaveat,
 } from "./gridCell";
-import { MOP_MODEL_NOTE, MOP_NETWORK, mopLineSource } from "./mopLine";
+import {
+  MOP_MODEL_NOTE,
+  MOP_NETWORK,
+  mopLineDistanceKm,
+  mopLineSource,
+} from "./mopLine";
 import { gridWindReadings, needleFrom, swellReadings } from "./needles";
+import type { ProvenanceFacts } from "./ProvenanceLine";
 import { ShoreMap } from "./ShoreMap";
 import { shoreViewFor } from "./shore";
 import { SkyWording } from "./SkyWording";
 import { gridPoints, swellPoints, tidePoints } from "./series";
+import {
+  TIDE_NETWORK,
+  tideStationDistanceKm,
+  tideStationNote,
+} from "./tideStation";
 
 /**
  * What each tab says when its own feed is the thing that is missing.
@@ -316,6 +327,66 @@ export async function DayPanel({ slug }: { slug: string }) {
   ]);
 
   /*
+    Who published each curve, composed once for the week rather than per day.
+
+    A tide station, a model line and a forecast cell are bound to the beach and
+    never to the day: all seven days of a tab carry the same publisher, so
+    building these inside the loop would be seven copies of one fact. Every word
+    comes from `tideStation.ts`, `mopLine.ts` and `gridCell.ts` -- three modules
+    that exist because two call sites wording one fact is how `ProvenanceLine`
+    came to print one station two ways on one card.
+
+    `null` where the beach binds no such source, which is the same condition
+    under which that tab has no curve to attribute: each of the three fields is
+    null exactly when its own read's state is `no-station`, `no-line` or
+    `no-cell`, and none of those states reaches a plot.
+  */
+  const cellNote = [
+    GRID_MODEL_NOTE,
+    gridCellCaveat(grid.cell?.elevationM ?? null),
+  ]
+    .filter((part): part is string => part !== null)
+    .join("; ");
+
+  const station = hourly.station;
+  const tideProvenance: ProvenanceFacts | null =
+    station === null
+      ? null
+      : {
+          label: "Tide",
+          source: station.name,
+          network: TIDE_NETWORK,
+          distanceKm: tideStationDistanceKm(station.distanceM),
+          note: tideStationNote(station.distanceM, station.water),
+        };
+
+  const swellProvenance: ProvenanceFacts | null =
+    waves.line === null
+      ? null
+      : {
+          label: "Swell",
+          source: mopLineSource(waves.line.id),
+          network: MOP_NETWORK,
+          distanceKm: mopLineDistanceKm(waves.line.distanceM),
+          note: MOP_MODEL_NOTE,
+        };
+
+  /*
+    One cell and two tabs, so two lines rather than one shared: the label is
+    what says which curve is being attributed, and it is the only field of the
+    two that differs.
+
+    No distance, which is the omission `WeekPanel`'s cloud row already makes. A
+    cell is a 2.5 km square of map with the beach somewhere inside it, so "about
+    n km from this beach" would be a figure about nothing -- unlike a station or
+    a model line, which stand at a point.
+  */
+  const cellProvenance = (label: string): ProvenanceFacts | null =>
+    grid.cell === null
+      ? null
+      : { label, source: GRID_SOURCE, network: GRID_NETWORK, note: cellNote };
+
+  /*
     The seven days come from the daylight read, which is the same choice
     `WeekPanel` makes one region up: it is computed from the beach's own
     coordinates rather than fetched, so it cannot fail and costs no request.
@@ -376,6 +447,7 @@ export async function DayPanel({ slug }: { slug: string }) {
                 day.sunsetLabel,
               ),
         absence: absenceFor(hourly, WORDS.tide, when),
+        provenance: tideProvenance,
       },
       {
         key: "swell",
@@ -392,6 +464,7 @@ export async function DayPanel({ slug }: { slug: string }) {
                 day.sunsetLabel,
               ),
         absence: absenceFor(waves, WORDS.swell, when),
+        provenance: swellProvenance,
       },
       {
         key: "wind",
@@ -408,6 +481,7 @@ export async function DayPanel({ slug }: { slug: string }) {
           WORDS.wind.outOfReach(when),
         ),
         absence: gridAbsenceFor(grid, gridDay?.windMph, WORDS.wind, when),
+        provenance: cellProvenance("Wind"),
       },
       {
         /*
@@ -441,6 +515,10 @@ export async function DayPanel({ slug }: { slug: string }) {
           WORDS.temperature,
           when,
         ),
+        // The word the tab drops, put back. Same rule as the spoken
+        // description and the sentence under the plot: "Temp" buys width on a
+        // 375px tab bar, and nothing else on this page pays for it.
+        provenance: cellProvenance("Air temperature"),
       },
     ];
 
@@ -536,13 +614,6 @@ export async function DayPanel({ slug }: { slug: string }) {
     across north in its first three hours, and a day measured end to end
     reports an arc nobody could have stood in.
   */
-  const cellNote = [
-    GRID_MODEL_NOTE,
-    gridCellCaveat(grid.cell?.elevationM ?? null),
-  ]
-    .filter((part): part is string => part !== null)
-    .join("; ");
-
   const compassDays: CompassDay[] = daylight.days.map((day) => {
     const gridDay =
       grid.state.kind === "week"

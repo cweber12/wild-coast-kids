@@ -83,6 +83,20 @@ type ProvenanceLineProps = {
   surface?: "card" | "page";
 };
 
+/**
+ * Everything this line says about a source, less the ground it is printed on.
+ *
+ * **Two things a caller knows and one it does not.** Which station answered,
+ * who publishes it and how far away it stands are facts about the data, and
+ * travel with it: `HourSeries` carries a set of these per tab, composed where
+ * the read is. Which surface it lands on is a fact about the markup and is
+ * known only at the call site, so it stays out of here -- a series that carried
+ * its own `surface` would be a data structure with an opinion about where it
+ * would be rendered, and the whole reason this prop exists is that the last
+ * component to guess that got it wrong at 1.03:1.
+ */
+export type ProvenanceFacts = Omit<ProvenanceLineProps, "surface">;
+
 export function ProvenanceLine({
   source,
   network = null,

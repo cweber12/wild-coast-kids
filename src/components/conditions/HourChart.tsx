@@ -104,6 +104,7 @@ import { useId, useState } from "react";
 import { nightBands } from "./dayFrame";
 import { useHydrated } from "./hydrated";
 import type { SparkPoint } from "./DaySpark";
+import { ProvenanceLine, type ProvenanceFacts } from "./ProvenanceLine";
 import { TOUCH_TARGET } from "../ui/touchTarget";
 
 /**
@@ -135,6 +136,25 @@ export type HourSeries = {
    * wind series is a fact about one forecast run.
    */
   absence: string;
+  /**
+   * Who published this curve, printed beneath the plot when there is one.
+   *
+   * **Per series, because the four tabs are three publishers.** The tide is
+   * NOAA's, the swell is CDIP's model and the wind and the air temperature are
+   * the National Weather Service's cell — so one line for the chart would be
+   * wrong on at least two tabs, and the nearest line above the plot already is:
+   * it names the cell, and a reader who takes it for the plot's source is
+   * misinformed whenever the tide or the swell is drawn. ADR-0029 licenses the
+   * modelled swell sitting a few pixels above the buoy's measured height
+   * *on condition that each is attributed*, which is this field.
+   *
+   * **Required and nullable rather than optional.** `null` is a real state and
+   * not an omission: 26 of 51 beaches bind no MOP line, and a beach with no
+   * tide station or no forecast cell has nothing to name either. Making the
+   * field required is what stops the fifth series being composed without one,
+   * which is exactly how these four came to be drawn by nobody.
+   */
+  provenance: ProvenanceFacts | null;
 };
 
 export type HourChartProps = {
@@ -377,7 +397,7 @@ export function HourChart({
   // prop's docstring: picking the first one with data would be a rule a reader
   // could not see.
   const active = series[mounted ? tab : 0] ?? series[0];
-  const { points, unitLabel, description, absence } = active;
+  const { points, unitLabel, description, absence, provenance } = active;
 
   const onTabKeyDown = (event: React.KeyboardEvent) => {
     const moves: Record<string, number> = { ArrowLeft: -1, ArrowRight: 1 };
@@ -1030,6 +1050,40 @@ export function HourChart({
           Low {lowValue.toFixed(1)} {unitLabel}, high {highValue.toFixed(1)}{" "}
           {unitLabel} today. Night is shaded; cloud is the band above.
         </p>
+
+        {/*
+          Who published the curve, and it changes with the tab.
+
+          **Last, and beneath the summary, because it is the most subordinate
+          thing here** -- the same place `WeekGrid` puts its three. It is also
+          the reading order the fault needs: a reader arriving at the plot from
+          above has just passed a line naming the forecast cell, and this is the
+          first thing after the plot that says whose the plot actually is.
+
+          **Labelled, though the tab bar is four inches away and says the same
+          word.** Two sources are inside this frame -- the curve and the cloud
+          band above it, which is the National Weather Service's sky whatever
+          tab is selected -- so an unlabelled "MOP line D0481 · CDIP" under the
+          whole thing would credit CDIP with the weather. `WeekGrid` labels its
+          lines for exactly this reason and records it. The label is the series'
+          own word in full rather than the tab's: "Temp" is a tab shortened to
+          fit four across a 375px screen, and this line is not paying for that
+          width.
+
+          **`surface="page"`, and it is not a preference.** The chart's shell is
+          `bg-white/60`; the default paints `CARD_MUTED`, white at 55%, which on
+          this ground is the colour of the ground. `ProvenanceLine`'s own
+          docstring records two callers that shipped exactly that at 1.03:1.
+
+          Only where there is a plot. A quiet tab prints its `absence` instead,
+          and every one of those sentences already names the publisher that went
+          quiet -- which is what `WORDS` in `DayPanel` exists to do.
+        */}
+        {provenance !== null && (
+          <div className="mt-2" data-series-provenance>
+            <ProvenanceLine {...provenance} surface="page" />
+          </div>
+        )}
       </div>
     </>,
   );
