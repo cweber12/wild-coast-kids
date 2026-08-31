@@ -227,6 +227,43 @@ test("the server render carries the hour, and still carries no control", () => {
   expect(markup).toContain("data-selected-guide");
   expect(markup).not.toContain("data-hour-prev");
   expect(markup).not.toContain("data-hour-column");
+
+  // And the sentence that says which hour the mark is, which is gated with the
+  // facts rather than with the buttons. Read out of the readout element rather
+  // than off the whole markup: `hourLabel` writes every axis label, so a bare
+  // search for "2 PM" would pass on a chart with nothing selected at all.
+  const sentence = markup
+    .split("data-hour-readout")[1]
+    ?.split("</p>")[0]
+    .replace(/^[^>]*>/, "");
+  expect(sentence).toContain("2 PM");
+  expect(sentence).toContain("14.0 ft");
+  expect(sentence).not.toContain("Pick an hour");
+});
+
+test("without a script the invitation to pick an hour is not offered", () => {
+  // The fallback wording is a control's instruction, so it is gated like one.
+  // Reached here because this day's tide stops at 10 AM and the page opens on
+  // 2 PM -- a reader with a script is told to pick an hour and can; a reader
+  // without one would be told to use a control that is not on the page.
+  const markup = renderToStaticMarkup(
+    <SelectedDayProvider>
+      <SelectedHourProvider currentHour={14}>
+        <ChosenDay days={[dayView(0, 10), dayView(1), dayView(2)]} map={null} />
+      </SelectedHourProvider>
+    </SelectedDayProvider>,
+  );
+
+  expect(markup).toContain("data-hour-readout");
+  expect(markup).not.toContain("Pick an hour");
+
+  // With a script, the same state does offer it.
+  const { container } = renderPage(14, [
+    dayView(0, 10),
+    dayView(1),
+    dayView(2),
+  ]);
+  expect(readout(container)).toBe("Pick an hour to read it.");
 });
 
 test("without a current hour the server render marks nothing", () => {

@@ -1142,10 +1142,20 @@ export function HourChart({
           `aria-live="polite"` because the change is the whole point and a
           reader moving through the hours with the arrow keys is not looking at
           this line. A reserved minimum height keeps the page from jumping when
-          the first hour is chosen.
+          the first hour is chosen. It announces nothing on arrival, because a
+          live region does not announce the content it is born with -- which is
+          what lets the chart open on an hour without speaking over the page.
+
+          **The sentence is not gated on hydration and the buttons are**, which
+          is ADR-0035 drawing the line ADR-0027's rule was always about. A
+          button that cannot work is a lie about what the page can do; a stated
+          fact is not, and the mark it explains is in the server's render
+          either way. Gating the sentence with the buttons would leave a reader
+          without a script looking at a marked hour and no word about which
+          hour it is.
         */}
-        {mounted && (
-          <div className="mt-4 flex flex-wrap items-center gap-2">
+        <div className="mt-4 flex flex-wrap items-center gap-2">
+          {mounted && (
             <div className="flex gap-1.5">
               <button
                 type="button"
@@ -1166,15 +1176,25 @@ export function HourChart({
                 Later →
               </button>
             </div>
-            <p
-              className="text-2xs leading-relaxed min-h-4 flex-1 text-ocean"
-              aria-live="polite"
-              data-hour-readout
-            >
-              {readout() ?? "Pick an hour to read it."}
-            </p>
-          </div>
-        )}
+          )}
+          <p
+            className="text-2xs leading-relaxed min-h-4 flex-1 text-ocean"
+            aria-live="polite"
+            data-hour-readout
+          >
+            {/*
+              The invitation is offered only where it can be accepted.
+
+              Without a script there is no way to pick an hour, so "Pick an hour
+              to read it." would be an instruction to use a control that is not
+              there -- the same failure the buttons are gated to avoid, in
+              words instead of in a button. It is reached only when this series
+              does not run as far as the hour the page opened on, because the
+              hour is otherwise always resolved.
+            */}
+            {readout() ?? (mounted ? "Pick an hour to read it." : "")}
+          </p>
+        </div>
 
         <p className="text-2xs leading-relaxed mt-3 text-fog">
           Low {lowValue.toFixed(1)} {unitLabel}, high {highValue.toFixed(1)}{" "}
