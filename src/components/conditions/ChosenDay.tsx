@@ -44,6 +44,15 @@ export type DayView = {
   localDate: string;
   /** This day's name in the heading: "Today", "Thu, Aug 27". */
   dayName: string;
+  /**
+   * The same day inside a sentence: "today", "on Thu, Aug 27".
+   *
+   * A second form rather than `dayName` lowercased, because lowercasing a date
+   * gives "thu, aug 27" — and a third form of one fact is what three positions
+   * genuinely want. `DayPanel` composes all of them in one place, next to the
+   * `when` its absence sentences take.
+   */
+  chartWhen: string;
   /** Local midnight this day begins on, and the next. The plot's two edges. */
   startMs: number;
   endMs: number;
@@ -142,6 +151,7 @@ export function ChosenDay({
             series={day.series}
             sunriseMs={day.sunriseMs}
             sunsetMs={day.sunsetMs}
+            when={day.chartWhen}
             cloud={day.cloud}
             cloudDescription={day.cloudDescription}
             nowMs={day.nowMs}

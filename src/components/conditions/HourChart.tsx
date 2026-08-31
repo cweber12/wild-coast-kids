@@ -176,6 +176,34 @@ export type HourChartProps = {
   /** Sunset; everything after it is shaded as night. */
   sunsetMs: number;
   /**
+   * Which day these figures belong to, ready to print inside a sentence:
+   * `"today"`, or `"on Thu, Aug 27"`.
+   *
+   * **The summary line said "today" on all seven days until this existed**, four
+   * lines under a heading naming the day — and it mis-stated a figure and not
+   * only a date, since Wednesday's range called today's attributes Wednesday's
+   * tide to a reader standing in Monday. `DayPanel`'s `WORDS` records the rule
+   * it broke: every sentence names the day, because the region is no longer
+   * always today.
+   *
+   * **Required, and never defaulted to `"today"`.** A default is exactly how
+   * the word got here — true when it was written, false the moment the week
+   * became the selector — and it would go on being true for whichever caller
+   * forgets next.
+   *
+   * **Worded by the caller, which is the opposite of what `ProvenanceLine`
+   * concluded and right for a different reason.** That component takes a number
+   * and writes the sentence, because four call sites had drifted into four
+   * wordings of one fact. Here the fact is a calendar's and this component's
+   * whole argument is that it draws a frame and knows nothing about calendars:
+   * it cannot tell a relative word from a date without being told, so a clause
+   * built here would need a conditional on the literal string `"today"`. The
+   * closer precedent is this component's own: `description`, `absence` and
+   * `cloudDescription` are three caller-worded day-named strings it already
+   * prints, and this is the fourth.
+   */
+  when: string;
+  /**
    * Cloud cover per forecast hour, 0 to 100, drawn along the top of the plot.
    *
    * A layer rather than a series of its own: it is the condition the selected
@@ -378,6 +406,7 @@ export function HourChart({
   series,
   sunriseMs,
   sunsetMs,
+  when,
   cloud = [],
   cloudDescription = "Cloud cover through the day.",
   nowMs = null,
@@ -1128,7 +1157,7 @@ export function HourChart({
 
         <p className="text-2xs leading-relaxed mt-3 text-fog">
           Low {lowValue.toFixed(1)} {unitLabel}, high {highValue.toFixed(1)}{" "}
-          {unitLabel} today. Night is shaded; cloud is the band above.
+          {unitLabel} {when}. Night is shaded; cloud is the band above.
         </p>
 
         {/*
