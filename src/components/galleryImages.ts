@@ -38,13 +38,14 @@ export type GalleryImage = {
   /**
    * The `object-position` the tile crops around, as `x y`.
    *
-   * Every tile is landscape and seven of the nine photographs are portrait
-   * 3:4, so `object-cover` scales each one to the tile's width and spills the
-   * height: a `tall` tile shows 56% of a portrait frame and a `wide` tile
-   * 42%. Which 56% is a decision about the artwork, and the default — dead
-   * centre — makes it by accident. Two of these nine would lose their subject
-   * to it outright: the stegosaurus sits in the bottom third of its frame and
-   * the sumi-e card in the top third.
+   * Every tile is landscape and six of the nine photographs are portrait 3:4,
+   * so `object-cover` scales each one to the tile's width and spills the
+   * height. Those six are exactly the six `tall` slots, which show 56% of a
+   * portrait frame; the three landscape files take the `wide` slots and spill
+   * less, but all nine spill something. Which 56% is a decision about the
+   * artwork, and the default — dead centre — makes it by accident. The sumi-e
+   * card would lose its subject to that default outright: it sits in the top
+   * third of its frame.
    *
    * The x half is inert and written anyway. A source narrower than its tile
    * is scaled to fit the width exactly, so there is no horizontal overflow
@@ -58,11 +59,10 @@ export type GalleryImage = {
 /* Slot order is a reading order, not a filing order: the row opens on two kids
    holding up work they just finished, and closes on the stegosaurus.
 
-   Which three are wide was decided by which three survive a 16:9 band. Both
-   landscape photographs take wide slots for that reason alone, and the third —
-   the stegosaurus, portrait like the rest — earns its place because the
-   dinosaur itself is a long horizontal shape that a wide crop frames better
-   than a tall one does. */
+   Which three are wide was decided by which three survive a 16:9 band, and all
+   three are landscape files. Two were photographed that way; the stegosaurus
+   was cropped to it in #185 and reads better for it, the dinosaur being a long
+   horizontal subject a wide crop frames better than a tall one does. */
 export const GALLERY_IMAGES: GalleryImage[] = [
   {
     src: "/gallery/kids-with-portraits.jpg",
@@ -142,8 +142,14 @@ export const GALLERY_IMAGES: GalleryImage[] = [
     src: "/gallery/stegosaurus-watercolor.jpg",
     alt: "A watercolor stegosaurus cut out and mounted on white card, its plates painted red and orange",
     aspect: "wide",
-    // Almost the bottom of the frame. The dinosaur occupies the lower third
-    // and a centred 16:9 band would have shown the desk above it.
-    crop: "50% 88%",
+    // Barely off the top, where 88% used to be almost the bottom. The file was
+    // re-cropped to 1200x800 to take a doodle sheet carrying two children's
+    // names out of the published bytes (#185), and what is left is the
+    // dinosaur and the card it is mounted on — so a 16:9 band now spills 125px
+    // rather than 925, and the old value would have cut the plates off. Picked
+    // by rendering the band at 0, 15, 30, 50, 75 and 100 and looking: this is
+    // the one that leaves about as much room above the plates as below the
+    // tail's curl, and from 30 the top plates start meeting the edge.
+    crop: "50% 15%",
   },
 ];

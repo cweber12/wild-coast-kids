@@ -64,11 +64,11 @@ test("every photograph names a file that is actually in public/", () => {
 });
 
 test("every photograph says where its crop is anchored", () => {
-  // Every tile is landscape and seven of the nine files are portrait, so
-  // object-cover discards between 44% and 58% of each frame's height. Which
-  // part it discards is a decision per photograph, and an entry that omits it
-  // is not neutral — it silently takes the centre, which is wrong for at
-  // least the stegosaurus and the sumi-e card.
+  // Every tile is landscape and six of the nine files are portrait, so
+  // object-cover discards part of every frame's height — 44% of each of those
+  // six. Which part it discards is a decision per photograph, and an entry
+  // that omits it is not neutral: it silently takes the centre, which is wrong
+  // for at least the sumi-e card, whose subject sits in the top third.
   for (const { src, crop } of GALLERY_IMAGES) {
     expect(crop, `${src} has no crop`).toMatch(/^\d+% \d+%$/);
   }
@@ -122,7 +122,7 @@ const FRAME_SIZES: Record<string, { width: number; height: number }> = {
   "/gallery/cactus-collage.jpg": { width: 1200, height: 1600 },
   "/gallery/sumi-e-sun-and-bamboo.jpg": { width: 1200, height: 1600 },
   "/gallery/ink-brush-studies.jpg": { width: 1200, height: 1600 },
-  "/gallery/stegosaurus-watercolor.jpg": { width: 1200, height: 1600 },
+  "/gallery/stegosaurus-watercolor.jpg": { width: 1200, height: 800 },
 };
 
 /**
