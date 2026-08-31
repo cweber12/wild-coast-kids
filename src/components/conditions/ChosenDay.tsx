@@ -19,10 +19,17 @@
  *
  * **The chart is not keyed on the day, deliberately.** Changing the day keeps
  * the same `HourChart` mounted, so the tab a reader chose stays chosen as they
- * move across the week -- which is the comparison the tabs exist for. The
- * *hour* they chose does not survive, and that also falls out rather than being
- * arranged: `HourChart` holds the selection as an instant, and an instant on
- * Tuesday matches no point in Thursday.
+ * move across the week -- which is the comparison the tabs exist for.
+ *
+ * **The hour survives too, and it did not always.** It used to fall out of
+ * `HourChart` holding the selection as an instant: an instant on Tuesday
+ * matches no point in Thursday, so the selection cleared itself. That was
+ * recorded here as a virtue and it was not one. The hour is now the page's
+ * rather than the chart's -- `selectedHour.tsx` -- and it is held as an hour of
+ * the day, so it resolves against whichever day is showing. A reader comparing
+ * 5 PM across the week is doing the same thing with the hour that the tabs let
+ * them do with the product, on the region this file already says the week
+ * selector exists to make comparable.
  *
  * **The heading names the day, because the region no longer always means
  * today.** It says "Today, hour by hour" on arrival and on today, and the

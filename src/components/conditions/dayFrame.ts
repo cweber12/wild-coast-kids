@@ -40,6 +40,34 @@ export interface DayBounds {
   sunsetMs: number;
 }
 
+const HOUR_MS = 3_600_000;
+
+/**
+ * Which hour of its day an instant falls in.
+ *
+ * **The one place the convention lives.** The chart draws the hours and the day
+ * panel computes which one is now, so without a shared definition the two could
+ * name one hour differently -- and the readout on the map reads the same value
+ * again. That is this module's own argument applied past the night band: two
+ * plots agreeing about a quantity is enforceable only when there is one
+ * definition of it.
+ *
+ * It is here rather than beside the selection it feeds because the selection
+ * module is `"use client"`, and the default is computed on the server. The
+ * hour's definition is day geometry; which hour a reader chose is not.
+ *
+ * **It is an index into the day rather than a clock hour**, and on the two days
+ * a year this coast changes offset the two diverge: `localMidnightOf` resolves
+ * the zone offset twice, so a fall-back day is twenty-five hours long. The
+ * chart's `hourLabel` reads this index as a clock hour and is wrong for it on
+ * those days. That defect predates the sharing and is inherited here rather
+ * than forked, so the two regions stay wrong together rather than
+ * disagreeing -- see ADR-0035's last consequence.
+ */
+export function hourOfDay(atMs: number, dayStartMs: number): number {
+  return Math.round((atMs - dayStartMs) / HOUR_MS);
+}
+
 /**
  * The dark ends of one day, in the caller's own plot units.
  *

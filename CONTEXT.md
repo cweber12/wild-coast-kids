@@ -195,6 +195,17 @@ The large plot inside the day panel: twenty-four hours across, night shaded,
 cloud as a band above, one of four series drawn at a time behind four tabs.
 _Avoid_: graph, the plot, day chart, timeline
 
+**Selected hour**:
+The one hour of the chosen day the day panel is showing. The hour chart marks
+it and states its figures — the hour, the reading, the sky and whether the sun
+was up. It **starts at the hour it is now**, and on the six days that are not
+today that means the same hour of the clock, so all seven behave alike. A
+reader who picks a different one keeps it as they move across the week and as
+they change product, which is how one hour is compared from day to day
+(ADR-0035). Night hours are ordinary: the panel draws the whole day, so an hour
+before dawn can be chosen and is stated like any other.
+_Avoid_: scrubbed hour, hovered hour, current time, the cursor, timestamp
+
 **Shore map**:
 The square picture beside the hour chart: this beach's own stretch of coast
 drawn heavier than the shore either side of it, and the open water washed in

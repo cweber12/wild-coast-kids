@@ -1,10 +1,40 @@
 import { describe, expect, test } from "vitest";
-import { fireEvent, render, screen } from "@testing-library/react";
+import {
+  fireEvent,
+  render as renderBare,
+  screen,
+} from "@testing-library/react";
 import { renderToStaticMarkup } from "react-dom/server";
+import type { ReactElement } from "react";
 import { HourChart, NARROW_FRAME } from "./HourChart";
+import { SelectedHourProvider } from "./selectedHour";
 import { TOUCH_TARGET } from "../ui/touchTarget";
 import type { SparkPoint } from "./DaySpark";
 import { localMidnightOf } from "@/lib/pacific-time";
+
+/**
+ * Every render mounts the chart the way the page does: inside the hour
+ * provider.
+ *
+ * **The chart no longer owns the hour**, so rendering it bare tests an
+ * arrangement the page never builds -- one where the columns and the stepper
+ * are drawn and the context's no-op `choose` swallows every press. `WeekGrid`
+ * has had the same property since `selectedDay.tsx` and answers it the same
+ * way: the component's own tests mount it under its provider, and what the
+ * provider and its consumers do to each other is asserted at the seam, in
+ * `selectedHour.test.tsx`.
+ *
+ * `currentHour` is null here rather than an hour, which is the read-went-wrong
+ * degradation `selectedHour.tsx` documents. It is the right fixture for this
+ * file: it keeps every test's premise -- nothing is selected until something
+ * selects it -- so these go on asserting this component's own behaviour rather
+ * than the default's, which is the seam's to assert.
+ */
+function render(ui: ReactElement) {
+  return renderBare(
+    <SelectedHourProvider currentHour={null}>{ui}</SelectedHourProvider>,
+  );
+}
 
 /**
  * One ordinary Pacific day. Every instant is derived from it rather than

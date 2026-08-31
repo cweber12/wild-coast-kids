@@ -69,6 +69,8 @@ import { MeasuredToday } from "./MeasuredToday";
 import { ReservedSlot } from "../ui/ReservedSlot";
 import type { CompassNeedle } from "./Compass";
 import { DayCompass, DayCompassSources, type CompassDay } from "./DayCompass";
+import { hourOfDay } from "./dayFrame";
+import { SelectedHourProvider } from "./selectedHour";
 import {
   GRID_MODEL_NOTE,
   GRID_NETWORK,
@@ -765,23 +767,48 @@ export async function DayPanel({ slug }: { slug: string }) {
     return { localDate: day.localDate, needles };
   });
 
+  /*
+    Which hour it is now, as an index into any of the seven days.
+
+    Computed here rather than in the client, because the page carries
+    `revalidate = 900` and a client reading its own clock would disagree with a
+    fifteen-minute-old cached render across an hour boundary and hydrate wrong.
+    It is the same reason `nowMs` is a prop rather than a `Date.now()` in the
+    plot, and the value comes from the same read, so the chart's now-line and
+    the hour it arrives on cannot name different hours.
+
+    `isToday` from the daylight read rather than `nowMs !== null` on the built
+    days, which is the distinction `nowMs`'s own comment above draws: six days
+    carry null and reading that as a contract would be reading a coincidence of
+    construction. `undefined` is unreachable -- `weekOfDays` is built from this
+    same instant, so exactly one of the seven is today -- and it is answered
+    with null rather than a made-up hour, because a page whose read went wrong
+    should select nothing visibly rather than midnight plausibly.
+  */
+  const today = daylight.days.find((day) => day.isToday);
+  const currentHour =
+    today === undefined
+      ? null
+      : hourOfDay(daylight.atMs, localMidnightOf(today.localDate));
+
   return (
     <section aria-labelledby="day-panel-heading">
-      <ChosenDay
-        days={days}
-        map={
-          shore === null ? null : (
-            <>
-              <ShoreMap
-                {...shore}
-                description={mapDescription(beach!.name)}
-                absence="We cannot place this beach on a map: the coordinates we hold for it are all one point."
-                noCoast="The coastline this site traces is the open coast, and it does not reach this beach."
-                coastCredit={`Shore traced from CDIP's model lines, which are computed a few hundred metres offshore — so the water's edge is drawn further out than the sand.`}
-                readout={<DayCompass days={compassDays} />}
-                readoutSources={<DayCompassSources days={compassDays} />}
-              />
-              {/*
+      <SelectedHourProvider currentHour={currentHour}>
+        <ChosenDay
+          days={days}
+          map={
+            shore === null ? null : (
+              <>
+                <ShoreMap
+                  {...shore}
+                  description={mapDescription(beach!.name)}
+                  absence="We cannot place this beach on a map: the coordinates we hold for it are all one point."
+                  noCoast="The coastline this site traces is the open coast, and it does not reach this beach."
+                  coastCredit={`Shore traced from CDIP's model lines, which are computed a few hundred metres offshore — so the water's edge is drawn further out than the sand.`}
+                  readout={<DayCompass days={compassDays} />}
+                  readoutSources={<DayCompassSources days={compassDays} />}
+                />
+                {/*
                 The sighting layer from #121, reserved *on* the map rather than
                 instead of it. Until this slice the slot stood where a map would
                 go and said a map was coming; the map is here, so what is
@@ -796,18 +823,19 @@ export async function DayPanel({ slug }: { slug: string }) {
                 which mocks this component and would pass while the slot said
                 nothing at all. No issue number, per the standing rule.
               */}
-              <div className="mt-4">
-                <ReservedSlot
-                  emoji="🐙"
-                  headline="Sightings will be drawn on this map."
-                  detail="Will show octopus, nudibranchs, sea hares and leopard sharks logged near this beach in the past week — reported by naturalists, not surveyed by us."
-                  density="row"
-                />
-              </div>
-            </>
-          )
-        }
-      />
+                <div className="mt-4">
+                  <ReservedSlot
+                    emoji="🐙"
+                    headline="Sightings will be drawn on this map."
+                    detail="Will show octopus, nudibranchs, sea hares and leopard sharks logged near this beach in the past week — reported by naturalists, not surveyed by us."
+                    density="row"
+                  />
+                </div>
+              </>
+            )
+          }
+        />
+      </SelectedHourProvider>
     </section>
   );
 }
