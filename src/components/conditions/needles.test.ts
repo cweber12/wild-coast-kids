@@ -151,7 +151,13 @@ describe("swellReadings", () => {
     atMs: number,
     heightFt: number,
     directionDegT: number | null,
-  ) => ({ atMs, heightFt, published: directionDegT !== null, directionDegT });
+  ) => ({
+    atMs,
+    heightFt,
+    published: directionDegT !== null,
+    periodS: directionDegT === null ? null : 14,
+    directionDegT,
+  });
 
   it("weights each of CDIP's bearings by the height that came with it", () => {
     expect(

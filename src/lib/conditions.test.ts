@@ -921,24 +921,28 @@ test("the day carries every hour of it, drawn between CDIP's own estimates", asy
       atMs: pacificHour(0, 2),
       heightFt: 2,
       published: true,
+      periodS: 14,
       directionDegT: 270,
     },
     {
       atMs: pacificHour(0, 3),
       heightFt: 3,
       published: false,
+      periodS: null,
       directionDegT: null,
     },
     {
       atMs: pacificHour(0, 4),
       heightFt: 4,
       published: false,
+      periodS: null,
       directionDegT: null,
     },
     {
       atMs: pacificHour(0, 5),
       heightFt: 5,
       published: true,
+      periodS: 14,
       directionDegT: 270,
     },
   ]);
@@ -965,6 +969,29 @@ test("only CDIP's own estimates carry a direction, never the hours between", asy
   ]);
 });
 
+test("each estimate carries its own period, and the hours between carry none", async () => {
+  // The period moves between published points -- the committed fixture goes
+  // from 16.67 s to 15.38 s inside one day -- so a row stating an hour's swell
+  // cannot take its period from the day's selected estimate and its height from
+  // the hour. It is null between them because nothing draws a period curve: the
+  // height is interpolated because a polyline needs a value at every hour, and
+  // that need is the whole of the licence.
+  mopRows([
+    { atMs: pacificHour(0, 2), heightFt: 2, periodS: 16.666668 },
+    { atMs: pacificHour(0, 5), heightFt: 5, periodS: 15.384616 },
+  ]);
+
+  const view = await readWaveWeek(BEACH, NOON_PACIFIC_20260817);
+
+  if (view.state.kind !== "week") throw new Error("expected a week");
+  expect(view.state.days[0].hours.map((hour) => hour.periodS)).toEqual([
+    16.666668,
+    null,
+    null,
+    15.384616,
+  ]);
+});
+
 test("the hours before the grid's first estimate come from the day before", async () => {
   // In Pacific time CDIP's UTC grid lands at 02:00, so midnight and 1 AM fall
   // between the previous day's last estimate and this day's first. Bucketing
@@ -984,18 +1011,21 @@ test("the hours before the grid's first estimate come from the day before", asyn
       atMs: pacificHour(0, 0),
       heightFt: 2,
       published: false,
+      periodS: null,
       directionDegT: null,
     },
     {
       atMs: pacificHour(0, 1),
       heightFt: 3,
       published: false,
+      periodS: null,
       directionDegT: null,
     },
     {
       atMs: pacificHour(0, 2),
       heightFt: 4,
       published: true,
+      periodS: 14,
       directionDegT: 270,
     },
   ]);
@@ -1019,12 +1049,14 @@ test("a gap wider than the grid is left empty rather than drawn across", async (
       atMs: pacificHour(0, 2),
       heightFt: 2,
       published: true,
+      periodS: 14,
       directionDegT: 270,
     },
     {
       atMs: pacificHour(0, 11),
       heightFt: 8,
       published: true,
+      periodS: 14,
       directionDegT: 270,
     },
   ]);

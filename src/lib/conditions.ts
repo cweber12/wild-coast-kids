@@ -922,6 +922,23 @@ export interface WaveHour {
   /** True when CDIP issued an estimate for this instant. */
   published: boolean;
   /**
+   * Peak period in seconds, and `null` on every drawn hour.
+   *
+   * **Interpolable, and deliberately not interpolated** -- which is what makes
+   * this a different case from `directionDegT` below rather than a second copy
+   * of it. A period is a scalar and the average of two of them would be
+   * arithmetic that means something. It is null between estimates because
+   * nothing draws a period curve: the height carries a value at every hour
+   * because a polyline needs one, and that need is the whole of the licence.
+   *
+   * What reads it is the readout on the shore map, which states one hour's
+   * height, period and direction off a single published step so that a row
+   * never puts two instants beside each other (ADR-0035). A drawn period would
+   * be a number this repo made up sitting inside that row, indistinguishable
+   * from the two around it that CDIP issued.
+   */
+  periodS: number | null;
+  /**
    * Peak direction in degrees true, and `null` on every drawn hour.
    *
    * **A bearing is not interpolable the way a height is**, and the arithmetic
@@ -1063,6 +1080,7 @@ function hourlyWaveHeights(rows: readonly MopWaveRow[]): WaveHour[] {
       atMs: row.atMs,
       heightFt: row.heightFt,
       published: true,
+      periodS: row.periodS,
       directionDegT: row.directionDegT,
     });
 
@@ -1078,6 +1096,7 @@ function hourlyWaveHeights(rows: readonly MopWaveRow[]): WaveHour[] {
         atMs,
         heightFt: row.heightFt + (next.heightFt - row.heightFt) * through,
         published: false,
+        periodS: null,
         directionDegT: null,
       });
     }
