@@ -45,6 +45,7 @@
 import type { ReactNode } from "react";
 import type { Bounds, Position, ShorePoint } from "@/lib/coastline";
 import { projectionFor } from "@/lib/coastline";
+import { cornerFor, READOUT_BOX, readoutStyle } from "./corner";
 
 export type ShoreMapProps = {
   /** The windowed coast in walk order. Empty draws no shoreline and says so. */
@@ -78,35 +79,42 @@ export type ShoreMapProps = {
    */
   coastCredit: string;
   /**
-   * The dial, already rendered, placed in the map's own drawing space.
+   * The weather readout, already rendered, laid over a corner of the picture.
    *
-   * A slot rather than data, because the needles change with the day a reader
+   * A slot rather than data, because the readout changes with the day a reader
    * picks and this picture does not: the map is built once on the server and
    * this is the one part of it that varies. `DayCompass` is what fills it.
    *
-   * It is translated onto the beach's own stretch of coast rather than left at
-   * the frame's middle, because the frame is sized by the sources -- at
-   * `mission-beach` a station nine kilometres away puts the middle of the frame
-   * out in the county, and needles arriving there arrive at nothing.
+   * **HTML over the frame rather than a group inside it**, which is the change
+   * ADR-0034 records. It used to be translated into the map's own drawing space
+   * and anchored on the beach's stretch of coast, where it covered the one
+   * thing the picture exists to show. It is now positioned in CSS against the
+   * map's box, and which corner it lands in is measured rather than fixed —
+   * see `corner.ts`.
    *
-   * Withheld along with everything else when there is no coast to read a
-   * bearing against. See `compassSources`.
+   * **Rendered on every beach, including the 23 the traced coast does not
+   * reach.** The dial was withheld there, on the rule that a bearing read
+   * against no shoreline is the bare gauge the brief's anti-references open
+   * with. That rule was about a needle drawn over an empty frame; a labelled
+   * readout with units, a word for the direction and a provenance line beneath
+   * is not that thing. Withholding it meant nearly half the inventory printed
+   * no wind figure anywhere on the picture. See ADR-0034.
    */
-  compass?: ReactNode;
+  readout?: ReactNode;
   /**
-   * What the dial says, printed beneath the picture.
+   * Where the readout's figures came from, printed beneath the picture.
    *
-   * Two slots and not one, because the dial is drawn inside the frame and read
-   * outside it. The `<svg>` is one `role="img"`, so nothing drawn in it reaches
-   * the accessibility tree, and this block is the dial's text equivalent rather
-   * than a caption on it.
+   * Two slots and not one, because attribution belongs under the picture rather
+   * than on it: the map is already the densest thing in this column, and
+   * `ShoreMap`'s own coast credit sits in the same place for the same reason.
    *
-   * **Both halves go together, and go together with the coast.** A dial drawn
-   * with its sources missing is an unattributed figure; sources printed under a
-   * map with no dial name a needle nobody can see. On the 23 beaches the traced
-   * coast does not reach, neither is rendered.
+   * **Both halves go together.** A readout with its sources missing is an
+   * unattributed figure, and sources printed under a map with no readout name a
+   * bearing nobody can see. Neither is now tied to the coast: they arrive
+   * together on all 51 beaches, or not at all on a day no feed gave a bearing
+   * for, which is the caller's decision rather than this component's.
    */
-  compassSources?: ReactNode;
+  readoutSources?: ReactNode;
 };
 
 /**
@@ -118,6 +126,17 @@ export type ShoreMapProps = {
  */
 const WIDTH = 100;
 const HEIGHT = 100;
+
+/**
+ * The same two numbers as a box, for the things that reason about the frame
+ * rather than draw into it.
+ *
+ * One definition, passed to both, so the readout's footprint and the map's
+ * viewBox cannot drift apart. `corner.ts` measures in these units and
+ * `readoutStyle` converts them to percentages, which is exact because the frame
+ * is square and the picture is drawn `w-full` at `h-auto`.
+ */
+const FRAME = { width: WIDTH, height: HEIGHT };
 
 /**
  * Far enough that the sea polygon always leaves the frame.
@@ -192,8 +211,8 @@ export function ShoreMap({
   absence,
   noCoast,
   coastCredit,
-  compass = null,
-  compassSources = null,
+  readout = null,
+  readoutSources = null,
 }: ShoreMapProps) {
   if (bounds === null) {
     return <p className="text-2xs text-fog italic">{absence}</p>;
@@ -212,93 +231,120 @@ export function ShoreMap({
 
   const sea = hasCoast ? seaPath(path, drawn) : null;
 
-  /*
-    Where the dial stands: the middle of the beach's own drawn stretch.
+  const drawnSegment =
+    segment === null || segment.length < 2
+      ? []
+      : segment.map((point) => project(point.lat, point.lon));
 
-    Null wherever that stretch is not a run of the coast, which is exactly the
-    23 beaches the traced coastline does not reach. That is not an
-    implementation detail standing in for the rule -- a bearing read against no
-    shoreline is the bare gauge the brief's anti-references open with -- but the
-    two conditions are the same one, so the map cannot draw a dial it has
-    nothing to draw it against.
+  /*
+    Which corner the readout stands in, or null when there is no readout.
+
+    **The coast is no longer a condition**, which is the change ADR-0034's last
+    clause records. It was one: a bearing read against no shoreline was held to
+    be the bare gauge the brief opens its anti-references with, so the 23
+    beaches in Mission Bay and San Diego Bay printed no wind figure anywhere on
+    the picture. That objection was about a needle drawn over an empty frame,
+    and this is a labelled block with units and a publisher under it.
+
+    The corner is measured against everything the map draws -- the windowed
+    coast and this beach's own stretch -- rather than against the segment alone.
+    The plan asked only for the segment; measured, an adaptive corner clears
+    both on every beach in the inventory, so there was no reason but arithmetic
+    to leave the coastline out and the arithmetic did not charge for it. On a
+    beach with neither, every corner is clear and the first is taken.
   */
-  const anchor =
-    compass === null || !hasCoast || segment === null || segment.length < 2
+  const corner =
+    readout === null
       ? null
-      : (() => {
-          const middle = segment[Math.floor(segment.length / 2)];
-          return project(middle.lat, middle.lon);
-        })();
+      : cornerFor([...drawn, ...drawnSegment], READOUT_BOX, FRAME);
+
+  const rightHanded = corner === "top-right" || corner === "bottom-right";
 
   return (
     <div>
-      <svg
-        role="img"
-        aria-label={description}
-        viewBox={`0 0 ${WIDTH} ${HEIGHT}`}
-        className="rounded-tile border-[1.5px] border-ocean block h-auto w-full bg-white/60"
-      >
+      {/*
+        The wrapper the readout is positioned against, and it wraps the picture
+        alone. The coast credit below must stay outside it: an overlay measured
+        against a box that included a line of prose would be measured against a
+        box that is not square, and the readout's footprint is in the map's own
+        units precisely because those two agree.
+      */}
+      <div className="relative">
+        <svg
+          role="img"
+          aria-label={description}
+          viewBox={`0 0 ${WIDTH} ${HEIGHT}`}
+          className="rounded-tile border-[1.5px] border-ocean block h-auto w-full bg-white/60"
+        >
+          {/*
+            One wash, no gradient and no depth. The sea is the only filled
+            region on this map, so a reader can tell water from land at a glance
+            without a legend -- and it is a flat tint rather than a shaded one,
+            because shading implies depth and depth here would be invented.
+          */}
+          {sea !== null && (
+            <path
+              d={sea.d}
+              className="fill-ocean"
+              fillOpacity={0.16}
+              data-sea=""
+            />
+          )}
+
+          {hasCoast && (
+            <path
+              d={path}
+              fill="none"
+              className="stroke-ocean"
+              strokeWidth={1.2}
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              vectorEffect="non-scaling-stroke"
+              data-coast=""
+            />
+          )}
+
+          {/*
+            This beach's own stretch, heavier than the coast it sits on. Weight
+            rather than only hue: the two are the same ocean, so a reader who
+            sees no colour still sees which part of the shore they chose.
+          */}
+          {drawnSegment.length > 0 && (
+            <path
+              d={drawnSegment
+                .map(
+                  (at, index) =>
+                    `${index === 0 ? "M" : "L"}${at.x.toFixed(2)} ${at.y.toFixed(2)}`,
+                )
+                .join(" ")}
+              fill="none"
+              className="stroke-purple-deep"
+              strokeWidth={3.5}
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              vectorEffect="non-scaling-stroke"
+              data-segment=""
+            />
+          )}
+        </svg>
+
         {/*
-          One wash, no gradient and no depth. The sea is the only filled region
-          on this map, so a reader can tell water from land at a glance without
-          a legend -- and it is a flat tint rather than a shaded one, because
-          shading implies depth and depth here would be invented.
+          Over the picture rather than in it, in the corner the geometry left
+          free. The box is set from `READOUT_BOX` rather than from the content,
+          so what the overlay occupies and what `cornerFor` was asked to keep
+          clear are one number: a block that grew past its footprint would make
+          the inventory-wide check a claim about a box nothing draws.
         */}
-        {sea !== null && (
-          <path
-            d={sea.d}
-            className="fill-ocean"
-            fillOpacity={0.16}
-            data-sea=""
-          />
-        )}
-
-        {hasCoast && (
-          <path
-            d={path}
-            fill="none"
-            className="stroke-ocean"
-            strokeWidth={1.2}
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            vectorEffect="non-scaling-stroke"
-            data-coast=""
-          />
-        )}
-
-        {/*
-          This beach's own stretch, heavier than the coast it sits on. Weight
-          rather than only hue: the two are the same ocean, so a reader who sees
-          no colour still sees which part of the shore they chose.
-        */}
-        {segment !== null && segment.length > 1 && (
-          <path
-            d={segment
-              .map((point, index) => {
-                const at = project(point.lat, point.lon);
-                return `${index === 0 ? "M" : "L"}${at.x.toFixed(2)} ${at.y.toFixed(2)}`;
-              })
-              .join(" ")}
-            fill="none"
-            className="stroke-purple-deep"
-            strokeWidth={3.5}
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            vectorEffect="non-scaling-stroke"
-            data-segment=""
-          />
-        )}
-
-        {/* Last, so the dial sits over the coast rather than under it. */}
-        {anchor !== null && (
-          <g
-            transform={`translate(${anchor.x.toFixed(2)} ${anchor.y.toFixed(2)})`}
-            data-compass-anchor=""
+        {corner !== null && (
+          <div
+            className={`absolute flex p-1.5 ${rightHanded ? "justify-end" : "justify-start"}`}
+            style={readoutStyle(corner, READOUT_BOX, FRAME)}
+            data-readout-corner={corner}
           >
-            {compass}
-          </g>
+            {readout}
+          </div>
         )}
-      </svg>
+      </div>
 
       {hasCoast ? (
         <p className="text-2xs text-fog mt-2 italic">{coastCredit}</p>
@@ -306,7 +352,7 @@ export function ShoreMap({
         <p className="text-2xs text-fog mt-2 italic">{noCoast}</p>
       )}
 
-      {anchor !== null && compassSources}
+      {corner !== null && readoutSources}
     </div>
   );
 }

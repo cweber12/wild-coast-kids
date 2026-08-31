@@ -74,14 +74,22 @@ import {
   GRID_NETWORK,
   GRID_SOURCE,
   gridCellCaveat,
+  windFigure,
 } from "./gridCell";
 import {
   MOP_MODEL_NOTE,
   MOP_NETWORK,
   mopLineDistanceKm,
   mopLineSource,
+  swellFigure,
+  swellStepNote,
 } from "./mopLine";
-import { gridWindReadings, needleFrom, swellReadings } from "./needles";
+import {
+  gridWindReadings,
+  needleFrom,
+  peakInDaylight,
+  swellReadings,
+} from "./needles";
 import type { ProvenanceFacts } from "./ProvenanceLine";
 import { ShoreMap } from "./ShoreMap";
 import { shoreViewFor } from "./shore";
@@ -306,7 +314,7 @@ function cloudBandDescription(
  * Says what the picture is and nothing about what the shape of the coast
  * means. A reader hearing this should learn the same thing a reader seeing it
  * does: where this beach is on its own coast, and which side the water is on.
- * The dial's own bearings are spoken separately, under the picture, because
+ * The readout's own bearings are spoken separately, in its own rows, because
  * they change with the day and this does not.
  */
 function mapDescription(beachName: string): string {
@@ -605,7 +613,7 @@ export async function DayPanel({ slug }: { slug: string }) {
   /*
     The map is built once and handed over, outside the seven days, because it
     is the same picture on all seven: this beach, its own stretch of coast, and
-    the water beside it. Only the dial drawn on it changes with the day, and
+    the water beside it. Only the readout laid over it changes with the day, and
     that travels separately. It is also the one thing in this region that reads
     no feed -- `beaches.json` and `mop-lines.json` are committed -- so it cannot
     go quiet and does not belong behind a Suspense boundary.
@@ -663,6 +671,38 @@ export async function DayPanel({ slug }: { slug: string }) {
             swellReadings(swellDay.hours, day.sunriseMs, day.sunsetMs),
           );
 
+    /*
+      How much of each there was, worded here because the copy on this page is
+      the caller's.
+
+      **Both are the largest thing the daylight window holds**, which is one
+      rule and is why the two rows can be labelled the same way. The swell's
+      selection is `readWaveWeek`'s and is a three-hour step CDIP published; the
+      wind's is made here out of hours the gridpoint publishes one by one, so
+      the wind figure is exact to the hour and the swell figure can sit up to
+      ninety minutes off its real peak. That difference is what the swell's
+      provenance line says and the wind's does not.
+
+      **One decimal on the wind, which is the precision the chart states.** Four
+      of the five places this page prints a wind figure use `toFixed(1)` and the
+      fifth uses `toFixed(0)`, which is issue #191 -- 11.5 spoken as 12 to the
+      one reader who cannot see the axis. This is a sixth statement of that
+      figure and it joins the four rather than the one, so #191 stays a defect
+      about `gridDescription` alone rather than gaining a second site.
+    */
+    const windPeak =
+      gridDay === undefined
+        ? null
+        : peakInDaylight(gridDay.windMph, day.sunriseMs, day.sunsetMs);
+
+    /*
+      The swell's estimate, taken beside the needle rather than inside the
+      branch that pushes the row. `readWaveWeek` made this selection once and
+      the week grid prints the same object, which is what stops the map and the
+      grid stating different numbers for one day.
+    */
+    const reading = swellDay === undefined ? null : swellDay.daylight;
+
     const needles: CompassNeedle[] = [];
 
     /*
@@ -677,9 +717,23 @@ export async function DayPanel({ slug }: { slug: string }) {
         label: "Wind",
         fromDegT: wind.fromDegT,
         spreadDeg: wind.spreadDeg,
-        source: GRID_SOURCE,
-        network: GRID_NETWORK,
-        note: cellNote,
+        figure: windFigure(windPeak),
+        provenance: {
+          /*
+            The superlative is in the label, which is `WaveWeek`'s rule and its
+            reason: a single figure under the bare word invites a reader to take
+            it for the day's typical wind, which is the one thing it is not.
+
+            No distance, which is the omission the cloud row and the chart's own
+            cell line already make: a cell is a 2.5 km square of map with the
+            beach somewhere inside it, so "about n km from this beach" would be
+            a figure about nothing.
+          */
+          label: "Biggest wind in daylight",
+          source: GRID_SOURCE,
+          network: GRID_NETWORK,
+          note: cellNote,
+        },
       });
     }
 
@@ -689,9 +743,22 @@ export async function DayPanel({ slug }: { slug: string }) {
         label: "Swell",
         fromDegT: swell.fromDegT,
         spreadDeg: swell.spreadDeg,
-        source: mopLineSource(waves.line.id),
-        network: MOP_NETWORK,
-        note: MOP_MODEL_NOTE,
+        figure: swellFigure(reading),
+        provenance: {
+          label: "Biggest swell in daylight",
+          source: mopLineSource(waves.line.id),
+          network: MOP_NETWORK,
+          distanceKm: mopLineDistanceKm(waves.line.distanceM),
+          /*
+            The step's own time, which used to be printed beside the figure and
+            belongs here instead. `WaveReading.timeLabel` is a bucket rather
+            than a peak located to the minute -- MOP publishes every three hours
+            -- so a reader owed the figure is also owed which three hours it is
+            for, and the readout has no room to say it. Withheld along with the
+            figure on a day the forecast does not reach.
+          */
+          note: swellStepNote(reading),
+        },
       });
     }
 
@@ -711,8 +778,8 @@ export async function DayPanel({ slug }: { slug: string }) {
                 absence="We cannot place this beach on a map: the coordinates we hold for it are all one point."
                 noCoast="The coastline this site traces is the open coast, and it does not reach this beach."
                 coastCredit={`Shore traced from CDIP's model lines, which are computed a few hundred metres offshore — so the water's edge is drawn further out than the sand.`}
-                compass={<DayCompass days={compassDays} />}
-                compassSources={<DayCompassSources days={compassDays} />}
+                readout={<DayCompass days={compassDays} />}
+                readoutSources={<DayCompassSources days={compassDays} />}
               />
               {/*
                 The sighting layer from #121, reserved *on* the map rather than

@@ -96,6 +96,39 @@ export function swellReadings(
 }
 
 /**
+ * The largest value this series reaches while the sun is up, or nothing.
+ *
+ * **The wind's answer to `WaveReading`**, and deliberately the same rule. CDIP
+ * publishes a three-hour step and `readWaveWeek` selects the daylight one that
+ * carried the largest height; the gridpoint publishes every hour and nothing
+ * selects among them, so this does. Both figures are then the largest thing the
+ * daylight window holds, which is what lets the two rows of the readout be
+ * worded once instead of each explaining its own selection.
+ *
+ * **Daylight rather than the whole day**, for the reason `gridWindReadings`
+ * gives above and `ADR-0023` gives for the week: a figure a reader cannot be
+ * there for is not the figure they came for.
+ *
+ * `null` on an absent series and on a day whose daylight window the forecast
+ * does not reach -- a ragged row is a forecast doing what forecasts do, and a
+ * zero would be a drawn calm that nobody predicted.
+ */
+export function peakInDaylight(
+  series: GridDaySeries,
+  sunriseMs: number,
+  sunsetMs: number,
+): number | null {
+  if (series.kind !== "published") return null;
+
+  let peak: number | null = null;
+  for (const hour of series.hours) {
+    if (hour.atMs < sunriseMs || hour.atMs >= sunsetMs) continue;
+    if (peak === null || hour.value > peak) peak = hour.value;
+  }
+  return peak;
+}
+
+/**
  * A day's readings as one needle, or nothing to draw.
  *
  * **Both numbers or neither.** An arc with no needle in it says the wind had a

@@ -12,7 +12,7 @@ import { fireEvent, render, screen } from "@testing-library/react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { localMidnightOf } from "@/lib/pacific-time";
 import { ChosenDay, type DayView } from "./ChosenDay";
-import { DayCompassSources, type CompassDay } from "./DayCompass";
+import { DayCompass, type CompassDay } from "./DayCompass";
 import { SelectedDayProvider } from "./selectedDay";
 import { WeekGrid, type WeekDay, type WeekRow } from "./WeekGrid";
 import type { SparkPoint } from "./DaySpark";
@@ -107,7 +107,7 @@ const VIEWS = DATES.map((_, index) => dayView(index));
 /**
  * One needle per day, each from a different quarter.
  *
- * The dial travels beside the map rather than inside `DayView`, because the map
+ * The readout travels beside the map rather than inside `DayView`, because the map
  * is one picture for the whole week and the needles are not. That makes it a
  * second consumer of the same choice, which is what this file exists to assert.
  */
@@ -119,9 +119,12 @@ const COMPASS_DAYS: CompassDay[] = DATES.map((localDate, index) => ({
       label: "Wind",
       fromDegT: [90, 180, 270][index],
       spreadDeg: 20,
-      source: "this beach's own grid cell",
-      network: "National Weather Service, San Diego",
-      note: null,
+      figure: "11.5 mph",
+      provenance: {
+        label: "Biggest wind in daylight",
+        source: "this beach's own grid cell",
+        network: "National Weather Service, San Diego",
+      },
     },
   ],
 }));
@@ -350,7 +353,7 @@ test("a region outside the provider shows its first day rather than failing", ()
   expect(drawnDay(container)).toBe(`Tide on ${DATES[0]}`);
 });
 
-test("the dial on the map follows the chosen day, and the map does not", () => {
+test("the readout on the map follows the chosen day, and the map does not", () => {
   // The second consumer of the one choice. The needles are per day and the
   // coast is not, so the picture stays exactly where it was while the bearing
   // under it changes -- which is the whole reason the compass is a client
@@ -358,15 +361,17 @@ test("the dial on the map follows the chosen day, and the map does not", () => {
   const { container } = renderBoth(
     <>
       <p data-test-coast="">One coastline, drawn once</p>
-      <DayCompassSources days={COMPASS_DAYS} />
+      <DayCompass days={COMPASS_DAYS} />
     </>,
   );
 
-  expect(screen.getByText(/from the east, 90°/)).toBeDefined();
+  expect(screen.getByRole("img", { name: /from the east, 90°/ })).toBeDefined();
 
   fireEvent.click(container.querySelector(`[data-day-choice="${DATES[2]}"]`)!);
 
-  expect(screen.getByText(/from the west, 270°/)).toBeDefined();
-  expect(screen.queryByText(/from the east, 90°/)).toBeNull();
+  expect(
+    screen.getByRole("img", { name: /from the west, 270°/ }),
+  ).toBeDefined();
+  expect(screen.queryByRole("img", { name: /from the east, 90°/ })).toBeNull();
   expect(screen.getByText("One coastline, drawn once")).toBeDefined();
 });

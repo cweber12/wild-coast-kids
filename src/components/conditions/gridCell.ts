@@ -66,6 +66,27 @@ export function gridCellCaveat(elevationM: number | null): string | null {
 }
 
 /**
+ * A wind speed as this page states it.
+ *
+ * **One decimal, which is the precision the day chart states.** Four of the
+ * five places this page prints a wind figure use it and the fifth uses none --
+ * that is issue #191, where a reader is told the day tops at 12 mph and then,
+ * on reaching the hour it happens at, that it is 11.5. Anything printing a
+ * sixth wind figure joins the four rather than the one, so that issue stays a
+ * defect about `gridDescription` alone.
+ *
+ * The trailing zero is kept for the same reason `swellFigure` keeps one: "14
+ * mph" and "14.0 mph" claim different precisions, and the axis this figure has
+ * to agree with prints the second.
+ *
+ * `null` in and `null` out, like `mopLineDistanceKm`: a cell that published a
+ * direction and no speed is a ragged forecast, not a fault.
+ */
+export function windFigure(mph: number | null): string | null {
+  return mph === null ? null : `${mph.toFixed(1)} mph`;
+}
+
+/**
  * A forecast phenomenon in the register the page already writes in.
  *
  * The service publishes `fog` with coverage `patchy`, and its own plain-language

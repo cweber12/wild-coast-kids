@@ -37,20 +37,21 @@
  * alike in a column — which is why `ConditionsNotes` says which is which rather
  * than leaving a reader to assume they are the same kind of figure.
  *
- * **Whole seconds.** CDIP publishes the peak period as a float — 16.666668 —
- * because it is the reciprocal of a spectral frequency bin, not a measurement
- * to six decimal places. The buoy card beside this one prints whole seconds
- * because NDBC publishes whole seconds, and two wave products on one page
- * printing periods to different precisions would imply one of them is the more
- * exact.
+ * **The two figures are worded by `swellFigure`, not here**, because the shore
+ * map's readout prints the same `WaveReading` — the same three-hour step,
+ * selected once by `readWaveWeek` — a screen away. Two call sites each wording
+ * one fact is what `ProvenanceLine`'s docstring records the cost of, and here
+ * the cost would be the grid and the map stating different numbers for
+ * Thursday. That helper carries the reasons that used to be written here: whole
+ * seconds, because CDIP publishes the period as the reciprocal of a spectral
+ * frequency bin and the buoy card beside this prints whole seconds; and an
+ * interpunct rather than a space, because "0.8 ft 5 s" is two numbers a reader
+ * has to separate.
  *
- * **One line, at every width**, with an interpunct between the two figures
- * rather than a space — "0.8 ft 5 s" is two numbers a reader has to separate,
- * and ` · ` is what `ProvenanceLine` already uses to separate facts in running
- * text. Measured: `11:00 AM 0.7 ft · 6 s` is 117px against 125px in the
- * narrowest seven-column cell the grid now has, and 189px at 1024. This is the
- * longest line in the cell and the one that decided seven columns could not
- * start before `xl`.
+ * **One line, at every width.** Measured: `11:00 AM 0.7 ft · 6 s` is 117px
+ * against 125px in the narrowest seven-column cell the grid now has, and 189px
+ * at 1024. This is the longest line in the cell and the one that decided seven
+ * columns could not start before `xl`.
  *
  * **No cell where the forecast does not reach.** That is the caller's doing
  * rather than this component's: `readWaveWeek` returns only the days it has,
@@ -68,6 +69,7 @@
  */
 
 import type { WaveWeekDay } from "@/lib/conditions";
+import { swellFigure } from "./mopLine";
 import { SWELL_TONE } from "./weekTone";
 
 /** What every day of this row shares: the words that name it, and its colour. */
@@ -93,10 +95,7 @@ export function WaveWeek({ day }: { day: Pick<WaveWeekDay, "daylight"> }) {
         `ReadingCard` records hitting in the accessible-name algorithm.
       */}
       <span className="font-extrabold">{day.daylight.timeLabel}</span>{" "}
-      <span className="text-fog">
-        {day.daylight.heightFt.toFixed(1)} ft ·{" "}
-        {Math.round(day.daylight.periodS)} s
-      </span>
+      <span className="text-fog">{swellFigure(day.daylight)}</span>
     </>
   );
 }

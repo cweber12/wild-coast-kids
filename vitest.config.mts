@@ -286,12 +286,68 @@ export default defineConfig({
       // and `DayPanel` at 97.53% statements, whose uncovered statement is the
       // sentence for a CDIP outage that suite does not provoke.
       thresholds: {
-        // Back up a hundredth of a point each when the needles gained their
-        // labels, which are covered like everything else in `Compass.tsx`.
-        statements: 89.44,
-        branches: 88.94,
-        functions: 94.28,
-        lines: 89.14,
+        // RAISED 2026-08-31, all four, by the map's corner readout (#192).
+        // The ordinary direction and the easy case -- the signature is all
+        // four moving the same way, with both halves of every ratio growing
+        // and the numerators growing faster:
+        //
+        //   statements 2749/3069  89.44 -> 89.57
+        //   branches   1793/2010  88.94 -> 89.20
+        //   functions   634/672   94.28 -> 94.34
+        //   lines      2481/2779  89.14 -> 89.27
+        //
+        // `corner.ts` arrived at 100% on all four and does not appear in the
+        // report's table at all; `Compass.tsx` went back to 100% on all four
+        // as the dial's geometry left it. The two files this slice modified
+        // and did not finish clean are named rather than absorbed, and both
+        // are unchanged from before it: `ShoreMap.tsx` at 97.29% branches,
+        // whose one uncovered branch is the `|| 1` divide-by-zero guard for a
+        // drawn run whose ends project to the same point, and `DayPanel.tsx`
+        // at 97.7% statements, whose uncovered statement is the sentence for a
+        // CDIP outage that suite does not provoke.
+        //
+        // Nothing new is excluded. The same 0% entry-plumbing files named
+        // above still drag all four down in plain sight.
+        //
+        // RAISED again 2026-08-31, all four, by the magnitudes joining the
+        // readout's rows. Both halves of every ratio grew and the numerators
+        // grew faster:
+        //
+        //   statements 2764/3084  89.57 -> 89.62
+        //   branches   1815/2032  89.20 -> 89.32
+        //   functions   638/676   94.34 -> 94.37
+        //   lines      2493/2791  89.27 -> 89.32
+        //
+        // **Branches went down before they went up, and the dip is the part
+        // worth recording.** Wording the two magnitudes inline in `DayPanel`
+        // added four branches for the same fact -- a source that gave a
+        // direction and no magnitude -- and none of them could be reached from
+        // that component: a wind needle exists only where the speeds and the
+        // bearings joined, so a null peak beside a drawn needle is not a state
+        // `DayPanel` can be put in. Moving the wording into `windFigure`,
+        // `swellFigure` and `swellStepNote` -- null in, null out, which is
+        // `mopLineDistanceKm`'s shape -- put each of those arms somewhere a
+        // unit test can call it. The alternative was four branches covered by
+        // nothing and explained here, which is what this file already carries
+        // too much of.
+        //
+        // BRANCHES LOWERED 2026-08-31 under REASON 2, by the readout reaching
+        // all 51 beaches. Nothing became untested: the coast gate --
+        // `!hasCoast || drawnSegment.length === 0` -- was fully covered and is
+        // deleted, so three branch arms left and the surviving denominator
+        // tilts further toward the 0% entry plumbing.
+        //
+        //   branches 1815/2032 -> 1812/2029   89.32 -> 89.30
+        //
+        // **The numerator fell by exactly what the denominator did**, which is
+        // what says every deleted arm was covered; a regression drops the
+        // numerator alone and reads identically in the failure message. The
+        // other three are unmoved, because the slice deleted a condition rather
+        // than a statement, a function or a line.
+        statements: 89.62,
+        branches: 89.3,
+        functions: 94.37,
+        lines: 89.32,
       },
     },
   },

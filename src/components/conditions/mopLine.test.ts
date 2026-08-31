@@ -4,6 +4,8 @@ import {
   MOP_NETWORK,
   mopLineDistanceKm,
   mopLineSource,
+  swellFigure,
+  swellStepNote,
 } from "./mopLine";
 
 describe("mopLineSource", () => {
@@ -47,5 +49,58 @@ describe("the words the page uses about this feed", () => {
     // ADR-0016 turns on a reader being able to tell the modelled height from
     // the measured one on the same page.
     expect(MOP_MODEL_NOTE).toContain("not a measurement");
+  });
+});
+
+describe("swellFigure", () => {
+  test("one decimal of feet and whole seconds", () => {
+    // CDIP publishes the peak period as the reciprocal of a spectral frequency
+    // bin -- 16.666668 -- rather than as a measurement to six decimal places,
+    // and the buoy card beside this prints whole seconds because NDBC does.
+    expect(swellFigure({ heightFt: 3.42, periodS: 16.666668 })).toBe(
+      "3.4 ft · 17 s",
+    );
+  });
+
+  test("keeps a trailing zero, because the figure is a measurement", () => {
+    // "2 ft" and "2.0 ft" claim different precisions, and the grid's other
+    // heights are all one decimal.
+    expect(swellFigure({ heightFt: 2, periodS: 14 })).toBe("2.0 ft · 14 s");
+  });
+
+  test("separates the two figures rather than running them together", () => {
+    // "0.8 ft 5 s" is two numbers a reader has to separate. The interpunct is
+    // what `ProvenanceLine` already uses to separate facts in running text.
+    expect(swellFigure({ heightFt: 0.8, periodS: 5 })).toContain(" · ");
+  });
+
+  test("no estimate is no figure, rather than a drawn flat sea", () => {
+    // The shape `mopLineDistanceKm` already has, and here for the same reason:
+    // a day the forecast does not reach is a ragged forecast rather than a
+    // fault, and a caller that branched on it would be a second place deciding
+    // what a missing estimate looks like.
+    expect(swellFigure(null)).toBeNull();
+  });
+});
+
+describe("swellStepNote", () => {
+  test("names the three-hour step the estimate is for", () => {
+    // MOP publishes every three hours, so the real peak can fall up to ninety
+    // minutes either side of the time printed. The word "step" is what keeps a
+    // reader from taking it for a peak located to the minute, the way the tide
+    // row's turning point above it is.
+    expect(swellStepNote({ timeLabel: "2:00 PM" })).toContain(
+      "for the three-hour step at 2:00 PM",
+    );
+  });
+
+  test("keeps saying the figure is modelled, with or without a time", () => {
+    // ADR-0016 turns on a reader being able to tell the modelled height from
+    // the measured one on the same page, so the clause survives the absence.
+    expect(swellStepNote({ timeLabel: "2:00 PM" })).toContain(
+      "not a measurement",
+    );
+    expect(swellStepNote(null)).toContain("not a measurement");
+    expect(swellStepNote(null)).not.toContain("three-hour step");
   });
 });
