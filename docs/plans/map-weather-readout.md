@@ -460,7 +460,7 @@ survives as the wedge: a narrow one is a day that had a direction and a near-blo
 is a day that did not, which is the reading ADR-0034 already built the wedge for.
 The week grid and the hour chart carry the day's figures either way.
 
-### The six decisions
+### The seven decisions
 
 **The caption is always present, and it names the hour.** Without it the block
 still changes its numbers with nothing visible saying what they now mean, which
@@ -564,9 +564,37 @@ states the hour a reader is looking at. Two different facts, each labelled by it
 own caption and its own provenance line — which is the condition ADR-0010 and
 ADR-0029 both set, rather than an exception to them.
 
-The same goes for the wind: `peakInDaylight` no longer feeds the readout's
-figure. The wedge still needs `gridWindReadings`, so `needles.ts` keeps its
-daylight half and gains an hourly one beside it.
+**The day's biggest wind is the page's only statement of that figure, and
+ADR-0034 says otherwise.** That ADR justifies drawing the readout on all 51
+beaches partly on the cost of withholding it — "nearly half the inventory printed
+no wind figure anywhere on the picture, the same figure the week grid above
+states for every one of those beaches". The week grid states no wind figure.
+`WeekPanel` declines it deliberately and says why: temperature and wind "come
+from the air station rather than an airport", and "moving those to a forecast is
+the displacement ADR-0019 declined to decide". The grid's rows are tides, swell,
+daylight and sky.
+
+So `peakInDaylight` feeding `windFigure` at `DayPanel.tsx:696` is the only place
+this page states the day's biggest wind, and an hour instrument would remove it.
+**It moves into the provenance line instead of being lost.** `WaveWeek`'s rule
+already puts the superlative in the provenance label — "Biggest wind in
+daylight" — so the label gains the figure and the hour it happened at. The lines
+sit outside the readout's box, so this costs none of the width that is the
+block's whole constraint, and it puts the day and the hour a few centimetres
+apart where they can be compared.
+
+Rejected: accepting the loss, on the grounds that the peak is the top of the
+wind curve and a reader can select that hour. It is the closest this design comes
+to breaching ADR-0027's "only additively" condition, and a figure that is on the
+page today and gone tomorrow with nothing announcing it is what "nothing fails
+silently" is for. Also rejected: marking the peak hour on the curve, which is a
+fifth mark on a plot already carrying a now-line, night bands, a cloud band,
+published-point marks and the selection guide, and would need a rule for the
+other three tabs.
+
+`needles.ts` therefore keeps its daylight half and gains an hourly one beside it:
+the wedge still needs `gridWindReadings`, and `peakInDaylight` still feeds the
+figure that moved.
 
 ### Slice 2 splits in two
 
