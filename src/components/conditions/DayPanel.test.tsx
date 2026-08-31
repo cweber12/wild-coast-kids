@@ -952,6 +952,47 @@ test("a beach with no swell model keeps its wind row", async () => {
   expect(screen.queryByText(/^Biggest swell in daylight/)).toBeNull();
 });
 
+test("a beach the traced coast does not reach gains its wind row", async () => {
+  // 23 of 51 beaches are in Mission Bay or San Diego Bay, where `mop-lines.json`
+  // traces no coast. The dial was withheld on every one of them together with
+  // its provenance, so nearly half the inventory printed no wind figure
+  // anywhere on the picture -- for a rule about a needle drawn over an empty
+  // frame rather than about a labelled block. ADR-0034.
+  //
+  // Modelled as it really is: no coast in the window, and no MOP line to bind,
+  // so the readout is the wind row alone.
+  const dates = [TODAY];
+  daylight(dates);
+  tideWeek(dates);
+  readWaveWeek.mockResolvedValue({
+    beachName: BINDING.beachName,
+    line: null,
+    state: {
+      kind: "no-line",
+      reason: "no MOP line is computed for this beach",
+    },
+  });
+  skyWeek(dates);
+  gridWeek(dates);
+  wordingWeek([{ localDate: TODAY, periodName: "Today", words: "Patchy Fog" }]);
+
+  const { container } = render(
+    <SelectedDayProvider>
+      {await DayPanel({ slug: "fiesta-island" })}
+    </SelectedDayProvider>,
+  );
+
+  // The picture this beach gets: its own two ends as a chord, and no coastline.
+  expect(container.querySelector("[data-coast]")).toBeNull();
+  expect(container.querySelector("[data-segment]")).not.toBeNull();
+
+  // And the figure it used to have nowhere to print.
+  expect(
+    container.querySelector("[data-readout-figure='wind']")!.textContent,
+  ).toBe("14.0 mph");
+  expect(screen.getByText(/^Biggest wind in daylight/)).toBeDefined();
+});
+
 /* =========================================================================
  * Who published the curve
  * ========================================================================= */

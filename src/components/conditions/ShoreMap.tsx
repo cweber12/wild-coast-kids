@@ -92,8 +92,13 @@ export type ShoreMapProps = {
    * map's box, and which corner it lands in is measured rather than fixed —
    * see `corner.ts`.
    *
-   * Withheld along with everything else when there is no coast to read a
-   * bearing against. See `readoutSources`.
+   * **Rendered on every beach, including the 23 the traced coast does not
+   * reach.** The dial was withheld there, on the rule that a bearing read
+   * against no shoreline is the bare gauge the brief's anti-references open
+   * with. That rule was about a needle drawn over an empty frame; a labelled
+   * readout with units, a word for the direction and a provenance line beneath
+   * is not that thing. Withholding it meant nearly half the inventory printed
+   * no wind figure anywhere on the picture. See ADR-0034.
    */
   readout?: ReactNode;
   /**
@@ -103,10 +108,11 @@ export type ShoreMapProps = {
    * than on it: the map is already the densest thing in this column, and
    * `ShoreMap`'s own coast credit sits in the same place for the same reason.
    *
-   * **Both halves go together, and go together with the coast.** A readout with
-   * its sources missing is an unattributed figure; sources printed under a map
-   * with no readout name a bearing nobody can see. On the 23 beaches the traced
-   * coast does not reach, neither is rendered.
+   * **Both halves go together.** A readout with its sources missing is an
+   * unattributed figure, and sources printed under a map with no readout name a
+   * bearing nobody can see. Neither is now tied to the coast: they arrive
+   * together on all 51 beaches, or not at all on a day no feed gave a bearing
+   * for, which is the caller's decision rather than this component's.
    */
   readoutSources?: ReactNode;
 };
@@ -231,21 +237,24 @@ export function ShoreMap({
       : segment.map((point) => project(point.lat, point.lon));
 
   /*
-    Which corner the readout stands in, or null when there is nothing to read a
-    bearing against.
+    Which corner the readout stands in, or null when there is no readout.
 
-    The condition is the coast, not the readout's size: on the 23 beaches the
-    traced coastline does not reach, a bearing has no shoreline to be read
-    against and is the bare gauge the brief's anti-references open with.
+    **The coast is no longer a condition**, which is the change ADR-0034's last
+    clause records. It was one: a bearing read against no shoreline was held to
+    be the bare gauge the brief opens its anti-references with, so the 23
+    beaches in Mission Bay and San Diego Bay printed no wind figure anywhere on
+    the picture. That objection was about a needle drawn over an empty frame,
+    and this is a labelled block with units and a publisher under it.
 
     The corner is measured against everything the map draws -- the windowed
     coast and this beach's own stretch -- rather than against the segment alone.
     The plan asked only for the segment; measured, an adaptive corner clears
     both on every beach in the inventory, so there was no reason but arithmetic
-    to leave the coastline out and the arithmetic did not charge for it.
+    to leave the coastline out and the arithmetic did not charge for it. On a
+    beach with neither, every corner is clear and the first is taken.
   */
   const corner =
-    readout === null || !hasCoast || drawnSegment.length === 0
+    readout === null
       ? null
       : cornerFor([...drawn, ...drawnSegment], READOUT_BOX, FRAME);
 

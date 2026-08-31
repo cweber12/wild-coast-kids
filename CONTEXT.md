@@ -215,7 +215,9 @@ it is on the map and not beside it. **It lies over the picture rather than being
 drawn inside it** (ADR-0034): it is in the accessibility tree, so each row is
 its own spoken equivalent, and it covers nothing the map draws because the
 corner it stands in is measured per beach rather than fixed. It carries two
-publishers on one instrument, one provenance line per row (ADR-0032), and it is
-withheld on the beaches the traced coast does not reach, where a bearing has
-nothing to be read against.
+publishers on one instrument, one provenance line per row (ADR-0032). **It is
+drawn on all 51 beaches**, including the 23 the traced coast does not reach:
+withholding it there left nearly half the inventory with no wind figure
+anywhere on the picture, and the objection it was withheld under was about a
+needle over an empty frame rather than about a labelled block.
 _Avoid_: dial, badge, compass rose, wind rose, gauge, direction widget, legend

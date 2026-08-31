@@ -330,8 +330,22 @@ export default defineConfig({
         // unit test can call it. The alternative was four branches covered by
         // nothing and explained here, which is what this file already carries
         // too much of.
+        //
+        // BRANCHES LOWERED 2026-08-31 under REASON 2, by the readout reaching
+        // all 51 beaches. Nothing became untested: the coast gate --
+        // `!hasCoast || drawnSegment.length === 0` -- was fully covered and is
+        // deleted, so three branch arms left and the surviving denominator
+        // tilts further toward the 0% entry plumbing.
+        //
+        //   branches 1815/2032 -> 1812/2029   89.32 -> 89.30
+        //
+        // **The numerator fell by exactly what the denominator did**, which is
+        // what says every deleted arm was covered; a regression drops the
+        // numerator alone and reads identically in the failure message. The
+        // other three are unmoved, because the slice deleted a condition rather
+        // than a statement, a function or a line.
         statements: 89.62,
-        branches: 89.32,
+        branches: 89.3,
         functions: 94.37,
         lines: 89.32,
       },

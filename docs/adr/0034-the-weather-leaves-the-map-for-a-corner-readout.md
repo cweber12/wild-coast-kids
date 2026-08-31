@@ -52,6 +52,15 @@ picture rather than as a drawing inside it.**
   with the unabbreviated sentence as its label, which is how `DaylightWeek` and
   `Placeholder` already name a thing whose visible content is not its name. The
   sentence under the map keeps attribution and stops restating bearings.
+- **It is drawn on all 51 beaches**, including the 23 in Mission Bay and San
+  Diego Bay that the traced coast does not reach. The dial was withheld there
+  on the rule that "a bearing read against no shoreline is the bare gauge the
+  brief's anti-references open with". That objection was about a needle drawn
+  over an empty frame; a labelled block carrying a word for the direction, its
+  degrees, a magnitude with units and a publisher beneath is not that thing.
+  The cost of withholding it was that nearly half the inventory printed no wind
+  figure anywhere on the picture — the same figure the week grid above states
+  for every one of those beaches.
 
 **The bearing is still read against the coast, which is what the reversed
 decision was protecting.** The block is inside the same square frame as the
@@ -150,5 +159,10 @@ the half of that pair a parent planning a beach day actually reads.
 - **The readout's width has a hard ceiling of 50 drawing units**, and a later
   slice adding a field to a row will meet it. The height does not; spend that
   instead.
-- **The 23 beaches with no traced coast still get nothing**, unchanged by this
-  decision. That is the next slice, not this one.
+- **The 23 beaches with no traced coast gain a wind row**, where they had
+  neither a bearing nor a provenance line before. They gain no swell row, and
+  that is right rather than incidental: they bind no MOP line, so there is no
+  swell estimate for them to be given.
+- **The map's own absence sentence is unchanged.** A beach with no traced coast
+  still says so under the picture, and now says it beneath a readout rather
+  than beneath nothing.

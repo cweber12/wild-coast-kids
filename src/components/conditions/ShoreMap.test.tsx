@@ -214,16 +214,15 @@ test("the readout moves to the side the drawing leaves open", () => {
   expect(overlay.getAttribute("data-readout-corner")).not.toBe("top-left");
 });
 
-test("a beach the coast does not reach gets no readout", () => {
-  // Cole's rule, and the reason for it: a bearing is worth reading against a
-  // coastline and is a bare gauge without one -- which is the anti-reference
-  // the brief opens with. 23 of 51 beaches are in this state.
+test("a beach the coast does not reach still gets its readout", () => {
+  // 23 of 51 beaches are in this state, and the dial was withheld on all of
+  // them -- so nearly half the inventory printed no wind figure anywhere on the
+  // picture, for a rule about a needle drawn over an empty frame. A labelled
+  // block with units and a publisher under it is not that thing. ADR-0034.
   //
   // The segment here is the beach's own two ends and NOT null, because that is
   // what `shore.ts` draws on 22 of those 23: with no coast to mark a run of, a
-  // chord is the only thing that says where the beach is. Written with a null
-  // segment this test passes with the coast check deleted, which is what
-  // mutating it revealed.
+  // chord is the only thing that says where the beach is.
   const { container } = render(
     <ShoreMap
       {...PROPS}
@@ -233,21 +232,26 @@ test("a beach the coast does not reach gets no readout", () => {
         { lat: 32.78, lon: -117.235 },
       ]}
       readout={<p data-test-readout="">Wind</p>}
-      readoutSources={<p>Wind, from the west, 281°</p>}
+      readoutSources={<p>Biggest wind in daylight</p>}
     />,
   );
 
-  expect(container.querySelector("[data-readout-corner]")).toBeNull();
-  expect(container.querySelector("[data-test-readout]")).toBeNull();
-  expect(screen.queryByText("Wind, from the west, 281°")).toBeNull();
+  expect(container.querySelector("[data-test-readout]")).not.toBeNull();
+  expect(screen.getByText("Biggest wind in daylight")).toBeTruthy();
   // The beach is still placed, which is the one question the picture has to
-  // answer when there is no shoreline to draw.
+  // answer when there is no shoreline to draw, and the readout does not cover
+  // the chord that answers it.
   expect(container.querySelector("[data-segment]")).not.toBeNull();
+  // And the map still says the traced coast does not reach here, which the
+  // readout neither replaces nor contradicts.
+  expect(screen.getByText(PROPS.noCoast)).toBeTruthy();
 });
 
-test("a beach whose two ends are one point gets no readout either", () => {
-  // `mission-bay-vacation-isle`, whose segment upper equals its lower, so
-  // there is neither a coast nor a chord on the picture.
+test("a beach with nothing drawn at all still gets its readout", () => {
+  // `mission-bay-vacation-isle`, whose segment upper equals its lower, so there
+  // is neither a coast nor a chord on the picture. Every corner is clear, so
+  // the first is taken -- there is nothing for the block to be measured against
+  // and nothing for it to cover.
   const { container } = render(
     <ShoreMap
       {...PROPS}
@@ -257,7 +261,24 @@ test("a beach whose two ends are one point gets no readout either", () => {
     />,
   );
 
+  expect(container.querySelector("[data-test-readout]")).not.toBeNull();
+  expect(
+    container
+      .querySelector("[data-readout-corner]")!
+      .getAttribute("data-readout-corner"),
+  ).toBe("top-left");
+});
+
+test("a day with no bearings gets no readout and no sources", () => {
+  // The withholding that remains, and it is the caller's rather than the
+  // coast's: `DayCompass` renders nothing on a day no feed gave a bearing for,
+  // and the sources go with it rather than naming a row nobody can see.
+  const { container } = render(
+    <ShoreMap {...PROPS} readout={null} readoutSources={<p>Orphaned</p>} />,
+  );
+
   expect(container.querySelector("[data-readout-corner]")).toBeNull();
+  expect(screen.queryByText("Orphaned")).toBeNull();
 });
 
 test("the readout's sources are listed beneath the picture", () => {
