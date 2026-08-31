@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { checkSeaSide, coastFrom, sideOf, WINDOW_MARGIN } from "./sea-side.mjs";
+import {
+  checkSeaSide,
+  coastFrom,
+  sideOf,
+  windowFor,
+  WINDOW_MARGIN,
+} from "./sea-side.mjs";
 import {
   coastline,
   sideOf as sideOfTs,
@@ -7,6 +13,8 @@ import {
   windowAround,
   SHORE_WINDOW_MARGIN,
 } from "../src/lib/coastline.ts";
+import { allBeaches } from "../src/lib/beaches.ts";
+import { shoreViewFor } from "../src/components/conditions/shore.ts";
 import MOP_LINES from "../src/data/mop-lines.json" with { type: "json" };
 import BEACHES from "../src/data/beaches.json" with { type: "json" };
 import BUOYS from "../src/data/wave-buoys.json" with { type: "json" };
@@ -162,9 +170,55 @@ describe("what the gate row prints", () => {
 });
 
 describe("the window the map draws", () => {
-  it("is the window the checker measures", () => {
+  it("uses the same margin the map does", () => {
     // A checker run against a different frame checks a different claim: a wider
     // window reaches more coast and can change which segment is nearest a buoy.
     expect(WINDOW_MARGIN).toBe(SHORE_WINDOW_MARGIN);
+  });
+
+  it("holds every point the map actually draws", () => {
+    // **The claim this file used to make by proxy, now made directly.** The
+    // margins matching was evidence that the checker looked at the run the map
+    // draws -- and it stopped being evidence when ADR-0036 changed what decides
+    // the map's frame. Measured at that moment, 27 of the 28 beaches with a
+    // coast drew points this checker had never seen, up to 53 of them; the
+    // margins were still equal and said nothing about it.
+    //
+    // So this asks the real assembler what the map draws, rather than asking a
+    // constant whether it agrees with another constant.
+    const tables = {
+      beaches: BEACHES.beaches,
+      buoys: BUOYS.buoys,
+      tideStations: TIDE_STATIONS.stations,
+      observationStations: OBSERVATION_STATIONS.stations,
+      mopLines: MOP_LINES.lines,
+    };
+    const coast = coastline();
+
+    const unchecked = [];
+    let compared = 0;
+
+    for (const beach of allBeaches()) {
+      const row = tables.beaches.find((each) => each.slug === beach.slug);
+      const checkerWindow = windowFor(row, tables);
+      const frame = shoreViewFor(beach).bounds;
+      if (!checkerWindow || frame === null) continue;
+
+      const seen = new Set(
+        windowAround(coast, checkerWindow).map((point) => point.id),
+      );
+      const drawn = windowAround(coast, frame);
+      if (drawn.length === 0) continue;
+
+      compared += 1;
+      const missed = drawn.filter((point) => !seen.has(point.id));
+      if (missed.length > 0) {
+        unchecked.push(`${beach.slug}: ${missed.length} points`);
+      }
+    }
+
+    expect(unchecked).toEqual([]);
+    // A check that compared nothing would pass forever.
+    expect(compared).toBe(28);
   });
 });

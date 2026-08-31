@@ -115,6 +115,52 @@ export function boundsAround(
   };
 }
 
+/**
+ * The same box grown on one side until it is square on the ground.
+ *
+ * **This is where the empty space is decided, and it is decided here rather
+ * than in the projection.** `projectionFor` letterboxes a non-square box into a
+ * square frame and splits the leftover evenly, which puts half of it inland on
+ * a map whose whole subject is which side the water is on. Squaring the box
+ * toward the sea first means the projection has no leftover to split: the
+ * growth is real mapped ocean rather than blank padding, so the sea wash covers
+ * it and the coast sits against the landward edge.
+ *
+ * The alternative was a bias inside `projectionFor`, which would have made a
+ * generic mapping know which of its two axes was the sea — a fact about a
+ * coastline, in a function that deliberately knows only about boxes.
+ *
+ * Unchanged when the box is already square, and unchanged when the caller has
+ * no seaward direction to offer: a beach with no traced coast has no land-sea
+ * split to bias toward, so an even letterbox is the honest frame for it.
+ */
+export function squareToward(
+  bounds: Bounds,
+  toward: { east: number; north: number },
+): Bounds {
+  const lonScale = Math.cos(
+    (((bounds.south + bounds.north) / 2) * Math.PI) / 180,
+  );
+  const spanLat = bounds.north - bounds.south;
+  const spanLon = (bounds.east - bounds.west) * lonScale;
+
+  if (spanLon < spanLat) {
+    const grow = (spanLat - spanLon) / lonScale;
+    return toward.east >= 0
+      ? { ...bounds, east: bounds.east + grow }
+      : { ...bounds, west: bounds.west - grow };
+  }
+
+  if (spanLat < spanLon) {
+    const grow = spanLon - spanLat;
+    return toward.north >= 0
+      ? { ...bounds, north: bounds.north + grow }
+      : { ...bounds, south: bounds.south - grow };
+  }
+
+  return bounds;
+}
+
 /** A point on the drawn plot, in the caller's own units. */
 export interface PlotPoint {
   readonly x: number;
@@ -211,6 +257,105 @@ export function windowAround(
     Math.max(0, first - 1),
     Math.min(points.length, last + 2),
   );
+}
+
+/**
+ * One degree of latitude, in metres. The only ground unit this module needs.
+ *
+ * Flat arithmetic with the same cosine correction `projectionFor` and
+ * `boundsAround` use, rather than the haversine in `scripts/geo.mjs`. That file
+ * is build-side and runs once against every beach; this runs per request
+ * against one, and a second distance convention inside one module is how two
+ * functions come to disagree about the same coast. At this coast's scale the
+ * two differ by less than the 98 m spacing of the points being measured.
+ */
+const METRES_PER_DEGREE = 111_320;
+
+function metresBetween(a: Position, b: Position): number {
+  const lonScale = Math.cos((((a.lat + b.lat) / 2) * Math.PI) / 180);
+  const dx = (a.lon - b.lon) * lonScale;
+  const dy = a.lat - b.lat;
+  return Math.hypot(dx, dy) * METRES_PER_DEGREE;
+}
+
+/**
+ * The point of the polyline nearest a position, and how far away it is.
+ *
+ * **The distance is returned because the caller has to be able to decline.**
+ * This file traces the open coast, so asking it for the nearest point to a
+ * Mission Bay beach gets an answer 4.9 km away that is somebody else's
+ * shoreline. A nearest-point search with no distance is a search that always
+ * succeeds, and the caller then draws whatever it found.
+ *
+ * Null on an empty polyline, which is a caller that has nothing to search
+ * rather than a place with no coast.
+ */
+export function nearestOn(
+  points: readonly ShorePoint[],
+  at: Position,
+): { index: number; metres: number } | null {
+  if (points.length === 0) return null;
+
+  let best = Infinity;
+  let index = 0;
+  points.forEach((point, at_) => {
+    const metres = metresBetween(at, point);
+    if (metres < best) {
+      best = metres;
+      index = at_;
+    }
+  });
+  return { index, metres: best };
+}
+
+/**
+ * The run between two points of the polyline, grown outward to a minimum length
+ * of shore.
+ *
+ * **A length of coast rather than a count of points**, because the points are
+ * an artifact of CDIP's grid and the picture is of a shoreline. They sit at
+ * about 98 m, so the two are close — and "about" is exactly the word that makes
+ * a count the wrong unit for a rule stated in the ground.
+ *
+ * **It grows from both ends alternately**, so a beach stays in the middle of
+ * the context it is given rather than being pushed against one end of it. Where
+ * the polyline runs out on one side — the county's two ends — the other side
+ * takes the remainder, which is the honest answer: there is no more coast to
+ * show, and the map should not pretend by centring on emptiness.
+ *
+ * Returns the run unchanged when it is already long enough, so a beach longer
+ * than the minimum sets its own frame.
+ */
+export function runAround(
+  points: readonly ShorePoint[],
+  fromIndex: number,
+  toIndex: number,
+  minimumMetres: number,
+): readonly ShorePoint[] {
+  if (points.length === 0) return [];
+
+  const last = points.length - 1;
+  let from = Math.max(0, Math.min(fromIndex, toIndex));
+  let to = Math.min(last, Math.max(fromIndex, toIndex));
+
+  let length = 0;
+  for (let index = from; index < to; index += 1) {
+    length += metresBetween(points[index], points[index + 1]);
+  }
+
+  while (length < minimumMetres && (from > 0 || to < last)) {
+    if (from > 0) {
+      length += metresBetween(points[from - 1], points[from]);
+      from -= 1;
+    }
+    if (length >= minimumMetres) break;
+    if (to < last) {
+      length += metresBetween(points[to], points[to + 1]);
+      to += 1;
+    }
+  }
+
+  return points.slice(from, to + 1);
 }
 
 /**
