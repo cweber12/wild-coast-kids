@@ -33,6 +33,27 @@ const OVERNIGHT_DIP = hourly([
   2.4, 3.1, 3.9, 4.5, 4.8, 4.6, 4.1, 3.5,
 ]);
 
+/**
+ * Each tab's source, written out rather than imported from `tideStation.ts` and
+ * `mopLine.ts`.
+ *
+ * This component looks nothing up: it prints what the caller composed. A
+ * fixture sharing the constants could not tell a chart printing its caller's
+ * words from one that had gone and found its own.
+ */
+const TIDE_SOURCE = {
+  label: "Tide",
+  source: "La Jolla (Scripps Institution Wharf)",
+  network: "NOAA Tides & Currents",
+};
+
+const SWELL_SOURCE = {
+  label: "Swell",
+  source: "MOP line D0481",
+  network: "CDIP, Scripps Institution of Oceanography",
+  note: "a model of the swell at 10 m depth, not a measurement",
+};
+
 /** The tab this chart opens on, and the one every test here drives unless it says otherwise. */
 const TIDE = {
   key: "tide",
@@ -41,6 +62,7 @@ const TIDE = {
   points: OVERNIGHT_DIP as readonly SparkPoint[],
   description: "Tide through Monday, 0.2 to 4.8 feet",
   absence: "No hourly prediction for this day.",
+  provenance: TIDE_SOURCE,
 };
 
 /**
@@ -59,6 +81,7 @@ const SWELL = {
   })) as readonly SparkPoint[],
   description: "Swell through Monday, three-hourly",
   absence: "No swell forecast reaches this day.",
+  provenance: SWELL_SOURCE,
 };
 
 const PROPS = {
@@ -898,6 +921,73 @@ describe("the tabs", () => {
     expect(markup).not.toContain("data-series-tab");
     expect(markup).not.toContain('role="tabpanel"');
     expect(markup).toContain("data-curve");
+  });
+});
+
+describe("who published the curve", () => {
+  const TABBED = { ...PROPS, series: [TIDE, SWELL] };
+
+  /** The chart's own attribution, and nothing else on the page that looks like one. */
+  function line(container: HTMLElement): HTMLElement | null {
+    return container.querySelector("[data-series-provenance] p");
+  }
+
+  test("the line names the tab that is selected, not the tab that opened", () => {
+    // Four tabs and three publishers, so one line for the chart would be wrong
+    // on at least two of them. This is the whole of finding 1 in the day view's
+    // design review.
+    const { container } = render(<HourChart {...TABBED} />);
+
+    expect(line(container)?.textContent).toContain("NOAA Tides & Currents");
+
+    fireEvent.click(container.querySelector('[data-series-tab="swell"]')!);
+
+    expect(line(container)?.textContent).toContain("MOP line D0481");
+    expect(line(container)?.textContent).not.toContain("NOAA");
+  });
+
+  test("a series with no source prints no line rather than an empty one", () => {
+    // 26 of 51 beaches bind no MOP line, and a beach with no tide station or no
+    // forecast cell has nothing to name either. A `ProvenanceLine` with an
+    // empty source would be a credit to nobody dressed as a credit.
+    const { container } = render(
+      <HourChart {...PROPS} series={[{ ...TIDE, provenance: null }]} />,
+    );
+
+    expect(container.querySelector("[data-curve]")).not.toBeNull();
+    expect(line(container)).toBeNull();
+  });
+
+  test("a quiet tab prints no attribution, because its absence names the publisher", () => {
+    // What is attributed is the curve. There is none here, and the sentence in
+    // its place already says which publisher went quiet -- that is what
+    // `DayPanel`'s per-product wording exists for.
+    const { container } = render(
+      <HourChart {...PROPS} series={[{ ...TIDE, points: [] }]} />,
+    );
+
+    expect(screen.getByText(TIDE.absence)).toBeDefined();
+    expect(line(container)).toBeNull();
+  });
+
+  test("the line is legible on the chart's own ground, not a card's", () => {
+    // `ProvenanceLine` defaults to the reading card's colour -- white at 55%,
+    // which paints 1.03:1 on cream and shipped that way from two call sites.
+    // This chart's shell is `bg-white/60`, lighter still.
+    const { container } = render(<HourChart {...TABBED} />);
+
+    expect(line(container)?.getAttribute("class")).toContain("text-fog");
+    expect(line(container)?.getAttribute("class")).not.toContain("text-white");
+  });
+
+  test("the attribution survives choosing an hour", () => {
+    // ADR-0027's additive condition: an interaction may reveal what the page
+    // did not carry and may never put something written behind a gesture.
+    const { container } = render(<HourChart {...TABBED} />);
+
+    fireEvent.click(container.querySelector('[data-hour-column="9"]')!);
+
+    expect(line(container)?.textContent).toContain("NOAA Tides & Currents");
   });
 });
 

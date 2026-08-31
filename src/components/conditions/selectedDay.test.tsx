@@ -79,6 +79,9 @@ function dayView(index: number): DayView {
         points: points(localDate, index * 10),
         description: `Tide on ${localDate}`,
         absence: "No tide series.",
+        // This file is about which day is shown, not about who published it.
+        // Null keeps the fixture to the one fact under test.
+        provenance: null,
       },
       {
         key: "swell",
@@ -87,6 +90,7 @@ function dayView(index: number): DayView {
         points: points(localDate, index * 10 + 100),
         description: `Swell on ${localDate}`,
         absence: "No swell series.",
+        provenance: null,
       },
     ],
     wording: <p>Words for {localDate}</p>,

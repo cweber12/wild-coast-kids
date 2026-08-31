@@ -880,3 +880,137 @@ test("a beach with no swell model keeps its wind needle", async () => {
   expect(screen.getByText(/^Wind, from the south, 180°/)).toBeDefined();
   expect(screen.queryByText(/^Swell, from/)).toBeNull();
 });
+
+/* =========================================================================
+ * Who published the curve
+ * ========================================================================= */
+
+/**
+ * The chart's own attribution, scoped so that the sky wording's line above the
+ * plot is never read in its place.
+ *
+ * Reading the wrong line is not a hypothetical here: the nearest provenance
+ * above this chart names the grid cell, and the whole of finding 1 is that a
+ * reader takes it for the plot's. An unscoped `getByText` would make the same
+ * mistake the reader does, and pass.
+ */
+function provenance(container: HTMLElement): string {
+  return container.querySelector("[data-series-provenance]")?.textContent ?? "";
+}
+
+test("the tide curve names NOAA, not the grid cell above it", async () => {
+  // The line a reader would otherwise take for this plot's belongs to
+  // `SkyWording` and names the National Weather Service's cell. The tide is
+  // NOAA's, and the two are a few pixels apart.
+  const { container } = render(
+    await DayPanel({ slug: "la-jolla-shores-beach" }),
+  );
+
+  expect(provenance(container)).toContain(
+    "La Jolla (Scripps Institution Wharf)",
+  );
+  expect(provenance(container)).toContain("NOAA Tides & Currents");
+  expect(provenance(container)).not.toContain("this beach's own grid cell");
+});
+
+test("the swell curve names CDIP's model, which is not the buoy below it", async () => {
+  // ADR-0029 permits a modelled height beside a measured one on condition that
+  // each is attributed. The sea card 40px under this curve leads with the
+  // buoy's measurement, so an unattributed curve leaves the only named source
+  // on the screen belonging to the figure that is not drawn.
+  const { container } = render(
+    await DayPanel({ slug: "la-jolla-shores-beach" }),
+  );
+
+  fireEvent.click(container.querySelector('[data-series-tab="swell"]')!);
+
+  expect(provenance(container)).toContain("MOP line D0481");
+  expect(provenance(container)).toContain(
+    "CDIP, Scripps Institution of Oceanography",
+  );
+  expect(provenance(container)).toContain(
+    "a model of the swell at 10 m depth, not a measurement",
+  );
+  expect(provenance(container)).not.toContain("NOAA");
+});
+
+test("the wind and the air temperature name the cell, on both their tabs", async () => {
+  // Neither is attributed anywhere on this page. The only wind provenance it
+  // carries is the air card's Scripps Pier, which is the station these curves
+  // did not come from -- ADR-0029's whole subject.
+  const { container } = render(
+    await DayPanel({ slug: "la-jolla-shores-beach" }),
+  );
+
+  fireEvent.click(container.querySelector('[data-series-tab="wind"]')!);
+  expect(provenance(container)).toContain("this beach's own grid cell");
+  expect(provenance(container)).toContain(
+    "National Weather Service, San Diego",
+  );
+  expect(provenance(container)).toContain(
+    "a forecast, not a reading taken at the beach",
+  );
+
+  fireEvent.click(container.querySelector('[data-series-tab="temperature"]')!);
+  expect(provenance(container)).toContain("this beach's own grid cell");
+  // "Temp" is a tab shortened to fit four across a phone. Everywhere a reader
+  // is not paying for the width, this page says the word in full.
+  expect(provenance(container)).toContain("Air temperature");
+});
+
+test("a beach with no tide station credits nobody rather than reaching through", async () => {
+  // `station` is null exactly in this state, and the four sources are composed
+  // once for the week -- before any tab knows whether it has a curve to
+  // attribute. An implementation that reached through the null would throw here
+  // instead of rendering the absence the reader is owed.
+  readHourlyTide.mockResolvedValue({
+    beachName: BINDING.beachName,
+    station: null,
+    state: {
+      kind: "no-station",
+      reason: "no station within 40 km of this beach publishes predictions",
+    },
+  });
+
+  const { container } = render(
+    await DayPanel({ slug: "la-jolla-shores-beach" }),
+  );
+
+  expect(screen.getByText(/no station within 40 km/)).toBeDefined();
+  expect(container.querySelector("[data-series-provenance]")).toBeNull();
+});
+
+test("a beach with no forecast cell leaves wind and temperature uncredited", async () => {
+  // The same for the third source. There is no curve on either tab to
+  // attribute, and no cell to name if there were.
+  readGridpointWeek.mockResolvedValue({
+    beachName: BINDING.beachName,
+    cell: null,
+    state: {
+      kind: "no-cell",
+      reason: "the forecast grid does not reach this beach",
+    },
+  });
+
+  const { container } = render(
+    await DayPanel({ slug: "la-jolla-shores-beach" }),
+  );
+
+  fireEvent.click(container.querySelector('[data-series-tab="wind"]')!);
+
+  expect(screen.getByText(/the forecast grid does not reach/)).toBeDefined();
+  expect(container.querySelector("[data-series-provenance]")).toBeNull();
+});
+
+test("the attribution survives choosing an hour", async () => {
+  // ADR-0027 lets a plot be asked a question only additively: an interaction
+  // may reveal what the page did not carry, and may never put something drawn
+  // or written behind a gesture.
+  const { container } = render(
+    await DayPanel({ slug: "la-jolla-shores-beach" }),
+  );
+
+  fireEvent.click(container.querySelector('[data-hour-column="9"]')!);
+
+  expect(provenance(container)).toContain("NOAA Tides & Currents");
+});
