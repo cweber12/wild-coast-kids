@@ -424,3 +424,185 @@ Everything else in this plan is unchanged. The ADR in slice 2 records the corner
 choice alongside the dial leaving the map, because both are the same decision
 seen from two sides: the readout stops covering the picture, and where it stands
 is what makes that true.
+
+## Addendum — 2026-08-31: the readout is an hour instrument, and its default is now
+
+**Grilled before slice 5 started, the design above turned out to be answering
+the wrong question.** It proposed a block with two modes: the day's figures on
+arrival, one hour's once something was clicked. Asked what the map should show,
+the reviewer's answer was neither half of that — **the current wind and swell,
+and then whatever hour the reader moves to.**
+
+That is a different instrument, and a better answer to the clause it has to
+supersede.
+
+### What it fixes in the argument above
+
+The reversal was argued here as: "the wedge is the day's swing and means the
+same thing on all seven days, and the arrow is this hour read against it." That
+concedes ADR-0027's objection rather than answering it. The clause says a needle
+"whose meaning changes depending on what was last clicked is a different
+instrument from one showing the day's dominant direction" — and a block that is
+a day aggregate before the first click and an hour after it is _precisely_ that
+needle. The wedge behind it does not disambiguate: with nothing selected the
+arrow sits at the day's resultant, which is inside the wedge by construction,
+and with 3 PM selected it sits at 3 PM's bearing, also inside it. The two modes
+draw the same picture.
+
+**With no day mode, there is nothing to change meaning between.** The arrow is
+the wind at one hour, before any click and after every one. ADR-0027's real
+demand — "two needles that always mean the same thing on all seven days" — is
+met literally rather than argued around.
+
+**What that costs is the day-dominant direction, which leaves the map.** That is
+the honest price and the ADR states it rather than routing around it. The day
+survives as the wedge: a narrow one is a day that had a direction and a near-blob
+is a day that did not, which is the reading ADR-0034 already built the wedge for.
+The week grid and the hour chart carry the day's figures either way.
+
+### The six decisions
+
+**The caption is always present, and it names the hour.** Without it the block
+still changes its numbers with nothing visible saying what they now mean, which
+is the failure this page is least entitled to ship. It also closes a gap that
+exists today: the block prints `11.5 mph` with no visible statement that it is
+the daylight peak — that fact lives only in the provenance line under the map.
+
+Its cost is measured rather than assumed. `READOUT_BOX` is `{ width: 50, height:
+35 }`, and 35 was chosen as "the smallest height that holds the tallest thing the
+rows can wrap to" — at 320px the two rows wrap to three lines each, 88px, 32.4 of
+the 35 units. A third line needs about five more, so the box goes to 40, which
+`corner.ts` measured as moving three beaches to a different corner:
+`pacific-beach`, `mission-bay-de-anza-cove` and `mission-bay-sea-world`. Always
+present rather than appearing on click, so the reserved box matches the ink in
+both states and the block never jumps.
+
+**The default is the current clock hour, resolved against whichever day is
+showing.** Six of the seven days have no "now" — `DayPanel` sets `nowMs` from
+`day.isToday` and null otherwise — so "the current hour" needs a rule for
+Thursday. It is the same clock hour: at 3:40 PM every day defaults to its own
+3 PM. One rule, one meaning on all seven days, and it is how a parent reads a
+forecast — what is Thursday like at this time.
+
+Rejected: today shows now and the other six show the daylight peak. It reads
+well until a reader steps from today to Friday and the figures change meaning
+with no click, which is the two-mode failure moved from the click to the day
+selector.
+
+**The current hour is computed on the server and passed down.** The page carries
+`revalidate = 900`, so a client that read its own clock would disagree with a
+fifteen-minute-old cache across an hour boundary and hydrate wrong. `nowMs`
+already works exactly this way for the chart's now-line; this needs the Pacific
+clock hour instead, because six days carry no `nowMs`.
+
+**The chart arrives with that hour marked.** One selected hour, stated in two
+places, agreeing. The alternative — the context defaults to null and the readout
+resolves null as "now" — leaves nothing in the chart pointing at the hour the map
+is showing on the six days that have no now-line, so a reader cannot see where
+the figures came from. `aria-live` does not announce initial content, so a
+readout that is filled on arrival makes no announcement on load.
+
+**A chosen hour carries across days.** It already had to: the default resolves
+per day, so the shared value is an hour rather than an instant, and an hour
+survives a day change by construction. Letting a deliberate choice do anything
+else would mean a reader who picked 5 PM watches the page silently revert it on
+every day change — and comparing one hour across the week is the comparison
+`ChosenDay` says the week selector exists for.
+
+This reverses `ChosenDay`'s docstring, which presents the opposite as a virtue:
+"The _hour_ they chose does not survive, and that also falls out rather than
+being arranged." It fell out of holding an instant. An hour is strictly more
+portable — it survives tab changes, which is the property `HourChart`'s comment
+gives for choosing an instant in the first place, _and_ day changes, which an
+instant cannot.
+
+**The wedge stays the daylight swing, and the arrow may leave it at night.** The
+reviewer asked for the selected hour to be reflected even at night, so the arrow
+is no longer daylight-bound and the wedge still is. At 3 AM it can therefore sit
+outside its own wedge, which is a true statement — that hour's wind came from a
+direction it never came from while the sun was up — and `needleSentence` already
+qualifies the wedge as "in daylight", so the accessible form is correct and only
+the visual is unqualified.
+
+Rejected: widening the wedge to the whole day so the arrow is always inside it.
+It is the more consistent rule and it costs the thing the wedge is for.
+`needles.ts` records why: the committed run swings across north in its first
+three hours — 340, 20, 150 — so a wedge measured end to end draws a near-blob on
+a day that was settled from sunrise onward, and it narrows the daylight rule that
+ADR-0023, `WaveWeek` and the week grid all hold, for one mark.
+
+**The swell row is the nearest published step within ninety minutes, whole.**
+The plan said "the last published estimate", which is up to three hours stale
+where the nearest is at most ninety minutes, and has no answer at all at 00:00
+and 01:00 — `hourlyWaveHeights` interpolates only forward, and `waveHoursByDate`
+buckets the previous day's 23:00 publication to the previous date. Those hours
+were unreachable while the block was daylight-bound and are reachable now.
+
+Each published estimate owns the three hours centred on it, which is the bucket
+`ConditionsNotes` already explains. Outside any bucket the row is withheld,
+which covers both the start of the day and the holes a refused estimate leaves —
+`hourlyWaveHeights` does not bridge those, "nothing inside it claims a figure",
+and a map holding a four-and-a-half-hour-old estimate where the chart claims
+none would be the louder of the two saying the less honest thing. A withheld row
+takes its provenance line with it, which is ADR-0032's existing rule.
+
+**And the row is one estimate rather than a mix.** Height, period and direction
+all come off the same published step, with one time named. `WaveHour` carries an
+interpolated `heightFt` on every hour and a `directionDegT` only where CDIP
+issued one, so reading the row field by field would put two instants in one row.
+This is what `periodS` joining `WaveHour` is actually for: the committed fixture
+moves 16.67 s to 15.38 s between published points, so the period cannot come from
+the day's `WaveReading` either.
+
+### What this costs that the plan claimed
+
+**The map and the week grid will print different swell numbers for one day, and
+that invariant was stated.** `DayPanel` records it: the swell figure "is
+`swellFigure`, so the week grid and this readout cannot print different numbers
+for Thursday". The grid states the day's biggest daylight step; the map now
+states the hour a reader is looking at. Two different facts, each labelled by its
+own caption and its own provenance line — which is the condition ADR-0010 and
+ADR-0029 both set, rather than an exception to them.
+
+The same goes for the wind: `peakInDaylight` no longer feeds the readout's
+figure. The wedge still needs `gridWindReadings`, so `needles.ts` keeps its
+daylight half and gains an hourly one beside it.
+
+### Slice 2 splits in two
+
+The work above is four implementation slices across `HourChart` (1,199 lines and
+a 46 KB test), `DayPanel`, `Compass`, `DayCompass`, `corner.ts`, `needles.ts` and
+`conditions.ts` (a 71 KB test) — past the guide CLAUDE.md sets. It splits where
+the dependency really is:
+
+**PR 2a — the chart owns an hour (#193).** This addendum, the ADR, the
+`selectedHour` context, `HourChart` lifting into it with the current clock hour
+as its default, and the `Selected hour` entry in `CONTEXT.md`. The map still
+shows the day at the end of it; what lands is a chart that arrives with an hour
+marked and keeps it across days and tabs.
+
+**PR 2b — the readout follows it.** Blocked on 2a. The caption, the per-hour
+wind row, `READOUT_BOX` to 40 with `corner.test.ts` re-measured, `periodS` on
+`WaveHour`, the per-hour swell row, and the `Readout` entry in `CONTEXT.md`.
+PR 3 (#194) is blocked on this rather than on 2a, because the animated field's
+parameters are the hour's.
+
+**The ADR is whole and lands in 2a**, rather than being split to match the
+branches. It is one decision — the page has one selected hour, it defaults to
+now, and the readout shows it — and two ADRs describing halves of it would leave
+neither able to state the argument. It says which half ships where.
+
+### Noticed, not fixed
+
+`HourChart` derives an hour as `Math.round((point.atMs - startMs) / HOUR_MS)` and
+hands it to `hourLabel`, which reads it as a clock hour. `localMidnightOf`
+resolves the zone offset twice, so `startMs` and `endMs` are true local midnights
+and a DST day is 23 or 25 hours long: on the fall-back day index 24 renders
+"12 PM", colliding with noon, and every hour after 2 AM is off by one. The
+forecast window is seven days, so it is reachable twice a year.
+
+It predates this work and is its own slice. What this plan owes it is not to make
+it worse: the shared hour uses `HourChart`'s existing index convention and the
+readout's caption prints through the same `hourLabel`, so the chart and the map
+can never disagree about what to call an hour — correct or not — and the fix
+stays a single-site one.
