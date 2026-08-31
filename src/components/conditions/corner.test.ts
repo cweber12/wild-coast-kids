@@ -188,3 +188,45 @@ test("the footprint stays inside what the inventory can hold", () => {
   // vertical room to spend and none to spare across.
   expect(READOUT_BOX.width).toBeLessThanOrEqual(50);
 });
+
+test("the inventory's ceiling on the readout's width is 50.5 units", () => {
+  // **The figure `READOUT_BOX` is budgeted against, held by the gate instead of
+  // by the docstring that used to hold it.**
+  //
+  // ADR-0036 reframed every map, and two of the three figures in this module's
+  // table went stale without anything noticing -- a fixed top-left fell from 8.3
+  // units to 1.0. This one did not move, and the reason it did not is worth
+  // asserting rather than trusting: the beach that sets the ceiling binds no
+  // coast, so its frame was not one of the frames that moved. A later change
+  // that does move it should fail here.
+  //
+  // Measured at several heights because "the height is free and the width is
+  // not" is the claim the rows are laid out against, and it is the half most
+  // likely to stop being true.
+  for (const height of [14, 20, 30, 35, 40, 50]) {
+    const probe: Box = { width: 0, height };
+
+    let worst = Infinity;
+    let worstBeach = "";
+    for (const beach of allBeaches()) {
+      const points = drawnPoints(beach);
+      if (points.length === 0) continue;
+      const roomiest = Math.max(
+        ...(
+          ["top-left", "top-right", "bottom-left", "bottom-right"] as const
+        ).map((corner) => clearanceAt(corner, points, probe, FRAME)),
+      );
+      if (roomiest < worst) {
+        worst = roomiest;
+        worstBeach = beach.slug;
+      }
+    }
+
+    expect(worst).toBeCloseTo(50.5, 1);
+    expect(worstBeach).toBe("mission-bay-visitor-s-center");
+  }
+
+  // And the box actually declared stays inside it, which is the point of
+  // knowing the number at all.
+  expect(READOUT_BOX.width).toBeLessThanOrEqual(50);
+});

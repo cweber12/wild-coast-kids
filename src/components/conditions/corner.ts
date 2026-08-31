@@ -10,21 +10,30 @@
  * that test says the fixed corner has nowhere to stand.
  *
  * Measured across the inventory, as the widest readout each rule survives on its
- * worst beach — and the three figures do not move at any readout height from 12
- * units to 40:
+ * worst beach. **Re-measured after ADR-0036 moved every frame** — the first
+ * three figures were taken against the old projection and two of them had gone
+ * stale, which is what `MEASURED.md` would say if this repo kept one:
  *
- * | placement                | widest readout | worst beach                  |
- * | ------------------------ | ------------ | ------------------------------ |
- * | fixed top-left           | 8.3 units    | `childrens-pool`               |
- * | top, side flips          | 19.0 units   | `la-jolla-cove`                |
- * | any of the four corners  | 50.5 units   | `mission-bay-visitor-s-center` |
+ * | placement               | widest readout | worst beach                    |
+ * | ----------------------- | -------------- | ------------------------------ |
+ * | fixed top-left          | 1.0 unit       | `tijuana-slough…`              |
+ * | top, side flips         | 43.3 at h=14   | `coronado-central-beach`       |
+ * | any of the four corners | 50.5 units     | `mission-bay-visitor-s-center` |
  *
- * 8.3 units is about 27px on the 328px map a phone draws, against the 150px two
- * rows of four fields need. **The cause is structural rather than unlucky**: on
- * the beaches with no traced coast, `beachStretch` draws the beach's own two
- * ends, so the segment is a chord between the frame's margin corners and always
- * blocks one diagonal pair. `childrens-pool` reads 8 units clear at the
- * top-left, 8 at the bottom-right, 92 at each of the others.
+ * **The one that decides anything did not move**, and that is not luck: the
+ * worst beach for the adaptive rule binds no coast, so ADR-0036's reframing
+ * never touched it. 50.5 units still holds at every height from 14 to 50, which
+ * is the "height is free and width is not" the readout's rows are budgeted
+ * against. `corner.test.ts` now pins it rather than leaving it here to rot.
+ *
+ * The two that did move describe rejected alternatives, and both moved *away*
+ * from viability: a fixed top-left now survives one unit rather than 8.3.
+ * **The cause is structural rather than unlucky**: on the beaches with no
+ * traced coast, `beachStretch` draws the beach's own two ends, so the segment
+ * is a chord between the frame's margin corners and always blocks one diagonal
+ * pair. The flip rule's figure now falls with height — 43.3 at 14, 16.0 at 35,
+ * 8.3 at 40 — where the adaptive rule's does not, which is the clearest
+ * statement of why the fourth corner is worth having.
  *
  * **The half of the plan's rejection that was wrong is the reason this file
  * exists.** It said an adaptive corner "becomes untestable in the useful
@@ -64,10 +73,14 @@ export interface PlotPoint {
  *
  * **The height is free and the width is not**, which is the measurement that
  * decides what the rows may say. The widest readout any corner allows is 50.5
- * units at a band 14 units deep, and *still* 50.5 at 20, 25, 30, 35 and 40 --
- * it only moves at 50, where it drops to 50.0. What blocks a corner is a stroke
- * crossing it diagonally, and a deeper band meets the same stroke at nearly the
- * same place.
+ * units at a band 14 units deep, and *still* 50.5 at 20, 30, 35, 40 and 50.
+ * What blocks a corner is a stroke crossing it diagonally, and a deeper band
+ * meets the same stroke at nearly the same place.
+ *
+ * Re-measured after ADR-0036 reframed every map, and unchanged: the beach that
+ * sets this ceiling binds no coast, so it was not one of the frames that moved.
+ * `corner.test.ts` asserts the figure, so the next reframing says so here
+ * rather than leaving a stale number to be believed.
  *
  * So the rows have vertical room to spend and none at all to spare across, and
  * that is why a row wraps rather than running on: at 10px, `SWELL south-west
