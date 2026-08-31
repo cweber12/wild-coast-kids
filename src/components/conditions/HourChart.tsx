@@ -91,6 +91,19 @@
  * `BeachSelector`'s `noscript` list exists to prevent. The chart itself still
  * renders on the server, complete, which is what ADR-0025 requires.
  *
+ * **The selection is not a control, and does not wait with them.** The chart
+ * arrives on the current hour rather than on nothing, so the guide and the mark
+ * are in the server's render -- and a reader without JavaScript gets a stated
+ * hour they cannot change rather than an affordance that does not work. That is
+ * the distinction the rule above was always drawing: a dead button is a lie
+ * about what the page can do, and a printed fact is not.
+ *
+ * **The hour belongs to the page rather than to this component.** The map's
+ * readout shows it too, and the two regions stating different things about one
+ * day is what #193 was. `selectedHour.tsx` holds it and holds the argument;
+ * ADR-0035 records why a readout that follows the hour no longer breaches
+ * ADR-0027's clause against one that does.
+ *
  * **The "now" line appears on today and on no other day.** A vertical rule at
  * an instant is a claim about the present, and drawing one on Thursday would
  * say the reader is standing in Thursday. The instant comes from
@@ -101,8 +114,9 @@
 "use client";
 
 import { useId, useState } from "react";
-import { nightBands } from "./dayFrame";
+import { hourOfDay, nightBands } from "./dayFrame";
 import { useHydrated } from "./hydrated";
+import { resolveHour, useSelectedHour } from "./selectedHour";
 import type { SparkPoint } from "./DaySpark";
 import { ProvenanceLine, type ProvenanceFacts } from "./ProvenanceLine";
 import { TOUCH_TARGET } from "../ui/touchTarget";
@@ -411,19 +425,29 @@ export function HourChart({
   cloudDescription = "Cloud cover through the day.",
   nowMs = null,
 }: HourChartProps) {
-  /**
-   * The chosen hour, held as an instant rather than as an index into `points`.
-   *
-   * **So that switching tabs keeps the hour.** An index means something
-   * different in each series -- the tide has twenty-four points and a swell
-   * that ran out at teatime has fewer -- so index 9 would land on 9 AM in one
-   * and mid-afternoon in another. An instant means the same thing in all four,
-   * and a tab with no point at that instant simply has nothing selected, which
-   * is the honest answer rather than the nearest one.
-   */
-  const [selectedMs, setSelectedMs] = useState<number | null>(null);
+  /*
+    The chosen hour is the page's rather than this component's, because the
+    map's readout shows it too and the two regions stating different things
+    about one day is the whole of #193. `selectedHour.tsx` holds the argument
+    for its shape; what matters here is that it is an hour of the day rather
+    than a position in `points`.
+
+    **Which is what kept the hour across a tab change, and now keeps it across
+    a day change too.** A position means something different in each series --
+    the tide has twenty-four points and a swell that ran out at teatime has
+    fewer -- so index 9 would land on 9 AM in one and mid-afternoon in another.
+    An hour means the same thing in all four and on all seven days, and a series
+    with no point at that hour simply has nothing selected, which is the honest
+    answer rather than the nearest one. This component held an instant for the
+    first half of that; an hour is the same argument carried one step further.
+  */
+  const { selected: chosenHour, choose, currentHour } = useSelectedHour();
+  const shownHour = resolveHour(chosenHour, currentHour);
   const [tab, setTab] = useState(0);
   const tabIds = useId();
+
+  /** This day's own hour for a point, through the one module that defines it. */
+  const hourOf = (point: SparkPoint) => hourOfDay(point.atMs, startMs);
 
   /*
     The controls exist only once they can work. Rendered on the server they
@@ -652,29 +676,26 @@ export function HourChart({
 
   /** Cloud by the hour it covers, so a readout can name the sky at that hour. */
   const cloudByHour = new Map(
-    cloud.map((hour) => [
-      Math.round((hour.atMs - startMs) / HOUR_MS),
-      hour.value,
-    ]),
+    cloud.map((hour) => [hourOfDay(hour.atMs, startMs), hour.value]),
   );
 
   /**
-   * Where the chosen instant falls in *this* series, or -1 when it does not.
+   * Where the shown hour falls in *this* series, or -1 when it does not.
    *
    * Exact rather than nearest. A swell tab whose forecast ran out at teatime
    * has no 8 PM, and quietly selecting 5 PM instead would put a figure under a
-   * heading the reader chose for a different hour.
+   * heading the reader chose for a different hour. It is also what makes the
+   * arrival state honest: the current hour is resolved the same way as a chosen
+   * one, so a series that does not reach now shows no selection rather than
+   * being given the nearest point it happens to hold.
    */
   const selected =
-    selectedMs === null
+    shownHour === null
       ? -1
-      : points.findIndex((point) => point.atMs === selectedMs);
+      : points.findIndex((point) => hourOf(point) === shownHour);
 
   const selectedPoint = selected === -1 ? null : (points[selected] ?? null);
-  const selectedHour =
-    selectedPoint === null
-      ? null
-      : Math.round((selectedPoint.atMs - startMs) / HOUR_MS);
+  const selectedHour = selectedPoint === null ? null : shownHour;
 
   /**
    * What one hour says when it is chosen.
@@ -704,7 +725,7 @@ export function HourChart({
   /** Select by position in this series, which is how both controls move. */
   const selectAt = (index: number) => {
     const point = points[Math.min(points.length - 1, Math.max(0, index))];
-    if (point !== undefined) setSelectedMs(point.atMs);
+    if (point !== undefined) choose(hourOf(point));
   };
 
   /** Move the selection, wrapping at neither end: a day has two ends and they hold. */
@@ -1047,7 +1068,7 @@ export function HourChart({
                 data-hour-columns
               >
                 {points.map((point, index) => {
-                  const hour = Math.round((point.atMs - startMs) / HOUR_MS);
+                  const hour = hourOf(point);
                   const cloudAt = cloudByHour.get(hour);
                   return (
                     <button
@@ -1121,10 +1142,20 @@ export function HourChart({
           `aria-live="polite"` because the change is the whole point and a
           reader moving through the hours with the arrow keys is not looking at
           this line. A reserved minimum height keeps the page from jumping when
-          the first hour is chosen.
+          the first hour is chosen. It announces nothing on arrival, because a
+          live region does not announce the content it is born with -- which is
+          what lets the chart open on an hour without speaking over the page.
+
+          **The sentence is not gated on hydration and the buttons are**, which
+          is ADR-0035 drawing the line ADR-0027's rule was always about. A
+          button that cannot work is a lie about what the page can do; a stated
+          fact is not, and the mark it explains is in the server's render
+          either way. Gating the sentence with the buttons would leave a reader
+          without a script looking at a marked hour and no word about which
+          hour it is.
         */}
-        {mounted && (
-          <div className="mt-4 flex flex-wrap items-center gap-2">
+        <div className="mt-4 flex flex-wrap items-center gap-2">
+          {mounted && (
             <div className="flex gap-1.5">
               <button
                 type="button"
@@ -1145,15 +1176,25 @@ export function HourChart({
                 Later →
               </button>
             </div>
-            <p
-              className="text-2xs leading-relaxed min-h-4 flex-1 text-ocean"
-              aria-live="polite"
-              data-hour-readout
-            >
-              {readout() ?? "Pick an hour to read it."}
-            </p>
-          </div>
-        )}
+          )}
+          <p
+            className="text-2xs leading-relaxed min-h-4 flex-1 text-ocean"
+            aria-live="polite"
+            data-hour-readout
+          >
+            {/*
+              The invitation is offered only where it can be accepted.
+
+              Without a script there is no way to pick an hour, so "Pick an hour
+              to read it." would be an instruction to use a control that is not
+              there -- the same failure the buttons are gated to avoid, in
+              words instead of in a button. It is reached only when this series
+              does not run as far as the hour the page opened on, because the
+              hour is otherwise always resolved.
+            */}
+            {readout() ?? (mounted ? "Pick an hour to read it." : "")}
+          </p>
+        </div>
 
         <p className="text-2xs leading-relaxed mt-3 text-fog">
           Low {lowValue.toFixed(1)} {unitLabel}, high {highValue.toFixed(1)}{" "}

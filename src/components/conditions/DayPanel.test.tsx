@@ -406,10 +406,57 @@ test("the swell tab marks CDIP's own estimates and no others", async () => {
   fireEvent.click(container.querySelector('[data-series-tab="swell"]')!);
 
   const plot = container.querySelector('svg[aria-label^="Swell today"]');
-  expect(plot?.querySelectorAll("circle")).toHaveLength(8);
+  // Scoped to the published marks rather than every circle in the plot: the
+  // chart now arrives on an hour, so its selection mark is a circle too, and
+  // counting all of them would count the reader's position as an estimate.
+  expect(plot?.querySelectorAll("[data-marks] circle")).toHaveLength(8);
   // And the sentence says it too, for a reader who gets no marks at all.
   expect(plot?.getAttribute("aria-label")).toContain(
     "publishes every three hours and issued 8 estimates",
+  );
+});
+
+test("the panel opens on the hour it is now, taken from the daylight read", () =>
+  DayPanel({ slug: "la-jolla-shores-beach" }).then((node) => {
+    // The one place the current hour is actually computed. `NOW` is 2 PM, and
+    // the read that carries it is the same one the "now" line is drawn from --
+    // which is why they cannot name different hours.
+    const { container } = render(node);
+
+    expect(container.querySelector("[data-selected-mark]")).not.toBeNull();
+    expect(
+      container.querySelector("[data-hour-readout]")?.textContent,
+    ).toContain("2 PM");
+  }));
+
+test("a read that names no day today selects no hour, rather than midnight", async () => {
+  // Unreachable through `weekOfDays`, which builds its array from today
+  // outward -- so this asserts the shape of the failure rather than a state the
+  // page reaches. It is here because the alternative was passing a made-up hour
+  // to satisfy the signature, and a page whose read went wrong selecting
+  // midnight plausibly is worse than selecting nothing visibly.
+  readDaylightWeek.mockReturnValue({
+    beachName: BINDING.beachName,
+    atMs: NOW,
+    days: [TODAY, TOMORROW].map((localDate) => ({
+      localDate,
+      dayLabel: "Mon, Aug 17",
+      dateLabel: "Mon, Aug 17",
+      isToday: false,
+      sunriseLabel: "6:14 AM",
+      sunsetLabel: "7:32 PM",
+      sunriseMs: localMidnightOf(localDate) + 6 * HOUR + 14 * 60_000,
+      sunsetMs: localMidnightOf(localDate) + 19 * HOUR + 32 * 60_000,
+    })),
+  });
+
+  const { container } = render(
+    await DayPanel({ slug: "la-jolla-shores-beach" }),
+  );
+
+  expect(container.querySelector("[data-selected-mark]")).toBeNull();
+  expect(container.querySelector("[data-hour-readout]")?.textContent).toBe(
+    "Pick an hour to read it.",
   );
 });
 
@@ -506,7 +553,9 @@ test("the wind tab marks each block the office issued, not every hour", async ()
 
   const plot = container.querySelector('svg[aria-label^="Wind today"]');
   expect(plot).not.toBeNull();
-  expect(plot?.querySelectorAll("circle")).toHaveLength(4);
+  // The published marks, not the selection mark beside them. See the swell
+  // tab's own count above.
+  expect(plot?.querySelectorAll("[data-marks] circle")).toHaveLength(4);
   expect(plot?.getAttribute("aria-label")).toContain(
     "in blocks rather than by the hour, and this day's is made of 4 of them",
   );

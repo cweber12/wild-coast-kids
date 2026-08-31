@@ -14,6 +14,7 @@ import { localMidnightOf } from "@/lib/pacific-time";
 import { ChosenDay, type DayView } from "./ChosenDay";
 import { DayCompass, type CompassDay } from "./DayCompass";
 import { SelectedDayProvider } from "./selectedDay";
+import { SelectedHourProvider } from "./selectedHour";
 import { WeekGrid, type WeekDay, type WeekRow } from "./WeekGrid";
 import type { SparkPoint } from "./DaySpark";
 
@@ -138,7 +139,20 @@ function renderBoth(map: React.ReactNode = null) {
         days={DAYS}
         rows={[TIDE_ROW]}
       />
-      <ChosenDay days={VIEWS} map={map} />
+      {/*
+        The hour provider inside the day one, which is the nesting `DayPanel`
+        builds: the week does not need the hour, and the day region does. It is
+        here rather than in the tests that use it because the day selection is
+        no longer separable from it -- a chosen hour now has to survive a change
+        of day, which is a fact about the pair.
+
+        `currentHour` is null so these tests keep their premise that the page
+        opens with no hour chosen. What the default does instead is
+        `selectedHour.test.tsx`'s to assert.
+      */}
+      <SelectedHourProvider currentHour={null}>
+        <ChosenDay days={VIEWS} map={map} />
+      </SelectedHourProvider>
     </SelectedDayProvider>,
   );
 }
@@ -283,9 +297,8 @@ test("the 'now' line follows today, and does not follow the choice", () => {
 
 test("the tab a reader chose survives a change of day", () => {
   // The comparison the tabs exist for is across days, so the chart is not keyed
-  // on the day and stays mounted. The chosen *hour* does not survive, and that
-  // falls out rather than being arranged: the selection is an instant, and an
-  // instant on Monday matches no point in Wednesday.
+  // on the day and stays mounted. The chosen hour survives with it -- see
+  // `selectedHour.test.tsx`, which owns that half now.
   const { container } = renderBoth();
 
   fireEvent.click(container.querySelector('[data-series-tab="swell"]')!);
@@ -295,7 +308,12 @@ test("the tab a reader chose survives a change of day", () => {
   expect(drawnDay(container)).toBe(`Swell on ${DATES[2]}`);
 });
 
-test("the chosen hour does not survive it, because that instant is not in this day", () => {
+test("the chosen hour survives it too, resolved against the new day", () => {
+  // The reversal ADR-0035 records, asserted where the day selection lives.
+  // This used to assert the opposite -- that the hour cleared itself, because
+  // the selection was an instant and an instant on Monday matches no point in
+  // Tuesday. That was the accident being read as a feature: a reader who chose
+  // 9 AM to compare it across the week got it taken away on every step.
   const { container } = renderBoth();
 
   fireEvent.click(container.querySelector('[data-hour-column="9"]')!);
@@ -304,9 +322,13 @@ test("the chosen hour does not survive it, because that instant is not in this d
   );
 
   fireEvent.click(container.querySelector(`[data-day-choice="${DATES[1]}"]`)!);
-  expect(container.querySelector("[data-hour-readout]")?.textContent).toBe(
-    "Pick an hour to read it.",
+  expect(container.querySelector("[data-hour-readout]")?.textContent).toContain(
+    "9 AM",
   );
+  // And it is the new day's 9 AM rather than a stale reading: this fixture's
+  // curves differ per day, so a chart still showing Monday's figure would say
+  // so here.
+  expect(drawnDay(container)).toBe(`Tide on ${DATES[1]}`);
 });
 
 test("without a script the week is whole and offers no control", () => {
