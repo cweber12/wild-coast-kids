@@ -73,12 +73,43 @@ frame deciding which coastline is drawn.**
   to where it means something: a length of _shore_, which is what the picture is
   of, rather than a width of _box_, which is an artifact of how the box was
   built.
-- **The frame is that run plus the beach's own ends, with the existing margin.**
-  The coast is then in view by construction rather than by luck, and the
-  property is assertable directly: the run that set the frame is inside it.
+- **The frame is that run, with the existing margin, and nothing else.** The
+  coast is then in view by construction rather than by luck, and the property is
+  assertable directly: the run that set the frame is inside it.
 - **The bound MOP line leaves the frame's arithmetic.** `coastline()` is built
   from `MOP_LINES`, so the beach's line is a point on the polyline and the run
   already contains it. Nothing is lost and the along-shore stretch goes.
+- **The beach's own two ends leave it as well, wherever a coast is drawn.**
+  Written first as "the run plus the beach's own ends", this decision kept the
+  same fault it was removing, one step further along: the sand is not drawn
+  either. `ShoreMap`'s own credit says why — the traced line is computed "a few
+  hundred metres offshore, so the water's edge is drawn further out than the
+  sand" — and the stretch marking the beach is a run of that line rather than of
+  the sand. At `coronado-central-beach` the sand sits 0.93 km inland of the
+  line, and including it pushed the box that far toward the land: measured, the
+  coast sat at 65–104 of the frame's 100 units with the empty space above it,
+  and framing on the run alone moved it to 8–50 with the sea below. The ends
+  stay in the arithmetic on the 23 beaches with no traced coast, where they are
+  the only thing drawn.
+
+**A run may not cross a gap in the model.** The polyline is ordered by line id,
+and consecutive ids are not always neighbours on the ground: of its 1,086 steps
+most are about 98 m, 25 exceed 300 m, nine exceed 500 m, and exactly one is
+2,967 m — `D0226` to `D0228`, across the mouth of San Diego Bay, where CDIP
+places no lines because there is no open coast to place them on. A run crossing
+one draws a straight stroke over open water and calls it shoreline.
+
+Searching the whole coastline is what made this reachable: inside the old
+200-metre window a beach's two ends could not land on opposite sides of a
+three-kilometre gap, and outside it they can. `coronado-north-beach` did — the
+stretch marking a 2.8 km beach came out as a 4.9 km V with a three-kilometre
+diagonal across the channel, drawn in the stroke that means "this is your
+beach". So both ends are pulled onto one unbroken fragment before anything is
+sliced, and a run grows only within it.
+
+This is the same class of correction as the zero-length segments this module
+already removes, and it is made for the same reason: a zero-length step has no
+direction, and a three-kilometre step has no shore.
 
 **Whether a beach is on the traced coast becomes an explicit distance, not a
 side effect of box size.** Measured across the inventory: every beach that binds
@@ -166,6 +197,23 @@ is which side the water is on.
 - **Three beaches stop being blank.** That is a change in what the site claims
   about a place, not only in how it looks, and it is why this decision names
   them.
+- **The `sea-side` gate stopped covering the map, and had to be widened.** It
+  argued that the map's window was contained in its own, so the run the map
+  draws inherited its verdict — and that containment was an accident of both
+  boxes being built by `boundsAround` from overlapping points. This decision
+  ended it: measured immediately afterwards, 27 of the 28 beaches with a coast
+  drew points the gate had never looked at, up to 53 at
+  `la-jolla-community-beach`. `MIN_WINDOW_M` restores containment, swept rather
+  than guessed, and the constant-equality check that stood in for it is replaced
+  by the containment itself, asserted against the real assembler.
+- **How the sea polygon closes is now the weakest part of the picture**, and
+  this decision does not touch it. `seaPath` takes one normal from the drawn
+  run's two ends (ADR-0033), which is exact on a straight shore and approximate
+  on a bent one; longer runs bend more. `coronado-north-beach`, at the bay
+  mouth, is where it shows — better than before this change, which drew its
+  whole coast as one gap-crossing diagonal, and still leaving a corner of frame
+  unshaded. That is its own defect against ADR-0033 rather than a framing
+  question, and it is filed rather than folded in here.
 - **#193 should be measured after this, not before.** That work grows the
   readout's box and re-measures every corner; done first it would measure
   against a projection this decision then moves.

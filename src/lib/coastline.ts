@@ -309,6 +309,50 @@ export function nearestOn(
 }
 
 /**
+ * The stretch of polyline around an index that no gap interrupts.
+ *
+ * **The file is ordered by line id, and consecutive ids are not always
+ * neighbours on the ground.** Measured across the 1,086 steps: most are about
+ * 98 m, 25 exceed 300 m, and exactly one is 2,967 m — `D0226` to `D0228`,
+ * across the mouth of San Diego Bay, where the model places no lines because
+ * there is no open coast to place them on. Nine steps exceed 500 m and each is
+ * a harbour or river mouth of the same kind.
+ *
+ * A run that crosses one of those draws a straight stroke over open water and
+ * calls it shoreline. `coronado-north-beach` did exactly that: its two ends
+ * landed on opposite sides of the bay mouth, so the stretch marking a 2.8 km
+ * beach was a 4.9 km V with a 3 km diagonal across the channel.
+ *
+ * This is the same class of problem as the zero-length segments this module
+ * already removes, and it is answered the same way: the geometry is made
+ * answerable before anything is asked of it. A zero-length step has no
+ * direction; a three-kilometre step has no shore.
+ */
+export function unbrokenAround(
+  points: readonly ShorePoint[],
+  index: number,
+  gapMetres: number,
+): { from: number; to: number } {
+  let from = Math.max(0, Math.min(index, points.length - 1));
+  let to = from;
+
+  while (
+    from > 0 &&
+    metresBetween(points[from - 1], points[from]) <= gapMetres
+  ) {
+    from -= 1;
+  }
+  while (
+    to < points.length - 1 &&
+    metresBetween(points[to], points[to + 1]) <= gapMetres
+  ) {
+    to += 1;
+  }
+
+  return { from, to };
+}
+
+/**
  * The run between two points of the polyline, grown outward to a minimum length
  * of shore.
  *
@@ -331,11 +375,16 @@ export function runAround(
   fromIndex: number,
   toIndex: number,
   minimumMetres: number,
+  within: { from: number; to: number } = {
+    from: 0,
+    to: Math.max(0, points.length - 1),
+  },
 ): readonly ShorePoint[] {
   if (points.length === 0) return [];
 
-  const last = points.length - 1;
-  let from = Math.max(0, Math.min(fromIndex, toIndex));
+  const last = Math.min(points.length - 1, within.to);
+  const start = Math.max(0, within.from);
+  let from = Math.max(start, Math.min(fromIndex, toIndex));
   let to = Math.min(last, Math.max(fromIndex, toIndex));
 
   let length = 0;
@@ -343,8 +392,8 @@ export function runAround(
     length += metresBetween(points[index], points[index + 1]);
   }
 
-  while (length < minimumMetres && (from > 0 || to < last)) {
-    if (from > 0) {
+  while (length < minimumMetres && (from > start || to < last)) {
+    if (from > start) {
       length += metresBetween(points[from - 1], points[from]);
       from -= 1;
     }

@@ -5,7 +5,9 @@ import {
   boundsAround,
   coastline,
   nearestOn,
+  runAround,
   SHORE_WINDOW_MARGIN,
+  unbrokenAround,
 } from "@/lib/coastline";
 import { coastRunFor, seawardFrom, shoreViewFor } from "./shore";
 
@@ -251,12 +253,10 @@ test("the frame's extra ground is put on the sea side, not shared out", () => {
   // result being right are different claims. La Jolla's coast runs north with
   // the Pacific to the west, so the box grows west: the coast ends up toward
   // the landward edge and the sea wash fills what is left.
+  // The run alone, which is what the frame is built from: the beach's own sand
+  // is not drawn where a coast is, so it is not in the arithmetic either.
   const boxed = boundsAround(
-    [
-      LA_JOLLA.segment.upper,
-      LA_JOLLA.segment.lower,
-      ...coastRunFor(LA_JOLLA)!.points,
-    ],
+    coastRunFor(LA_JOLLA)!.points,
     SHORE_WINDOW_MARGIN,
   );
   const framed = shoreViewFor(LA_JOLLA).bounds!;
@@ -278,4 +278,63 @@ test("a beach with no traced coast keeps an even frame", () => {
   const framed = shoreViewFor(bay).bounds!;
 
   expect(framed).toEqual(boxed);
+});
+
+test("no beach's stretch is drawn across a gap in the model", () => {
+  // `coronado-north-beach` sits by the mouth of San Diego Bay, where the model
+  // leaves a 2,967 m gap because there is no open coast to place lines on.
+  // Searching the whole coastline for the beach's two ends -- which is what
+  // ADR-0036 changed -- let them land on opposite sides of it, so the stretch
+  // marking a 2.8 km beach came out as a 4.9 km V with a three-kilometre
+  // diagonal drawn straight across the channel, in the heavy stroke that means
+  // "this is your beach".
+  //
+  // Asserted for every beach and against the step rather than the total: a
+  // stretch is allowed to be longer than its beach, and is never allowed to
+  // contain a step no shoreline could.
+  const kmPerDegree = 111.32;
+  const stepMetres = (a: Position, b: Position) => {
+    const lonScale = Math.cos((((a.lat + b.lat) / 2) * Math.PI) / 180);
+    return (
+      Math.hypot((a.lon - b.lon) * lonScale, a.lat - b.lat) * kmPerDegree * 1000
+    );
+  };
+
+  const jumped: string[] = [];
+  for (const beach of allBeaches()) {
+    const run = coastRunFor(beach);
+    if (run === null) continue;
+
+    for (const points of [run.points, run.stretch]) {
+      for (let index = 0; index < points.length - 1; index += 1) {
+        const step = stepMetres(points[index], points[index + 1]);
+        if (step > 500) {
+          jumped.push(`${beach.slug}: ${step.toFixed(0)} m`);
+          break;
+        }
+      }
+    }
+  }
+
+  expect(jumped).toEqual([]);
+});
+
+test("a run stops at a gap rather than growing through it", () => {
+  // The unit behind the inventory check above. Two fragments 3 km apart, and a
+  // minimum long enough that a run would cross the gap if nothing stopped it.
+  const points = [
+    { id: "a", lat: 32.0, lon: -117.0 },
+    { id: "b", lat: 32.001, lon: -117.0 },
+    { id: "c", lat: 32.03, lon: -117.0 },
+    { id: "d", lat: 32.031, lon: -117.0 },
+  ];
+
+  const whole = unbrokenAround(points, 0, 500);
+  expect(whole).toEqual({ from: 0, to: 1 });
+
+  const run = runAround(points, 0, 0, 5_000, whole);
+  expect(run.map((point) => point.id)).toEqual(["a", "b"]);
+
+  // And from the far fragment, the other way.
+  expect(unbrokenAround(points, 3, 500)).toEqual({ from: 2, to: 3 });
 });

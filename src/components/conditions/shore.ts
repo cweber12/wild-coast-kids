@@ -23,6 +23,7 @@ import {
   coastline,
   nearestOn,
   runAround,
+  unbrokenAround,
   SHORE_WINDOW_MARGIN,
   squareToward,
   windowAround,
@@ -111,6 +112,21 @@ const COAST_REACH_M = 1_000;
  */
 const MIN_RUN_M = 2_000;
 
+/**
+ * A step longer than this is a gap in the model rather than a piece of shore.
+ *
+ * `unbrokenAround` holds the argument; this is where the figure is chosen. The
+ * polyline steps about 98 m, so 500 m means the model placed nothing for five
+ * lines running -- which on this coast means a harbour or river mouth rather
+ * than a stretch of beach. Nine of the 1,086 steps exceed it and each is one of
+ * those; the largest, 2,967 m, is the mouth of San Diego Bay.
+ *
+ * Not tighter, because 25 steps exceed 300 m and most of them are ordinary
+ * coast the model sampled unevenly. Not looser, because 1,118 m is the next gap
+ * up and is also a channel.
+ */
+const COAST_GAP_M = 500;
+
 /** The run of coast a map is framed on, and the part of it this beach is. */
 type CoastRun = {
   /** What the frame is built from: the beach's shore plus its context. */
@@ -140,8 +156,22 @@ export function coastRunFor(beach: Beach): CoastRun | null {
   if (lower === null || upper === null) return null;
   if (Math.min(lower.metres, upper.metres) > COAST_REACH_M) return null;
 
-  const from = Math.min(lower.index, upper.index);
-  const to = Math.max(lower.index, upper.index);
+  /*
+    Both ends are pulled onto one unbroken piece of shore before anything is
+    sliced.
+
+    Searching the whole coastline made this reachable where a small window could
+    not: `coronado-north-beach` sits by the mouth of San Diego Bay, its two ends
+    snapped to opposite sides of the 2,967 m gap the model leaves there, and the
+    stretch marking a 2.8 km beach came out as a 4.9 km V with a three-kilometre
+    diagonal drawn across the channel. The nearer end is the one to trust, so
+    its own fragment is what both ends are clamped into.
+  */
+  const anchor = lower.metres <= upper.metres ? lower.index : upper.index;
+  const whole = unbrokenAround(points, anchor, COAST_GAP_M);
+
+  const from = Math.max(whole.from, Math.min(lower.index, upper.index));
+  const to = Math.min(whole.to, Math.max(lower.index, upper.index));
 
   /*
     A stretch of one point draws nothing, and several beaches are shorter than
@@ -151,10 +181,10 @@ export function coastRunFor(beach: Beach): CoastRun | null {
     the whole of `beachStretch`'s argument against a chord: a stroke at an angle
     to the shore beside it reads as a second, wrong shore.
   */
-  const end = to === from ? Math.min(points.length - 1, from + 1) : to;
+  const end = to === from ? Math.min(whole.to, from + 1) : to;
 
   return {
-    points: runAround(points, from, to, MIN_RUN_M),
+    points: runAround(points, from, to, MIN_RUN_M, whole),
     stretch: points.slice(from, end + 1),
   };
 }
@@ -220,12 +250,20 @@ export function seawardFrom(
 export function shoreViewFor(beach: Beach): ShoreView {
   const run = coastRunFor(beach);
 
+  /*
+    The beach's own two ends are in the arithmetic only where nothing else is.
+
+    Where a coast is drawn they are not, and leaving them in was the same fault
+    as leaving the MOP line in, one step further along: the sand is not drawn
+    either. `ShoreMap`'s own credit says why -- the traced line is CDIP's model
+    line "computed a few hundred metres offshore, so the water's edge is drawn
+    further out than the sand" -- and the stretch marking this beach is a run of
+    that line, not of the sand. At `coronado-central-beach` the sand sits 0.93
+    km inland of the line, and including it stretched the box that far toward
+    the land, which is the empty band the picture then had to spend.
+  */
   const boxed = boundsAround(
-    [
-      beach.segment.upper,
-      beach.segment.lower,
-      ...(run === null ? [] : run.points),
-    ],
+    run === null ? [beach.segment.upper, beach.segment.lower] : run.points,
     SHORE_WINDOW_MARGIN,
   );
 
