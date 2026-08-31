@@ -40,6 +40,65 @@ export const SEAWARD = "left";
  */
 export const WINDOW_MARGIN = 0.1;
 
+/**
+ * The least ground this window covers, whatever the sources say.
+ *
+ * **The map's frame outgrew this checker, and the checker did not notice.**
+ * This file used to argue that the map's window was contained in its own, so
+ * the run the map draws was a sub-run of the run checked here and inherited the
+ * verdict. ADR-0036 made the map frame on a run of coast grown to a minimum
+ * length instead, and measured afterwards, 27 of the 28 beaches with a coast
+ * drew points this checker had never looked at -- 53 of them at
+ * `la-jolla-community-beach`.
+ *
+ * **Twelve kilometres, and the figure is measured rather than reasoned.** This
+ * window has to *contain* the map's rather than match it, and the map's is not
+ * simply its two-kilometre run: on a shore that runs east to west, squaring the
+ * frame toward the sea grows it along the coast as well, so the run drawn at
+ * `coronado-cays-nr` and `imperial-beach` reaches much further than the minimum
+ * suggests. Swept against the real assembler: 4 km leaves 9 beaches drawing
+ * unchecked points, 8 km leaves 5, and 12 km leaves none.
+ *
+ * **A wider window is not free, which is why it is checked and not assumed.**
+ * This file's own opening records that the polyline is not monotonic — it wraps
+ * Point Loma, where 39 of 1,209 steps run north to south — so a window wide
+ * enough to reach that wrap could match a buoy against a segment walking the
+ * wrong way. At 12 km every one of the 15 beaches that binds a buoy still puts
+ * it seaward, so the width is paid for rather than merely large.
+ *
+ * The containment itself is asserted in `sea-side.test.mjs` against the real
+ * assembler rather than trusted to this comment — which is what the old
+ * constant-equality check was a proxy for, and stopped being.
+ */
+export const MIN_WINDOW_M = 12_000;
+
+const METRES_PER_DEGREE = 111_320;
+
+/** The same box grown from its middle until it covers at least `metres`. */
+function atLeast(bounds, metres) {
+  const lonScale = Math.cos(
+    (((bounds.south + bounds.north) / 2) * Math.PI) / 180,
+  );
+  const growLat =
+    Math.max(0, metres - (bounds.north - bounds.south) * METRES_PER_DEGREE) /
+    2 /
+    METRES_PER_DEGREE;
+  const growLon =
+    Math.max(
+      0,
+      metres - (bounds.east - bounds.west) * lonScale * METRES_PER_DEGREE,
+    ) /
+    2 /
+    (METRES_PER_DEGREE * lonScale);
+
+  return {
+    south: bounds.south - growLat,
+    north: bounds.north + growLat,
+    west: bounds.west - growLon,
+    east: bounds.east + growLon,
+  };
+}
+
 /** Consecutive repeats dropped, so no segment has zero length and no direction. */
 export function coastFrom(mopLines) {
   const points = [];
@@ -152,11 +211,23 @@ export function sideOf(points, at) {
  * measured, not guessed.
  *
  * The property proven is about the polyline and not about the frame: walked
- * south to north, this coast has the sea on its left. `boundsAround` grows with
- * the points it is given, so the map's window is contained in this one and its
- * run of coast is a contiguous sub-run of the run checked here. A sub-run walks
- * the same way, which is what `ShoreMap`'s shading depends on.
+ * south to north, this coast has the sea on its left. The map's run of coast is
+ * a contiguous sub-run of the run checked here, and a sub-run walks the same
+ * way, which is what `ShoreMap`'s shading depends on.
+ *
+ * **That containment used to be an accident of arithmetic and is now a rule.**
+ * It held because `boundsAround` grows with the points it is given and the map
+ * was framed on a subset of them. ADR-0036 stopped framing the map that way,
+ * and the containment quietly stopped holding: 27 of the 28 beaches with a
+ * coast drew points this file had never checked. `MIN_WINDOW_M` is what makes
+ * it true again, and `sea-side.test.mjs` is what stops it becoming false
+ * silently a second time.
  */
+export function windowFor(beach, tables) {
+  const bounds = boundsAround(positionsFor(beach, tables), WINDOW_MARGIN);
+  return bounds === null ? null : atLeast(bounds, MIN_WINDOW_M);
+}
+
 function positionsFor(beach, tables) {
   const positions = [beach.segment.upper, beach.segment.lower];
 
@@ -206,7 +277,7 @@ export function checkSeaSide(tables) {
       continue;
     }
 
-    const bounds = boundsAround(positionsFor(beach, tables), WINDOW_MARGIN);
+    const bounds = windowFor(beach, tables);
     if (!bounds) {
       skip("have every source at one place", beach.slug);
       continue;
