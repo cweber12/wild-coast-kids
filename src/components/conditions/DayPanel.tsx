@@ -398,9 +398,27 @@ export async function DayPanel({ slug }: { slug: string }) {
     days in the same order and the two cannot disagree about which is Tuesday.
   */
   const days: DayView[] = daylight.days.map((day) => {
-    // "today" inside a sentence, `Thu, Aug 27` on the other six. The grid's own
-    // label, so the heading and the cell a reader just chose agree.
+    /*
+      Three forms of one day, because three positions want three.
+
+      `when` goes where a noun or a preposition already precedes it -- "for
+      today", "Tide Thu, Aug 27, hour by hour" -- and is the form every absence
+      sentence and every spoken description takes. `dayName` heads the region,
+      where it is capitalised. `chartWhen` closes the chart's summary line,
+      which ends on the day rather than continuing past it: "high 5.3 ft today"
+      needs no preposition and "high 5.3 ft Thu, Aug 27" reads as "5.3 ft Thu"
+      and then a stray "Aug 27", because the comma inside the label collides
+      with the sentence.
+
+      All three are composed here, in one expression each, rather than derived
+      from one another downstream. `dayName` is not `when` capitalised and
+      `chartWhen` is not `dayName` lowercased: lowercasing a date gives "thu,
+      aug 27". A component deriving one from another would be inventing a
+      calendar rule at a call site, which is the drift `ProvenanceLine`'s
+      docstring records for a different fact.
+    */
     const when = day.isToday ? "today" : day.dayLabel;
+    const chartWhen = day.isToday ? "today" : `on ${day.dayLabel}`;
 
     const tideDay =
       hourly.state.kind === "week"
@@ -526,6 +544,7 @@ export async function DayPanel({ slug }: { slug: string }) {
       localDate: day.localDate,
       // "Today" at the head of a heading, the grid's own label otherwise.
       dayName: day.isToday ? "Today" : day.dayLabel,
+      chartWhen,
       /*
         The frame comes from the calendar, not from a feed.
 

@@ -89,6 +89,11 @@ const PROPS = {
   endMs: END,
   sunriseMs: SUNRISE,
   sunsetMs: SUNSET,
+  // The chart is handed the day already worded, so "today" here is a fixture
+  // value and not a fact this component knows. `selectedDay.test.tsx` is where
+  // the word is checked against the heading, which is the only place the two
+  // can be compared.
+  when: "today",
   series: [TIDE],
 };
 

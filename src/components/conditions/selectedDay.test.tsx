@@ -65,6 +65,10 @@ function dayView(index: number): DayView {
   return {
     localDate,
     dayName: isToday ? "Today" : DAYS[index].dayLabel,
+    // The heading's form and the sentence's form, composed the way `DayPanel`
+    // composes them. A fixture deriving one from the other would prove the two
+    // agree here and nothing about whether they agree on the page.
+    chartWhen: isToday ? "today" : `on ${DAYS[index].dayLabel}`,
     startMs: localMidnightOf(localDate),
     endMs: localMidnightOf(localDate) + 24 * HOUR,
     sunriseMs: localMidnightOf(localDate) + 6 * HOUR,
