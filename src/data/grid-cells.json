@@ -1,8 +1,8 @@
 {
   "version": "0.1.0",
-  "generated": "2026-08-26",
+  "generated": "2026-09-01",
   "_provenance": "Measured by scripts/probe-grid-cells.mjs against https://api.weather.gov; re-runnable and diffable with --check. Each beach segment end is resolved by /points, which is the National Weather Service's own mapping from a coordinate to a forecast cell and cannot be recomputed offline; each distinct cell is then read once from /gridpoints for its mean elevation and its published series. See https://www.weather.gov/documentation/services-web-api.",
-  "_what_was_measured": "21 distinct cells serve this inventory, of which 21 publish a sky cover series. 0 publish a visibility series -- a key present with an empty values array is not a published variable, and every cell declares visibility and ceilingHeight whether or not it fills them. That is why delivers counts entries.",
+  "_what_was_measured": "27 distinct cells serve this inventory, of which 27 publish a sky cover series. 0 publish a visibility series -- a key present with an empty values array is not a published variable, and every cell declares visibility and ceilingHeight whether or not it fills them. That is why delivers counts entries.",
   "_schema": {
     "cells.<id>.office: ": "The forecast office, from /points gridId.",
     "cells.<id>.x": "Grid column, from /points gridX.",
@@ -16,6 +16,36 @@
     "resolutions.<slug>.<end>.reason": "Present only when cell is null. What /points said."
   },
   "cells": {
+    "SGX/53,14": {
+      "office": "SGX",
+      "x": 53,
+      "y": 14,
+      "elevation_m": 0,
+      "sky_cover_entries": 40,
+      "visibility_entries": 0,
+      "ceiling_entries": 0,
+      "delivers": true
+    },
+    "SGX/53,15": {
+      "office": "SGX",
+      "x": 53,
+      "y": 15,
+      "elevation_m": 0,
+      "sky_cover_entries": 39,
+      "visibility_entries": 0,
+      "ceiling_entries": 0,
+      "delivers": true
+    },
+    "SGX/53,16": {
+      "office": "SGX",
+      "x": 53,
+      "y": 16,
+      "elevation_m": 0,
+      "sky_cover_entries": 40,
+      "visibility_entries": 0,
+      "ceiling_entries": 0,
+      "delivers": true
+    },
     "SGX/53,19": {
       "office": "SGX",
       "x": 53,
@@ -31,7 +61,17 @@
       "x": 53,
       "y": 20,
       "elevation_m": 0,
-      "sky_cover_entries": 37,
+      "sky_cover_entries": 40,
+      "visibility_entries": 0,
+      "ceiling_entries": 0,
+      "delivers": true
+    },
+    "SGX/54,13": {
+      "office": "SGX",
+      "x": 54,
+      "y": 13,
+      "elevation_m": 0,
+      "sky_cover_entries": 40,
       "visibility_entries": 0,
       "ceiling_entries": 0,
       "delivers": true
@@ -41,7 +81,7 @@
       "x": 54,
       "y": 14,
       "elevation_m": 0,
-      "sky_cover_entries": 36,
+      "sky_cover_entries": 40,
       "visibility_entries": 0,
       "ceiling_entries": 0,
       "delivers": true
@@ -51,7 +91,7 @@
       "x": 54,
       "y": 16,
       "elevation_m": 3.048,
-      "sky_cover_entries": 35,
+      "sky_cover_entries": 40,
       "visibility_entries": 0,
       "ceiling_entries": 0,
       "delivers": true
@@ -61,7 +101,7 @@
       "x": 54,
       "y": 17,
       "elevation_m": 0.9144,
-      "sky_cover_entries": 35,
+      "sky_cover_entries": 40,
       "visibility_entries": 0,
       "ceiling_entries": 0,
       "delivers": true
@@ -71,7 +111,7 @@
       "x": 54,
       "y": 18,
       "elevation_m": 25.908,
-      "sky_cover_entries": 36,
+      "sky_cover_entries": 40,
       "visibility_entries": 0,
       "ceiling_entries": 0,
       "delivers": true
@@ -81,7 +121,7 @@
       "x": 54,
       "y": 20,
       "elevation_m": 106.0704,
-      "sky_cover_entries": 36,
+      "sky_cover_entries": 39,
       "visibility_entries": 0,
       "ceiling_entries": 0,
       "delivers": true
@@ -91,7 +131,17 @@
       "x": 54,
       "y": 21,
       "elevation_m": 0,
-      "sky_cover_entries": 37,
+      "sky_cover_entries": 40,
+      "visibility_entries": 0,
+      "ceiling_entries": 0,
+      "delivers": true
+    },
+    "SGX/55,13": {
+      "office": "SGX",
+      "x": 55,
+      "y": 13,
+      "elevation_m": 0,
+      "sky_cover_entries": 40,
       "visibility_entries": 0,
       "ceiling_entries": 0,
       "delivers": true
@@ -101,7 +151,7 @@
       "x": 55,
       "y": 14,
       "elevation_m": 0.9144,
-      "sky_cover_entries": 36,
+      "sky_cover_entries": 39,
       "visibility_entries": 0,
       "ceiling_entries": 0,
       "delivers": true
@@ -111,7 +161,7 @@
       "x": 55,
       "y": 15,
       "elevation_m": 2.1336,
-      "sky_cover_entries": 37,
+      "sky_cover_entries": 39,
       "visibility_entries": 0,
       "ceiling_entries": 0,
       "delivers": true
@@ -121,7 +171,7 @@
       "x": 55,
       "y": 16,
       "elevation_m": 7.9248,
-      "sky_cover_entries": 34,
+      "sky_cover_entries": 40,
       "visibility_entries": 0,
       "ceiling_entries": 0,
       "delivers": true
@@ -131,7 +181,7 @@
       "x": 55,
       "y": 17,
       "elevation_m": 3.9624,
-      "sky_cover_entries": 37,
+      "sky_cover_entries": 39,
       "visibility_entries": 0,
       "ceiling_entries": 0,
       "delivers": true
@@ -141,7 +191,7 @@
       "x": 55,
       "y": 18,
       "elevation_m": 35.9664,
-      "sky_cover_entries": 35,
+      "sky_cover_entries": 39,
       "visibility_entries": 0,
       "ceiling_entries": 0,
       "delivers": true
@@ -151,7 +201,7 @@
       "x": 55,
       "y": 22,
       "elevation_m": 117.0432,
-      "sky_cover_entries": 36,
+      "sky_cover_entries": 39,
       "visibility_entries": 0,
       "ceiling_entries": 0,
       "delivers": true
@@ -161,7 +211,7 @@
       "x": 55,
       "y": 25,
       "elevation_m": 102.108,
-      "sky_cover_entries": 37,
+      "sky_cover_entries": 39,
       "visibility_entries": 0,
       "ceiling_entries": 0,
       "delivers": true
@@ -171,7 +221,17 @@
       "x": 55,
       "y": 26,
       "elevation_m": 21.9456,
-      "sky_cover_entries": 37,
+      "sky_cover_entries": 38,
+      "visibility_entries": 0,
+      "ceiling_entries": 0,
+      "delivers": true
+    },
+    "SGX/56,12": {
+      "office": "SGX",
+      "x": 56,
+      "y": 12,
+      "elevation_m": 0,
+      "sky_cover_entries": 38,
       "visibility_entries": 0,
       "ceiling_entries": 0,
       "delivers": true
@@ -181,7 +241,7 @@
       "x": 56,
       "y": 13,
       "elevation_m": 0.9144,
-      "sky_cover_entries": 36,
+      "sky_cover_entries": 39,
       "visibility_entries": 0,
       "ceiling_entries": 0,
       "delivers": true
@@ -191,7 +251,7 @@
       "x": 57,
       "y": 10,
       "elevation_m": 2.1336,
-      "sky_cover_entries": 36,
+      "sky_cover_entries": 39,
       "visibility_entries": 0,
       "ceiling_entries": 0,
       "delivers": true
@@ -201,7 +261,7 @@
       "x": 57,
       "y": 7,
       "elevation_m": 4.8768,
-      "sky_cover_entries": 37,
+      "sky_cover_entries": 40,
       "visibility_entries": 0,
       "ceiling_entries": 0,
       "delivers": true
@@ -211,7 +271,7 @@
       "x": 57,
       "y": 8,
       "elevation_m": 0.9144,
-      "sky_cover_entries": 37,
+      "sky_cover_entries": 40,
       "visibility_entries": 0,
       "ceiling_entries": 0,
       "delivers": true
@@ -221,7 +281,7 @@
       "x": 57,
       "y": 9,
       "elevation_m": 10.0584,
-      "sky_cover_entries": 37,
+      "sky_cover_entries": 38,
       "visibility_entries": 0,
       "ceiling_entries": 0,
       "delivers": true
@@ -261,12 +321,44 @@
         "cell": "SGX/57,10"
       }
     },
+    "coronado-central-beach": {
+      "upper": {
+        "cell": "SGX/55,13"
+      },
+      "lower": {
+        "cell": "SGX/56,13"
+      }
+    },
+    "coronado-city-beaches": {
+      "upper": {
+        "cell": "SGX/55,13"
+      },
+      "lower": {
+        "cell": "SGX/56,12"
+      }
+    },
+    "coronado-north-beach": {
+      "upper": {
+        "cell": "SGX/54,13"
+      },
+      "lower": {
+        "cell": "SGX/55,13"
+      }
+    },
     "del-mar-city-beach": {
       "upper": {
         "cell": "SGX/55,26"
       },
       "lower": {
         "cell": "SGX/55,25"
+      }
+    },
+    "dog-beach-o-b": {
+      "upper": {
+        "cell": "SGX/54,16"
+      },
+      "lower": {
+        "cell": "SGX/53,16"
       }
     },
     "fiesta-island": {
@@ -477,6 +569,14 @@
         "cell": "SGX/57,8"
       }
     },
+    "ocean-beach": {
+      "upper": {
+        "cell": "SGX/54,16"
+      },
+      "lower": {
+        "cell": "SGX/53,15"
+      }
+    },
     "pacific-beach": {
       "upper": {
         "cell": "SGX/54,18"
@@ -531,6 +631,14 @@
       },
       "lower": {
         "cell": "SGX/55,15"
+      }
+    },
+    "sunset-cliffs-park": {
+      "upper": {
+        "cell": "SGX/53,15"
+      },
+      "lower": {
+        "cell": "SGX/53,14"
       }
     },
     "tecolote-shores": {
