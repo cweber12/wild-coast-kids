@@ -45,6 +45,7 @@
 import type { ReactNode } from "react";
 import type { Bounds, Position, ShorePoint } from "@/lib/coastline";
 import { projectionFor } from "@/lib/coastline";
+import { seaWash } from "./wash";
 
 export type ShoreMapProps = {
   /** The windowed coast in walk order. Empty draws no shoreline and says so. */
@@ -143,71 +144,6 @@ export type ShoreMapProps = {
 const WIDTH = 100;
 const HEIGHT = 100;
 
-/**
- * Far enough that the sea polygon always leaves the frame.
- *
- * Twice the diagonal, so no window shape can leave a corner unshaded. The outer
- * `<svg>` clips to its own viewport, so the overshoot costs nothing.
- */
-const OFF_FRAME = 2 * Math.hypot(WIDTH, HEIGHT);
-
-/**
- * The sea, as a polygon closed off the edge of the frame.
- *
- * **Which side is seaward.** `sideOf` in `lib/coastline.ts` answers that
- * geographically and the `sea-side` gate row proves the answer is "left of the
- * walk" for every beach that can be asked. Converting to plot coordinates is
- * the one place the flip matters: `projectionFor` puts north at the top, so y
- * grows southward and the geographic left of a walk appears on the other hand
- * on screen. Left of geographic (dx, dy) is (-dy, dx); with y flipped, a plot
- * direction (px, py) has its seaward normal at (py, -px).
- *
- * **The polygon also runs on past both ends, and that is not decoration.**
- * Closing straight from the last point to seaward and back to the first leaves
- * a wedge of frame unshaded wherever the coast is not perpendicular to that
- * normal — a diagonal edge of missing sea in a corner, which reads as a drawing
- * error because it is one. Extending along the walk as well as out to sea puts
- * both closing corners outside the frame in both directions, so the whole
- * seaward half is covered whatever angle the shore runs at.
- *
- * Taken from the run's two ends rather than segment by segment: the polygon
- * only has to close on the right side of the frame, and a per-segment normal
- * would fold on itself at a bend.
- */
-function seaPath(
-  path: string,
-  drawn: readonly { x: number; y: number }[],
-): {
-  d: string;
-  from: { x: number; y: number };
-  unit: { x: number; y: number };
-} {
-  const first = drawn[0];
-  const last = drawn[drawn.length - 1];
-
-  const px = last.x - first.x;
-  const py = last.y - first.y;
-  const length = Math.hypot(px, py) || 1;
-
-  const unit = { x: py / length, y: -px / length };
-  const walk = { x: (px / length) * OFF_FRAME, y: (py / length) * OFF_FRAME };
-  const sea = { x: unit.x * OFF_FRAME, y: unit.y * OFF_FRAME };
-
-  const beyondEnd = { x: last.x + walk.x + sea.x, y: last.y + walk.y + sea.y };
-  const beforeStart = {
-    x: first.x - walk.x + sea.x,
-    y: first.y - walk.y + sea.y,
-  };
-
-  return {
-    d:
-      `${path} L${beyondEnd.x.toFixed(2)} ${beyondEnd.y.toFixed(2)}` +
-      ` L${beforeStart.x.toFixed(2)} ${beforeStart.y.toFixed(2)} Z`,
-    from: drawn[Math.floor(drawn.length / 2)],
-    unit,
-  };
-}
-
 export function ShoreMap({
   coast,
   bounds,
@@ -234,7 +170,17 @@ export function ShoreMap({
     )
     .join(" ");
 
-  const sea = hasCoast ? seaPath(path, drawn) : null;
+  /*
+    The wash is built from the drawn coast and the frame, and from nothing else.
+
+    It used to be closed on a normal taken across the run's two ends, which is
+    exact on a straight shore and approximate on a bent one -- and ADR-0039 gave
+    the bays a shoreline that turns through more than a right angle inside one
+    frame. `seaWash` closes on the frame's own edges instead, so which side is
+    water is read from the walk rather than from a direction anything here has
+    to get right. ADR-0041.
+  */
+  const sea = seaWash(drawn, { width: WIDTH, height: HEIGHT });
 
   const drawnSegment =
     segment === null || segment.length < 2
@@ -281,7 +227,12 @@ export function ShoreMap({
           */}
         {sea !== null && (
           <path
-            d={sea.d}
+            d={`${sea
+              .map(
+                (at, index) =>
+                  `${index === 0 ? "M" : "L"}${at.x.toFixed(2)} ${at.y.toFixed(2)}`,
+              )
+              .join(" ")} Z`}
             className="fill-ocean"
             fillOpacity={0.16}
             data-sea=""

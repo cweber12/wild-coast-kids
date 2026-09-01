@@ -105,17 +105,18 @@ test("the shaded side is the seaward one", () => {
   const sea = container.querySelector("[data-sea]")!.getAttribute("d")!;
   const xs = [...sea.matchAll(/[ML](-?[\d.]+) /g)].map((m) => Number(m[1]));
 
-  // The polygon closes on two points pushed off-frame to the seaward side.
-  const closing = xs.slice(-2);
-  const coastXs = xs.slice(0, -2);
+  // The wash runs off the western edge of the picture and stops short of the
+  // eastern one. Where exactly its corners fall is `wash.ts`'s business and is
+  // checked there, against every committed beach rather than one fixture.
+  expect(Math.min(...xs)).toBeLessThan(0);
+  expect(Math.max(...xs)).toBeLessThan(100);
+  expect(sea.endsWith("Z")).toBe(true);
 
-  expect(Math.max(...closing)).toBeLessThan(Math.min(...coastXs));
-
-  // And a point known to be out at sea falls west of every drawn coast point,
-  // which is the direction the closing corners went.
+  // And the drawn coast is well inside the frame, so "runs off the west edge"
+  // is a claim about the wash rather than about where the window happens to be.
   const project = projectionFor(BOUNDS, { width: 100, height: 100 });
-  const offshore = project(32.865, -117.272);
-  expect(offshore.x).toBeLessThan(Math.min(...coastXs));
+  const coastXs = COAST.map((point) => project(point.lat, point.lon).x);
+  expect(Math.min(...coastXs)).toBeGreaterThan(0);
 });
 
 test("the water is one solid wash, not a gradient", () => {
