@@ -389,10 +389,22 @@ export default defineConfig({
         // this slice's own test found missing, where a flipped ring winding
         // would have returned the inland ecoregion boundary and drawn it as a
         // shoreline forty kilometres inland.
-        statements: 89.3,
-        branches: 89.0,
-        functions: 94.1,
-        lines: 88.99,
+        // LOWERED 2026-08-31 again, one commit later, under reason 2 this time:
+        // ADR-0038 deleted corner.ts and corner.test.ts. That module was at
+        // 100% on all four, so removing it pulls the whole-project ratio toward
+        // the 0% entry plumbing even though no test was lost and nothing became
+        // untested. 23 statements and 26 branches left the numerator with their
+        // denominators; the ratio falls about a tenth of a point.
+        //
+        // Two lowerings in two commits is worth naming rather than passing
+        // over. They are the two different legitimate reasons, in order: the
+        // denominator grew with a probe's untestable half, then the numerator
+        // shrank when a fully-tested module was deleted. Neither is a test that
+        // stopped running.
+        statements: 89.22,
+        branches: 88.87,
+        functions: 94.06,
+        lines: 88.89,
       },
     },
   },
