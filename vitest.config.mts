@@ -369,10 +369,48 @@ export default defineConfig({
         // not provoke, and `dayFrame.ts` at 87.5% branches, whose one uncovered
         // arm is `nightBands` dropping a band with no width -- a polar summer,
         // which this coast does not have.
-        statements: 90.01,
-        branches: 89.59,
-        functions: 94.56,
-        lines: 89.74,
+        // LOWERED 2026-08-31 under reason 1, when probe-coastline.mjs arrived
+        // with ADR-0037. Nothing new is excluded and no test was lost; the
+        // denominator grew by one 450-line probe whose untestable half is the
+        // usual one.
+        //
+        // It lands at 76.2% statements, 74% lines -- better covered than
+        // probe-mop-lines.mjs at 60.6% and 56.9%, which sits here for exactly
+        // the same reason. The uncovered statements are lines 465-551 and
+        // 560-562: `getJson`, `queryUrl` and `main()`. That is fetch-and-write
+        // plumbing against services2.arcgis.com, and covering it would mean
+        // either mocking the network at a seam this repo deliberately does not
+        // put one at, or a gate row that needs the internet.
+        //
+        // Everything in the file that decides the shape of a coastline is
+        // tested: arcBetween, simplifyIndices, densifyIndices, thin,
+        // anchorsFrom, mainlandRing, coastalArc, metresBetween, nearestVertex
+        // and document, including all six of the refusals -- among them the one
+        // this slice's own test found missing, where a flipped ring winding
+        // would have returned the inland ecoregion boundary and drawn it as a
+        // shoreline forty kilometres inland.
+        // LOWERED 2026-08-31 again, one commit later, under reason 2 this time:
+        // ADR-0038 deleted corner.ts and corner.test.ts. That module was at
+        // 100% on all four, so removing it pulls the whole-project ratio toward
+        // the 0% entry plumbing even though no test was lost and nothing became
+        // untested. 23 statements and 26 branches left the numerator with their
+        // denominators; the ratio falls about a tenth of a point.
+        //
+        // LOWERED 2026-08-31 a third time, under reason 2 again: ADR-0039
+        // deleted `modelLine()` from coastline.ts, a covered function with its
+        // covered tests. Two hundredths of a point on lines and functions.
+        //
+        // Three lowerings in three commits is worth naming rather than passing
+        // over, and they are not one drift. In order: the denominator grew with
+        // a probe's untestable half (reason 1), then the numerator shrank twice
+        // as fully-tested code was deleted (reason 2) -- corner.ts when the
+        // readout left the picture, then modelLine() when the open-coast test
+        // it existed for stopped existing. No test stopped running in any of
+        // them, and every deletion is a decision with an ADR.
+        statements: 89.22,
+        branches: 88.89,
+        functions: 94.04,
+        lines: 88.87,
       },
     },
   },

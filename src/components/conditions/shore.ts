@@ -76,27 +76,33 @@ function beachStretch(
 }
 
 /**
- * Farther than this from the traced coast and a beach is not on it.
+ * Farther than this from the traced shore and a beach has no coast to draw.
  *
- * **Measured rather than chosen, and it reproduces a partition this repo
- * already documents.** Every beach that binds a MOP line is within 0.93 km of
- * the traced coastline; every Mission Bay and San Diego Bay beach is 1.17 km or
- * more away. So a kilometre separates the two groups the same way ADR-0034's
- * "23 beaches with no traced coast" already does, and the gap it sits in is
- * wide enough that no beach is near the line.
+ * **It stopped separating the open coast from the bays, because the traced
+ * shore stopped making that distinction.** Under ADR-0037 this was measured
+ * against the model line and reproduced the 28/23 split ADR-0033 and ADR-0036
+ * document: a kilometre sat in a wide gap between the beaches CDIP places a
+ * line for and the ones in Mission Bay and San Diego Bay. ADR-0039 draws the
+ * bays, so there is no longer a partition for it to reproduce, and this becomes
+ * what its name always said — the distance past which there is nothing to draw.
  *
- * It replaces a test that was never written down: whether the beach's own tiny
- * frame happened to catch a point. That answered the same question by accident
- * and got three beaches wrong -- `childrens-pool`, `tijuana-slough` and
- * `coronado-cays-nr` are 0.33, 0.74 and 0.83 km from the open coast and drew
- * none of it, because none binds a MOP line and their frames were tens of
- * metres across.
+ * **Measured, and the gap it sits in is wider than the old one.** Every beach
+ * in the inventory is within 36.7 m of the traced shore except
+ * `mission-bay-vacation-isle`, which is 416 m from it. Nothing lies between.
  *
- * **Not "binds a MOP line"**, which is free and committed and answers a
- * different question: which model line supplies this beach's swell forecast.
- * `childrens-pool` binds none and is plainly on the open coast.
+ * **The one it excludes is the one that must be excluded**, which is why the
+ * threshold is not simply dropped. Vacation Isle is on an island, and the
+ * committed shoreline holds the mainland ring only, so its nearest shore is
+ * across a channel. Admitted, it would take a run on the far bank, frame on it,
+ * and draw the heavy "this is your beach" stroke on somebody else's shoreline.
+ * Excluded, it falls back to its own two ends -- which are a single point, so
+ * `boundsAround` returns null and the page renders an absence, which is what
+ * that beach has always been owed.
+ *
+ * 200 m rather than 100 or 400: it is the middle of the gap, so neither a beach
+ * drifting tens of metres nor the island drifting a hundred crosses it quietly.
  */
-const COAST_REACH_M = 1_000;
+const COAST_REACH_M = 200;
 
 /**
  * The least shore a map shows, when the beach itself is shorter than this.
@@ -113,17 +119,29 @@ const COAST_REACH_M = 1_000;
 const MIN_RUN_M = 2_000;
 
 /**
- * A step longer than this is a gap in the model rather than a piece of shore.
+ * A step longer than this is a chord across water rather than a piece of shore.
  *
- * `unbrokenAround` holds the argument; this is where the figure is chosen. The
- * polyline steps about 98 m, so 500 m means the model placed nothing for five
- * lines running -- which on this coast means a harbour or river mouth rather
- * than a stretch of beach. Nine of the 1,086 steps exceed it and each is one of
- * those; the largest, 2,967 m, is the mouth of San Diego Bay.
+ * `unbrokenAround` holds the argument; this is where the figure is chosen.
  *
- * Not tighter, because 25 steps exceed 300 m and most of them are ordinary
- * coast the model sampled unevenly. Not looser, because 1,118 m is the next gap
- * up and is also a channel.
+ * **The figure survived ADR-0037 and its reason was replaced.** Against the
+ * model line it read: the polyline steps about 98 m, so 500 m means the model
+ * placed nothing for five lines running, and nine of the 1,086 steps exceeded
+ * it -- each a harbour or river mouth, the largest 2,967 m at the mouth of San
+ * Diego Bay.
+ *
+ * The traced shore is a continuous ring, so it has no gaps in that sense at
+ * all, and simplifying it produced long steps for the opposite reason: a
+ * straight coast needs no vertices, which left one step of 1,834 m across open
+ * beach north of Oceanside. `probe-coastline.mjs` answers that by restoring
+ * published vertices to a 200 m cap, which is what makes this number mean
+ * something again. Measured on the committed file afterwards: steps run a
+ * median 50 m, and exactly nine exceed 500 m -- the largest 970 m, and every
+ * one of the nine a chord the source's "bays erased" step drew straight across
+ * the entrances of San Diego Bay and Mission Bay.
+ *
+ * So it still separates shore from water, on a different mechanism, with the
+ * same count by coincidence. Not tighter, because 133 steps fall between the
+ * cap and this and every one is ordinary coast the publisher sampled sparsely.
  */
 const COAST_GAP_M = 500;
 
@@ -145,9 +163,11 @@ type CoastRun = {
  * on `la-jolla-cove` the stretch was drawn beside the MOP line, about 400 m
  * from the beach.
  *
- * Null where the traced coast does not reach, which is a fact about which water
- * this site maps and not a failure. The caller draws the beach's own ends
- * instead and says so under the picture.
+ * Null where the traced coast does not reach, which is a fact about the
+ * geometry rather than a failure. That was 23 beaches until ADR-0039 and is now
+ * one: `mission-bay-vacation-isle`, on an island the committed mainland ring
+ * does not hold. The caller draws the beach's own ends instead — and that
+ * beach's two ends are one point, so it draws nothing and says so.
  */
 export function coastRunFor(beach: Beach): CoastRun | null {
   const points = coastline();
@@ -255,12 +275,16 @@ export function shoreViewFor(beach: Beach): ShoreView {
 
     Where a coast is drawn they are not, and leaving them in was the same fault
     as leaving the MOP line in, one step further along: the sand is not drawn
-    either. `ShoreMap`'s own credit says why -- the traced line is CDIP's model
-    line "computed a few hundred metres offshore, so the water's edge is drawn
-    further out than the sand" -- and the stretch marking this beach is a run of
-    that line, not of the sand. At `coronado-central-beach` the sand sits 0.93
-    km inland of the line, and including it stretched the box that far toward
-    the land, which is the empty band the picture then had to spend.
+    either. The stretch marking this beach is a run of the drawn line rather
+    than of the sand, so including the sand stretched the box toward the land
+    and the picture spent the difference on an empty band.
+
+    ADR-0037 shrank that difference without removing the rule. The drawn line
+    was CDIP's model line, a few hundred metres offshore -- at
+    `coronado-central-beach` the sand sat 0.93 km inland of it. The traced shore
+    puts that beach 36.7 m from the line and is the worst of the 50. The gap is
+    now small enough not to distort a frame, and the reason for the rule stands:
+    what the box is built from should be what the box shows.
   */
   const boxed = boundsAround(
     run === null ? [beach.segment.upper, beach.segment.lower] : run.points,
@@ -271,7 +295,19 @@ export function shoreViewFor(beach: Beach): ShoreView {
   const bounds =
     boxed === null || seaward === null ? boxed : squareToward(boxed, seaward);
 
-  const coast = bounds === null ? [] : windowAround(coastline(), bounds);
+  /*
+    Still both conditions, and the second one is no longer about the bays.
+
+    ADR-0037 made this explicit because the traced shore reached beaches
+    `coastRunFor` was declining to draw, and an empty coast that had been an
+    accident of the source needed to become a decision. ADR-0039 removed the
+    declining, so the only beach left is the island: no run, its own two ends
+    for a frame, and those are one point -- so `bounds` is null and this returns
+    empty by the first condition anyway. The second is kept because it is the
+    honest statement of the rule and costs nothing.
+  */
+  const coast =
+    run === null || bounds === null ? [] : windowAround(coastline(), bounds);
 
   return { coast, bounds, segment: beachStretch(run, beach) };
 }

@@ -1280,15 +1280,18 @@ test("a beach with no swell model keeps its wind row", async () => {
   expect(screen.queryByText(/MOP line/)).toBeNull();
 });
 
-test("a beach the traced coast does not reach gains its wind row", async () => {
-  // 23 of 51 beaches are in Mission Bay or San Diego Bay, where `mop-lines.json`
-  // traces no coast. The dial was withheld on every one of them together with
-  // its provenance, so nearly half the inventory printed no wind figure
-  // anywhere on the picture -- for a rule about a needle drawn over an empty
-  // frame rather than about a labelled block. ADR-0034.
+test("a bay beach with no model line gets both a coast and its wind row", async () => {
+  // Two decisions meeting on one beach.
   //
-  // Modelled as it really is: no coast in the window, and no MOP line to bind,
-  // so the readout is the wind row alone.
+  // ADR-0034: the dial was withheld wherever no coast was drawn, together with
+  // its provenance, so nearly half the inventory printed no wind figure
+  // anywhere on the picture -- for a rule about a needle over an empty frame
+  // rather than about a labelled block.
+  //
+  // ADR-0039: the empty frame is gone too. `fiesta-island` binds no MOP line
+  // and never will -- CDIP places none in Mission Bay -- but CDFW's ecoregion
+  // boundary follows the bay shore, so there is a coastline to draw. The two
+  // are independent, and this beach is where that shows: no line, and a coast.
   const dates = [TODAY];
   daylight(dates);
   tideWeek(dates);
@@ -1310,8 +1313,9 @@ test("a beach the traced coast does not reach gains its wind row", async () => {
     </SelectedDayProvider>,
   );
 
-  // The picture this beach gets: its own two ends as a chord, and no coastline.
-  expect(container.querySelector("[data-coast]")).toBeNull();
+  // The picture this beach gets: the bay's own shoreline, and its stretch of it
+  // drawn heavier. Both, where it used to get a chord across an empty square.
+  expect(container.querySelector("[data-coast]")).not.toBeNull();
   expect(container.querySelector("[data-segment]")).not.toBeNull();
 
   // And the figures it used to have nowhere to print: this hour's, and the

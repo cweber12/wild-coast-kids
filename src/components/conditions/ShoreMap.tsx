@@ -17,14 +17,14 @@
  * it is where the drawn coastline *is*, 117 to 930 m out, so a window without
  * it crops the shoreline off the edge.
  *
- * **A quarter of the county has no coast to draw, and gets the map anyway.**
- * 23 of 51 beaches are in Mission Bay or San Diego Bay, between 2.6 and 5.4 km
- * from the nearest MOP line, because `mop-lines.json` traces the open coast
- * only. Widening their frames until the ocean appears was measured and
- * rejected: what arrives is a shoreline 5 km away that is not this beach's
- * shore. They get their own stretch drawn as a chord — the one thing that says
- * where the beach is — and the map says plainly that the traced coast does not
- * reach them.
+ * **Every beach in the county has a coast to draw.** A quarter of them did not:
+ * 23 of 51 are in Mission Bay or San Diego Bay, and `mop-lines.json` traced the
+ * open coast only, so they got a frame with a chord across it and a sentence
+ * saying the traced coast did not reach them. ADR-0037 replaced that line with
+ * CDFW's ecoregion boundary, which has the bays cut out of it and therefore
+ * follows their shores; ADR-0039 stopped withholding it. What is left is one
+ * beach on an island the committed mainland ring does not hold, and its two
+ * ends are a single point, so it has no frame either and says so.
  *
  * **Presentational and pure**, like `DaySpark`. It takes a window, a box and a
  * stretch, and renders them; it resolves no station and reads no file. The
@@ -45,7 +45,6 @@
 import type { ReactNode } from "react";
 import type { Bounds, Position, ShorePoint } from "@/lib/coastline";
 import { projectionFor } from "@/lib/coastline";
-import { cornerFor, READOUT_BOX, readoutStyle } from "./corner";
 
 export type ShoreMapProps = {
   /** The windowed coast in walk order. Empty draws no shoreline and says so. */
@@ -57,48 +56,65 @@ export type ShoreMapProps = {
    *
    * A run of `coast` wherever a coast is drawn, because a chord between the two
    * ends `beaches.json` carries lands beside the shore at an angle to it and
-   * reads as a second, wrong coastline. On the 23 beaches with no coast in
-   * frame it is those two ends after all, because nothing else on the picture
-   * says where the beach is. `shore.ts` makes that choice.
+   * reads as a second, wrong coastline. Where no coast is drawn it is those two
+   * ends after all, because nothing else on the picture says where the beach
+   * is — which since ADR-0039 is no beach in the committed inventory.
+   * `shore.ts` makes that choice.
    */
   segment: readonly Position[] | null;
   /** The spoken equivalent of the whole picture. */
   description: string;
   /** What to say instead of a map when there is no box at all. */
   absence: string;
-  /** What to say when the traced coast does not reach this beach. */
+  /**
+   * What to say when the traced coast does not reach this beach.
+   *
+   * No committed beach is in that state since ADR-0039 — the bays have their
+   * own shoreline and the island has no frame at all, so it takes `absence`
+   * instead. The prop stays because this component is pure and is handed a
+   * coast rather than resolving one: an empty coast has to render as a sentence
+   * rather than as an empty square, which on a page about the sea reads as open
+   * water.
+   */
   noCoast: string;
   /**
    * What the drawn shore was traced from, said once under the picture.
    *
    * ADR-0010's rule applied to the largest thing on the map, which is now the
    * only thing on it. It matters more here than for an ordinary figure: nothing
-   * about looking at a line down a coast says it is a model line computed a few
-   * hundred metres offshore rather than the shore itself, so these words are the
-   * only place a reader can learn it.
+   * about looking at a line down a coast says what traced it, so these words are
+   * the only place a reader can learn it.
+   *
+   * Under ADR-0030 what they had to disclose was that the line was not a shore
+   * at all — CDIP's model line, a few hundred metres out. ADR-0037 made it a
+   * shore, and the disclosure did not go away, it changed: the line is county
+   * linework with no published tide datum, so it says where the land is mapped
+   * and not where today's water reaches.
    */
   coastCredit: string;
   /**
-   * The weather readout, already rendered, laid over a corner of the picture.
+   * The weather readout, already rendered, printed under the picture.
    *
    * A slot rather than data, because the readout changes with the day a reader
    * picks and this picture does not: the map is built once on the server and
    * this is the one part of it that varies. `DayCompass` is what fills it.
    *
-   * **HTML over the frame rather than a group inside it**, which is the change
-   * ADR-0034 records. It used to be translated into the map's own drawing space
-   * and anchored on the beach's stretch of coast, where it covered the one
-   * thing the picture exists to show. It is now positioned in CSS against the
-   * map's box, and which corner it lands in is measured rather than fixed —
-   * see `corner.ts`.
+   * **Under the frame rather than over it or in it**, which is ADR-0038
+   * reversing the placement half of ADR-0034. It was once translated into the
+   * map's own drawing space, anchored on the beach's stretch of coast, where it
+   * covered the one thing the picture exists to show; ADR-0034 lifted it out
+   * into an overlay in whichever corner the geometry left free. That corner
+   * stopped existing when the traced coast reached the bays — a bay shore
+   * surrounds the frame — so it comes out of the picture altogether, and gets
+   * the width of the column instead of 46 percent of a square.
    *
-   * **Rendered on every beach, including the 23 the traced coast does not
-   * reach.** The dial was withheld there, on the rule that a bearing read
-   * against no shoreline is the bare gauge the brief's anti-references open
-   * with. That rule was about a needle drawn over an empty frame; a labelled
-   * readout with units, a word for the direction and a provenance line beneath
-   * is not that thing. Withholding it meant nearly half the inventory printed
-   * no wind figure anywhere on the picture. See ADR-0034.
+   * **Rendered on every beach.** The dial was once withheld wherever no
+   * shoreline was drawn, on the rule that a bearing read against nothing is the
+   * bare gauge the brief's anti-references open with — which meant nearly half
+   * the inventory printed no wind figure anywhere on the picture. That rule was
+   * about a needle over an empty frame; a labelled readout with units, a word
+   * for the direction and a provenance line beneath is not that thing.
+   * ADR-0034. The 23 frames it was about are no longer empty either.
    */
   readout?: ReactNode;
   /**
@@ -126,17 +142,6 @@ export type ShoreMapProps = {
  */
 const WIDTH = 100;
 const HEIGHT = 100;
-
-/**
- * The same two numbers as a box, for the things that reason about the frame
- * rather than draw into it.
- *
- * One definition, passed to both, so the readout's footprint and the map's
- * viewBox cannot drift apart. `corner.ts` measures in these units and
- * `readoutStyle` converts them to percentages, which is exact because the frame
- * is square and the picture is drawn `w-full` at `h-auto`.
- */
-const FRAME = { width: WIDTH, height: HEIGHT };
 
 /**
  * Far enough that the sea polygon always leaves the frame.
@@ -237,114 +242,110 @@ export function ShoreMap({
       : segment.map((point) => project(point.lat, point.lon));
 
   /*
-    Which corner the readout stands in, or null when there is no readout.
+    **The coast is not a condition on the readout**, which is the change
+    ADR-0034's last clause records and this one keeps. It was one: a bearing
+    read against no shoreline was held to be the bare gauge the brief opens its
+    anti-references with, so the 23 beaches in Mission Bay and San Diego Bay
+    printed no wind figure anywhere on the picture. That objection was about a
+    needle drawn over an empty frame, and this is a labelled block with units
+    and a publisher under it.
 
-    **The coast is no longer a condition**, which is the change ADR-0034's last
-    clause records. It was one: a bearing read against no shoreline was held to
-    be the bare gauge the brief opens its anti-references with, so the 23
-    beaches in Mission Bay and San Diego Bay printed no wind figure anywhere on
-    the picture. That objection was about a needle drawn over an empty frame,
-    and this is a labelled block with units and a publisher under it.
-
-    The corner is measured against everything the map draws -- the windowed
-    coast and this beach's own stretch -- rather than against the segment alone.
-    The plan asked only for the segment; measured, an adaptive corner clears
-    both on every beach in the inventory, so there was no reason but arithmetic
-    to leave the coastline out and the arithmetic did not charge for it. On a
-    beach with neither, every corner is clear and the first is taken.
+    What the drawn geometry no longer decides is *where the block goes*. It
+    used to pick a corner, measured against the windowed coast and the beach's
+    own stretch. See ADR-0038.
   */
-  const corner =
-    readout === null
-      ? null
-      : cornerFor([...drawn, ...drawnSegment], READOUT_BOX, FRAME);
+  /*
+    Both halves go together, which is the coupling the corner used to carry by
+    accident: the overlay was gated on a corner having been chosen, and the
+    sources were gated on the same thing. With no corner to gate on, it is
+    stated.
 
-  const rightHanded = corner === "top-right" || corner === "bottom-right";
+    A readout with its sources missing is an unattributed figure, and sources
+    printed under a map with no readout name a bearing nobody can see.
+  */
+  const hasReadout = readout !== null && readout !== undefined;
 
   return (
     <div>
-      {/*
-        The wrapper the readout is positioned against, and it wraps the picture
-        alone. The coast credit below must stay outside it: an overlay measured
-        against a box that included a line of prose would be measured against a
-        box that is not square, and the readout's footprint is in the map's own
-        units precisely because those two agree.
-      */}
-      <div className="relative">
-        <svg
-          role="img"
-          aria-label={description}
-          viewBox={`0 0 ${WIDTH} ${HEIGHT}`}
-          className="rounded-tile border-[1.5px] border-ocean block h-auto w-full bg-white/60"
-        >
-          {/*
+      <svg
+        role="img"
+        aria-label={description}
+        viewBox={`0 0 ${WIDTH} ${HEIGHT}`}
+        className="rounded-tile border-[1.5px] border-ocean block h-auto w-full bg-white/60"
+      >
+        {/*
             One wash, no gradient and no depth. The sea is the only filled
             region on this map, so a reader can tell water from land at a glance
             without a legend -- and it is a flat tint rather than a shaded one,
             because shading implies depth and depth here would be invented.
           */}
-          {sea !== null && (
-            <path
-              d={sea.d}
-              className="fill-ocean"
-              fillOpacity={0.16}
-              data-sea=""
-            />
-          )}
+        {sea !== null && (
+          <path
+            d={sea.d}
+            className="fill-ocean"
+            fillOpacity={0.16}
+            data-sea=""
+          />
+        )}
 
-          {hasCoast && (
-            <path
-              d={path}
-              fill="none"
-              className="stroke-ocean"
-              strokeWidth={1.2}
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              vectorEffect="non-scaling-stroke"
-              data-coast=""
-            />
-          )}
+        {hasCoast && (
+          <path
+            d={path}
+            fill="none"
+            className="stroke-ocean"
+            strokeWidth={1.2}
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            vectorEffect="non-scaling-stroke"
+            data-coast=""
+          />
+        )}
 
-          {/*
+        {/*
             This beach's own stretch, heavier than the coast it sits on. Weight
             rather than only hue: the two are the same ocean, so a reader who
             sees no colour still sees which part of the shore they chose.
           */}
-          {drawnSegment.length > 0 && (
-            <path
-              d={drawnSegment
-                .map(
-                  (at, index) =>
-                    `${index === 0 ? "M" : "L"}${at.x.toFixed(2)} ${at.y.toFixed(2)}`,
-                )
-                .join(" ")}
-              fill="none"
-              className="stroke-purple-deep"
-              strokeWidth={3.5}
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              vectorEffect="non-scaling-stroke"
-              data-segment=""
-            />
-          )}
-        </svg>
-
-        {/*
-          Over the picture rather than in it, in the corner the geometry left
-          free. The box is set from `READOUT_BOX` rather than from the content,
-          so what the overlay occupies and what `cornerFor` was asked to keep
-          clear are one number: a block that grew past its footprint would make
-          the inventory-wide check a claim about a box nothing draws.
-        */}
-        {corner !== null && (
-          <div
-            className={`absolute flex p-1.5 ${rightHanded ? "justify-end" : "justify-start"}`}
-            style={readoutStyle(corner, READOUT_BOX, FRAME)}
-            data-readout-corner={corner}
-          >
-            {readout}
-          </div>
+        {drawnSegment.length > 0 && (
+          <path
+            d={drawnSegment
+              .map(
+                (at, index) =>
+                  `${index === 0 ? "M" : "L"}${at.x.toFixed(2)} ${at.y.toFixed(2)}`,
+              )
+              .join(" ")}
+            fill="none"
+            className="stroke-purple-deep"
+            strokeWidth={3.5}
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            vectorEffect="non-scaling-stroke"
+            data-segment=""
+          />
         )}
-      </div>
+      </svg>
+
+      {/*
+        Under the picture rather than over it, which is ADR-0038 reversing
+        ADR-0034's placement.
+
+        The corner it used to stand in was chosen by measuring which corner the
+        drawn geometry left free, and that measurement stopped having an answer:
+        with the traced coast reaching the bays, a bay shore surrounds the frame
+        and `fiesta-island` and `mission-bay-sea-world` have no clear corner at
+        any box size. Narrowing the block does not help -- the widest box that
+        fits every beach is four units of a hundred.
+
+        It is wider here, not narrower. The overlay was capped at 46 units --
+        46 percent of a square that is itself a third of the row at `xl` -- and
+        below the map it has the whole column. The cap existed only to keep the
+        block off the picture.
+      */}
+      {hasReadout && (
+        <div className="mt-3" data-readout="">
+          {readout}
+        </div>
+      )}
 
       {hasCoast ? (
         <p className="text-2xs text-fog mt-2 italic">{coastCredit}</p>
@@ -352,7 +353,7 @@ export function ShoreMap({
         <p className="text-2xs text-fog mt-2 italic">{noCoast}</p>
       )}
 
-      {corner !== null && readoutSources}
+      {hasReadout && readoutSources}
     </div>
   );
 }

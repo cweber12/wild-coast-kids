@@ -16,6 +16,7 @@ import stationTable from "@/data/tide-stations.json";
 import buoyTable from "@/data/wave-buoys.json";
 import mopLineTable from "@/data/mop-lines.json";
 import observationTable from "@/data/observation-stations.json";
+import shorelineTable from "@/data/shoreline.json";
 
 export interface Coordinate {
   lat: number;
@@ -400,5 +401,6 @@ export function inventoryCaveats(): readonly string[] {
     ...(buoyTable.unresolved as readonly string[]),
     ...(mopLineTable.unresolved as readonly string[]),
     ...(observationTable.unresolved as readonly string[]),
+    ...(shorelineTable.unresolved as readonly string[]),
   ];
 }

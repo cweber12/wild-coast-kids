@@ -271,11 +271,13 @@ export function needleSentence(needle: CompassNeedle, at: string): string {
 }
 
 /**
- * The readout, laid over the corner of the map its caller chose.
+ * The readout, printed under the map by its caller.
  *
- * It renders the rows and nothing about where they stand: which corner is safe
- * is a question about the coastline underneath, which this component cannot
- * see. `ShoreMap` projects, asks `corner.ts` and positions this.
+ * It renders the rows and nothing about where they stand. That used to be a
+ * question about the coastline underneath — which corner of the picture was
+ * safe to cover — and this component could not see it, so `ShoreMap` measured
+ * and positioned. ADR-0038 ended the question by taking the block off the
+ * picture; `ShoreMap` now just places it below.
  */
 export function Compass({
   needles,
@@ -293,12 +295,20 @@ export function Compass({
     being clipped, because a taller block is a visible degradation and a line
     running off the picture is an invisible one.
 
-    It binds at 320 CSS px, which that ADR commits this site to. `SWELL
-    south-west 270°` is 147.6px at 10px against the 151.5px this box leaves
-    inside a 327px map and the 124px it leaves inside a 272px one -- so the
-    bearing drops under its own label at the narrow end and the row is one line
-    everywhere else. `corner.ts` records why that trade is available at all:
-    the width is the whole constraint and the height costs nothing.
+    It binds at 320 CSS px, which that ADR commits this site to.
+
+    **The figures that used to be here were measured against the overlay and
+    have expired.** They read: `SWELL south-west 270°` is 147.6px at 10px
+    against the 151.5px this box leaves inside a 327px map and the 124px it
+    leaves inside a 272px one -- so the bearing drops under its own label at
+    the narrow end. That was the block at 46 percent of a square map column.
+
+    ADR-0038 took it out of the picture and gave it the column, so it is about
+    twice as wide at every breakpoint and the wrap those numbers describe no
+    longer binds where they said it did. The rule is kept because it is the
+    right behaviour under squeeze, not because the squeeze is still there.
+    Restating it with new figures needs the rendered page rather than this
+    file, and it is not restated here on a guess.
   */
   /*
     The caption is the hour, and it is above the rows rather than after them

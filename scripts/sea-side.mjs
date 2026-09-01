@@ -3,7 +3,7 @@
  *
  * `ShoreMap` shades the sea. To shade it, something has to know which side of
  * the drawn coastline the water is on, and the answer this repo relies on is
- * that `mop-lines.json` runs south to north along a west-facing county, so the
+ * that `shoreline.json` runs south to north along a west-facing county, so the
  * sea is on the left of the walk. That claim is one sentence and it is holding
  * up a picture, which is exactly the shape ADR-0021 says gets a checker rather
  * than a comment.
@@ -11,14 +11,15 @@
  * **What it checks, and why not the obvious thing.** The obvious check is that
  * every wave buoy falls left of the whole polyline. That check fails, and it is
  * the check that is wrong rather than the data: walked end to end the file is
- * not monotonic -- it wraps Point Loma, where 39 of its 1,209 steps run north
- * to south -- so buoy 46232, 22.9 km off that peninsula, matches a segment on
- * the wrap and lands on the right. The map never asks the question that way.
+ * not monotonic -- it wraps Point Loma and follows both bays in and out, so
+ * 1,824 of its 5,367 steps run north to south, against 39 of 1,209 when this
+ * traced the model line -- and buoy 46232, 22.9 km off that peninsula, matches
+ * a segment on the wrap and lands on the right. The map never asks the question that way.
  * It asks inside one beach's window, where the coast runs one way, and inside
  * every such window the rule holds. That is what is checked here.
  *
  * **Read only, and no flag that writes.** ADR-0021's first line. Nothing here
- * can regenerate `mop-lines.json`, because nothing here measured it.
+ * can regenerate `shoreline.json`, because nothing here measured it.
  *
  * **The geometry is spelled twice, and the duplication is pinned.** This runs
  * under plain node for the gate and cannot import `src/lib/coastline.ts`;
@@ -51,26 +52,35 @@ export const WINDOW_MARGIN = 0.1;
  * drew points this checker had never looked at -- 53 of them at
  * `la-jolla-community-beach`.
  *
- * **Twelve kilometres, and the figure is measured rather than reasoned.** This
+ * **Sixteen kilometres, and the figure is measured rather than reasoned.** This
  * window has to *contain* the map's rather than match it, and the map's is not
  * simply its two-kilometre run: on a shore that runs east to west, squaring the
  * frame toward the sea grows it along the coast as well, so the run drawn at
  * `coronado-cays-nr` and `imperial-beach` reaches much further than the minimum
- * suggests. Swept against the real assembler: 4 km leaves 9 beaches drawing
- * unchecked points, 8 km leaves 5, and 12 km leaves none.
+ * suggests.
+ *
+ * **It was 12 km until ADR-0039 drew the bays, and 12 km stopped containing
+ * one.** The two boxes are centred differently -- this one on the beach and its
+ * sources, the map's on the run of coast the beach occupies -- so a bigger box
+ * does not contain a smaller one for free. A bay run wanders: `mission-bay`
+ * frames 5.6 km across and drew 9 points this window had never looked at, while
+ * being nominally less than half its width. Swept again against the real
+ * assembler: 12 km leaves that one beach unchecked, and 14 km leaves none.
+ * 16 is taken rather than 14 because 14 is the exact edge.
  *
  * **A wider window is not free, which is why it is checked and not assumed.**
  * This file's own opening records that the polyline is not monotonic — it wraps
- * Point Loma, where 39 of 1,209 steps run north to south — so a window wide
- * enough to reach that wrap could match a buoy against a segment walking the
- * wrong way. At 12 km every one of the 15 beaches that binds a buoy still puts
- * it seaward, so the width is paid for rather than merely large.
+ * Point Loma, and 1,824 of the traced shore's 5,367 steps run north to south —
+ * so a window wide enough to reach that wrap could match a buoy against a
+ * segment walking the wrong way. At 16 km every one of the 15 beaches that
+ * binds a buoy still puts it seaward, so the width is paid for rather than
+ * merely large.
  *
  * The containment itself is asserted in `sea-side.test.mjs` against the real
  * assembler rather than trusted to this comment — which is what the old
  * constant-equality check was a proxy for, and stopped being.
  */
-export const MIN_WINDOW_M = 12_000;
+export const MIN_WINDOW_M = 16_000;
 
 const METRES_PER_DEGREE = 111_320;
 
@@ -99,15 +109,22 @@ function atLeast(bounds, metres) {
   };
 }
 
-/** Consecutive repeats dropped, so no segment has zero length and no direction. */
-export function coastFrom(mopLines) {
+/**
+ * The traced shore as points, consecutive repeats dropped so no segment has
+ * zero length and no direction.
+ *
+ * Takes `shoreline.json`'s `points` -- `[lon, lat]` pairs -- because that is
+ * the line `ShoreMap` draws. It took `mop-lines.json` until ADR-0037, and
+ * checking that file now would prove which side of a line the water is on that
+ * nothing on the page draws.
+ */
+export function coastFrom(tracedPoints) {
   const points = [];
 
-  for (const id of Object.keys(mopLines)) {
-    const line = mopLines[id];
+  for (const [lon, lat] of tracedPoints) {
     const last = points[points.length - 1];
-    if (last && last.lat === line.lat && last.lon === line.lon) continue;
-    points.push({ id, lat: line.lat, lon: line.lon });
+    if (last && last.lat === lat && last.lon === lon) continue;
+    points.push({ lat, lon });
   }
 
   return points;
@@ -259,7 +276,7 @@ function positionsFor(beach, tables) {
  * CLAUDE.md's rule is that nothing skipped is silent.
  */
 export function checkSeaSide(tables) {
-  const coast = coastFrom(tables.mopLines);
+  const coast = coastFrom(tables.shoreline);
   const wrong = [];
   const skipped = new Map();
   let checked = 0;

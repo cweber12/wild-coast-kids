@@ -16,6 +16,7 @@ import {
 import { allBeaches } from "../src/lib/beaches.ts";
 import { shoreViewFor } from "../src/components/conditions/shore.ts";
 import MOP_LINES from "../src/data/mop-lines.json" with { type: "json" };
+import SHORELINE from "../src/data/shoreline.json" with { type: "json" };
 import BEACHES from "../src/data/beaches.json" with { type: "json" };
 import BUOYS from "../src/data/wave-buoys.json" with { type: "json" };
 import TIDE_STATIONS from "../src/data/tide-stations.json" with { type: "json" };
@@ -27,6 +28,16 @@ import OBSERVATION_STATIONS from "../src/data/observation-stations.json" with { 
  */
 function fabricated(buoyLon) {
   return {
+    // The drawn coast, as `shoreline.json` spells it: [lon, lat].
+    shoreline: [
+      [-117.0, 32.0],
+      [-117.0, 32.01],
+      [-117.0, 32.02],
+      [-117.0, 32.03],
+      [-117.0, 32.04],
+    ],
+    // Still needed, and for the other question: the checker names the model
+    // line a beach binds when it reports one.
     mopLines: {
       D0001: { lat: 32.0, lon: -117.0 },
       D0002: { lat: 32.01, lon: -117.0 },
@@ -95,6 +106,7 @@ describe("checkSeaSide", () => {
 
   it("holds for every beach in the committed data", () => {
     const { ok } = checkSeaSide({
+      shoreline: SHORELINE.points,
       mopLines: MOP_LINES.lines,
       beaches: BEACHES.beaches,
       buoys: BUOYS.buoys,
@@ -112,7 +124,7 @@ describe("the two spellings of the geometry", () => {
     // TypeScript, so the geometry is spelled twice -- the trade ADR-0021 made
     // for generated-date.mjs. What keeps it safe is this: not a sampled
     // agreement but the whole committed file, both ways.
-    const fromScript = coastFrom(MOP_LINES.lines);
+    const fromScript = coastFrom(SHORELINE.points);
     const fromSrc = coastline();
 
     expect(fromScript.length).toBe(fromSrc.length);
@@ -191,6 +203,7 @@ describe("the window the map draws", () => {
       buoys: BUOYS.buoys,
       tideStations: TIDE_STATIONS.stations,
       observationStations: OBSERVATION_STATIONS.stations,
+      shoreline: SHORELINE.points,
       mopLines: MOP_LINES.lines,
     };
     const coast = coastline();
@@ -204,21 +217,33 @@ describe("the window the map draws", () => {
       const frame = shoreViewFor(beach).bounds;
       if (!checkerWindow || frame === null) continue;
 
-      const seen = new Set(
-        windowAround(coast, checkerWindow).map((point) => point.id),
-      );
-      const drawn = windowAround(coast, frame);
+      // Keyed on the coordinates rather than on an id, because ADR-0037 took
+      // the id off a ShorePoint -- a traced shore has no line ids to carry.
+      // Keying on the missing field made every point's key `undefined`, so the
+      // set held one entry, nothing was ever missing and this assertion passed
+      // without looking at anything.
+      const key = (point) => `${point.lat},${point.lon}`;
+      const seen = new Set(windowAround(coast, checkerWindow).map(key));
+
+      // What the map draws, from the assembler, rather than this file's own
+      // second windowing of the same polyline. Those agreed while the coast
+      // reached only the open shore; the traced coast reaches every beach, so
+      // re-windowing here counted 50 beaches as drawing a coast when
+      // `shoreViewFor` draws one on 28.
+      const drawn = shoreViewFor(beach).coast;
       if (drawn.length === 0) continue;
 
       compared += 1;
-      const missed = drawn.filter((point) => !seen.has(point.id));
+      const missed = drawn.filter((point) => !seen.has(key(point)));
       if (missed.length > 0) {
         unchecked.push(`${beach.slug}: ${missed.length} points`);
       }
     }
 
     expect(unchecked).toEqual([]);
-    // A check that compared nothing would pass forever.
-    expect(compared).toBe(28);
+    // A check that compared nothing would pass forever. 50 rather than 28
+    // since ADR-0039 drew the bays; the one beach not compared is the island,
+    // which has no frame.
+    expect(compared).toBe(50);
   });
 });
