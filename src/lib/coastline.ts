@@ -35,14 +35,10 @@
  * is runtime TypeScript that runs per request against one.
  */
 
-import mopLineTable from "@/data/mop-lines.json";
 import shorelineTable from "@/data/shoreline.json";
-import type { MopLine } from "./beaches";
 
 /** The committed file's shape: `[lon, lat]` pairs in decimal degrees. */
 const TRACED = shorelineTable.points as readonly number[][];
-
-const MOP_LINES = mopLineTable.lines as Readonly<Record<string, MopLine>>;
 
 /** One point on the drawn coast. */
 export interface ShorePoint {
@@ -60,36 +56,6 @@ export interface ShorePoint {
  */
 export function coastline(): readonly ShorePoint[] {
   return withoutRepeats(TRACED.map(([lon, lat]) => ({ lat, lon })));
-}
-
-/**
- * CDIP's model line, which no longer draws anything and still decides one
- * thing: whether this site maps the water a beach sits on.
- *
- * **It stopped being the coast and did not stop being the test.** The traced
- * shore reaches every beach in the inventory — the bay beaches included, at a
- * median 4 m — so a distance measured against it can no longer separate the
- * open coast from Mission Bay, which is the separation `shore.ts` has always
- * made and ADR-0033 and ADR-0036 both document as 28 beaches and 23. Measured
- * against the model line that separation is unchanged, because the model line
- * is exactly what traces the open coast and nothing else.
- *
- * **Not `beach.mopLine`**, the binding in `beaches.json`. ADR-0036 rejected that
- * and its reason holds: `childrens-pool` binds no line, sits 0.33 km from the
- * open coast and is plainly on it. The binding answers which line supplies a
- * swell forecast, which is a different question.
- *
- * The `delivers` flag is not read here. A line CDIP places but does not forecast
- * still marks open coast, which is a fact about the geography rather than about
- * the feed.
- */
-export function modelLine(): readonly ShorePoint[] {
-  return withoutRepeats(
-    Object.keys(MOP_LINES).map((id) => ({
-      lat: MOP_LINES[id].lat,
-      lon: MOP_LINES[id].lon,
-    })),
-  );
 }
 
 /** A lat/lon box a map has to cover. */

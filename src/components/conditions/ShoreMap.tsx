@@ -17,14 +17,14 @@
  * it is where the drawn coastline *is*, 117 to 930 m out, so a window without
  * it crops the shoreline off the edge.
  *
- * **A quarter of the county has no coast to draw, and gets the map anyway.**
- * 23 of 51 beaches are in Mission Bay or San Diego Bay, between 2.6 and 5.4 km
- * from the nearest MOP line, because `mop-lines.json` traces the open coast
- * only. Widening their frames until the ocean appears was measured and
- * rejected: what arrives is a shoreline 5 km away that is not this beach's
- * shore. They get their own stretch drawn as a chord — the one thing that says
- * where the beach is — and the map says plainly that the traced coast does not
- * reach them.
+ * **Every beach in the county has a coast to draw.** A quarter of them did not:
+ * 23 of 51 are in Mission Bay or San Diego Bay, and `mop-lines.json` traced the
+ * open coast only, so they got a frame with a chord across it and a sentence
+ * saying the traced coast did not reach them. ADR-0037 replaced that line with
+ * CDFW's ecoregion boundary, which has the bays cut out of it and therefore
+ * follows their shores; ADR-0039 stopped withholding it. What is left is one
+ * beach on an island the committed mainland ring does not hold, and its two
+ * ends are a single point, so it has no frame either and says so.
  *
  * **Presentational and pure**, like `DaySpark`. It takes a window, a box and a
  * stretch, and renders them; it resolves no station and reads no file. The
@@ -56,16 +56,26 @@ export type ShoreMapProps = {
    *
    * A run of `coast` wherever a coast is drawn, because a chord between the two
    * ends `beaches.json` carries lands beside the shore at an angle to it and
-   * reads as a second, wrong coastline. On the 23 beaches with no coast in
-   * frame it is those two ends after all, because nothing else on the picture
-   * says where the beach is. `shore.ts` makes that choice.
+   * reads as a second, wrong coastline. Where no coast is drawn it is those two
+   * ends after all, because nothing else on the picture says where the beach
+   * is — which since ADR-0039 is no beach in the committed inventory.
+   * `shore.ts` makes that choice.
    */
   segment: readonly Position[] | null;
   /** The spoken equivalent of the whole picture. */
   description: string;
   /** What to say instead of a map when there is no box at all. */
   absence: string;
-  /** What to say when the traced coast does not reach this beach. */
+  /**
+   * What to say when the traced coast does not reach this beach.
+   *
+   * No committed beach is in that state since ADR-0039 — the bays have their
+   * own shoreline and the island has no frame at all, so it takes `absence`
+   * instead. The prop stays because this component is pure and is handed a
+   * coast rather than resolving one: an empty coast has to render as a sentence
+   * rather than as an empty square, which on a page about the sea reads as open
+   * water.
+   */
   noCoast: string;
   /**
    * What the drawn shore was traced from, said once under the picture.
@@ -98,13 +108,13 @@ export type ShoreMapProps = {
    * surrounds the frame — so it comes out of the picture altogether, and gets
    * the width of the column instead of 46 percent of a square.
    *
-   * **Rendered on every beach, including the 23 the traced coast does not
-   * reach.** The dial was withheld there, on the rule that a bearing read
-   * against no shoreline is the bare gauge the brief's anti-references open
-   * with. That rule was about a needle drawn over an empty frame; a labelled
-   * readout with units, a word for the direction and a provenance line beneath
-   * is not that thing. Withholding it meant nearly half the inventory printed
-   * no wind figure anywhere on the picture. See ADR-0034.
+   * **Rendered on every beach.** The dial was once withheld wherever no
+   * shoreline was drawn, on the rule that a bearing read against nothing is the
+   * bare gauge the brief's anti-references open with — which meant nearly half
+   * the inventory printed no wind figure anywhere on the picture. That rule was
+   * about a needle over an empty frame; a labelled readout with units, a word
+   * for the direction and a provenance line beneath is not that thing.
+   * ADR-0034. The 23 frames it was about are no longer empty either.
    */
   readout?: ReactNode;
   /**

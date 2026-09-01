@@ -52,26 +52,35 @@ export const WINDOW_MARGIN = 0.1;
  * drew points this checker had never looked at -- 53 of them at
  * `la-jolla-community-beach`.
  *
- * **Twelve kilometres, and the figure is measured rather than reasoned.** This
+ * **Sixteen kilometres, and the figure is measured rather than reasoned.** This
  * window has to *contain* the map's rather than match it, and the map's is not
  * simply its two-kilometre run: on a shore that runs east to west, squaring the
  * frame toward the sea grows it along the coast as well, so the run drawn at
  * `coronado-cays-nr` and `imperial-beach` reaches much further than the minimum
- * suggests. Swept against the real assembler: 4 km leaves 9 beaches drawing
- * unchecked points, 8 km leaves 5, and 12 km leaves none.
+ * suggests.
+ *
+ * **It was 12 km until ADR-0039 drew the bays, and 12 km stopped containing
+ * one.** The two boxes are centred differently -- this one on the beach and its
+ * sources, the map's on the run of coast the beach occupies -- so a bigger box
+ * does not contain a smaller one for free. A bay run wanders: `mission-bay`
+ * frames 5.6 km across and drew 9 points this window had never looked at, while
+ * being nominally less than half its width. Swept again against the real
+ * assembler: 12 km leaves that one beach unchecked, and 14 km leaves none.
+ * 16 is taken rather than 14 because 14 is the exact edge.
  *
  * **A wider window is not free, which is why it is checked and not assumed.**
  * This file's own opening records that the polyline is not monotonic — it wraps
- * Point Loma, where 39 of 1,209 steps run north to south — so a window wide
- * enough to reach that wrap could match a buoy against a segment walking the
- * wrong way. At 12 km every one of the 15 beaches that binds a buoy still puts
- * it seaward, so the width is paid for rather than merely large.
+ * Point Loma, and 1,824 of the traced shore's 5,367 steps run north to south —
+ * so a window wide enough to reach that wrap could match a buoy against a
+ * segment walking the wrong way. At 16 km every one of the 15 beaches that
+ * binds a buoy still puts it seaward, so the width is paid for rather than
+ * merely large.
  *
  * The containment itself is asserted in `sea-side.test.mjs` against the real
  * assembler rather than trusted to this comment — which is what the old
  * constant-equality check was a proxy for, and stopped being.
  */
-export const MIN_WINDOW_M = 12_000;
+export const MIN_WINDOW_M = 16_000;
 
 const METRES_PER_DEGREE = 111_320;
 

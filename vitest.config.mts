@@ -396,15 +396,21 @@ export default defineConfig({
         // untested. 23 statements and 26 branches left the numerator with their
         // denominators; the ratio falls about a tenth of a point.
         //
-        // Two lowerings in two commits is worth naming rather than passing
-        // over. They are the two different legitimate reasons, in order: the
-        // denominator grew with a probe's untestable half, then the numerator
-        // shrank when a fully-tested module was deleted. Neither is a test that
-        // stopped running.
+        // LOWERED 2026-08-31 a third time, under reason 2 again: ADR-0039
+        // deleted `modelLine()` from coastline.ts, a covered function with its
+        // covered tests. Two hundredths of a point on lines and functions.
+        //
+        // Three lowerings in three commits is worth naming rather than passing
+        // over, and they are not one drift. In order: the denominator grew with
+        // a probe's untestable half (reason 1), then the numerator shrank twice
+        // as fully-tested code was deleted (reason 2) -- corner.ts when the
+        // readout left the picture, then modelLine() when the open-coast test
+        // it existed for stopped existing. No test stopped running in any of
+        // them, and every deletion is a decision with an ADR.
         statements: 89.22,
-        branches: 88.87,
-        functions: 94.06,
-        lines: 88.89,
+        branches: 88.89,
+        functions: 94.04,
+        lines: 88.87,
       },
     },
   },
