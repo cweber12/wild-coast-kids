@@ -191,9 +191,13 @@ is what redraws.
 _Avoid_: day view, detail panel, today panel (it is any of seven days)
 
 **Hour chart**:
-The large plot inside the day panel: twenty-four hours across, night shaded,
-cloud as a band above, one of four series drawn at a time behind four tabs.
-_Avoid_: graph, the plot, day chart, timeline
+The large plot inside the day panel: one whole day across, midnight to
+midnight, night shaded, cloud as a band above, one of four series drawn at a
+time behind four tabs. Twice a year that day is twenty-three or twenty-five
+hours rather than twenty-four, and the axis shows it — the named hours stay
+12 AM, 3 AM, 6 AM and so on, each over the moment it names, so the gap holding
+the transition is wider or narrower than the rest (ADR-0040).
+_Avoid_: graph, the plot, day chart, timeline, twenty-four hours across
 
 **Selected hour**:
 The one hour of the chosen day the day panel is showing. The hour chart marks

@@ -75,7 +75,17 @@ function daylight(dates: string[], atMs = NOW) {
   });
 }
 
-/** A day of hourly heights that rises and falls, so a curve has somewhere to go. */
+/**
+ * A day of hourly heights that rises and falls, so a curve has somewhere to go.
+ *
+ * **These helpers assume a 24-hour day and every date they are used with is
+ * one.** `endMs` is a literal `+ 24 * HOUR` where production takes the next
+ * day's local midnight, and the hour arrays are `{ length: 24 }`. Dating a test
+ * on 2026-11-01 or 2027-03-14 through here would build a 24-hour fixture for a
+ * 25- or 23-hour day, and any assertion about the transition would pass without
+ * ever meeting one. The DST tests at the foot of this file build their own days
+ * for that reason -- see `dstWeek`.
+ */
 function hoursOn(localDate: string, offset = 0) {
   return {
     localDate,
@@ -1460,4 +1470,185 @@ test("the attribution survives choosing an hour", async () => {
   fireEvent.click(container.querySelector('[data-hour-column="9"]')!);
 
   expect(provenance(container)).toContain("NOAA Tides & Currents");
+});
+
+/**
+ * The map's caption on the two days a year a position is not a clock hour.
+ *
+ * **Its own fixture rather than the shared helpers above**, which hardcode a
+ * 24-hour day: fed a DST date they would build 24 hours for a 25-hour span, and
+ * a test asserting the transition would pass without a transition in it. This
+ * one takes the day's length from `localMidnightOf` at both ends, which is what
+ * `DayPanel` itself does, so the span is 25 or 23 because the zone says so.
+ *
+ * The caption is the site issue #196 does not mention and the one ADR-0035
+ * makes non-optional: if the chart names hours from instants while the caption
+ * counts positions, the two regions disagree on exactly the days that decision
+ * arranged for them to agree on.
+ */
+function dstWeek(localDate: string, nextDate: string, atMs: number) {
+  const startMs = localMidnightOf(localDate);
+  const count = Math.round((localMidnightOf(nextDate) - startMs) / HOUR);
+  const day = {
+    localDate,
+    dayLabel: "Sun, Nov 1",
+    dateLabel: "Sun, Nov 1",
+    isToday: true,
+  };
+  const hourly = <T,>(build: (hour: number) => T) =>
+    Array.from({ length: count }, (_, hour) => build(hour));
+
+  readDaylightWeek.mockReturnValue({
+    beachName: BINDING.beachName,
+    atMs,
+    days: [
+      {
+        ...day,
+        sunriseLabel: "6:14 AM",
+        sunsetLabel: "4:55 PM",
+        sunriseMs: startMs + 6 * HOUR + 14 * 60_000,
+        sunsetMs: startMs + 17 * HOUR + 55 * 60_000,
+      },
+    ],
+  });
+
+  readHourlyTide.mockResolvedValue({
+    ...BINDING,
+    state: {
+      kind: "week",
+      days: [
+        {
+          ...day,
+          startMs,
+          endMs: localMidnightOf(nextDate),
+          hours: hourly((hour) => ({
+            atMs: startMs + hour * HOUR,
+            feet: 2.5 + 2 * Math.sin((hour / count) * 2 * Math.PI),
+          })),
+        },
+      ],
+    },
+  });
+
+  readWaveWeek.mockResolvedValue({
+    beachName: BINDING.beachName,
+    line: { id: "D0481", distanceM: 117 },
+    state: {
+      kind: "week",
+      days: [
+        {
+          ...day,
+          daylight: { timeLabel: "11:00 AM", heightFt: 1.8, periodS: 15 },
+          allDay: null,
+          hours: hourly((hour) => ({
+            atMs: startMs + hour * HOUR,
+            heightFt: 1.5,
+            published: hour % 3 === 2,
+            periodS: hour % 3 === 2 ? 15 : null,
+            directionDegT: hour % 3 === 2 ? 315 : null,
+          })),
+        },
+      ],
+    },
+  });
+
+  const published = (value: number) => ({
+    kind: "published" as const,
+    hours: hourly((hour) => ({
+      atMs: startMs + hour * HOUR,
+      value,
+      published: true,
+    })),
+  });
+
+  readGridpointWeek.mockResolvedValue({
+    beachName: BINDING.beachName,
+    cell: CELL,
+    state: {
+      kind: "week",
+      days: [
+        {
+          ...day,
+          windMph: published(8),
+          windDirDegT: published(180),
+          airTempF: published(64),
+        },
+      ],
+    },
+  });
+
+  readSkyWeek.mockResolvedValue({
+    beachName: BINDING.beachName,
+    cell: CELL,
+    state: {
+      kind: "week",
+      days: [
+        {
+          ...day,
+          thirds: { am: 40, mid: 40, eve: 40 },
+          hours: hourly((hour) => ({
+            atMs: startMs + hour * HOUR,
+            percent: 40,
+          })),
+          phenomenon: null,
+        },
+      ],
+    },
+  });
+
+  wordingWeek([{ localDate, periodName: "Today", words: "Patchy Fog" }]);
+  return { startMs, count };
+}
+
+test("the map's caption names the last hour of a fall-back day 11 PM", async () => {
+  // Position 24 of a 25-hour day. Read as a clock hour it fell through to
+  // `${hour - 12} PM` and the caption said "12 PM" -- noon, printed at eleven
+  // at night, over a wind arrow for the wrong hour.
+  const { startMs, count } = dstWeek(
+    "2026-11-01",
+    "2026-11-02",
+    localMidnightOf("2026-11-01") + 24 * HOUR,
+  );
+  expect(count).toBe(25);
+
+  const { container } = render(
+    <SelectedDayProvider>
+      {await DayPanel({ slug: "la-jolla-shores-beach" })}
+    </SelectedDayProvider>,
+  );
+
+  expect(container.querySelector("[data-readout-caption]")!.textContent).toBe(
+    "11 PM",
+  );
+  // And the chart's readout says the same words about the same hour, which is
+  // the property ADR-0035 exists for and the one that would break first if
+  // only one region were fixed.
+  expect(container.querySelector("[data-hour-readout]")!.textContent).toContain(
+    "11 PM",
+  );
+  expect(startMs + 24 * HOUR).toBeGreaterThan(startMs);
+});
+
+test("the map's caption names a spring-forward hour ahead, not behind", async () => {
+  // The mirror. Position 2 of a 23-hour day is 3 AM: a fix that subtracted an
+  // hour would pass the test above and fail this one.
+  const { count } = dstWeek(
+    "2027-03-14",
+    "2027-03-15",
+    localMidnightOf("2027-03-14") + 2 * HOUR,
+  );
+  expect(count).toBe(23);
+
+  const { container } = render(
+    <SelectedDayProvider>
+      {await DayPanel({ slug: "la-jolla-shores-beach" })}
+    </SelectedDayProvider>,
+  );
+
+  expect(container.querySelector("[data-readout-caption]")!.textContent).toBe(
+    "3 AM",
+  );
+  expect(container.querySelector("[data-hour-readout]")!.textContent).toContain(
+    "3 AM",
+  );
 });

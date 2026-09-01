@@ -1170,3 +1170,199 @@ describe("the frame on a phone", () => {
     expect(container.querySelectorAll("circle")).toHaveLength(24);
   });
 });
+
+/**
+ * The two days a year a position in the day is not a clock hour.
+ *
+ * A 24-hour fixture cannot exercise this, so these build their own days from
+ * `localMidnightOf` at both ends -- which is what production does
+ * (`DayPanel.tsx`) and what makes the span really 25 or 23 hours rather than a
+ * literal that agrees with the zone by luck.
+ */
+describe("a day the clocks change on", () => {
+  /** Falls back: 25 positions, 0 through 24. */
+  const FALL_START = localMidnightOf("2026-11-01");
+  const FALL_END = localMidnightOf("2026-11-02");
+  /** Springs forward: 23 positions, 0 through 22. */
+  const SPRING_START = localMidnightOf("2027-03-14");
+  const SPRING_END = localMidnightOf("2027-03-15");
+
+  /** A day of readings across whatever span it is really given. */
+  function dayOf(startMs: number, endMs: number) {
+    const count = Math.round((endMs - startMs) / HOUR);
+    return {
+      ...PROPS,
+      startMs,
+      endMs,
+      sunriseMs: startMs + 6 * HOUR + 14 * 60_000,
+      sunsetMs: startMs + 17 * HOUR + 55 * 60_000,
+      series: [
+        {
+          ...TIDE,
+          points: Array.from({ length: count }, (_, hour) => ({
+            atMs: startMs + hour * HOUR,
+            value: 2 + Math.sin(hour / 4),
+            published: true,
+          })) as readonly SparkPoint[],
+        },
+      ],
+    };
+  }
+
+  test("the fall-back day really is twenty-five positions long", () => {
+    // The premise every assertion below rests on. Without it these tests could
+    // pass against a 24-hour fixture and prove nothing -- which is exactly what
+    // `DayPanel.test.tsx`'s shared helper would have done.
+    expect(FALL_END - FALL_START).toBe(25 * HOUR);
+    expect(SPRING_END - SPRING_START).toBe(23 * HOUR);
+  });
+
+  test("the axis names the same eight hours it names on every other day", () => {
+    // ADR-0040's choice, on the page: the names stay regular and the spacing
+    // bends. The axis reads 12 AM, 3 AM, 6 AM on a 25-hour day exactly as it
+    // does on a 24-hour one -- and, unlike before, each of those is over the
+    // moment it names.
+    const { container } = render(
+      <HourChart {...dayOf(FALL_START, FALL_END)} />,
+    );
+
+    const labels = [...container.querySelectorAll("[data-axis-hour]")].map(
+      (label) => label.textContent,
+    );
+    expect(labels).toEqual([
+      "12 AM",
+      "3 AM",
+      "6 AM",
+      "9 AM",
+      "12 PM",
+      "3 PM",
+      "6 PM",
+      "9 PM",
+    ]);
+    // #196's first symptom, gone: noon is named once, at noon, and no hour is
+    // named twice.
+    expect(labels.filter((label) => label === "12 PM")).toHaveLength(1);
+    expect(new Set(labels).size).toBe(labels.length);
+  });
+
+  test("data-axis-hour carries a clock hour, so nothing inherits the bug", () => {
+    // The attribute is unrenamed and now true. Every test in this file already
+    // read it as a clock hour -- `[data-axis-hour="6"]` meaning the 6 AM label
+    // -- and on a DST day it used to be a position wearing that name.
+    const { container } = render(
+      <HourChart {...dayOf(FALL_START, FALL_END)} />,
+    );
+
+    expect(container.querySelector('[data-axis-hour="12"]')?.textContent).toBe(
+      "12 PM",
+    );
+    expect(container.querySelector('[data-axis-hour="24"]')).toBeNull();
+  });
+
+  test("each tick sits where the curve puts its own instant", () => {
+    // The second defect, and the one #196 does not mention. `left` was
+    // `hour / 24` while the curve is mapped against the day's real span, so on
+    // this day the "3 AM" tick sat over 2:07 AM. The expected figures are the
+    // day's own: 3 hours of 25 is 12%, not 12.5%, and the wide first gap is the
+    // span that really held four hours.
+    const { container } = render(
+      <HourChart {...dayOf(FALL_START, FALL_END)} />,
+    );
+
+    const lefts = [...container.querySelectorAll("[data-axis-hour]")].map(
+      (label) =>
+        Number(
+          Number((label as HTMLElement).style.left.replace("%", "")).toFixed(2),
+        ),
+    );
+    expect(lefts).toEqual([0, 16, 28, 40, 52, 64, 76, 88]);
+  });
+
+  test("a spring-forward day is displaced the other way", () => {
+    // A fix that stretched in one direction only would pass every assertion
+    // above and fail here: the first gap is *narrower* on this day, not wider.
+    const { container } = render(
+      <HourChart {...dayOf(SPRING_START, SPRING_END)} />,
+    );
+
+    const lefts = [...container.querySelectorAll("[data-axis-hour]")].map(
+      (label) =>
+        Number(
+          Number((label as HTMLElement).style.left.replace("%", "")).toFixed(2),
+        ),
+    );
+    expect(lefts).toEqual([0, 8.7, 21.74, 34.78, 47.83, 60.87, 73.91, 86.96]);
+  });
+
+  test("the chart's readout names the hour a reader is on, not its position", () => {
+    // Position 15 on this day is 2 PM. The readout used to say "3 PM", and a
+    // reader has no way to detect that from the page.
+    const { container } = render(
+      <HourChart {...dayOf(FALL_START, FALL_END)} />,
+    );
+
+    const columns = container.querySelectorAll("[data-hour-column]");
+    fireEvent.click(columns[15]);
+    expect(
+      container.querySelector("[data-hour-readout]")?.textContent,
+    ).toContain("2 PM");
+  });
+
+  test("the last hour of a fall-back day reads 11 PM", () => {
+    const { container } = render(
+      <HourChart {...dayOf(FALL_START, FALL_END)} />,
+    );
+
+    const columns = container.querySelectorAll("[data-hour-column]");
+    expect(columns).toHaveLength(25);
+    fireEvent.click(columns[24]);
+    expect(
+      container.querySelector("[data-hour-readout]")?.textContent,
+    ).toContain("11 PM");
+  });
+
+  test("a spring-forward day names its hours forward, not back", () => {
+    // The mirror, and it matters that it is a mirror: a fix that subtracted an
+    // hour would pass the fall-back tests above and fail here.
+    const { container } = render(
+      <HourChart {...dayOf(SPRING_START, SPRING_END)} />,
+    );
+
+    const columns = container.querySelectorAll("[data-hour-column]");
+    expect(columns).toHaveLength(23);
+    fireEvent.click(columns[2]);
+    expect(
+      container.querySelector("[data-hour-readout]")?.textContent,
+    ).toContain("3 AM");
+  });
+
+  test("the hidden column label names the same hour the readout does", () => {
+    // A screen reader landing on a column gets the hour without moving to the
+    // readout, so the two have to be one hour named once.
+    const { container } = render(
+      <HourChart {...dayOf(FALL_START, FALL_END)} />,
+    );
+
+    expect(
+      container.querySelectorAll("[data-hour-column]")[24]?.textContent,
+    ).toContain("11 PM");
+  });
+
+  test("an ordinary day is unchanged, so the fix is about the transition", () => {
+    const { container } = render(<HourChart {...PROPS} />);
+
+    const labels = [...container.querySelectorAll("[data-axis-hour]")].map(
+      (label) => label.textContent,
+    );
+    expect(labels).toEqual([
+      "12 AM",
+      "3 AM",
+      "6 AM",
+      "9 AM",
+      "12 PM",
+      "3 PM",
+      "6 PM",
+      "9 PM",
+    ]);
+  });
+});

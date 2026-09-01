@@ -270,7 +270,7 @@ test("the server render carries the hour, and still carries no control", () => {
   // printed fact. The mark is the fact and it is not gated on hydration, so a
   // reader without a script arrives on an hour like everyone else.
   //
-  // Asserted on the mark rather than on the hour's words: `hourLabel` writes
+  // Asserted on the mark rather than on the hour's words: `hourLabelAt` writes
   // every axis label, so `toContain("2 PM")` is true of a chart with nothing
   // selected at all and would pass without this feature existing.
   const markup = renderToStaticMarkup(
@@ -288,7 +288,7 @@ test("the server render carries the hour, and still carries no control", () => {
 
   // And the sentence that says which hour the mark is, which is gated with the
   // facts rather than with the buttons. Read out of the readout element rather
-  // than off the whole markup: `hourLabel` writes every axis label, so a bare
+  // than off the whole markup: `hourLabelAt` writes every axis label, so a bare
   // search for "2 PM" would pass on a chart with nothing selected at all.
   const sentence = markup
     .split("data-hour-readout")[1]
@@ -394,7 +394,7 @@ test("the map's readout shows the hour the chart marks, before and after a click
   // about one day, a few centimetres apart, which is issue #193.
   //
   // Both name the hour in the same words, because both print through
-  // `hourLabel`. That is what a reader has to see it with: the caption over the
+  // `hourLabelAt`. That is what a reader has to see it with: the caption over the
   // block and the sentence under the plot are the only visible statement that
   // the two regions are showing one hour.
   const { container } = renderPage(

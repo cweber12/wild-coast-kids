@@ -4,6 +4,8 @@ import {
   localDateOf,
   localDayLabel,
   localDayOf,
+  hourLabelAt,
+  localHourOf,
   localMidnightOf,
   localTimeOf,
   SITE_TIME_ZONE,
@@ -126,5 +128,100 @@ describe("localDayLabel", () => {
     // formatting it in a zone behind UTC yields New Year's Eve. A local date
     // carries no zone, so it is named in the only one that cannot shift it.
     expect(localDayLabel("2026-01-01")).toBe("Thu, Jan 1");
+  });
+});
+
+/**
+ * The two days a year a position in the day is not a clock hour.
+ *
+ * California falls back on 2026-11-01 and springs forward on 2027-03-14, so
+ * those days hold 25 and 23 hours. Every figure below was taken by running
+ * these helpers over both days rather than reasoned about.
+ */
+const FALL_BACK = "2026-11-01";
+const SPRING_FORWARD = "2027-03-14";
+const HOUR = 3_600_000;
+
+describe("localHourOf", () => {
+  test("reads the clock rather than counting from midnight", () => {
+    const midnight = localMidnightOf("2026-08-17");
+    expect(localHourOf(midnight)).toBe(0);
+    expect(localHourOf(midnight + 15 * HOUR)).toBe(15);
+  });
+
+  test("midnight is 0 and not 24", () => {
+    // `hour12: false` yields "24" for midnight on some ICU builds, which would
+    // make the guard in this function the difference between 0 and a number no
+    // clock has. Asserted rather than trusted for the reason `zoneOffsetMs`
+    // carries the same guard.
+    expect(localHourOf(localMidnightOf("2026-01-15"))).toBe(0);
+    expect(localHourOf(localMidnightOf(FALL_BACK))).toBe(0);
+  });
+
+  test("a fall-back day repeats an hour, so two positions read the same", () => {
+    const start = localMidnightOf(FALL_BACK);
+    expect(localHourOf(start + 1 * HOUR)).toBe(1);
+    expect(localHourOf(start + 2 * HOUR)).toBe(1);
+    // And from there the position runs an hour ahead of the clock for the rest
+    // of the day: 25 positions, 24 clock hours.
+    expect(localHourOf(start + 12 * HOUR)).toBe(11);
+    expect(localHourOf(start + 24 * HOUR)).toBe(23);
+  });
+
+  test("a spring-forward day skips one, so 2 AM never reads at all", () => {
+    const start = localMidnightOf(SPRING_FORWARD);
+    expect(localHourOf(start + 1 * HOUR)).toBe(1);
+    expect(localHourOf(start + 2 * HOUR)).toBe(3);
+    expect(localHourOf(start + 22 * HOUR)).toBe(23);
+  });
+
+  test("the zone is a parameter, so the rule can be tested rather than trusted", () => {
+    expect(localHourOf(SUMMER_INSTANT, "UTC")).toBe(13);
+  });
+});
+
+describe("hourLabelAt", () => {
+  test("names the hour in the reader's own clock", () => {
+    const start = localMidnightOf("2026-08-17");
+    expect(hourLabelAt(start)).toBe("12 AM");
+    expect(hourLabelAt(start + 3 * HOUR)).toBe("3 AM");
+    expect(hourLabelAt(start + 12 * HOUR)).toBe("12 PM");
+    expect(hourLabelAt(start + 15 * HOUR)).toBe("3 PM");
+    expect(hourLabelAt(start + 23 * HOUR)).toBe("11 PM");
+  });
+
+  test("the words are the repo's own, with an ordinary space", () => {
+    // Not `Intl`'s hour-only format, which returns the same string on ICU 77
+    // and is free to choose a narrow no-break space on another build. A test
+    // reading `toBe("3 PM")` would then fail on CI and nowhere else.
+    expect([...hourLabelAt(localMidnightOf("2026-08-17") + 15 * HOUR)]).toEqual(
+      ["3", " ", "P", "M"],
+    );
+  });
+
+  test("the twenty-fifth hour of a fall-back day is 11 PM, not a second noon", () => {
+    // The defect this replaces, in one line: reading position 24 as a clock
+    // hour fell through to `${hour - 12} PM` and printed "12 PM" -- a second
+    // noon, at eleven at night. Position 12 is 11 AM on this day, so the old
+    // reading also never named noon at all.
+    const start = localMidnightOf(FALL_BACK);
+    expect(hourLabelAt(start + 24 * HOUR)).toBe("11 PM");
+    expect(hourLabelAt(start + 12 * HOUR)).toBe("11 AM");
+    expect(hourLabelAt(start + 13 * HOUR)).toBe("12 PM");
+  });
+
+  test("a repeated hour is named twice rather than disambiguated", () => {
+    // ADR-0040: two hours honestly share a name on the one day they genuinely
+    // do. They stay distinct selections because the position keys them, and
+    // neither is ever an axis tick.
+    const start = localMidnightOf(FALL_BACK);
+    expect(hourLabelAt(start + 1 * HOUR)).toBe("1 AM");
+    expect(hourLabelAt(start + 2 * HOUR)).toBe("1 AM");
+  });
+
+  test("a spring-forward day names its hours an hour ahead of its positions", () => {
+    const start = localMidnightOf(SPRING_FORWARD);
+    expect(hourLabelAt(start + 2 * HOUR)).toBe("3 AM");
+    expect(hourLabelAt(start + 22 * HOUR)).toBe("11 PM");
   });
 });

@@ -1,7 +1,14 @@
 /**
- * One day at reading size: twenty-four hours across in the site's own tile,
- * night shaded, cloud in a band above the frame, and the model's own published
- * points marked.
+ * One day at reading size: midnight to midnight in the site's own tile, night
+ * shaded, cloud in a band above the frame, and the model's own published points
+ * marked.
+ *
+ * **A whole day rather than twenty-four hours, which is not pedantry twice a
+ * year.** This coast changes offset on two days and they are twenty-three and
+ * twenty-five hours long; the axis names its hours from the instants they fall
+ * on and stands them where the curve puts them, so on those days the gap
+ * holding the transition is wider or narrower than the rest. See ADR-0040 and
+ * `axisTicks`.
  *
  * **The same instrument as `DaySpark`, at the other zoom level.** It takes the
  * same `SparkPoint` series and draws the same night band from the same shared
@@ -114,7 +121,8 @@
 "use client";
 
 import { useId, useState } from "react";
-import { hourLabel, hourOfDay, nightBands } from "./dayFrame";
+import { hourLabelAt } from "@/lib/pacific-time";
+import { axisTicks, hourOfDay, nightBands } from "./dayFrame";
 import { useHydrated } from "./hydrated";
 import { resolveHour, useSelectedHour } from "./selectedHour";
 import type { SparkPoint } from "./DaySpark";
@@ -372,7 +380,7 @@ const MARKS_FIT_NARROW = 12;
 const HOUR_MS = 3_600_000;
 
 /**
- * Hours the axis names, and which of them survive a narrow screen.
+ * Clock hours the axis names, and which of them survive a narrow screen.
  *
  * Every three hours is right at 1536 and collides at 375: eight labels at 10px
  * need about 35px each and a 283px plot gives them 35px exactly, so "12 PM"
@@ -380,6 +388,31 @@ const HOUR_MS = 3_600_000;
  * quarter-day hours are kept at every width and the rest appear from `sm`,
  * which is the same degrade-before-you-lie rule the sparkline follows when its
  * cell gets too narrow to read.
+ *
+ * **These are clock hours, and were positions until #196.** The distinction is
+ * invisible on 363 days and decides the axis on the other two -- see
+ * `axisTicks`. It is also why the spacing figures above describe a 24-hour day
+ * only: on a 25-hour day these sit 16% then 12% apart, and on a 23-hour day
+ * 8.7% then 13%.
+ *
+ * **The tightest pair that produces is midnight and 3 AM on a spring-forward
+ * day at `sm`, and it clears by 2.5px.** Measured on the built page 2026-09-01
+ * at five widths, because 8.7% of a plot is the one figure this rule could have
+ * broken and an argument about it is worth less than a number. `sm` is the
+ * binding width -- it is the narrowest at which all eight labels show, and at
+ * 375 only the quarter-day four do, so no narrow screen can meet this pair at
+ * all. At 640 the plot is 502px: "3 AM" is 25.0px centred on 8.7%, so it starts
+ * at 31.2px, and "12 AM" is 28.6px left-aligned at 0, so it ends at 28.6px.
+ * Every wider viewport has more room -- 9.5px at 768, 29.0px at 1024, 33.1px at
+ * 1536 -- and every other gap on both DST days is wider than a 24-hour day's.
+ * The same run re-measured the 237px plot at 375 this docstring already cites,
+ * which is what says the rig agrees with the page these figures came from.
+ *
+ * **Neither transition's ambiguous hour is in this list**, which is what makes
+ * `axisTicks`' two refusals unreachable from here: the hour a fall-back day
+ * repeats is 1 AM and the one a spring-forward day skips is 2 AM. That is a
+ * property of this list rather than a guarantee, so `axisTicks` defines both
+ * cases and `dayFrame.test.ts` asserts them.
  */
 const LABELLED_HOURS = [0, 3, 6, 9, 12, 15, 18, 21];
 const QUARTER_DAY_HOURS = new Set([0, 6, 12, 18]);
@@ -705,7 +738,10 @@ export function HourChart({
     const dark =
       selectedPoint.atMs < sunriseMs || selectedPoint.atMs > sunsetMs;
     return [
-      hourLabel(selectedHour),
+      // Named from the point's own instant rather than from `selectedHour`,
+      // which is the position that found it. On a fall-back day those are
+      // different hours from position 3 onward -- see ADR-0040.
+      hourLabelAt(selectedPoint.atMs),
       `${selectedPoint.value.toFixed(1)} ${unitLabel}`,
       cloudAt === undefined ? "no cloud forecast" : `${cloudAt}% cloud`,
       dark ? "before sunrise or after sunset" : "in daylight",
@@ -1080,7 +1116,8 @@ export function HourChart({
                       has just selected.
                     */}
                       <span className="absolute -m-px h-px w-px overflow-hidden">
-                        {hourLabel(hour)}, {point.value.toFixed(1)} {unitLabel}
+                        {hourLabelAt(point.atMs)}, {point.value.toFixed(1)}{" "}
+                        {unitLabel}
                         {cloudAt === undefined ? "" : `, ${cloudAt}% cloud`}
                       </span>
                     </button>
@@ -1104,18 +1141,30 @@ export function HourChart({
         cloud, value and hour -- all line up on the same left edge.
       */}
         <div className="relative mt-1 ml-14 h-4">
-          {LABELLED_HOURS.map((hour) => (
-            <span
-              key={hour}
-              className={`text-2xs absolute text-fog ${
-                hour === 0 ? "" : "-translate-x-1/2"
-              } ${QUARTER_DAY_HOURS.has(hour) ? "" : "hidden sm:inline"}`}
-              style={{ left: `${(hour / 24) * 100}%` }}
-              data-axis-hour={hour}
-            >
-              {hourLabel(hour)}
-            </span>
-          ))}
+          {axisTicks(LABELLED_HOURS, { startMs, endMs }).map(
+            ({ clockHour, atMs }) => (
+              <span
+                key={clockHour}
+                className={`text-2xs absolute text-fog ${
+                  clockHour === 0 ? "" : "-translate-x-1/2"
+                } ${QUARTER_DAY_HOURS.has(clockHour) ? "" : "hidden sm:inline"}`}
+                /*
+                  Positioned with the same `x` the curve is drawn with, divided
+                  by the frame's own width to get back to a fraction. That is
+                  the point of `axisTicks` returning an instant rather than a
+                  percentage: there is one mapping from time to position in this
+                  file, so a tick cannot sit anywhere but over its own moment on
+                  the curve. It used to be `hour / 24`, a second mapping that
+                  agreed with this one on 363 days and was up to 53 minutes out
+                  on the other two.
+                */
+                style={{ left: `${(x(atMs) / WIDTH) * 100}%` }}
+                data-axis-hour={clockHour}
+              >
+                {hourLabelAt(atMs)}
+              </span>
+            ),
+          )}
         </div>
 
         {/*
