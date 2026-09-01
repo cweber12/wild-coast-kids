@@ -51,19 +51,27 @@ export function bindGridCell(beach, table) {
   if (resolution === undefined) {
     // Two different situations reach here and the wording has to fit both.
     // `/points` needs a coordinate, and the only coordinates this repo holds
-    // are the served inventory's -- an excluded beach records why it was
-    // excluded and nothing else -- so the table covers the served beaches and
+    // are the served inventory's, so the table covers the served beaches and
     // the seed asks it about all 73. For an excluded beach this is expected and
-    // the binding is discarded; for a served one it means the inventory moved
-    // since the last probe, which `seed-beaches.mjs` raises rather than files
-    // away. Claiming staleness in both cases would cry wolf on 28 beaches
+    // the binding is discarded; for a served one it means the inventory grew
+    // since the last probe, which `unlistedCellFault` in `seed-beaches.mjs`
+    // refuses. Claiming staleness in both cases would cry wolf on 22 beaches
     // every run.
+    //
+    // **THE WORDING SAID "an excluded beach has none recorded", WHICH IS ONLY
+    // TRUE OF ONE OF THEM**, and the served case is the only one that ever
+    // reaches a reader -- an excluded beach is filtered out of the inventory
+    // before the reason is written anywhere. So the sentence was false every
+    // time it was shown, and it was shown on six of 51 beaches for six days
+    // while the table predated `0572e3c`. It now names the table's coverage
+    // rather than asserting why a beach is outside it, which is true of both
+    // and is all this function can honestly know from a slug.
     return {
       cellId: null,
       reason:
-        `the forecast-cell table does not list ${beach.slug}; it covers the beaches this ` +
-        `site serves, because resolving a cell needs a coordinate and an excluded beach ` +
-        `has none recorded`,
+        `the forecast-cell table does not list ${beach.slug}; it is measured against the ` +
+        `inventory this site serves, so a beach is missing from it either because it is ` +
+        `not served or because the table predates it`,
     };
   }
 

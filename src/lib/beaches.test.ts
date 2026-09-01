@@ -454,3 +454,62 @@ describe("the wave buoy binding", () => {
     expect(caveat).not.toMatch(/only station in the box/i);
   });
 });
+
+describe("the forecast cell binding", () => {
+  test("every beach the site serves has one", () => {
+    // THE INVARIANT THE INVENTORY BROKE SILENTLY. `grid-cells.json` is measured
+    // against api.weather.gov by a probe and read by the join, so it is a
+    // snapshot with its own date -- and when TWC0405 brought six beaches back
+    // inside tolerance (see the count at the top of this file) the table was
+    // not re-measured. Those six shipped with `grid_cell: null` for six days:
+    // no wind, no air temperature, no cloud band, no sky wording and no wind
+    // needle on the map, on 6 of 51 beaches.
+    //
+    // Nothing caught it because nothing asked. Every other binding here is
+    // legitimately null somewhere -- 36 beaches have no buoy, 26 no line -- so
+    // there was no habit of asserting completeness. This one is different: the
+    // National Weather Service's grid covers the whole county, so a served
+    // beach with no cell is a stale table rather than a fact about the coast.
+    for (const beach of allBeaches()) {
+      expect(
+        beach.grid_cell,
+        `${beach.slug} has no forecast cell: ${beach.grid_cell_null_reason}`,
+      ).not.toBeNull();
+      expect(beach.grid_cell_null_reason).toBeUndefined();
+    }
+  });
+
+  test("the six Point Loma and Coronado beaches bind the cells /points gave", () => {
+    // Named rather than counted, for the reason the buoy test above gives: a
+    // count alone goes green if six different beaches arrive. These are the
+    // ones the inventory gained, with the cells the probe resolved for them.
+    const bound = Object.fromEntries(
+      allBeaches().map((beach) => [beach.slug, beach.grid_cell]),
+    );
+
+    expect(bound["dog-beach-o-b"]).toBe("SGX/53,16");
+    expect(bound["ocean-beach"]).toBe("SGX/53,15");
+    expect(bound["sunset-cliffs-park"]).toBe("SGX/53,14");
+    expect(bound["coronado-north-beach"]).toBe("SGX/54,13");
+    expect(bound["coronado-central-beach"]).toBe("SGX/55,13");
+    expect(bound["coronado-city-beaches"]).toBe("SGX/55,13");
+  });
+
+  test("each of them binds a cell at sea level rather than a bluff", () => {
+    // The join picks between a beach's two ends by which cell averages nearer
+    // sea level, and ADR-0020 records how weak that proxy is where neither end
+    // is low. All six resolved to 0 m, so none of them is served by terrain
+    // behind the shore -- which is worth pinning, because a beach bound to a
+    // 100 m cell is bound and still wrong.
+    for (const slug of [
+      "dog-beach-o-b",
+      "ocean-beach",
+      "sunset-cliffs-park",
+      "coronado-north-beach",
+      "coronado-central-beach",
+      "coronado-city-beaches",
+    ]) {
+      expect(beachBySlug(slug)!.grid_cell_elevation_m).toBe(0);
+    }
+  });
+});

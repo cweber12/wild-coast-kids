@@ -546,6 +546,50 @@ export function servesBeach(beach, toleranceM = SERVICE_TOLERANCE_M) {
   return serviceFault(beach, toleranceM) === null;
 }
 
+/**
+ * Why this seed must not be written: a beach it serves has no forecast cell
+ * because the table has never been asked about it. Null when there is none.
+ *
+ * **THE GUARD `grid-cell-join.mjs` SAID EXISTED AND DID NOT.** That module's
+ * comment has always read "for a served one it means the inventory moved since
+ * the last probe, which `seed-beaches.mjs` raises rather than files away". No
+ * such raise was ever written, so when `0572e3c` admitted six beaches that
+ * `grid-cells.json` predated, the seed wrote six nulls and a false sentence and
+ * said nothing. Those six shipped with no wind, no air temperature, no cloud
+ * and no wind needle.
+ *
+ * **It refuses only the stale-table case, and that distinction is the whole
+ * design.** A served beach can honestly have no cell -- if `/points` answers
+ * for neither end, or if the cell it lands in publishes no sky series -- and
+ * `bindGridCell` says so in its own words. Those are facts about the coast and
+ * the beach is published without a wind figure, which is what the `no-cell`
+ * state in `conditions.ts` is for. What cannot be a fact about the coast is a
+ * beach the table was never asked about: the National Weather Service's grid
+ * covers the whole county, so the answer exists and nobody fetched it.
+ *
+ * So it reads the table rather than the reason string. Matching on wording
+ * would tie a refusal to a sentence written for a reader, and the two drift.
+ *
+ * @param {{slug: string}[]} beaches The served inventory, after `document` filtered it.
+ * @param {{resolutions: Record<string, unknown>}} gridCells
+ * @returns {string | null}
+ */
+export function unlistedCellFault(beaches, gridCells) {
+  const unlisted = beaches
+    .filter((beach) => gridCells.resolutions[beach.slug] === undefined)
+    .map((beach) => beach.slug);
+
+  if (unlisted.length === 0) return null;
+
+  return (
+    `grid-cells.json does not list ${unlisted.length} of the ${beaches.length} beaches this ` +
+    `site serves: ${unlisted.join(", ")}. The National Weather Service's grid covers this ` +
+    `county, so this is a table that predates the inventory rather than a coast no forecast ` +
+    `reaches. Re-run scripts/probe-grid-cells.mjs, then seed again; refusing to write an ` +
+    `inventory whose forecast is missing where it should not be.`
+  );
+}
+
 export function document(built, now = new Date()) {
   const beaches = built.filter((beach) => servesBeach(beach));
   const excluded = built
@@ -821,6 +865,13 @@ async function main() {
   const built = document(
     build(rows, stations, buoys, observationStations, mopLines, gridCells),
   );
+
+  // Before the write and before --check's comparison, because a stale table is
+  // a reason to stop rather than a difference to report: --check would call it
+  // "unchanged" on the second run, when the inventory and the table are both
+  // stale in the same way.
+  const unlisted = unlistedCellFault(built.beaches, gridCells);
+  if (unlisted !== null) throw new Error(unlisted);
 
   // `generated` is the one field that moves on every run by design, so comparing
   // it would make every check fail and mean nothing.
