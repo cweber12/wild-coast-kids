@@ -407,10 +407,34 @@ export default defineConfig({
         // readout left the picture, then modelLine() when the open-coast test
         // it existed for stopped existing. No test stopped running in any of
         // them, and every deletion is a decision with an ADR.
-        statements: 89.22,
-        branches: 88.89,
-        functions: 94.04,
-        lines: 88.87,
+        // RAISED 2026-09-01, all four, by the day chart naming its hours from
+        // instants (#196, first slice). The ordinary direction and the easy
+        // case -- both halves of every ratio grew and the numerators grew
+        // faster:
+        //
+        //   statements 3003/3365  89.22 -> 89.24
+        //   branches   1917/2155  88.89 -> 88.95
+        //   functions   682/725   94.04 -> 94.06
+        //   lines      2704/3042  88.87 -> 88.88
+        //
+        // Hundredths, and they are recorded rather than absorbed for the reason
+        // the entries above give in both directions: the ratchet only means
+        // something if it is moved every time it can be. The slice is small in
+        // code -- `localHourOf` and `hourLabelAt` in pacific-time.ts,
+        // `instantOfHour` in dayFrame.ts, four call sites following them -- and
+        // large in tests, because a rule about 2026-11-01 and 2027-03-14 is
+        // worth nothing unless both dates are asserted. `dayFrame.ts` gained a
+        // test file of its own and reached 100% on all four; its one previously
+        // uncovered branch, `nightBands` dropping a band with no width, is
+        // covered now by calling it directly rather than by widening the floor
+        // around it.
+        //
+        // Nothing new is excluded. The same 0% entry-plumbing files named above
+        // still drag all four down in plain sight.
+        statements: 89.24,
+        branches: 88.95,
+        functions: 94.06,
+        lines: 88.88,
       },
     },
   },

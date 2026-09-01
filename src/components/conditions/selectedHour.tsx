@@ -30,15 +30,13 @@
  * therefore supplied by the server read that already knows which day is today,
  * and the server render and the first client render agree by construction.
  *
- * **The hour is an index into the day, which is `HourChart`'s convention rather
- * than a new one.** That component derives an hour as
- * `Math.round((atMs - startMs) / HOUR_MS)` and prints it through `hourLabel`,
- * which reads an index as a clock hour -- and `localMidnightOf` resolves the
- * zone offset twice, so a fall-back day is twenty-five hours long and the two
- * diverge. That defect predates this file and is not fixed here; what this file
- * owes it is not to introduce a second, disagreeing convention, so that the
- * chart and the readout can never call one hour by two names and the fix stays
- * a single-site one. See ADR-0035's last consequence.
+ * **The hour is a position in the day, which is `hourOfDay`'s convention rather
+ * than a new one**, and it is deliberately not a clock hour. A position is
+ * unique on all 365 days; a clock hour is not, because a fall-back day holds
+ * two 1 AMs and keying a selection on one of them would make the two
+ * indistinguishable. Nothing here is ever shown to a reader: the words come
+ * from `hourLabelAt`, against the instant the position falls on, which is
+ * ADR-0040's split and the reason this file needed no change to survive it.
  */
 
 "use client";

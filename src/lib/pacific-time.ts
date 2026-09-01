@@ -53,6 +53,68 @@ export function localTimeOf(
 }
 
 /**
+ * The clock hour an instant falls in, in `timeZone`, as `0` to `23`.
+ *
+ * **The hour a reader would say, which is not the same as the hour a plot
+ * counts.** `hourOfDay` in `dayFrame.ts` divides a day's span by an hour and
+ * gets a position; this reads the clock. They agree on 363 days a year and
+ * disagree on the two this coast changes offset, which is issue #196: a
+ * fall-back day is twenty-five hours long, so its twelfth position is 11 AM
+ * and its twenty-fourth is 11 PM. Anything the page *says* out loud is named
+ * from here; the position stays a position.
+ *
+ * `hour12: false` yields "24" for midnight on some ICU versions rather than
+ * "00", which `zoneOffsetMs` below guards against for the same reason. The
+ * modulo is that guard and not a rounding.
+ */
+export function localHourOf(
+  atMs: number,
+  timeZone: string = SITE_TIME_ZONE,
+): number {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone,
+    hour: "2-digit",
+    hour12: false,
+  }).formatToParts(new Date(atMs));
+  return Number(parts.find((part) => part.type === "hour")!.value) % 24;
+}
+
+/**
+ * The hour an instant falls in, named for a reader: `12 AM`, `3 PM`.
+ *
+ * **Here rather than in `dayFrame.ts`, because it names an instant rather than
+ * a position.** It sat beside `hourOfDay` while it took that function's output,
+ * on the argument that one definition of an hour and one definition of what to
+ * call it belong together. Naming from the instant dissolves that pairing: this
+ * is a wall clock read in a named zone, which is what this module is, and it is
+ * reachable from both a server component and a `"use client"` one either way.
+ *
+ * **The words are built here rather than asked of `Intl`**, which would be the
+ * shorter implementation and is deliberately not taken. An hour-only format
+ * returns "3 PM" with an ordinary space on Node 22.18.0 / ICU 77 and "12 AM" at
+ * midnight -- checked, not assumed -- but which space character ICU chooses has
+ * moved before, and CI runs a different build of it. `localHourOf` above reads
+ * a *number* out of `Intl`, where no such question arises, and the wording is
+ * the repo's own.
+ *
+ * **`At` is not decoration.** This took a `0`-to-`23` index until #196 and now
+ * takes epoch milliseconds; both are `number`, so a call site missed in that
+ * change would compile and return plausible nonsense -- `hourLabel(12)` gave
+ * "12 PM". The defect being fixed here is an index being silently readable as a
+ * clock hour, and shipping the fix under the old name would leave that same
+ * trap one layer down.
+ */
+export function hourLabelAt(
+  atMs: number,
+  timeZone: string = SITE_TIME_ZONE,
+): string {
+  const hour = localHourOf(atMs, timeZone);
+  if (hour === 0) return "12 AM";
+  if (hour === 12) return "12 PM";
+  return hour < 12 ? `${hour} AM` : `${hour - 12} PM`;
+}
+
+/**
  * The calendar day an instant falls on, in `timeZone`, as `Tue, Sep 8`.
  *
  * Weekday included because the co-op's whole identity is which day of the week

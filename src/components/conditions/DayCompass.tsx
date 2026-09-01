@@ -49,9 +49,13 @@ import { resolveHour, useSelectedHour } from "./selectedHour";
  * is a fact about the forecast rather than about this component.
  */
 export type CompassHour = {
-  /** The hour's index into its own day, which is `hourOfDay`'s convention. */
+  /** The hour's position in its own day, which is `hourOfDay`'s convention. */
   hour: number;
-  /** What to call it, worded by `hourLabel` so the chart's axis agrees. */
+  /**
+   * What to call it, worded by `hourLabelAt` from the position's own instant so
+   * the chart's readout agrees. Not derived from `hour` above: on a fall-back
+   * day two positions are both 1 AM and one is 11 PM (ADR-0040).
+   */
   caption: string;
   /** Empty on an hour no feed gave a bearing for, which renders no readout. */
   needles: readonly CompassNeedle[];

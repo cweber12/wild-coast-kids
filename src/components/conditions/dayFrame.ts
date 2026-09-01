@@ -56,39 +56,37 @@ const HOUR_MS = 3_600_000;
  * module is `"use client"`, and the default is computed on the server. The
  * hour's definition is day geometry; which hour a reader chose is not.
  *
- * **It is an index into the day rather than a clock hour**, and on the two days
- * a year this coast changes offset the two diverge: `localMidnightOf` resolves
- * the zone offset twice, so a fall-back day is twenty-five hours long. The
- * chart's `hourLabel` reads this index as a clock hour and is wrong for it on
- * those days. That defect predates the sharing and is inherited here rather
- * than forked, so the two regions stay wrong together rather than
- * disagreeing -- see ADR-0035's last consequence.
+ * **It is a position in the day and is never spoken**, which is the whole of
+ * ADR-0040. On the two days a year this coast changes offset it is not a clock
+ * hour: `localMidnightOf` resolves the zone offset twice, so a fall-back day is
+ * twenty-five hours long and its twelfth position is 11 AM. That is not a
+ * defect in this function -- an index is exactly what the geometry needs, and
+ * the columns, `cloudByHour`, `needles.ts` and the selection all key on it,
+ * where a repeated 1 AM would not be a unique key. The defect was that four
+ * places *said* it out loud. They now name their hours from instants through
+ * `hourLabelAt`, and this stays a coordinate.
  */
 export function hourOfDay(atMs: number, dayStartMs: number): number {
   return Math.round((atMs - dayStartMs) / HOUR_MS);
 }
 
 /**
- * `0` to "12 AM", `13` to "1 PM". The axis speaks the reader's clock.
+ * The instant a position in the day falls on. The inverse of `hourOfDay`.
  *
- * **Here rather than in the chart, because the readout on the map names the
- * same hour.** `hourOfDay` is the one definition of which hour an instant falls
- * in and this is the one definition of what to call it, and the pair belongs
- * together for that function's own reason: the caption over the readout and the
- * label under the plot are how a reader sees that two regions are showing one
- * hour, and they can only be that if the words come from one place. `HourChart`
- * is `"use client"` and the caption is worded on the server, so a module both
- * can reach was the only place this could go in any case.
+ * **Exact rather than approximate, and that is worth saying because it looks
+ * like the arithmetic this module was just corrected for.** `hourOfDay` rounds
+ * `(atMs - dayStartMs) / HOUR_MS`, so position `i` is by construction the
+ * instant `dayStartMs + i` hours -- including across a transition, where the
+ * wall clock repeats or skips an hour but elapsed time does not. Adding hours
+ * to a local midnight is wrong when the answer wanted is *a clock reading*, and
+ * right when the answer wanted is *the instant at a position*, which is this.
  *
- * **It reads its argument as a clock hour, which an index is not on the two
- * days a year this coast changes offset** -- see `hourOfDay` above. Inherited
- * rather than forked: the chart and the map are wrong together rather than
- * disagreeing, and the fix stays a single-site one.
+ * For the one caller that holds a position and no instant: `DayPanel` keys its
+ * readout rows by `hourOfDay` and has to name them, so it comes back here for
+ * the instant rather than adding hours to a midnight itself.
  */
-export function hourLabel(hour: number): string {
-  if (hour === 0) return "12 AM";
-  if (hour === 12) return "12 PM";
-  return hour < 12 ? `${hour} AM` : `${hour - 12} PM`;
+export function instantOfHour(hour: number, dayStartMs: number): number {
+  return dayStartMs + hour * HOUR_MS;
 }
 
 /**

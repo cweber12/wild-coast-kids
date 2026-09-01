@@ -61,7 +61,12 @@ import {
   type WaveWeekView,
 } from "@/lib/conditions";
 import { beachBySlug } from "@/lib/beaches";
-import { localMidnightOf, addLocalDays, localTimeOf } from "@/lib/pacific-time";
+import {
+  localMidnightOf,
+  addLocalDays,
+  localTimeOf,
+  hourLabelAt,
+} from "@/lib/pacific-time";
 import { ChosenDay, type DayView } from "./ChosenDay";
 import type { HourSeries } from "./HourChart";
 import { MeasuredPanel } from "./MeasuredPanel";
@@ -74,7 +79,7 @@ import {
   type CompassDay,
   type CompassHour,
 } from "./DayCompass";
-import { hourLabel, hourOfDay } from "./dayFrame";
+import { hourOfDay, instantOfHour } from "./dayFrame";
 import { SelectedHourProvider } from "./selectedHour";
 import {
   GRID_MODEL_NOTE,
@@ -816,13 +821,21 @@ export async function DayPanel({ slug }: { slug: string }) {
         if (swellRow !== undefined) needles.push(swellRow);
 
         /*
-          The caption, worded through the same `hourLabel` the chart's axis
-          uses. One hour named twice on one screen has to be named the same way,
-          and the defect the two share on a DST day is better than the
-          disagreement they would have if each counted its own -- `dayFrame.ts`
-          says why it is inherited rather than forked.
+          The caption, worded through the same `hourLabelAt` the chart's readout
+          and axis use. One hour named twice on one screen has to be named the
+          same way, which is what ADR-0035 arranged and what would break first
+          if only the chart were fixed: the two regions would disagree on
+          exactly the two days that decision was written to make them agree on.
+
+          `instantOfHour` because the rows are keyed by position -- `needles.ts`
+          buckets by `hourOfDay` and keeps no instant -- and a position is the
+          one thing this must not name itself from.
         */
-        return { hour, caption: hourLabel(hour), needles };
+        return {
+          hour,
+          caption: hourLabelAt(instantOfHour(hour, dayStartMs)),
+          needles,
+        };
       });
 
     return { localDate: day.localDate, hours };

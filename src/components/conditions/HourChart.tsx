@@ -114,7 +114,8 @@
 "use client";
 
 import { useId, useState } from "react";
-import { hourLabel, hourOfDay, nightBands } from "./dayFrame";
+import { hourLabelAt } from "@/lib/pacific-time";
+import { hourOfDay, instantOfHour, nightBands } from "./dayFrame";
 import { useHydrated } from "./hydrated";
 import { resolveHour, useSelectedHour } from "./selectedHour";
 import type { SparkPoint } from "./DaySpark";
@@ -705,7 +706,10 @@ export function HourChart({
     const dark =
       selectedPoint.atMs < sunriseMs || selectedPoint.atMs > sunsetMs;
     return [
-      hourLabel(selectedHour),
+      // Named from the point's own instant rather than from `selectedHour`,
+      // which is the position that found it. On a fall-back day those are
+      // different hours from position 3 onward -- see ADR-0040.
+      hourLabelAt(selectedPoint.atMs),
       `${selectedPoint.value.toFixed(1)} ${unitLabel}`,
       cloudAt === undefined ? "no cloud forecast" : `${cloudAt}% cloud`,
       dark ? "before sunrise or after sunset" : "in daylight",
@@ -1080,7 +1084,8 @@ export function HourChart({
                       has just selected.
                     */}
                       <span className="absolute -m-px h-px w-px overflow-hidden">
-                        {hourLabel(hour)}, {point.value.toFixed(1)} {unitLabel}
+                        {hourLabelAt(point.atMs)}, {point.value.toFixed(1)}{" "}
+                        {unitLabel}
                         {cloudAt === undefined ? "" : `, ${cloudAt}% cloud`}
                       </span>
                     </button>
@@ -1113,7 +1118,21 @@ export function HourChart({
               style={{ left: `${(hour / 24) * 100}%` }}
               data-axis-hour={hour}
             >
-              {hourLabel(hour)}
+              {/*
+                Named from the instant at this position rather than by reading
+                the position as a clock hour. On a fall-back day position 12 is
+                11 AM and position 24 is 11 PM, so the old reading printed
+                "12 PM" twice and never printed noon at all.
+
+                **The positions themselves are still wrong here**, and are put
+                right in the next commit: `left` divides by 24 while the curve
+                above is mapped against the day's real span, so on a 25-hour day
+                this tick sits up to 53 minutes off the instant it now names.
+                Naming and placing are separate defects and this commit fixes
+                only the first -- but the label is true of the tick it is on,
+                which is more than could be said before it.
+              */}
+              {hourLabelAt(instantOfHour(hour, startMs))}
             </span>
           ))}
         </div>
