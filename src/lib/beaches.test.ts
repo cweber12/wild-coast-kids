@@ -7,6 +7,7 @@ import {
   defaultBeach,
   inventoryCaveats,
   inventoryReach,
+  airStationFor,
   mopLineFor,
   tideStationFor,
   waveBuoyFor,
@@ -510,6 +511,57 @@ describe("the forecast cell binding", () => {
       "coronado-city-beaches",
     ]) {
       expect(beachBySlug(slug)!.grid_cell_elevation_m).toBe(0);
+    }
+  });
+});
+
+describe("the air station binding", () => {
+  test("never binds a station that does not deliver", () => {
+    // THE ASSERTION AIR WAS THE ONLY ONE OF THE FOUR MISSING. The tide station,
+    // the MOP line and the wave buoy all have it; this table did not, and a
+    // station dying is not hypothetical -- EW3619 Santee stopped answering
+    // between 2026-08-18 and 2026-09-01, which is what re-measured the table in
+    // the commit before this one.
+    //
+    // `air-join.mjs` filters on `delivers` when it binds, so a re-seed cannot
+    // produce this state. What it cannot rule out is the gap that cost six
+    // beaches their forecast in #167: a table re-measured and committed while
+    // beaches.json still points at what it used to say. The join runs at seed
+    // time; this runs in the gate.
+    for (const beach of allBeaches()) {
+      const station = airStationFor(beach);
+      if (station === null) continue;
+      expect(
+        station.delivers,
+        `${beach.slug} reads ${station.id}, which no longer delivers`,
+      ).toBe(true);
+    }
+  });
+
+  test("every bound station publishes both the figures the card states", () => {
+    // The air card prints a temperature and a wind, so a station delivering
+    // neither is bound and still useless. Two flags rather than `delivers`
+    // alone, because `delivers` only says the station answered at all.
+    for (const beach of allBeaches()) {
+      const station = airStationFor(beach);
+      if (station === null) continue;
+      expect(station.publishes_air_temp).toBe(true);
+      expect(station.publishes_wind).toBe(true);
+    }
+  });
+
+  test("no beach in the inventory is missing one", () => {
+    // Every beach binds an air station today, at 0.73 to 7.37 km, all inside
+    // SERVICE_TOLERANCE_M. Asserted for the reason #167 gave: the forecast-cell
+    // table was complete too, until an inventory grew past it and nothing
+    // asked. A null here would be a real state -- `air_station_null_reason`
+    // exists -- so this is a check that the inventory and the table still
+    // agree, not a claim that they must.
+    for (const beach of allBeaches()) {
+      expect(
+        beach.air_station,
+        `${beach.slug}: ${beach.air_station_null_reason}`,
+      ).not.toBeNull();
     }
   });
 });
