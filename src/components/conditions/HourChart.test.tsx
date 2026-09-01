@@ -1217,17 +1217,11 @@ describe("a day the clocks change on", () => {
     expect(SPRING_END - SPRING_START).toBe(23 * HOUR);
   });
 
-  test("every axis label is the true name of its own tick", () => {
-    // The ticks are still *positions* in this commit -- 0, 3, 6 ... 21 -- and
-    // what changes is that each is named from the instant it falls on rather
-    // than read as a clock hour. So on a 25-hour day the axis reads 12 AM,
-    // 2 AM, 5 AM ... which is odd-looking and true, where before it read 12 AM,
-    // 3 AM, 6 AM ... which is tidy and false.
-    //
-    // **Noon is absent here and that is not a defect of this commit**: no
-    // position on this day is 12 PM. The next commit stands the ticks on clock
-    // hours, which is what brings noon back and what moves them to the right
-    // part of the curve.
+  test("the axis names the same eight hours it names on every other day", () => {
+    // ADR-0040's choice, on the page: the names stay regular and the spacing
+    // bends. The axis reads 12 AM, 3 AM, 6 AM on a 25-hour day exactly as it
+    // does on a 24-hour one -- and, unlike before, each of those is over the
+    // moment it names.
     const { container } = render(
       <HourChart {...dayOf(FALL_START, FALL_END)} />,
     );
@@ -1237,17 +1231,67 @@ describe("a day the clocks change on", () => {
     );
     expect(labels).toEqual([
       "12 AM",
-      "2 AM",
-      "5 AM",
-      "8 AM",
-      "11 AM",
-      "2 PM",
-      "5 PM",
-      "8 PM",
+      "3 AM",
+      "6 AM",
+      "9 AM",
+      "12 PM",
+      "3 PM",
+      "6 PM",
+      "9 PM",
     ]);
-    // The half of #196 that is already gone: no hour is named twice, and no
-    // label reads "12 PM" anywhere but at noon.
+    // #196's first symptom, gone: noon is named once, at noon, and no hour is
+    // named twice.
+    expect(labels.filter((label) => label === "12 PM")).toHaveLength(1);
     expect(new Set(labels).size).toBe(labels.length);
+  });
+
+  test("data-axis-hour carries a clock hour, so nothing inherits the bug", () => {
+    // The attribute is unrenamed and now true. Every test in this file already
+    // read it as a clock hour -- `[data-axis-hour="6"]` meaning the 6 AM label
+    // -- and on a DST day it used to be a position wearing that name.
+    const { container } = render(
+      <HourChart {...dayOf(FALL_START, FALL_END)} />,
+    );
+
+    expect(container.querySelector('[data-axis-hour="12"]')?.textContent).toBe(
+      "12 PM",
+    );
+    expect(container.querySelector('[data-axis-hour="24"]')).toBeNull();
+  });
+
+  test("each tick sits where the curve puts its own instant", () => {
+    // The second defect, and the one #196 does not mention. `left` was
+    // `hour / 24` while the curve is mapped against the day's real span, so on
+    // this day the "3 AM" tick sat over 2:07 AM. The expected figures are the
+    // day's own: 3 hours of 25 is 12%, not 12.5%, and the wide first gap is the
+    // span that really held four hours.
+    const { container } = render(
+      <HourChart {...dayOf(FALL_START, FALL_END)} />,
+    );
+
+    const lefts = [...container.querySelectorAll("[data-axis-hour]")].map(
+      (label) =>
+        Number(
+          Number((label as HTMLElement).style.left.replace("%", "")).toFixed(2),
+        ),
+    );
+    expect(lefts).toEqual([0, 16, 28, 40, 52, 64, 76, 88]);
+  });
+
+  test("a spring-forward day is displaced the other way", () => {
+    // A fix that stretched in one direction only would pass every assertion
+    // above and fail here: the first gap is *narrower* on this day, not wider.
+    const { container } = render(
+      <HourChart {...dayOf(SPRING_START, SPRING_END)} />,
+    );
+
+    const lefts = [...container.querySelectorAll("[data-axis-hour]")].map(
+      (label) =>
+        Number(
+          Number((label as HTMLElement).style.left.replace("%", "")).toFixed(2),
+        ),
+    );
+    expect(lefts).toEqual([0, 8.7, 21.74, 34.78, 47.83, 60.87, 73.91, 86.96]);
   });
 
   test("the chart's readout names the hour a reader is on, not its position", () => {

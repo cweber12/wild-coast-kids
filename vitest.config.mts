@@ -431,10 +431,24 @@ export default defineConfig({
         //
         // Nothing new is excluded. The same 0% entry-plumbing files named above
         // still drag all four down in plain sight.
-        statements: 89.24,
+        // RAISED again 2026-09-01, three of four, by the axis standing on its
+        // instants (#196, second slice). Same ordinary direction:
+        //
+        //   statements 3012/3374  89.24 -> 89.27
+        //   functions   685/728   94.06 -> 94.09
+        //   lines      2712/3050  88.88 -> 88.91
+        //
+        // **Branches did not move at all -- 1917/2155 on both sides -- and that
+        // is the expected shape rather than an untested arm.** `axisTicks` has
+        // one conditional in it, the `filter` that drops an hour the day does
+        // not hold, and both of its arms are covered: 2 AM on 2027-03-14 goes
+        // one way and every ordinary hour the other. What the slice mostly did
+        // was replace one expression with another, and the tests it added are
+        // assertions about values rather than new paths through code.
+        statements: 89.27,
         branches: 88.95,
-        functions: 94.06,
-        lines: 88.88,
+        functions: 94.09,
+        lines: 88.91,
       },
     },
   },

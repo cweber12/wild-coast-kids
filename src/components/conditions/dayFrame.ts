@@ -23,6 +23,8 @@
  * every test counting bands would then have to know about.
  */
 
+import { localHourOf } from "@/lib/pacific-time";
+
 /** One stretch of a day that is dark, already mapped into plot units. */
 export interface NightBand {
   x: number;
@@ -87,6 +89,62 @@ export function hourOfDay(atMs: number, dayStartMs: number): number {
  */
 export function instantOfHour(hour: number, dayStartMs: number): number {
   return dayStartMs + hour * HOUR_MS;
+}
+
+/** One hour the axis names, and the instant in this day it happened at. */
+export interface AxisTick {
+  /** The clock hour a reader sees: `0` for midnight, `15` for 3 PM. */
+  clockHour: number;
+  /** When that was, which is where the tick belongs on the curve. */
+  atMs: number;
+}
+
+/**
+ * Where each of a day's named hours actually falls.
+ *
+ * **The axis stands on instants rather than on positions**, which is ADR-0040
+ * and the second half of #196. A tick placed at `hour / 24` of the plot while
+ * the curve above it is mapped against the day's real span is displaced by up
+ * to 53 minutes on a fall-back day and 52 on a spring-forward one, in opposite
+ * directions -- so a correctly *named* tick still sat over the wrong part of
+ * the curve. Returning the instant is what fixes that structurally: the caller
+ * positions a tick with the same `x` it draws the curve with, so there is one
+ * mapping in the file and the two cannot drift apart even in principle.
+ *
+ * **The names stay regular and the spacing bends**, which is the choice
+ * ADR-0040 records. A 25-hour day's ticks are 16% then 12% apart rather than
+ * 12.5% throughout, and the wide gap sits between midnight and 3 AM -- the span
+ * that really did hold four hours. The alternative kept the spacing even by
+ * moving the irregularity into the words, where a reader would meet it.
+ *
+ * **An hour the day does not hold is dropped rather than placed.** On a
+ * spring-forward day 2 AM never happens, so there is nowhere honest to put it.
+ * No caller asks for 2 AM today, which is why this is a contract worth writing
+ * down rather than a case worth discovering later.
+ *
+ * **A repeated hour takes the earlier of the two.** A fall-back day holds two
+ * 1 AMs and only one tick can be drawn; the first is the one a reader reaches
+ * first. No caller asks for 1 AM either, and both facts are asserted rather
+ * than left as a property of the current tick list.
+ */
+export function axisTicks(
+  clockHours: readonly number[],
+  bounds: { startMs: number; endMs: number },
+): AxisTick[] {
+  const count = Math.round((bounds.endMs - bounds.startMs) / HOUR_MS);
+
+  // Backwards, so that where an hour repeats the earlier position is the one
+  // left standing. Written as a sweep rather than a search per tick because the
+  // day has to be walked once either way to know which hours it holds at all.
+  const instants = new Map<number, number>();
+  for (let hour = count - 1; hour >= 0; hour -= 1) {
+    const atMs = instantOfHour(hour, bounds.startMs);
+    instants.set(localHourOf(atMs), atMs);
+  }
+
+  return clockHours
+    .map((clockHour) => ({ clockHour, atMs: instants.get(clockHour) }))
+    .filter((tick): tick is AxisTick => tick.atMs !== undefined);
 }
 
 /**
