@@ -3,7 +3,7 @@
  *
  * `ShoreMap` shades the sea. To shade it, something has to know which side of
  * the drawn coastline the water is on, and the answer this repo relies on is
- * that `mop-lines.json` runs south to north along a west-facing county, so the
+ * that `shoreline.json` runs south to north along a west-facing county, so the
  * sea is on the left of the walk. That claim is one sentence and it is holding
  * up a picture, which is exactly the shape ADR-0021 says gets a checker rather
  * than a comment.
@@ -11,14 +11,15 @@
  * **What it checks, and why not the obvious thing.** The obvious check is that
  * every wave buoy falls left of the whole polyline. That check fails, and it is
  * the check that is wrong rather than the data: walked end to end the file is
- * not monotonic -- it wraps Point Loma, where 39 of its 1,209 steps run north
- * to south -- so buoy 46232, 22.9 km off that peninsula, matches a segment on
- * the wrap and lands on the right. The map never asks the question that way.
+ * not monotonic -- it wraps Point Loma and follows both bays in and out, so
+ * 1,824 of its 5,367 steps run north to south, against 39 of 1,209 when this
+ * traced the model line -- and buoy 46232, 22.9 km off that peninsula, matches
+ * a segment on the wrap and lands on the right. The map never asks the question that way.
  * It asks inside one beach's window, where the coast runs one way, and inside
  * every such window the rule holds. That is what is checked here.
  *
  * **Read only, and no flag that writes.** ADR-0021's first line. Nothing here
- * can regenerate `mop-lines.json`, because nothing here measured it.
+ * can regenerate `shoreline.json`, because nothing here measured it.
  *
  * **The geometry is spelled twice, and the duplication is pinned.** This runs
  * under plain node for the gate and cannot import `src/lib/coastline.ts`;
@@ -99,15 +100,22 @@ function atLeast(bounds, metres) {
   };
 }
 
-/** Consecutive repeats dropped, so no segment has zero length and no direction. */
-export function coastFrom(mopLines) {
+/**
+ * The traced shore as points, consecutive repeats dropped so no segment has
+ * zero length and no direction.
+ *
+ * Takes `shoreline.json`'s `points` -- `[lon, lat]` pairs -- because that is
+ * the line `ShoreMap` draws. It took `mop-lines.json` until ADR-0037, and
+ * checking that file now would prove which side of a line the water is on that
+ * nothing on the page draws.
+ */
+export function coastFrom(tracedPoints) {
   const points = [];
 
-  for (const id of Object.keys(mopLines)) {
-    const line = mopLines[id];
+  for (const [lon, lat] of tracedPoints) {
     const last = points[points.length - 1];
-    if (last && last.lat === line.lat && last.lon === line.lon) continue;
-    points.push({ id, lat: line.lat, lon: line.lon });
+    if (last && last.lat === lat && last.lon === lon) continue;
+    points.push({ lat, lon });
   }
 
   return points;
@@ -259,7 +267,7 @@ function positionsFor(beach, tables) {
  * CLAUDE.md's rule is that nothing skipped is silent.
  */
 export function checkSeaSide(tables) {
-  const coast = coastFrom(tables.mopLines);
+  const coast = coastFrom(tables.shoreline);
   const wrong = [];
   const skipped = new Map();
   let checked = 0;

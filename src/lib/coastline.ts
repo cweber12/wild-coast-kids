@@ -1,20 +1,34 @@
 /**
- * The county coastline as a drawable polyline, from the MOP lines already
- * committed.
+ * The county coastline as a drawable polyline, from the traced shore.
  *
- * `mop-lines.json` holds 1,210 CDIP model lines at about 98 m spacing, keyed
- * `D0001` upward and ordered south to north. `beaches.ts` reads that table one
- * key at a time, to answer "which line does this beach bind". Nothing has ever
- * read it as a *shape* before, and reading it as a shape is what this module is
- * for.
+ * `shoreline.json` holds 5,368 points walked south to north, cut by
+ * `scripts/probe-coastline.mjs` from the landward edge of CDFW's ACE Ecoregion
+ * Sections. It is a shoreline: measured against `beaches.json`, 50 of the 51
+ * beaches sit within 37 m of it.
  *
- * **The de-duplication is not housekeeping.** 123 of the 1,210 repeat their
- * neighbour's coordinates exactly, so a polyline built straight from the file
- * carries 123 zero-length segments. A zero-length segment has no direction, so
- * every tangent is undefined there and every left-or-right test against it
- * returns whatever the arithmetic happens to produce — which already gave one
- * wrong answer while this work was being scoped. Removing them first is what
- * makes the geometry below answerable at all.
+ * **It used to be `mop-lines.json`, and that was not a shore.** CDIP computes
+ * MOP lines at 10 m depth, so their published positions sit offshore of the
+ * sand — 117 to 930 m for the beaches that bind one, median 644 — and they
+ * trace the open coast only, which left the 23 Mission Bay and San Diego Bay
+ * beaches with no coastline to draw. ADR-0030 measured both, could correct
+ * neither, and named the arrival of a real shoreline as the thing that would
+ * supersede it. ADR-0037 is that. `mop-lines.json` is unchanged and still
+ * answers the question it was always asked — which model line supplies a
+ * beach's swell forecast — and still supplies this file's two end anchors.
+ *
+ * **No tidal datum, and nothing here may invent one.** The traced line is
+ * county boundary linework, which nominally follows mean high tide but is not
+ * published as a tidal product. Drawing a water level against it needs a source
+ * that states its datum; see `docs/plans/traced-shoreline.md`.
+ *
+ * **The de-duplication is not housekeeping.** A zero-length segment has no
+ * direction, so every tangent is undefined there and every left-or-right test
+ * against it returns whatever the arithmetic happens to produce — which already
+ * gave one wrong answer while this work was being scoped, back when the source
+ * was MOP and 123 of its 1,210 lines repeated a neighbour exactly. The traced
+ * shore carries no exact repeats, which is a property of the current file
+ * rather than of the format: the step is kept because the cost is one comparison
+ * and the failure it prevents is silent.
  *
  * **Not `scripts/geo.mjs`.** That is build-side JavaScript for the joins that
  * produced `beaches.json`, and it runs once, offline, against every beach. This
@@ -22,14 +36,16 @@
  */
 
 import mopLineTable from "@/data/mop-lines.json";
+import shorelineTable from "@/data/shoreline.json";
 import type { MopLine } from "./beaches";
+
+/** The committed file's shape: `[lon, lat]` pairs in decimal degrees. */
+const TRACED = shorelineTable.points as readonly number[][];
 
 const MOP_LINES = mopLineTable.lines as Readonly<Record<string, MopLine>>;
 
-/** One point on the drawn coast, keeping the line id that placed it. */
+/** One point on the drawn coast. */
 export interface ShorePoint {
-  /** The MOP line id this came from, so a marker can name what it marks. */
-  readonly id: string;
   readonly lat: number;
   readonly lon: number;
 }
@@ -38,16 +54,38 @@ export interface ShorePoint {
  * The whole county coast, walked south to north, with consecutive duplicates
  * removed.
  *
- * The **first** of each run of repeats is the one kept. That choice is safe to
- * make rather than merely convenient: no beach in `beaches.json` binds a line
- * that this drops, so no marker loses the point it names. A later run that
- * changed that would fail the pinned count in this module's test before it
- * could fail silently on a page.
+ * The **first** of each run of repeats is the one kept, which matters only if
+ * the source ever grows one: the committed file has none, and this module's
+ * test pins that rather than leaving it to be discovered by a wrong tangent.
  */
 export function coastline(): readonly ShorePoint[] {
+  return withoutRepeats(TRACED.map(([lon, lat]) => ({ lat, lon })));
+}
+
+/**
+ * CDIP's model line, which no longer draws anything and still decides one
+ * thing: whether this site maps the water a beach sits on.
+ *
+ * **It stopped being the coast and did not stop being the test.** The traced
+ * shore reaches every beach in the inventory — the bay beaches included, at a
+ * median 4 m — so a distance measured against it can no longer separate the
+ * open coast from Mission Bay, which is the separation `shore.ts` has always
+ * made and ADR-0033 and ADR-0036 both document as 28 beaches and 23. Measured
+ * against the model line that separation is unchanged, because the model line
+ * is exactly what traces the open coast and nothing else.
+ *
+ * **Not `beach.mopLine`**, the binding in `beaches.json`. ADR-0036 rejected that
+ * and its reason holds: `childrens-pool` binds no line, sits 0.33 km from the
+ * open coast and is plainly on it. The binding answers which line supplies a
+ * swell forecast, which is a different question.
+ *
+ * The `delivers` flag is not read here. A line CDIP places but does not forecast
+ * still marks open coast, which is a fact about the geography rather than about
+ * the feed.
+ */
+export function modelLine(): readonly ShorePoint[] {
   return withoutRepeats(
     Object.keys(MOP_LINES).map((id) => ({
-      id,
       lat: MOP_LINES[id].lat,
       lon: MOP_LINES[id].lon,
     })),

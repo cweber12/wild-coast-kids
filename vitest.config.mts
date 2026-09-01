@@ -369,10 +369,30 @@ export default defineConfig({
         // not provoke, and `dayFrame.ts` at 87.5% branches, whose one uncovered
         // arm is `nightBands` dropping a band with no width -- a polar summer,
         // which this coast does not have.
-        statements: 90.01,
-        branches: 89.59,
-        functions: 94.56,
-        lines: 89.74,
+        // LOWERED 2026-08-31 under reason 1, when probe-coastline.mjs arrived
+        // with ADR-0037. Nothing new is excluded and no test was lost; the
+        // denominator grew by one 450-line probe whose untestable half is the
+        // usual one.
+        //
+        // It lands at 76.2% statements, 74% lines -- better covered than
+        // probe-mop-lines.mjs at 60.6% and 56.9%, which sits here for exactly
+        // the same reason. The uncovered statements are lines 465-551 and
+        // 560-562: `getJson`, `queryUrl` and `main()`. That is fetch-and-write
+        // plumbing against services2.arcgis.com, and covering it would mean
+        // either mocking the network at a seam this repo deliberately does not
+        // put one at, or a gate row that needs the internet.
+        //
+        // Everything in the file that decides the shape of a coastline is
+        // tested: arcBetween, simplifyIndices, densifyIndices, thin,
+        // anchorsFrom, mainlandRing, coastalArc, metresBetween, nearestVertex
+        // and document, including all six of the refusals -- among them the one
+        // this slice's own test found missing, where a flipped ring winding
+        // would have returned the inland ecoregion boundary and drawn it as a
+        // shoreline forty kilometres inland.
+        statements: 89.3,
+        branches: 89.0,
+        functions: 94.1,
+        lines: 88.99,
       },
     },
   },

@@ -18,13 +18,22 @@
  * | ----------------------- | -------------- | ------------------------------ |
  * | fixed top-left          | 1.0 unit       | `tijuana-slough…`              |
  * | top, side flips         | 43.3 at h=14   | `coronado-central-beach`       |
- * | any of the four corners | 50.5 units     | `mission-bay-visitor-s-center` |
+ * | any of the four corners | 46.7 units     | `tijuana-slough…`              |
  *
- * **The one that decides anything did not move**, and that is not luck: the
- * worst beach for the adaptive rule binds no coast, so ADR-0036's reframing
- * never touched it. 50.5 units still holds at every height from 14 to 50, which
- * is the "height is free and width is not" the readout's rows are budgeted
- * against. `corner.test.ts` now pins it rather than leaving it here to rot.
+ * **Re-measured again after ADR-0037 changed what the coast is traced from**,
+ * and this time the one that decides anything did move: 50.5 to 46.7, and the
+ * worst beach changed with it. `mission-bay-visitor-s-center` set the old
+ * ceiling with two drawn points; the traced shore gives
+ * `tijuana-slough-national-wildlife-refuge` 436, and one of them stands in
+ * every corner a 50-wide box reaches. It is one of the three beaches ADR-0036
+ * named as gaining a coastline they did not draw, so this is that decision's
+ * bill arriving rather than a new fault.
+ *
+ * **Height stopped being free**, which is the other half that moved. 50.5 held
+ * at every height from 14 to 50; the ceiling now depends on it — 50.4 at a band
+ * 20 or 30 units deep, and 46.7 at 40. The readout is 40 deep, so 46.7 is the
+ * figure that binds. `corner.test.ts` pins it rather than leaving it here to
+ * rot, which is how the last one was caught.
  *
  * The two that did move describe rejected alternatives, and both moved *away*
  * from viability: a fixed top-left now survives one unit rather than 8.3.
@@ -64,18 +73,22 @@ export interface PlotPoint {
 /**
  * The readout's footprint, in the map's drawing units.
  *
- * **50 is the ceiling the inventory sets, not a size that was liked.** The
- * worst beach leaves 50.5 units clear in its roomiest corner, so a wider block
- * would be one no placement rule can keep off the picture. The map's frame is
+ * **46 is the ceiling the inventory sets, not a size that was liked.** The
+ * worst beach leaves 46.7 units clear in its roomiest corner at this height, so
+ * a wider block would be one no placement rule can keep off the picture. It was
+ * 50 until ADR-0037; the traced coast is denser and follows the sand, so it
+ * reaches into corners the model line left empty. The map's frame is
  * 100 units square and is drawn `w-full` at `h-auto`, so a unit is one percent
  * of the rendered box on both axes — which is what lets the overlay be sized in
  * CSS percentages and still be the same box this file reasons about.
  *
- * **The height is free and the width is not**, which is the measurement that
- * decides what the rows may say. The widest readout any corner allows is 50.5
- * units at a band 14 units deep, and *still* 50.5 at 20, 30, 35, 40 and 50.
- * What blocks a corner is a stroke crossing it diagonally, and a deeper band
- * meets the same stroke at nearly the same place.
+ * **The width is what the rows are budgeted against, and the height now costs
+ * something too.** The widest readout any corner allows is 50.4 units at a band
+ * 20 or 30 deep and 46.7 at 40. What blocks a corner is usually a stroke
+ * crossing it diagonally, which a deeper band meets at nearly the same place —
+ * that is why the figure held flat across every height while the coast was the
+ * model line. A traced shore bends, so a deeper band can reach a bend the
+ * shallower one cleared.
  *
  * Re-measured after ADR-0036 reframed every map, and unchanged: the beach that
  * sets this ceiling binds no coast, so it was not one of the frames that moved.
@@ -111,7 +124,7 @@ export interface PlotPoint {
  * place. The count is the same and so is the shape of the answer, which is the
  * half of a measurement that survives a reframing.
  */
-export const READOUT_BOX: Box = { width: 50, height: 40 };
+export const READOUT_BOX: Box = { width: 46, height: 40 };
 
 /**
  * The order corners are tried in, and it is the reader's rather than the

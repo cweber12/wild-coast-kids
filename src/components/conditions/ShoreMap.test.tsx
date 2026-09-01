@@ -6,10 +6,10 @@ import { ShoreMap } from "./ShoreMap";
 
 /** A short run of coast running due north, west-facing like the real one. */
 const COAST = [
-  { id: "D0500", lat: 32.85, lon: -117.26 },
-  { id: "D0501", lat: 32.86, lon: -117.26 },
-  { id: "D0502", lat: 32.87, lon: -117.259 },
-  { id: "D0503", lat: 32.88, lon: -117.258 },
+  { lat: 32.85, lon: -117.26 },
+  { lat: 32.86, lon: -117.26 },
+  { lat: 32.87, lon: -117.259 },
+  { lat: 32.88, lon: -117.258 },
 ];
 
 const BOUNDS = {
@@ -198,9 +198,9 @@ test("the readout moves to the side the drawing leaves open", () => {
     <ShoreMap
       {...PROPS}
       coast={[
-        { id: "D0500", lat: 32.884, lon: -117.274 },
-        { id: "D0501", lat: 32.87, lon: -117.26 },
-        { id: "D0502", lat: 32.85, lon: -117.25 },
+        { lat: 32.884, lon: -117.274 },
+        { lat: 32.87, lon: -117.26 },
+        { lat: 32.85, lon: -117.25 },
       ]}
       segment={[
         { lat: 32.884, lon: -117.274 },

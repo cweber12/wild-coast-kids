@@ -865,7 +865,7 @@ export async function DayPanel({ slug }: { slug: string }) {
                   description={mapDescription(beach!.name)}
                   absence="We cannot place this beach on a map: the coordinates we hold for it are all one point."
                   noCoast="The coastline this site traces is the open coast, and it does not reach this beach."
-                  coastCredit={`Shore traced from CDIP's model lines, which are computed a few hundred metres offshore — so the water's edge is drawn further out than the sand.`}
+                  coastCredit={`Shore traced from CDFW's ecoregion boundary, which follows this county's own coastline linework — close to the sand, but no tide level is published for it, so the edge is drawn where the land is mapped rather than where the water is today.`}
                   readout={<DayCompass days={compassDays} />}
                   readoutSources={<DayCompassSources days={compassDays} />}
                 />

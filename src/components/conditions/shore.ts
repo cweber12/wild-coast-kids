@@ -21,6 +21,7 @@ import type { Bounds, Position, ShorePoint } from "@/lib/coastline";
 import {
   boundsAround,
   coastline,
+  modelLine,
   nearestOn,
   runAround,
   unbrokenAround,
@@ -76,14 +77,23 @@ function beachStretch(
 }
 
 /**
- * Farther than this from the traced coast and a beach is not on it.
+ * Farther than this from the *model* line and a beach is not on the open coast.
  *
- * **Measured rather than chosen, and it reproduces a partition this repo
- * already documents.** Every beach that binds a MOP line is within 0.93 km of
- * the traced coastline; every Mission Bay and San Diego Bay beach is 1.17 km or
- * more away. So a kilometre separates the two groups the same way ADR-0034's
- * "23 beaches with no traced coast" already does, and the gap it sits in is
- * wide enough that no beach is near the line.
+ * **Measured against the model line, which is the half of this rule that
+ * changed when the drawn coast did.** It used to say "the traced coast", and
+ * when the traced coast was CDIP's model line those were one sentence. They are
+ * no longer: the shore drawn now reaches every beach in the inventory at a
+ * median 4 m, so measured against it this test always passes and the partition
+ * disappears. Measured against the model line the partition is exactly what it
+ * was — every beach that binds a MOP line is within 0.93 km of it, every
+ * Mission Bay and San Diego Bay beach is 1.17 km or more away, and a kilometre
+ * sits in a gap no beach is near.
+ *
+ * **So the number and the split are untouched by ADR-0037**, deliberately. What
+ * a bay beach is owed is a separate question from what an open-coast beach's
+ * line is traced from, and answering both in one change would have made the
+ * second unreviewable. See the plan file: the bays are their own slice, and
+ * they bring the readout's placement with them.
  *
  * It replaces a test that was never written down: whether the beach's own tiny
  * frame happened to catch a point. That answered the same question by accident
@@ -113,17 +123,29 @@ const COAST_REACH_M = 1_000;
 const MIN_RUN_M = 2_000;
 
 /**
- * A step longer than this is a gap in the model rather than a piece of shore.
+ * A step longer than this is a chord across water rather than a piece of shore.
  *
- * `unbrokenAround` holds the argument; this is where the figure is chosen. The
- * polyline steps about 98 m, so 500 m means the model placed nothing for five
- * lines running -- which on this coast means a harbour or river mouth rather
- * than a stretch of beach. Nine of the 1,086 steps exceed it and each is one of
- * those; the largest, 2,967 m, is the mouth of San Diego Bay.
+ * `unbrokenAround` holds the argument; this is where the figure is chosen.
  *
- * Not tighter, because 25 steps exceed 300 m and most of them are ordinary
- * coast the model sampled unevenly. Not looser, because 1,118 m is the next gap
- * up and is also a channel.
+ * **The figure survived ADR-0037 and its reason was replaced.** Against the
+ * model line it read: the polyline steps about 98 m, so 500 m means the model
+ * placed nothing for five lines running, and nine of the 1,086 steps exceeded
+ * it -- each a harbour or river mouth, the largest 2,967 m at the mouth of San
+ * Diego Bay.
+ *
+ * The traced shore is a continuous ring, so it has no gaps in that sense at
+ * all, and simplifying it produced long steps for the opposite reason: a
+ * straight coast needs no vertices, which left one step of 1,834 m across open
+ * beach north of Oceanside. `probe-coastline.mjs` answers that by restoring
+ * published vertices to a 200 m cap, which is what makes this number mean
+ * something again. Measured on the committed file afterwards: steps run a
+ * median 50 m, and exactly nine exceed 500 m -- the largest 970 m, and every
+ * one of the nine a chord the source's "bays erased" step drew straight across
+ * the entrances of San Diego Bay and Mission Bay.
+ *
+ * So it still separates shore from water, on a different mechanism, with the
+ * same count by coincidence. Not tighter, because 133 steps fall between the
+ * cap and this and every one is ordinary coast the publisher sampled sparsely.
  */
 const COAST_GAP_M = 500;
 
@@ -150,11 +172,25 @@ type CoastRun = {
  * instead and says so under the picture.
  */
 export function coastRunFor(beach: Beach): CoastRun | null {
+  /*
+    Two polylines, and they answer different questions. The model line decides
+    whether this site maps the water this beach sits on; the traced shore is
+    what gets drawn when it does. They used to be one line because there was
+    only one, and the reach test cannot move to the traced shore: that reaches
+    every beach in the inventory, so measured against it the test always passes
+    and the 28/23 split ADR-0033 and ADR-0036 both document would silently
+    become 51 and 0.
+  */
+  const open = modelLine();
+  const reach = nearestOn(open, beach.segment.lower);
+  const reachUpper = nearestOn(open, beach.segment.upper);
+  if (reach === null || reachUpper === null) return null;
+  if (Math.min(reach.metres, reachUpper.metres) > COAST_REACH_M) return null;
+
   const points = coastline();
   const lower = nearestOn(points, beach.segment.lower);
   const upper = nearestOn(points, beach.segment.upper);
   if (lower === null || upper === null) return null;
-  if (Math.min(lower.metres, upper.metres) > COAST_REACH_M) return null;
 
   /*
     Both ends are pulled onto one unbroken piece of shore before anything is
@@ -255,12 +291,16 @@ export function shoreViewFor(beach: Beach): ShoreView {
 
     Where a coast is drawn they are not, and leaving them in was the same fault
     as leaving the MOP line in, one step further along: the sand is not drawn
-    either. `ShoreMap`'s own credit says why -- the traced line is CDIP's model
-    line "computed a few hundred metres offshore, so the water's edge is drawn
-    further out than the sand" -- and the stretch marking this beach is a run of
-    that line, not of the sand. At `coronado-central-beach` the sand sits 0.93
-    km inland of the line, and including it stretched the box that far toward
-    the land, which is the empty band the picture then had to spend.
+    either. The stretch marking this beach is a run of the drawn line rather
+    than of the sand, so including the sand stretched the box toward the land
+    and the picture spent the difference on an empty band.
+
+    ADR-0037 shrank that difference without removing the rule. The drawn line
+    was CDIP's model line, a few hundred metres offshore -- at
+    `coronado-central-beach` the sand sat 0.93 km inland of it. The traced shore
+    puts that beach 36.7 m from the line and is the worst of the 50. The gap is
+    now small enough not to distort a frame, and the reason for the rule stands:
+    what the box is built from should be what the box shows.
   */
   const boxed = boundsAround(
     run === null ? [beach.segment.upper, beach.segment.lower] : run.points,
@@ -271,7 +311,22 @@ export function shoreViewFor(beach: Beach): ShoreView {
   const bounds =
     boxed === null || seaward === null ? boxed : squareToward(boxed, seaward);
 
-  const coast = bounds === null ? [] : windowAround(coastline(), bounds);
+  /*
+    No open coast, no drawn coast -- and that is now said rather than relied on.
+
+    This line used to read `bounds === null ? [] : windowAround(...)`, and it
+    was right for a reason that has gone: the polyline it windowed traced the
+    open coast only, so a bay beach's box caught nothing and the empty result
+    was an accident of the source rather than a decision. The traced shore
+    reaches the bays, so the same box now catches 30 points at
+    `mission-bay-crown-point-shores` and the beach would quietly gain a
+    coastline that `coastRunFor` had already declined to give it.
+
+    Drawing it is what the next slice is for, with the readout's placement,
+    which those points take away. Until then the refusal is one condition.
+  */
+  const coast =
+    run === null || bounds === null ? [] : windowAround(coastline(), bounds);
 
   return { coast, bounds, segment: beachStretch(run, beach) };
 }

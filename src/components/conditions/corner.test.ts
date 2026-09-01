@@ -182,28 +182,39 @@ test("the overlay is placed in percentages of the map's own box", () => {
 });
 
 test("the footprint stays inside what the inventory can hold", () => {
-  // 50.5 units is the widest readout any placement rule survives on its worst
-  // beach, measured across all 51. This is the ceiling written down where a
-  // later slice adding a field to a row will run into it -- the rows have
-  // vertical room to spend and none to spare across.
-  expect(READOUT_BOX.width).toBeLessThanOrEqual(50);
+  // 46.7 units is the widest readout any placement rule survives on its worst
+  // beach at the height the readout actually is, measured across all 51. This
+  // is the ceiling written down where a later slice adding a field to a row
+  // will run into it -- and after ADR-0037 the rows have less room across than
+  // they did, and no longer have vertical room to spend for free either.
+  expect(READOUT_BOX.width).toBeLessThanOrEqual(46.7);
 });
 
-test("the inventory's ceiling on the readout's width is 50.5 units", () => {
+test("the inventory's ceiling on the readout's width falls with its height", () => {
   // **The figure `READOUT_BOX` is budgeted against, held by the gate instead of
   // by the docstring that used to hold it.**
   //
-  // ADR-0036 reframed every map, and two of the three figures in this module's
-  // table went stale without anything noticing -- a fixed top-left fell from 8.3
-  // units to 1.0. This one did not move, and the reason it did not is worth
-  // asserting rather than trusting: the beach that sets the ceiling binds no
-  // coast, so its frame was not one of the frames that moved. A later change
-  // that does move it should fail here.
+  // This is the second time it has been re-measured and the first time it has
+  // moved. ADR-0036 reframed every map and left it at 50.5, because the beach
+  // that set it bound no coast. ADR-0037 changed what the coast is traced from,
+  // and that did move it: the traced shore is denser than the model line and
+  // follows the sand, so it reaches into corners the model line left empty.
   //
   // Measured at several heights because "the height is free and the width is
-  // not" is the claim the rows are laid out against, and it is the half most
-  // likely to stop being true.
-  for (const height of [14, 20, 30, 35, 40, 50]) {
+  // not" was the claim the rows were laid out against -- and it has now stopped
+  // being true, which is exactly what measuring at several heights was for. The
+  // ceiling holds flat to 35 and then falls away, so the readout's own height
+  // of 40 is what picks 46.7 out of this table.
+  const CEILING: readonly (readonly [number, number, string])[] = [
+    [14, 50.46, "mission-bay-visitor-s-center"],
+    [20, 50.46, "mission-bay-visitor-s-center"],
+    [30, 50.46, "mission-bay-visitor-s-center"],
+    [35, 50.46, "mission-bay-visitor-s-center"],
+    [40, 46.77, "tijuana-slough-national-wildlife-refuge"],
+    [50, 26.26, "tijuana-slough-national-wildlife-refuge"],
+  ];
+
+  for (const [height, ceiling, beachSlug] of CEILING) {
     const probe: Box = { width: 0, height };
 
     let worst = Infinity;
@@ -222,9 +233,12 @@ test("the inventory's ceiling on the readout's width is 50.5 units", () => {
       }
     }
 
-    expect(worst).toBeCloseTo(50.5, 1);
-    expect(worstBeach).toBe("mission-bay-visitor-s-center");
+    expect(worst, `ceiling at height ${height}`).toBeCloseTo(ceiling, 1);
+    expect(worstBeach, `worst beach at height ${height}`).toBe(beachSlug);
   }
+
+  // The readout is 40 deep, so that row is the one that binds it.
+  expect(READOUT_BOX.height).toBe(40);
 
   // And the box actually declared stays inside it, which is the point of
   // knowing the number at all.

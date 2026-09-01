@@ -73,9 +73,14 @@ export type ShoreMapProps = {
    *
    * ADR-0010's rule applied to the largest thing on the map, which is now the
    * only thing on it. It matters more here than for an ordinary figure: nothing
-   * about looking at a line down a coast says it is a model line computed a few
-   * hundred metres offshore rather than the shore itself, so these words are the
-   * only place a reader can learn it.
+   * about looking at a line down a coast says what traced it, so these words are
+   * the only place a reader can learn it.
+   *
+   * Under ADR-0030 what they had to disclose was that the line was not a shore
+   * at all — CDIP's model line, a few hundred metres out. ADR-0037 made it a
+   * shore, and the disclosure did not go away, it changed: the line is county
+   * linework with no published tide datum, so it says where the land is mapped
+   * and not where today's water reaches.
    */
   coastCredit: string;
   /**

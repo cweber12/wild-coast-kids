@@ -1,6 +1,33 @@
 # A traced shoreline for the shore map
 
-Status: in flight. Started 2026-08-31.
+**Historical.** Planned 2026-08-31, shipped in PR #205 on 2026-08-31.
+It records what was intended then, not what the code does now, and is not
+maintained. See [`README.md`](README.md). The decision it argues for is
+ADR-0037, which is the maintained one.
+
+## Addendum, 2026-08-31 — what changed while it was built
+
+Three things, recorded before the file stopped being maintained.
+
+**The slice was narrowed after it was started.** Swapping the source gave all
+51 beaches a coastline, because the traced shore reaches the bays — which was
+supposed to be a later slice and arrived by itself. It also broke ADR-0034's
+readout corner outright: a bay shore surrounds the frame, so `fiesta-island`
+and `mission-bay-sea-world` had _no_ clear corner at any box size. The open
+coast test therefore moved to `modelLine()` rather than to the drawn shore, the
+28/23 split is untouched, and the bays and the readout's placement go together
+into a slice of their own.
+
+**Simplifying to 5 m alone was wrong and nearly shipped.** Douglas-Peucker
+strips every vertex from a straight coast, leaving 62 steps over 500 m and one
+of 1,834 m across open beach — and `COAST_GAP_M` reads a step that long as
+water not to be crossed, so every straight stretch would have cut a beach's
+run. The probe restores published vertices to a 200 m cap.
+
+**Two assertions turned out to have been passing vacuously**, both found by
+this change rather than caused by it: `sea-side.test.mjs` keyed a containment
+check on `point.id`, and `shoreViewFor` returned an empty coast for bay beaches
+by accident of the source rather than by decision. ADR-0037 records both.
 
 ## The problem, from the reader's point of view
 
@@ -58,15 +85,15 @@ polygon, so the boundary follows the bay shore.
 Distance from each beach's committed coordinates in `beaches.json` to each
 trace, taking the nearer of the segment's two ends:
 
-| | MOP polyline (drawn today) | ACE mainland arc |
-| --- | --- | --- |
-| median | 911 m | **4 m** |
-| p90 | 2,485 m | 17 m |
-| max | 4,911 m | 416 m |
-| within 200 m | 2 / 51 | **50 / 51** |
-| vertex spacing, median | ~98 m | 6.7 m |
+|                        | MOP polyline (drawn today) | ACE mainland arc |
+| ---------------------- | -------------------------- | ---------------- |
+| median                 | 911 m                      | **4 m**          |
+| p90                    | 2,485 m                    | 17 m             |
+| max                    | 4,911 m                    | 416 m            |
+| within 200 m           | 2 / 51                     | **50 / 51**      |
+| vertex spacing, median | ~98 m                      | 6.7 m            |
 
-**The one beach past 34 m is `mission-bay-vacation-isle` at 416 m, and it draws
+**The one beach past 37 m is `mission-bay-vacation-isle` at 416 m, and it draws
 no map anyway.** It is an island, so it is its own ring rather than part of the
 mainland arc. Its committed segment has `upper` equal to `lower`, so
 `boundsAround` returns null and the page renders an absence — the beach the
@@ -126,7 +153,7 @@ no line ids to carry, and keeping the field would mean inventing them.
   `enc_harbour` layer 227 does, and that is a separate slice with its own ADR.
 - **PMEP substrate — rock and reef.** Separate slice.
 - **Retiring `mop-lines.json`.** It still supplies every beach's swell forecast
-  binding and both anchors above. Only its use *as a shape* ends here.
+  binding and both anchors above. Only its use _as a shape_ ends here.
 
 ## Rejected
 

@@ -223,8 +223,8 @@ test("the sea is a quarter turn left of the walk, which is where it is", () => {
   // every beach against the wave buoy; this asserts the arithmetic that reads
   // it.
   const northward = [
-    { id: "a", lat: 32.85, lon: -117.27 },
-    { id: "b", lat: 32.87, lon: -117.27 },
+    { lat: 32.85, lon: -117.27 },
+    { lat: 32.87, lon: -117.27 },
   ];
   const seaward = seawardFrom(northward)!;
   expect(seaward.east).toBeLessThan(0); // west, which is where the Pacific is
@@ -239,11 +239,11 @@ test("the sea is a quarter turn left of the walk, which is where it is", () => {
 test("a run with no direction offers no seaward side", () => {
   // Both are unreachable through `shoreViewFor` and both are the kind of guard
   // that stops being unreachable when someone changes the caller.
-  expect(seawardFrom([{ id: "a", lat: 32.85, lon: -117.27 }])).toBeNull();
+  expect(seawardFrom([{ lat: 32.85, lon: -117.27 }])).toBeNull();
   expect(
     seawardFrom([
-      { id: "a", lat: 32.85, lon: -117.27 },
-      { id: "b", lat: 32.85, lon: -117.27 },
+      { lat: 32.85, lon: -117.27 },
+      { lat: 32.85, lon: -117.27 },
     ]),
   ).toBeNull();
 });
@@ -323,17 +323,17 @@ test("a run stops at a gap rather than growing through it", () => {
   // The unit behind the inventory check above. Two fragments 3 km apart, and a
   // minimum long enough that a run would cross the gap if nothing stopped it.
   const points = [
-    { id: "a", lat: 32.0, lon: -117.0 },
-    { id: "b", lat: 32.001, lon: -117.0 },
-    { id: "c", lat: 32.03, lon: -117.0 },
-    { id: "d", lat: 32.031, lon: -117.0 },
+    { lat: 32.0, lon: -117.0 },
+    { lat: 32.001, lon: -117.0 },
+    { lat: 32.03, lon: -117.0 },
+    { lat: 32.031, lon: -117.0 },
   ];
 
   const whole = unbrokenAround(points, 0, 500);
   expect(whole).toEqual({ from: 0, to: 1 });
 
   const run = runAround(points, 0, 0, 5_000, whole);
-  expect(run.map((point) => point.id)).toEqual(["a", "b"]);
+  expect(run.map((point) => point.lat)).toEqual([32.0, 32.001]);
 
   // And from the far fragment, the other way.
   expect(unbrokenAround(points, 3, 500)).toEqual({ from: 2, to: 3 });

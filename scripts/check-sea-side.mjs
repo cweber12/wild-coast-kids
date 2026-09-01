@@ -20,6 +20,7 @@ const read = (name) =>
   );
 
 const { ok, lines } = checkSeaSide({
+  shoreline: read("shoreline.json").points,
   mopLines: read("mop-lines.json").lines,
   beaches: read("beaches.json").beaches,
   buoys: read("wave-buoys.json").buoys,

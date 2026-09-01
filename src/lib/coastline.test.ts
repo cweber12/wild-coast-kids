@@ -10,26 +10,93 @@ import {
   windowAround,
   withoutRepeats,
 } from "./coastline";
+import { allBeaches } from "@/lib/beaches";
+
+/**
+ * Ground distance, worked out here rather than read off the module under test.
+ *
+ * The reach check below has to be able to fail when the committed line is
+ * wrong, and measuring it with the module's own arithmetic could only ever
+ * agree with itself. Same cosine correction, spelled independently.
+ */
+const METRES_PER_DEGREE = 111_320;
+
+function metresBetween(
+  a: { lat: number; lon: number },
+  b: { lat: number; lon: number },
+): number {
+  const lonScale = Math.cos((((a.lat + b.lat) / 2) * Math.PI) / 180);
+  return (
+    Math.hypot((a.lon - b.lon) * lonScale, a.lat - b.lat) * METRES_PER_DEGREE
+  );
+}
+
+/** Distance to the nearest *segment*, not the nearest vertex. */
+function metresToPolyline(
+  points: readonly { lat: number; lon: number }[],
+  at: { lat: number; lon: number },
+): number {
+  const lonScale = Math.cos((at.lat * Math.PI) / 180);
+  const x = (p: { lat: number; lon: number }) => p.lon * lonScale;
+
+  let best = Infinity;
+  for (let index = 0; index < points.length - 1; index += 1) {
+    const a = points[index];
+    const b = points[index + 1];
+    const dx = x(b) - x(a);
+    const dy = b.lat - a.lat;
+    const lengthSquared = dx * dx + dy * dy;
+
+    let px: number;
+    let py: number;
+    if (lengthSquared === 0) {
+      px = x(a);
+      py = a.lat;
+    } else {
+      const along = Math.max(
+        0,
+        Math.min(
+          1,
+          ((x(at) - x(a)) * dx + (at.lat - a.lat) * dy) / lengthSquared,
+        ),
+      );
+      px = x(a) + along * dx;
+      py = a.lat + along * dy;
+    }
+
+    const metres = Math.hypot(x(at) - px, at.lat - py) * METRES_PER_DEGREE;
+    if (metres < best) best = metres;
+  }
+  return best;
+}
 
 test("the committed 1,210 MOP lines reduce to 1,087 distinct points", () => {
-  // Pinned against the real file rather than a fixture. 123 of the lines repeat
-  // their neighbour's coordinates exactly, and the count is here so a future
-  // data change fails loudly instead of silently changing the shape of the
-  // coast every consumer draws.
-  expect(coastline()).toHaveLength(1087);
+  // Pinned against the real file rather than a fixture, so a future data change
+  // fails loudly instead of silently changing the shape of the coast every
+  // consumer draws.
+  //
+  // Every committed point survives, because the traced shore carries no exact
+  // repeats — which is the second half of what this pins. The old source had
+  // 123 of them among 1,210 MOP lines, and this number dropping below the
+  // file's own length is how a source that grew some would announce itself.
+  expect(coastline()).toHaveLength(5368);
 });
 
 test("a repeated coordinate is dropped rather than kept as a zero-length step", () => {
-  // The shape of the real defect, in miniature: D0002 sits exactly where D0001
-  // does. Keeping it would leave a segment with no length and therefore no
-  // direction, which is what corrupts a tangent or a side test downstream.
+  // The shape of the real defect, in miniature: the second point sits exactly
+  // where the first does. Keeping it would leave a segment with no length and
+  // therefore no direction, which is what corrupts a tangent or a side test
+  // downstream.
   const kept = withoutRepeats([
-    { id: "D0001", lat: 32.5, lon: -117.1 },
-    { id: "D0002", lat: 32.5, lon: -117.1 },
-    { id: "D0003", lat: 32.6, lon: -117.1 },
+    { lat: 32.5, lon: -117.1 },
+    { lat: 32.5, lon: -117.1 },
+    { lat: 32.6, lon: -117.1 },
   ]);
 
-  expect(kept.map((point) => point.id)).toEqual(["D0001", "D0003"]);
+  expect(kept).toEqual([
+    { lat: 32.5, lon: -117.1 },
+    { lat: 32.6, lon: -117.1 },
+  ]);
 });
 
 test("the window keeps one point past each end so the coast reaches the frame", () => {
@@ -37,12 +104,12 @@ test("the window keeps one point past each end so the coast reaches the frame", 
   // short of the edge with white on both sides of it, which reads as the land
   // ending rather than as the map ending.
   const points = [
-    { id: "D0001", lat: 32.0, lon: -117.0 },
-    { id: "D0002", lat: 32.1, lon: -117.0 },
-    { id: "D0003", lat: 32.2, lon: -117.0 },
-    { id: "D0004", lat: 32.3, lon: -117.0 },
-    { id: "D0005", lat: 32.4, lon: -117.0 },
-    { id: "D0006", lat: 32.5, lon: -117.0 },
+    { lat: 32.0, lon: -117.0 },
+    { lat: 32.1, lon: -117.0 },
+    { lat: 32.2, lon: -117.0 },
+    { lat: 32.3, lon: -117.0 },
+    { lat: 32.4, lon: -117.0 },
+    { lat: 32.5, lon: -117.0 },
   ];
 
   const kept = windowAround(points, {
@@ -52,22 +119,19 @@ test("the window keeps one point past each end so the coast reaches the frame", 
     east: -116.9,
   });
 
-  expect(kept.map((point) => point.id)).toEqual([
-    "D0002",
-    "D0003",
-    "D0004",
-    "D0005",
-  ]);
+  expect(kept.map((point) => point.lat)).toEqual([32.1, 32.2, 32.3, 32.4]);
 });
 
 test("a run that leaves the box and comes back stays one stroke", () => {
-  // The coast bends: 39 of the 1,209 real steps run north to south. A window
-  // that kept only what falls inside would cut a bend into two strokes with a
-  // gap where the land is.
+  // The coast bends, and the traced shore bends far more than the model line
+  // did: 1,824 of its 5,367 steps run north to south, against 39 of 1,209
+  // before, because it wraps Point Loma and follows both bays in and out. A
+  // window that kept only what falls inside would cut a bend into two strokes
+  // with a gap where the land is.
   const points = [
-    { id: "D0001", lat: 32.2, lon: -117.0 },
-    { id: "D0002", lat: 32.2, lon: -116.5 },
-    { id: "D0003", lat: 32.2, lon: -117.0 },
+    { lat: 32.2, lon: -117.0 },
+    { lat: 32.2, lon: -116.5 },
+    { lat: 32.2, lon: -117.0 },
   ];
 
   const kept = windowAround(points, {
@@ -77,13 +141,13 @@ test("a run that leaves the box and comes back stays one stroke", () => {
     east: -116.9,
   });
 
-  expect(kept.map((point) => point.id)).toEqual(["D0001", "D0002", "D0003"]);
+  expect(kept.map((point) => point.lon)).toEqual([-117.0, -116.5, -117.0]);
 });
 
 test("a box the coast does not reach is empty, which a caller must say", () => {
   // Not the same as a coast that is not there. The caller renders an absence,
   // never a blank frame that reads as open water.
-  const kept = windowAround([{ id: "D0001", lat: 32.2, lon: -117.0 }], {
+  const kept = windowAround([{ lat: 32.2, lon: -117.0 }], {
     south: 33.0,
     north: 33.1,
     west: -117.1,
@@ -155,8 +219,8 @@ test("west of a coast walked south to north is its seaward side", () => {
   // this, so it is stated once here and checked against the committed buoys by
   // the `sea-side` gate row rather than assumed.
   const northward = [
-    { id: "D0001", lat: 32.0, lon: -117.0 },
-    { id: "D0002", lat: 32.1, lon: -117.0 },
+    { lat: 32.0, lon: -117.0 },
+    { lat: 32.1, lon: -117.0 },
   ];
 
   expect(sideOf(northward, { lat: 32.05, lon: -117.1 })).toBe("left");
@@ -168,7 +232,7 @@ test("a run with no segment in it has no sides", () => {
   // is nothing to be on a side of. The map says so rather than shading a guess.
   expect(sideOf([], { lat: 32.0, lon: -117.0 })).toBeNull();
   expect(
-    sideOf([{ id: "D0001", lat: 32.0, lon: -117.0 }], {
+    sideOf([{ lat: 32.0, lon: -117.0 }], {
       lat: 32.0,
       lon: -117.1,
     }),
@@ -180,9 +244,9 @@ test("a zero-length segment is stepped over rather than divided by", () => {
   // runs by callers and a repeat here would divide by zero and answer with a
   // NaN that compares false both ways -- silently landward.
   const withRepeat = [
-    { id: "D0001", lat: 32.0, lon: -117.0 },
-    { id: "D0002", lat: 32.0, lon: -117.0 },
-    { id: "D0003", lat: 32.1, lon: -117.0 },
+    { lat: 32.0, lon: -117.0 },
+    { lat: 32.0, lon: -117.0 },
+    { lat: 32.1, lon: -117.0 },
   ];
 
   expect(sideOf(withRepeat, { lat: 32.05, lon: -117.1 })).toBe("left");
@@ -192,8 +256,8 @@ test("a position on the line itself is on neither side", () => {
   // The MOP line a beach binds sits on this polyline, so this is the answer for
   // the one marker that cannot be seaward or landward of the coast it traces.
   const northward = [
-    { id: "D0001", lat: 32.0, lon: -117.0 },
-    { id: "D0002", lat: 32.1, lon: -117.0 },
+    { lat: 32.0, lon: -117.0 },
+    { lat: 32.1, lon: -117.0 },
   ];
 
   expect(sideOf(northward, { lat: 32.05, lon: -117.0 })).toBeNull();
@@ -281,4 +345,63 @@ test("a run grows from both ends until it is long enough", () => {
   expect(atEnd.length).toBeGreaterThan(10);
 
   expect(runAround([], 0, 0, 2_000)).toEqual([]);
+});
+
+test("the traced shore reaches every beach but the island, within 40 m", () => {
+  // **The property that makes ADR-0037 worth doing, asserted rather than
+  // claimed.** The model line this replaced ran a median 911 m from the
+  // beaches it was drawn for and 4.9 km at the worst; a shoreline that drifted
+  // back toward that would still render, still shade a sea and still look
+  // right, and nothing else here would notice.
+  //
+  // Measured against the beach's nearer end, segment by segment rather than
+  // vertex by vertex: the committed line steps a median 50 m, so a vertex
+  // distance would report up to half a step of slack that is not really there.
+  const points = coastline();
+  const far: string[] = [];
+
+  for (const beach of allBeaches()) {
+    const metres = Math.min(
+      metresToPolyline(points, beach.segment.upper),
+      metresToPolyline(points, beach.segment.lower),
+    );
+
+    // `mission-bay-vacation-isle` is on an island, which is its own ring of the
+    // source feature and not part of the mainland arc this file holds. It is
+    // named rather than excluded by a looser threshold, because a second beach
+    // drifting out to 416 m should fail this and a threshold of 500 would hide
+    // it. Its segment is a single point, so it renders an absence regardless.
+    if (beach.slug === "mission-bay-vacation-isle") {
+      expect(metres).toBeGreaterThan(100);
+      continue;
+    }
+    // 40, against a measured worst of 36.7 at `coronado-central-beach`.
+    if (metres > 40) far.push(`${beach.slug}: ${metres.toFixed(0)} m`);
+  }
+
+  expect(far).toEqual([]);
+});
+
+test("the committed shore walks south to north and crosses no open water", () => {
+  // Two things every function over this polyline assumes and none of them
+  // checks. Walk order decides which side of it is the sea, so a reversed file
+  // would shade the land. And `COAST_GAP_M` reads a step over 500 m as a chord
+  // across water rather than a piece of shore -- true of the committed file
+  // because `probe-coastline.mjs` restores published vertices to a 200 m cap,
+  // and false of the same arc simplified without that step, where a straight
+  // coast north of Oceanside produced one step of 1,834 m.
+  const points = coastline();
+
+  expect(points[0].lat).toBeLessThan(points[points.length - 1].lat);
+
+  const steps = points
+    .slice(1)
+    .map((point, at) => metresBetween(points[at], point));
+  const overCap = steps.filter((metres) => metres > 500);
+
+  // Nine, and every one a chord the source drew across a bay entrance. The
+  // count is pinned because a tenth would mean either a new chord or a cap that
+  // stopped being applied.
+  expect(overCap).toHaveLength(9);
+  expect(Math.max(...steps)).toBeLessThan(1_000);
 });
