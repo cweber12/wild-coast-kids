@@ -124,8 +124,10 @@ path stays readable as "the shore, then off the edge".
 ## Consequences
 
 - **`ShoreMap` gets smaller and stops doing geometry.** `seaPath` goes, along
-  with `OFF_FRAME` and the two fields it returned that nothing had read since
-  ADR-0038 took the readout off the picture.
+  with `OFF_FRAME` and the `from` and `unit` it returned. Those two were the
+  gradient's anchor and axis under ADR-0030, and ADR-0033 replaced the fade with
+  a flat tint without removing them — so they have been computed and unread
+  since 2026-08-30.
 - **The wash covers the bays properly for the first time.** `silver-strand-state-beach`
   is the clearest: it is a sand spit with the ocean on one side and San Diego
   Bay on the other, and the bay was white. Swept without the two filters above —
