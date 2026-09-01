@@ -445,10 +445,38 @@ export default defineConfig({
         // one way and every ordinary hour the other. What the slice mostly did
         // was replace one expression with another, and the tests it added are
         // assertions about values rather than new paths through code.
-        statements: 89.27,
-        branches: 88.95,
-        functions: 94.09,
-        lines: 88.91,
+        // 2026-09-01, THREE LOWERED AND ONE RAISED under REASON 1, by the
+        // forecast-cell guard. The denominator grew with entry plumbing that
+        // ADR-0002 deliberately does not test:
+        //
+        //   statements 3018/3383  89.27 -> 89.21
+        //   branches   1919/2159  88.95 -> 88.88
+        //   functions   688/731   94.09 -> 94.11
+        //   lines      2717/3057  88.91 -> 88.87
+        //
+        // **Nothing became untested, and the numerators all rose.** Nine
+        // statements arrived and six are covered; four branches arrived and two
+        // are. The uncovered ones are two lines inside `seed-beaches.mjs`'s
+        // `main()` -- `const unlisted = unlistedCellFault(built.beaches,
+        // gridCells)` and the `if` that throws it -- which fall inside the
+        // 842-900 range that function has always occupied in this report. They
+        // are the ADR-0002 split working exactly as written: the deciding logic
+        // is `unlistedCellFault`, which is pure, exported and covered by four
+        // tests including the distinction the whole guard turns on; what is
+        // uncovered is the call site, in the same fetch-and-write plumbing as
+        // the rest of `main()`.
+        //
+        // Covering those two lines means faking the county portal's fetch and
+        // the file IO around it, which is the trade ADR-0002 already refused
+        // for run-gates.mjs and for every probe's `main()` in the notes above.
+        //
+        // Functions rose because `unlistedCellFault` and its two arrow
+        // callbacks are covered, which is the same event seen from the other
+        // side.
+        statements: 89.21,
+        branches: 88.88,
+        functions: 94.11,
+        lines: 88.87,
       },
     },
   },

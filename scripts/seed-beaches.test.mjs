@@ -10,6 +10,7 @@ import {
   serviceFault,
   servesBeach,
   slugify,
+  unlistedCellFault,
 } from "./seed-beaches.mjs";
 
 const BUOYS = {
@@ -336,9 +337,16 @@ describe("build", () => {
   });
 
   it("says why, when the table does not list the beach", () => {
-    // What every excluded beach hits, because resolving a cell needs a
-    // coordinate and an excluded beach records none. A null with no reason
-    // would be the silent failure this repo does not ship.
+    // What an excluded beach hits, because the table is measured against the
+    // served inventory. A null with no reason would be the silent failure this
+    // repo does not ship.
+    //
+    // **The reason no longer asserts which of the two situations it is.** It
+    // used to say "an excluded beach has none recorded", which is false for the
+    // other one -- a served beach the table predates -- and the served case is
+    // the only one a reader ever sees, since an excluded beach is filtered out
+    // before its reason is written anywhere. `unlistedCellFault` below is what
+    // stops that case reaching a reader at all.
     const [beach] = build(
       [row({ Beach_Name: "Unprobed Cove" })],
       STATIONS,
@@ -1042,5 +1050,72 @@ describe("document", () => {
     expect(document(built, new Date("2026-08-19T01:59:22Z")).generated).toBe(
       "2026-08-18",
     );
+  });
+});
+
+describe("unlistedCellFault", () => {
+  const table = {
+    resolutions: { "la-jolla-shores-beach": {}, "ocean-beach": {} },
+  };
+
+  it("passes when the table has been asked about every served beach", () => {
+    expect(
+      unlistedCellFault(
+        [{ slug: "la-jolla-shores-beach" }, { slug: "ocean-beach" }],
+        table,
+      ),
+    ).toBeNull();
+  });
+
+  it("refuses the seed when the table predates a beach the site serves", () => {
+    // THE REGRESSION. `0572e3c` admitted six beaches that `grid-cells.json`
+    // predated, and the seed wrote six nulls without a word. Six of 51 beaches
+    // shipped with no wind, no air temperature, no cloud band and no wind
+    // needle, under a reason that said they had no coordinate recorded.
+    const fault = unlistedCellFault(
+      [
+        { slug: "la-jolla-shores-beach" },
+        { slug: "ocean-beach" },
+        { slug: "coronado-north-beach" },
+      ],
+      table,
+    );
+
+    expect(fault).toMatch(/coronado-north-beach/);
+    expect(fault).toMatch(/1 of the 3 beaches/);
+    expect(fault).toMatch(/probe-grid-cells/);
+  });
+
+  it("names every unlisted beach, not the first one it meets", () => {
+    // A message naming one of six sends someone to re-probe, read a diff with
+    // six beaches in it, and wonder which of the five extra ones is a surprise.
+    const fault = unlistedCellFault(
+      [
+        { slug: "ocean-beach" },
+        { slug: "dog-beach-o-b" },
+        { slug: "sunset-cliffs-park" },
+      ],
+      table,
+    );
+
+    expect(fault).toMatch(/dog-beach-o-b/);
+    expect(fault).toMatch(/sunset-cliffs-park/);
+  });
+
+  it("does not refuse a served beach the table lists and could not resolve", () => {
+    // The distinction the whole guard turns on. `/points` answering for neither
+    // end, or a cell that publishes no sky series, are facts about the coast --
+    // `bindGridCell` words them and `conditions.ts` has a `no-cell` state for
+    // them. Only a beach the table was never asked about is a stale table.
+    expect(
+      unlistedCellFault([{ slug: "ocean-beach" }], {
+        resolutions: {
+          "ocean-beach": {
+            upper: { cell: null, reason: "the grid does not cover it" },
+            lower: { cell: null, reason: "the grid does not cover it" },
+          },
+        },
+      }),
+    ).toBeNull();
   });
 });
