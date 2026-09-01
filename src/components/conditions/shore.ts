@@ -243,10 +243,17 @@ export function coastRunFor(beach: Beach): CoastRun | null {
  * is the gate that holds it, for every beach, against the wave buoy as ground
  * truth — so this reads a fact that is checked rather than assuming one.
  *
- * Taken from the run's two ends rather than segment by segment, which is
- * `seaPath`'s choice one step earlier and made for the same reason: a
- * per-segment normal turns at every bend, and what is wanted is which side of
- * the whole run the ocean is.
+ * Taken from the run's two ends rather than segment by segment, because the
+ * only caller is `squareToward` and a box grows in one direction: the question
+ * being asked is which way the frame should lean overall, not which side of any
+ * particular bend the water is on.
+ *
+ * **The wash used to ask the second question with this answer, and stopped.**
+ * `ShoreMap` closed its polygon on a normal built the same way, which is exact
+ * on a straight shore and wrong wherever one turns — so ADR-0041 gave the wash
+ * a construction that reads the side from the walk itself and needs no
+ * direction at all. Nothing here is shared with it now, which is why the two
+ * can no longer disagree.
  *
  * Null on a run too short to have a direction, which is a beach with no traced
  * coast.

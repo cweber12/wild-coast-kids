@@ -473,10 +473,33 @@ export default defineConfig({
         // Functions rose because `unlistedCellFault` and its two arrow
         // callbacks are covered, which is the same event seen from the other
         // side.
-        statements: 89.21,
-        branches: 88.88,
-        functions: 94.11,
-        lines: 88.87,
+        // RAISED 2026-09-01, all four, by the sea wash closing on the frame
+        // (#200). The ordinary direction, and about as clean as this file gets:
+        //
+        //   statements 3072/3437  89.21 -> 89.38
+        //   branches   1952/2191  88.88 -> 89.09
+        //   functions   703/746   94.11 -> 94.23
+        //   lines      2763/3103  88.87 -> 89.04
+        //
+        // **Three of the four moved by the same amount top and bottom** --
+        // statements +54/+54, functions +15/+15, lines +46/+46 -- which says
+        // every statement, function and line `wash.ts` brought is covered. It
+        // arrives at 100% on all four and does not appear in the report's table
+        // at all.
+        //
+        // Branches are the interesting one: +33 numerator against +32
+        // denominator, so the numerator grew by more than the denominator did.
+        // That is not a rounding artefact and it is not a new test. `seaPath`
+        // took `Math.hypot(px, py) || 1` to guard a drawn run whose two ends
+        // project to the same point, and that arm was the one uncovered branch
+        // this file named against `ShoreMap.tsx` in the #192 note above. The
+        // guard is gone rather than covered: `seaWash` asks whether the run has
+        // a direction at all and returns null when it has not, which is a state
+        // a test can put it in. So `ShoreMap.tsx` leaves the table too.
+        statements: 89.38,
+        branches: 89.09,
+        functions: 94.23,
+        lines: 89.04,
       },
     },
   },
