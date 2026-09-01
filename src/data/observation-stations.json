@@ -1,8 +1,8 @@
 {
   "version": "0.2.0",
-  "generated": "2026-08-18",
+  "generated": "2026-09-01",
   "_provenance": "Measured by scripts/probe-observation-stations.mjs; re-runnable and diffable with --check. National Weather Service candidates are the union of https://api.weather.gov/gridpoints/<grid>/stations over every distinct gridpoint the beaches in beaches.json resolve to, filtered to 32.4-33.6N and -117.7 to -116.8E: 56 stations. The state-wide listing at /stations?state=CA is NOT the source; it is capped at 500 results and truncates before reaching either KSAN or KNKX. NDBC candidates are https://www.ndbc.noaa.gov/activestations.xml filtered to the wave corridor box 32.4-33.5N and -118.2 to -117E AND to type \"fixed\": 6 stations. That type filter is the criterion that lost both Scripps Pier stations from wave-buoys.json, so it is stated here rather than applied silently -- NDBC's buoys are that table's subject, eleven of the thirteen in the box publish no air temperature or wind at all, and the one that publishes both, 46086, is twenty-seven nautical miles offshore and out of every beach's reach. Capability was then measured one station at a time against the endpoints this site reads -- /stations/<id>/observations for NWS, https://www.ndbc.noaa.gov/data/realtime2/<id>.txt for NDBC -- rather than inferred from either listing.",
-  "_what_was_measured": "6 observations per station; a field counts as published if it appears on at least one of them. Of 62 candidates, 60 deliver, 56 publish air temperature and wind together, and 10 publish sky. So the pool an air join ranks over is 56 stations and not the thirteen a visibility-shaped probe recorded. Sky and visibility are one capability: both were measured, and they select exactly the same stations -- every one an airport METAR -- with sky the scarcer of the two per observation. Only publishes_sky is stored, because two flags for one capability are two things that can drift apart while naming one. Counts of how many of the six observations carried a field are deliberately absent from this file: they move on every probe, and a --check that fails from noise stops being read.",
+  "_what_was_measured": "6 observations per station; a field counts as published if it appears on at least one of them. Of 62 candidates, 59 deliver, 55 publish air temperature and wind together, and 10 publish sky. So the pool an air join ranks over is 55 stations and not the thirteen a visibility-shaped probe recorded. Sky and visibility are one capability: both were measured, and they select exactly the same stations -- every one an airport METAR -- with sky the scarcer of the two per observation. Only publishes_sky is stored, because two flags for one capability are two things that can drift apart while naming one. Counts of how many of the six observations carried a field are deliberately absent from this file: they move on every probe, and a --check that fails from noise stops being read.",
   "_schema": {
     "name": "The station name, reproduced as its network serves it, run of spaces and trailing 'CA US' included. A record of what upstream said, and what a later probe compares against. NOT what is shown to a reader -- see display_name.",
     "display_name": "What the page calls this station. Hand-written, like `shore` and like tide-stations.json's `water`, because the published name is an identifier rather than prose for most of these: the mesonet publishes callsigns, the tide network publishes station numbers, and the reserve network publishes instrument sites. The rule is the shortest name someone looking at a map of this county would recognise, saying nothing the sentence around it already says. See #87.",
@@ -559,10 +559,11 @@
       "lon": -117,
       "elevation_m": 126.1872,
       "shore": false,
-      "delivers": true,
-      "publishes_air_temp": true,
-      "publishes_wind": true,
-      "publishes_sky": false
+      "delivers": false,
+      "publishes_air_temp": false,
+      "publishes_wind": false,
+      "publishes_sky": false,
+      "dead_note": "Listed for a gridpoint and answers with no observations at all."
     },
     "E9965": {
       "name": "EW9965 Lakeside",
