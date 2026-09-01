@@ -21,7 +21,6 @@ import type { Bounds, Position, ShorePoint } from "@/lib/coastline";
 import {
   boundsAround,
   coastline,
-  modelLine,
   nearestOn,
   runAround,
   unbrokenAround,
@@ -77,36 +76,33 @@ function beachStretch(
 }
 
 /**
- * Farther than this from the *model* line and a beach is not on the open coast.
+ * Farther than this from the traced shore and a beach has no coast to draw.
  *
- * **Measured against the model line, which is the half of this rule that
- * changed when the drawn coast did.** It used to say "the traced coast", and
- * when the traced coast was CDIP's model line those were one sentence. They are
- * no longer: the shore drawn now reaches every beach in the inventory at a
- * median 4 m, so measured against it this test always passes and the partition
- * disappears. Measured against the model line the partition is exactly what it
- * was — every beach that binds a MOP line is within 0.93 km of it, every
- * Mission Bay and San Diego Bay beach is 1.17 km or more away, and a kilometre
- * sits in a gap no beach is near.
+ * **It stopped separating the open coast from the bays, because the traced
+ * shore stopped making that distinction.** Under ADR-0037 this was measured
+ * against the model line and reproduced the 28/23 split ADR-0033 and ADR-0036
+ * document: a kilometre sat in a wide gap between the beaches CDIP places a
+ * line for and the ones in Mission Bay and San Diego Bay. ADR-0039 draws the
+ * bays, so there is no longer a partition for it to reproduce, and this becomes
+ * what its name always said — the distance past which there is nothing to draw.
  *
- * **So the number and the split are untouched by ADR-0037**, deliberately. What
- * a bay beach is owed is a separate question from what an open-coast beach's
- * line is traced from, and answering both in one change would have made the
- * second unreviewable. See the plan file: the bays are their own slice, and
- * they bring the readout's placement with them.
+ * **Measured, and the gap it sits in is wider than the old one.** Every beach
+ * in the inventory is within 36.7 m of the traced shore except
+ * `mission-bay-vacation-isle`, which is 416 m from it. Nothing lies between.
  *
- * It replaces a test that was never written down: whether the beach's own tiny
- * frame happened to catch a point. That answered the same question by accident
- * and got three beaches wrong -- `childrens-pool`, `tijuana-slough` and
- * `coronado-cays-nr` are 0.33, 0.74 and 0.83 km from the open coast and drew
- * none of it, because none binds a MOP line and their frames were tens of
- * metres across.
+ * **The one it excludes is the one that must be excluded**, which is why the
+ * threshold is not simply dropped. Vacation Isle is on an island, and the
+ * committed shoreline holds the mainland ring only, so its nearest shore is
+ * across a channel. Admitted, it would take a run on the far bank, frame on it,
+ * and draw the heavy "this is your beach" stroke on somebody else's shoreline.
+ * Excluded, it falls back to its own two ends -- which are a single point, so
+ * `boundsAround` returns null and the page renders an absence, which is what
+ * that beach has always been owed.
  *
- * **Not "binds a MOP line"**, which is free and committed and answers a
- * different question: which model line supplies this beach's swell forecast.
- * `childrens-pool` binds none and is plainly on the open coast.
+ * 200 m rather than 100 or 400: it is the middle of the gap, so neither a beach
+ * drifting tens of metres nor the island drifting a hundred crosses it quietly.
  */
-const COAST_REACH_M = 1_000;
+const COAST_REACH_M = 200;
 
 /**
  * The least shore a map shows, when the beach itself is shorter than this.
@@ -167,30 +163,18 @@ type CoastRun = {
  * on `la-jolla-cove` the stretch was drawn beside the MOP line, about 400 m
  * from the beach.
  *
- * Null where the traced coast does not reach, which is a fact about which water
- * this site maps and not a failure. The caller draws the beach's own ends
- * instead and says so under the picture.
+ * Null where the traced coast does not reach, which is a fact about the
+ * geometry rather than a failure. That was 23 beaches until ADR-0039 and is now
+ * one: `mission-bay-vacation-isle`, on an island the committed mainland ring
+ * does not hold. The caller draws the beach's own ends instead — and that
+ * beach's two ends are one point, so it draws nothing and says so.
  */
 export function coastRunFor(beach: Beach): CoastRun | null {
-  /*
-    Two polylines, and they answer different questions. The model line decides
-    whether this site maps the water this beach sits on; the traced shore is
-    what gets drawn when it does. They used to be one line because there was
-    only one, and the reach test cannot move to the traced shore: that reaches
-    every beach in the inventory, so measured against it the test always passes
-    and the 28/23 split ADR-0033 and ADR-0036 both document would silently
-    become 51 and 0.
-  */
-  const open = modelLine();
-  const reach = nearestOn(open, beach.segment.lower);
-  const reachUpper = nearestOn(open, beach.segment.upper);
-  if (reach === null || reachUpper === null) return null;
-  if (Math.min(reach.metres, reachUpper.metres) > COAST_REACH_M) return null;
-
   const points = coastline();
   const lower = nearestOn(points, beach.segment.lower);
   const upper = nearestOn(points, beach.segment.upper);
   if (lower === null || upper === null) return null;
+  if (Math.min(lower.metres, upper.metres) > COAST_REACH_M) return null;
 
   /*
     Both ends are pulled onto one unbroken piece of shore before anything is
@@ -312,18 +296,15 @@ export function shoreViewFor(beach: Beach): ShoreView {
     boxed === null || seaward === null ? boxed : squareToward(boxed, seaward);
 
   /*
-    No open coast, no drawn coast -- and that is now said rather than relied on.
+    Still both conditions, and the second one is no longer about the bays.
 
-    This line used to read `bounds === null ? [] : windowAround(...)`, and it
-    was right for a reason that has gone: the polyline it windowed traced the
-    open coast only, so a bay beach's box caught nothing and the empty result
-    was an accident of the source rather than a decision. The traced shore
-    reaches the bays, so the same box now catches 30 points at
-    `mission-bay-crown-point-shores` and the beach would quietly gain a
-    coastline that `coastRunFor` had already declined to give it.
-
-    Drawing it is what the next slice is for, with the readout's placement,
-    which those points take away. Until then the refusal is one condition.
+    ADR-0037 made this explicit because the traced shore reached beaches
+    `coastRunFor` was declining to draw, and an empty coast that had been an
+    accident of the source needed to become a decision. ADR-0039 removed the
+    declining, so the only beach left is the island: no run, its own two ends
+    for a frame, and those are one point -- so `bounds` is null and this returns
+    empty by the first condition anyway. The second is kept because it is the
+    honest statement of the rule and costs nothing.
   */
   const coast =
     run === null || bounds === null ? [] : windowAround(coastline(), bounds);

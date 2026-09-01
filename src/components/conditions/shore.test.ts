@@ -56,14 +56,37 @@ test("a station seven kilometres away no longer decides the frame", () => {
   expect(heightKm * 1000).toBeLessThan(stationM / 2);
 });
 
-test("a bay beach gets a map and no coast", () => {
-  // The traced coast is the open one, and Mission Bay is 2.6 to 5.4 km from
-  // the nearest MOP line, so there is a frame to draw but no shoreline in it.
+test("a bay beach gets the bay's own shoreline", () => {
+  // It used to get a frame and nothing in it. The traced coast was the open
+  // one, and Mission Bay is 2.6 to 5.4 km from the nearest MOP line, so 23 of
+  // 51 beaches drew an empty square with a chord across it.
+  //
+  // ADR-0039. CDFW erased the bays out of the ecoregion polygon, which means
+  // its boundary follows the bay shore -- so the shoreline was in the committed
+  // file from ADR-0037 onward and was being withheld.
   const bay = beachBySlug("mission-bay-de-anza-cove")!;
   const view = shoreViewFor(bay);
 
   expect(view.bounds).not.toBeNull();
-  expect(view.coast).toHaveLength(0);
+  expect(view.coast.length).toBeGreaterThan(1);
+
+  // And it is the bay's own shore rather than the ocean's three kilometres
+  // west, which is the failure this could plausibly have instead: the nearest
+  // drawn point is metres from the beach, not kilometres.
+  //
+  // Not "every point is inside the frame" -- `windowAround` returns one point
+  // past each end on purpose, so the stroke leaves the frame rather than
+  // stopping short of it with sea on both sides of its ends.
+  const nearest = Math.min(
+    ...view.coast.map((point) =>
+      Math.hypot(
+        (point.lon - bay.segment.lower.lon) *
+          Math.cos((bay.segment.lower.lat * Math.PI) / 180),
+        point.lat - bay.segment.lower.lat,
+      ),
+    ),
+  );
+  expect(nearest * 111_320).toBeLessThan(100);
 });
 
 test("a beach whose two ends are one point draws no segment", () => {
@@ -81,7 +104,12 @@ test("every committed beach assembles, and the county's split is pinned", () => 
   const views = allBeaches().map(shoreViewFor);
 
   expect(views).toHaveLength(51);
-  expect(views.filter((view) => view.coast.length > 1)).toHaveLength(28);
+
+  // 50, not 28. ADR-0039 drew the bays; the one without a coast is
+  // `mission-bay-vacation-isle`, which is also the one without a frame -- it is
+  // on an island the committed mainland ring does not hold, and its two ends
+  // are a single point.
+  expect(views.filter((view) => view.coast.length > 1)).toHaveLength(50);
   expect(views.filter((view) => view.bounds === null)).toHaveLength(1);
 });
 
@@ -166,14 +194,23 @@ test("a beach shorter than the gap between points still draws a stretch", () => 
   expect(view.segment!.length).toBeGreaterThanOrEqual(2);
 });
 
-test("a beach with no coast is still placed on its own map", () => {
-  // The chord between the beach's own two ends, which is the only thing that
-  // says where it is when no shoreline is drawn.
+test("a bay beach's stretch is a run of the shore, not a chord across it", () => {
+  // While the bays drew no coastline this was the beach's own two ends, joined
+  // by a chord -- the only thing that said where it was. Now there is a shore
+  // to mark a run of, so the chord goes: a straight stroke at an angle to a
+  // drawn shoreline reads as a second, wrong shoreline, which is the whole of
+  // `beachStretch`'s argument and it now applies in the bays too.
   const bay = beachBySlug("mission-bay-de-anza-cove")!;
   const view = shoreViewFor(bay);
 
-  expect(view.coast).toHaveLength(0);
-  expect(view.segment).toEqual([bay.segment.lower, bay.segment.upper]);
+  expect(view.coast.length).toBeGreaterThan(1);
+  expect(view.segment).not.toEqual([bay.segment.lower, bay.segment.upper]);
+
+  // Every point of the stretch is a point of the drawn coast.
+  const drawn = new Set(view.coast.map((point) => `${point.lat},${point.lon}`));
+  for (const point of view.segment!) {
+    expect(drawn.has(`${point.lat},${point.lon}`)).toBe(true);
+  }
 });
 
 test("a beach with no coast and no extent has nothing to draw", () => {
@@ -267,15 +304,37 @@ test("the frame's extra ground is put on the sea side, not shared out", () => {
   expect(framed.south).toBeCloseTo(boxed!.south, 10);
 });
 
-test("a beach with no traced coast keeps an even frame", () => {
+test("a beach with no coast at all keeps an even frame", () => {
   // No coast means no land-sea split to lean the picture toward, so the box is
   // left as `boundsAround` made it rather than being pushed at a guess.
-  const bay = beachBySlug("mission-bay-de-anza-cove")!;
+  //
+  // This used to be a bay beach. ADR-0039 gave the bays a shore, so the only
+  // beach left in this state is the island -- and its two ends are one point,
+  // which `boundsAround` answers with null. So the branch is now reached only
+  // where there is no box either, and it is asserted through `beachStretch`'s
+  // own fallback rather than through a beach that no longer exists.
+  const isle = beachBySlug("mission-bay-vacation-isle")!;
+  const view = shoreViewFor(isle);
+
+  expect(view.bounds).toBeNull();
+  expect(view.coast).toHaveLength(0);
+  expect(view.segment).toBeNull();
+
+  // The even frame itself, on a fabricated beach with two ends and no shore
+  // near them -- which is the state the rule is about, and which the committed
+  // inventory no longer contains.
+  const offshore = {
+    ...isle,
+    segment: {
+      upper: { lat: 32.6, lon: -118.5 },
+      lower: { lat: 32.61, lon: -118.5 },
+    },
+  };
+  const framed = shoreViewFor(offshore).bounds!;
   const boxed = boundsAround(
-    [bay.segment.upper, bay.segment.lower],
+    [offshore.segment.upper, offshore.segment.lower],
     SHORE_WINDOW_MARGIN,
   )!;
-  const framed = shoreViewFor(bay).bounds!;
 
   expect(framed).toEqual(boxed);
 });

@@ -389,10 +389,28 @@ export default defineConfig({
         // this slice's own test found missing, where a flipped ring winding
         // would have returned the inland ecoregion boundary and drawn it as a
         // shoreline forty kilometres inland.
-        statements: 89.3,
-        branches: 89.0,
-        functions: 94.1,
-        lines: 88.99,
+        // LOWERED 2026-08-31 again, one commit later, under reason 2 this time:
+        // ADR-0038 deleted corner.ts and corner.test.ts. That module was at
+        // 100% on all four, so removing it pulls the whole-project ratio toward
+        // the 0% entry plumbing even though no test was lost and nothing became
+        // untested. 23 statements and 26 branches left the numerator with their
+        // denominators; the ratio falls about a tenth of a point.
+        //
+        // LOWERED 2026-08-31 a third time, under reason 2 again: ADR-0039
+        // deleted `modelLine()` from coastline.ts, a covered function with its
+        // covered tests. Two hundredths of a point on lines and functions.
+        //
+        // Three lowerings in three commits is worth naming rather than passing
+        // over, and they are not one drift. In order: the denominator grew with
+        // a probe's untestable half (reason 1), then the numerator shrank twice
+        // as fully-tested code was deleted (reason 2) -- corner.ts when the
+        // readout left the picture, then modelLine() when the open-coast test
+        // it existed for stopped existing. No test stopped running in any of
+        // them, and every deletion is a decision with an ADR.
+        statements: 89.22,
+        branches: 88.89,
+        functions: 94.04,
+        lines: 88.87,
       },
     },
   },

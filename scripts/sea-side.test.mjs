@@ -241,7 +241,9 @@ describe("the window the map draws", () => {
     }
 
     expect(unchecked).toEqual([]);
-    // A check that compared nothing would pass forever.
-    expect(compared).toBe(28);
+    // A check that compared nothing would pass forever. 50 rather than 28
+    // since ADR-0039 drew the bays; the one beach not compared is the island,
+    // which has no frame.
+    expect(compared).toBe(50);
   });
 });
