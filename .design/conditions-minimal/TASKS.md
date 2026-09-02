@@ -74,7 +74,7 @@ conflicts inside one file.
 > false at its own commit, which is exactly the drift this repo's docstrings are
 > written to avoid. The two slices are otherwise independent.
 
-- [ ] **Slice 1 — Cut the conditions hero to a title and the notice.**
+- [x] **Slice 1 — Cut the conditions hero to a title and the notice.**
       Remove the eyebrow (`Surf · Tide · Wind · Visibility`) and the lead
       paragraph. Drop the `<h1>` from `text-title` to roughly
       `clamp(24px, 3vw, 36px)`. Tighten the ADR-0009 notice to one line, keeping
@@ -89,7 +89,7 @@ conflicts inside one file.
       _The `<h1>` size is a local class, not a token change — nothing else on the
       site uses `text-title` at this rank._
 
-- [ ] **Slice 2 — Quieten the conditions region headings.**
+- [x] **Slice 2 — Quieten the conditions region headings.**
       Add a second heading rank beside `REGION_HEADING` in
       `src/components/ui/headingRank.ts` — roughly `clamp(17px, 1.6vw, 22px)`,
       same black italic — and use it for the three conditions `<h2>`s
@@ -118,7 +118,7 @@ conflicts inside one file.
 > absence branch and nothing else; the band is presentation only. Slices 4 and 5
 > below are renumbered accordingly.
 
-- [ ] **Slice 3 — Move the live readings to the top of the page.**
+- [x] **Slice 3 — Move the live readings to the top of the page.**
       Render `MeasuredPanel` from `ConditionsSection`, in its own Suspense
       boundary, **outside `SelectedDayProvider`**. Remove it from `DayPanel` and
       drop `DayView.measured` from `ChosenDay`. Presentation unchanged — this
@@ -165,7 +165,16 @@ conflicts inside one file.
 > Option 2 is the recommendation: it is the only one that recovers height without
 > touching a decision.
 
-- [ ] **Slice 4 — Compress the two reading cards into one band.**
+- [x] **Slice 4 — Compress the two reading cards into one band.**
+      **Built as option 2 instead, on the designer's call: _give the reading
+      cards fewer rows_.** The band is not built and should not be. Each card
+      keeps its own figure, its own plain-words gloss and its own attribution,
+      which is all ADR-0010 asks; the height comes out of row count instead. The
+      gloss moved onto the figure's row as a `ReadingCard` prop and a stat's
+      label moved beside its value. Measured on the built page: the block 223px
+      → 175px, the page 3296px → 3248px. The 65 existing card tests passed
+      unmodified, so three new ones assert the arrangement as shared parentage
+      rather than as a class.
       Two `rounded-card bg-dark` cards side by side become one dark band with a
       yellow `RIGHT NOW · <beach>` eyebrow: one surface, one set of padding, the
       two readings as groups inside it rather than as separate sections.
@@ -184,7 +193,13 @@ conflicts inside one file.
       the strip's look agreed here, because everything after it is quiet by
       contrast._
 
-- [ ] **Slice 5 — Add today's rip current level to the strip.**
+- [x] **Slice 5 — Add today's rip current level to the strip.**
+      **Built beside the beach chooser rather than in the strip**, which the
+      slice below did not anticipate. The measured band is what instruments
+      read; a rip level is a forecaster's judgement, and ADR-0009 turns on those
+      two being visibly different kinds of thing. It costs 9px there, because
+      `md:items-end` left that column bottom-aligned against a taller one.
+      The absent value needed more care than the level did — see the commit.
       Read the surf zone at page level, find today's `SurfZoneDay` by
       `localDate`, and print its `level` word in the strip. No gloss, no surf or
       water ranges, no period name — those stay in the day panel's full block,

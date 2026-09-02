@@ -44,12 +44,21 @@ vi.mock("@/components/conditions/MeasuredPanel", () => ({
 // would otherwise carry that swap into every test after them -- silently, since
 // the real cards render figures rather than throwing.
 beforeEach(() => {
+  ripLevel.mockReset();
+  ripLevel.mockImplementation(({ slug }: { slug: string }) => {
+    if (slug === "suspend-the-panels") throw new Promise(() => {});
+    return <p>rip for {slug}</p>;
+  });
   measuredPanel.mockReset();
   measuredPanel.mockImplementation(({ slug }: { slug: string }) => {
     if (slug === "suspend-the-panels") throw new Promise(() => {});
     return <p>measured for {slug}</p>;
   });
 });
+const ripLevel = vi.fn();
+vi.mock("@/components/conditions/RipLevel", () => ({
+  RipLevel: (props: { slug: string }) => ripLevel(props),
+}));
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push: vi.fn() }) }));
 
 const { ConditionsSection } = await import("./ConditionsSection");
@@ -330,12 +339,12 @@ test("no panel's loading line uses a word the glossary rejects", () => {
     .map((node) => node.textContent ?? "")
     .filter((text) => text.startsWith("Reading "));
 
-  // Three suspended regions: the measured block, the week and the day. It was
-  // two while the measured block sat inside the day panel, on a boundary this
-  // check could not see from here -- so its line was asserted in
+  // Four suspended regions: the rip level, the measured block, the week and the
+  // day. It was two while the measured block sat inside the day panel, on a
+  // boundary this check could not see from here -- so its line was asserted in
   // `DayPanel.test.tsx` instead, and moved back here with the block. Asserted
   // as a count so this cannot pass by finding none of them.
-  expect(loading.length).toBe(3);
+  expect(loading.length).toBe(4);
   for (const line of loading) {
     expect(line.toLowerCase()).not.toContain("weather");
     expect(line.toLowerCase()).not.toContain("forecast");

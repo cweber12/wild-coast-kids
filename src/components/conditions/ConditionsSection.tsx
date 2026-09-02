@@ -18,6 +18,7 @@ import { BeachSelector } from "./BeachSelector";
 import { ConditionsNotes } from "./ConditionsNotes";
 import { DayPanel } from "./DayPanel";
 import { MeasuredPanel } from "./MeasuredPanel";
+import { RipLevel } from "./RipLevel";
 import { SelectedDayProvider } from "./selectedDay";
 import { WeekPanel } from "./WeekPanel";
 
@@ -93,8 +94,30 @@ export function ConditionsSection({ slug }: { slug: string }) {
           </p>
         </div>
 
+        {/*
+          The chooser's column, and the rip level under it.
+
+          Reading order: choose the beach, then the one relayed judgement about
+          it. And it is nearly free here -- the row is `md:items-end`, so this
+          column is bottom-aligned against a taller one and the space above the
+          chooser was already empty. The same measurement put the standing
+          notice in this column once.
+
+          Its own Suspense boundary, because it is a sixth publisher and the
+          bulletin going quiet must not hold up the chooser, which needs no
+          network at all.
+        */}
         <div className="mt-6 md:mt-0 md:w-72">
           <BeachSelector groups={groups} current={slug} />
+          <Suspense
+            fallback={
+              <p className="mt-4 text-base text-fog">
+                Reading the rip current risk…
+              </p>
+            }
+          >
+            <RipLevel slug={slug} />
+          </Suspense>
         </div>
       </div>
 

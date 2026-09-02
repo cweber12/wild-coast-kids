@@ -136,12 +136,12 @@ function SeaCard({ beachName, buoy, state }: WavesView) {
       figure={
         state.kind === "reading" ? `${state.heightFt.toFixed(1)} ft` : null
       }
+      gloss={
+        state.kind === "reading" ? `${heightWords(state.heightFt)}.` : null
+      }
     >
       {state.kind === "reading" && (
         <>
-          <p className={`leading-relaxed mb-3 text-base ${CARD_PROSE}`}>
-            {heightWords(state.heightFt)}.
-          </p>
           {/*
             A null is rendered as an absence rather than dropped: a buoy that
             publishes waves and no water temperature is a measured fact about
@@ -408,19 +408,14 @@ function AirCard({ beachName, airStation, air }: AirView) {
       title="Air"
       context={beachName}
       figure={temperatureWords(air)}
-    >
-      {/*
+      /*
         The plain-words line every card on this page is specified to carry. A
         restatement, never advice: ADR-0009 forbids this site a verdict, so a
         Beaufort-style "a light breeze" is available and "a good day for it" is
         not.
-      */}
-      {words !== null && (
-        <p className={`leading-relaxed mb-3 text-base ${CARD_PROSE}`}>
-          {words}
-        </p>
-      )}
-
+      */
+      gloss={words}
+    >
       {air.kind === "reading" && <StatGroup stats={windStats(air)} />}
 
       {airStation !== null && (
