@@ -233,3 +233,49 @@ test("the three levels are rendered with the same emphasis", () => {
 
   expect(new Set(classNames).size).toBe(1);
 });
+
+/**
+ * The block must never say the water is safe, in any of its four states.
+ *
+ * ADR-0009 forbids this site forming the judgement, and the risk here is not
+ * the obvious one -- nobody would write "safe for kids today". It is the
+ * absence copy: "none is forecast here" and "no rip current risk" both read as
+ * *there is no rip current risk here*, which is a claim about the water rather
+ * than about the product's coverage. That reading is worst at exactly the
+ * beaches that get it, because a lagoon is calm until the day it is not.
+ *
+ * The withheld sentence is worded about the forecast for that reason, and this
+ * holds every state to the same line.
+ */
+test("no state implies the water is safe", () => {
+  const states: SurfZoneView["state"][] = [
+    forecast([{ localDate: "2026-09-02", periodName: "TODAY", level: "Low" }]),
+    forecast([{ localDate: "2026-09-01", periodName: "TODAY", level: "Low" }]),
+    {
+      kind: "no-surf-zone",
+      reason:
+        "the National Weather Service issues this forecast for San Diego County's " +
+        "coastal areas, and a bay, lagoon or inlet has no surf zone, so it does not " +
+        "describe the water here",
+    },
+    { kind: "unavailable", detail: "HTTP 503.", drift: false },
+  ];
+
+  for (const state of states) {
+    const { container, unmount } = render(
+      <SurfZone state={state} localDate="2026-09-02" when="today" />,
+    );
+    const text = container.textContent ?? "";
+
+    expect(text).not.toMatch(/\bsafe\b/i);
+    expect(text).not.toMatch(/no rip current risk/i);
+    expect(text).not.toMatch(/none is forecast/i);
+    // The publisher is named once at most; twice in one sentence was shipped
+    // to the rendered page before this test existed.
+    expect((text.match(/National Weather Service/g) ?? []).length).toBeLessThan(
+      2,
+    );
+
+    unmount();
+  }
+});

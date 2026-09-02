@@ -103,9 +103,22 @@ export function SurfZone({ state, localDate, when }: SurfZoneProps) {
     return (
       <section>
         <h3 className={BLOCK_HEADING}>Rip current risk</h3>
+        {/*
+          "This forecast", not "no rip current risk". The obvious short lead-in
+          -- "none is forecast here" -- reads as *there is no rip current risk
+          here*, which is a safety judgement this site is forbidden from making
+          (ADR-0009) and which would be worst at exactly these beaches: a lagoon
+          is calm until the day it is not. The sentence is about the product's
+          coverage and never about the water.
+
+          It also does not repeat the publisher. The reason already names the
+          National Weather Service, and a lead-in naming it again put the
+          agency twice in one sentence -- caught on the rendered page rather
+          than in a fixture, which is why the absence path is worth looking at
+          rather than only asserting.
+        */}
         <Absence>
-          The National Weather Service does not forecast one here:{" "}
-          {state.reason}.
+          This forecast is not issued for this beach: {state.reason}.
         </Absence>
       </section>
     );
