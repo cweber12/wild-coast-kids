@@ -263,6 +263,38 @@ test("the forecasts that are not built yet are named, and waves are no longer am
 });
 
 /**
+ * The horizon the slot promises, held still.
+ *
+ * It said "about three days ahead" until 2026-09-02, when all fourteen
+ * issuances NWS SGX still held — seven days of them — were read and every one
+ * carried exactly two periods for `CAZ043`. This asserts the sentence rather
+ * than the ocean: nothing in CI reaches the National Weather Service, so a
+ * change in what SGX issues is invisible here. The measurement is the
+ * evidence; the test only stops the claim reverting silently, which is the
+ * same division `inventoryCaveats()` is tested under.
+ *
+ * "three days" is asserted absent by name because that is the specific wrong
+ * figure, and it still stands in `docs/plans/conditions-tool.md`'s source
+ * table — permanently, since that plan is historical and never corrected. So
+ * the phrase remains copyable out of a document this repo keeps and reads,
+ * which is exactly the reverting this test exists to catch.
+ */
+test("the surf zone slot states the reach the product actually has", async () => {
+  readWeekOfLowestLows.mockResolvedValue({
+    ...BINDING,
+    state: { kind: "week", days: [tideDay(0, "6:41 PM", 0.9)] },
+  });
+
+  render(await WeekPanel({ slug: "la-jolla-shores-beach" }));
+
+  const detail = screen.getByText(/Rip current risk/i).textContent ?? "";
+  expect(detail).toMatch(/about two days ahead/i);
+  expect(detail).not.toMatch(/three days/i);
+  // The cadence is the half a reader can act on, so it is in the copy too.
+  expect(detail).toMatch(/twice a day/i);
+});
+
+/**
  * The row that replaced the promise. Until 2026-08-27 this slot said a gridded
  * forecast was coming and, briefly, over-promised temperature and wind with it.
  * A slot and the row it stood in for must never both be on the page: that is

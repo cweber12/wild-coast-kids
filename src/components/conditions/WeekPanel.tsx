@@ -95,8 +95,24 @@ import { WeekGrid, type ReservedRow, type WeekRow } from "./WeekGrid";
  * to a forecast is the displacement ADR-0019 declined to decide, and this row
  * previously promised it.
  *
- * The surf zone forecast is zone-level and reaches about three days
- * out; it is the product the tide heights on this page were checked against.
+ * The surf zone forecast is zone-level; it is the product the tide heights on
+ * this page were checked against.
+ *
+ * **It reaches about two days, not three, and the slot said three until now.**
+ * Measured 2026-09-02 against all fourteen issuances NWS SGX still held —
+ * seven days of them — every one carried exactly two periods for `CAZ043`.
+ * A morning issuance reads `TODAY` then a weekday; an afternoon one reads
+ * `THIS AFTERNOON THROUGH <weekday>` then the day after, which is why the
+ * reach is worth stating as "about" rather than as a number of days. The
+ * three-day figure came from `docs/plans/conditions-tool.md`'s source table,
+ * recorded from a 2026-08-17 measurement. It stays wrong there: that plan is
+ * historical, and `docs/plans/README.md` is explicit that a shipped plan is a
+ * dated record which is never corrected. What is still binding lives in
+ * `docs/adr/`, which is why the measurement above is here and not there.
+ *
+ * The cadence is in the copy because it is the part a reader can act on: a
+ * product reissued twice a day is one they should look at again, and a horizon
+ * alone does not say that.
  *
  * No issue numbers in the copy. A reader is owed what is coming, not our
  * backlog — the sighting map's slot set that precedent.
@@ -106,7 +122,7 @@ const RESERVED: readonly ReservedRow[] = [
     emoji: "🏖️",
     headline: "The surf zone forecast is coming.",
     detail:
-      "Rip current risk, surf height and water temperature, issued for this stretch of coast about three days ahead.",
+      "Rip current risk, surf height and water temperature, issued for this stretch of coast twice a day and reaching about two days ahead.",
   },
 ];
 
