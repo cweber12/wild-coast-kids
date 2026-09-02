@@ -294,10 +294,13 @@ function surfZoneWeek(
       kind: "forecast",
       issuedMs: localMidnightOf(TODAY) + 3_600_000,
       headline: null,
+      staleAfterHours: null,
       days: days.map((day) => ({
         ...day,
         periodName: "TODAY",
         meaning: "Life threatening rip currents are possible.",
+        surfHeight: "2 to 4 feet.",
+        waterTemperature: "70 to 76 degrees.",
       })),
     },
   });
