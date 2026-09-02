@@ -185,6 +185,11 @@ test("published art sessions show their times and their prices", async () => {
 // Art's accent is purple where the co-op's is ocean, and the component derives
 // it from the program rather than being told, so a page cannot ask for the
 // wrong one.
+//
+// Read off the date line rather than the heading since #139. The heading is a
+// region heading now and inherits its colour, as `REGION_HEADING` does
+// everywhere; the accent stayed on the label beneath it, which is where the
+// derivation still has to be right.
 test("the art schedule carries the art accent", async () => {
   vi.stubEnv("SUPABASE_URL", "https://abcdefghijklmnopqrst.supabase.co");
   vi.stubEnv("SUPABASE_ANON_KEY", "sb_publishable_test");
@@ -211,10 +216,7 @@ test("the art schedule carries the art accent", async () => {
 
   render(await Art());
 
-  expect(
-    screen.getByRole("heading", { level: 2, name: "Upcoming sessions" })
-      .className,
-  ).toContain("text-purple");
+  expect(screen.getByText(/Tue, Sep 22/).className).toContain("text-purple");
 });
 
 // /art is where the charter copy would have lived, and PR #99 left the page

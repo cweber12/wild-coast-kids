@@ -14,6 +14,7 @@
  * and a missing schedule looks like a missing schedule.
  */
 
+import { REGION_HEADING } from "./ui/headingRank";
 import { ReservedSlot } from "./ui/ReservedSlot";
 import { localDayOf, localTimeOf } from "@/lib/pacific-time";
 import type { Program, ScheduleResult, Session } from "@/lib/sessions";
@@ -74,10 +75,13 @@ export function SessionSchedule({
 
   return (
     <section aria-labelledby={headingId}>
-      <h2
-        id={headingId}
-        className={`text-2xs mb-3 font-extrabold tracking-widest uppercase ${ACCENTS[program]}`}
-      >
+      {/*
+        Display register, and the colour inherited rather than accented. See
+        ADR-0014 and #139: this heading was 10px above session titles set at
+        18px, so the child outranked its parent. The accent stays on the date
+        line below, which is a label and is where `ACCENTS` still reads.
+      */}
+      <h2 id={headingId} className={REGION_HEADING}>
         Upcoming sessions
       </h2>
       <ul className="grid gap-3">
