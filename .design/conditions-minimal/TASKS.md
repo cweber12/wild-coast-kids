@@ -225,7 +225,13 @@ conflicts inside one file.
 Two slices. Independent of PR 1 in principle; sequence after it so `ChosenDay`
 is edited once by slice 2 before slice 6 restructures around it.
 
-- [ ] **Slice 6 — Put a day strip above the hourly chart.**
+- [x] **Slice 6 — Put a day strip above the hourly chart.**
+      **Built under the region heading rather than directly above the chart**,
+      with the sky wording between: the office's sentences run one to three
+      lines, so a control below them moves as a reader steps across the week.
+      The plan also missed ADR-0027 — a control mounts only once it can work, so
+      the strip renders nothing before hydration. The existing no-script test
+      caught that, not a review.
       New `DayStrip` client component: seven day pills in one row, directly above
       `HourChart` inside `ChosenDay`. Calls `useSelectedDay()`, so it and
       `WeekGrid` are one control over one fact — choosing in either moves both.
@@ -246,7 +252,9 @@ is edited once by slice 2 before slice 6 restructures around it.
       `outline-offset` clips against it. Use `overflow-x-auto` with vertical
       padding._
 
-- [ ] **Slice 7 — Remove the week grid's daylight note, and record why.**
+- [x] **Slice 7 — Remove the week grid's daylight note, and record why.**
+      **ADR-0045**, re-derived at build time as the plan required — 0041 as
+      guessed in the brief was long since taken, and the highest was 0044.
       Delete the single unconditional note pushed at the top of `WeekPanel`'s
       `notes`. **Keep all seven conditional failure notes exactly as they are.**
       Write an ADR superseding that one clause of ADR-0023, carrying the
