@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
+import { REGION_HEADING } from "@/components/ui/headingRank";
 import Art from "./page";
 
 /** Unconfigured on purpose, for the reasons set out in `coop/page.test.tsx`. */
@@ -88,6 +89,41 @@ test("the approach list is named by its own heading", async () => {
   });
 
   expect(region.getAttribute("aria-labelledby")).toBe(heading.id);
+});
+
+/**
+ * ADR-0014, on the page it knowingly left behind. See #139.
+ *
+ * "What makes it different" was label register at 10px over approach cards set
+ * in the display register at 13px, so the child outranked its parent.
+ * "Packages & pricing" carried no display-register heading under it -- its tier
+ * headings are label register too -- but two region headings on one page
+ * rendering at two different ranks is its own defect, so both convert.
+ *
+ * The other half of the rank is that what sits inside them does not move with
+ * them: the approach cards keep the display register one size token down, and
+ * the tier headings keep the label register, which is ADR-0014's decision for
+ * a card heading rather than an oversight.
+ *
+ * jsdom applies no stylesheets (ADR-0001), so this asserts the class contract
+ * and a human confirms the rendered rank.
+ */
+test("the page's region headings outrank the headings inside them", async () => {
+  render(await Art());
+
+  for (const name of ["What makes it different", "Packages & pricing"]) {
+    expect(screen.getByRole("heading", { level: 2, name }).className).toBe(
+      REGION_HEADING,
+    );
+  }
+
+  expect(
+    screen.getByRole("heading", { level: 3, name: "Skills, not copies" })
+      .className,
+  ).not.toContain("text-quote");
+  expect(
+    screen.getByRole("heading", { level: 3, name: "Drop-in" }).className,
+  ).toContain("text-2xs");
 });
 
 // The prices are asserted as the strings a reader sees. Importing TIERS and
@@ -185,6 +221,11 @@ test("published art sessions show their times and their prices", async () => {
 // Art's accent is purple where the co-op's is ocean, and the component derives
 // it from the program rather than being told, so a page cannot ask for the
 // wrong one.
+//
+// Read off the date line rather than the heading since #139. The heading is a
+// region heading now and inherits its colour, as `REGION_HEADING` does
+// everywhere; the accent stayed on the label beneath it, which is where the
+// derivation still has to be right.
 test("the art schedule carries the art accent", async () => {
   vi.stubEnv("SUPABASE_URL", "https://abcdefghijklmnopqrst.supabase.co");
   vi.stubEnv("SUPABASE_ANON_KEY", "sb_publishable_test");
@@ -211,10 +252,7 @@ test("the art schedule carries the art accent", async () => {
 
   render(await Art());
 
-  expect(
-    screen.getByRole("heading", { level: 2, name: "Upcoming sessions" })
-      .className,
-  ).toContain("text-purple");
+  expect(screen.getByText(/Tue, Sep 22/).className).toContain("text-purple");
 });
 
 // /art is where the charter copy would have lived, and PR #99 left the page

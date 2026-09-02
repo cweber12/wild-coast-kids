@@ -55,7 +55,7 @@ label register.**
 
 A region heading takes `--text-quote`: `text-quote leading-display mb-4
 font-black italic`, inheriting its colour as the `<h1>` does. Named once, as
-`REGION_HEADING` in `src/components/headingRank.ts`, because a rank asserted in
+`REGION_HEADING` in `src/components/ui/headingRank.ts`, because a rank asserted in
 two places is one of them waiting to drift — the argument `touchTarget.ts`
 already makes about a number.
 
@@ -91,10 +91,42 @@ they are converted _against_ when someone does it, and recording the omission
 here is the point: the alternative is a rule that quietly means "on the page
 where it was written".
 
+> Amended 2026-09-01. **All three are converted**, in #139. They take
+> `REGION_HEADING` as-is and inherit their colour, so `/art` loses a purple and
+> `SessionSchedule` loses an accent that was a function of which program was
+> rendering. That was the decision inside the deferral, and it was taken by
+> looking: at 1536 the accented variant put a third large purple element in the
+> same viewport as `/art`'s `<h1>` and its pill, so colour would have meant
+> "label" and "rank" at once. The alternative considered and rejected was a
+> colour axis on `REGION_HEADING`, in the shape `PillLink` uses for its tones —
+> a second axis on a constant whose whole argument is that it names one rank.
+> Neither page's accent is gone from the component: `SessionSchedule` still
+> derives it for the date line above each session title.
+>
+> The path above is corrected in the same change. It said
+> `src/components/headingRank.ts` and the file was never there; it is now
+> `src/components/ui/headingRank.ts`, beside the `touchTarget.ts` this decision
+> argues from.
+
 **The heading inversion on those two pages is not fixed by this.** `/art` and
 `SessionSchedule` each render a display-register `<h3>` under a label-register
 `<h2>`, so a child outranks its parent. Converting the parents closes it;
 until then the defect stands and is recorded rather than filed.
+
+> Amended 2026-09-01. **Closed by #139**, by converting the parents, which is
+> what this paragraph said would close it. One correction to what it claimed:
+> only two of the three headings had a display-register `<h3>` beneath them —
+> `/art`'s "What makes it different" and `SessionSchedule`'s "Upcoming
+> sessions". "Packages & pricing" sits over tier headings that are label
+> register like itself, so nothing under it was inverted; it converted anyway,
+> because two region headings on one page at two different ranks is its own
+> defect.
+>
+> `/art`'s approach cards stay display register at `text-base`, one size token
+> under their region heading rather than in the label register this ADR names
+> for a card heading. The rank is monotonic and the inversion is gone; whether
+> those cards should be label register is a separate look at a finished
+> composition, and is not answered here.
 
 **The gate cannot check a rank.** jsdom applies no stylesheets (ADR-0001), so
 tests assert that a region heading composes `REGION_HEADING` and that a card

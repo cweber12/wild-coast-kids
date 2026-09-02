@@ -1,6 +1,6 @@
 import { expect, test } from "vitest";
 import { render, screen } from "@testing-library/react";
-import { REGION_HEADING } from "./headingRank";
+import { REGION_HEADING } from "../ui/headingRank";
 import {
   MIN_SPARK_BLOCK_PX,
   NARROWEST_CELL_CLEARS_FLOOR,

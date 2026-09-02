@@ -1,6 +1,7 @@
 import { describe, expect, test } from "vitest";
 import { render, screen } from "@testing-library/react";
 import { formatPrice, SessionSchedule } from "./SessionSchedule";
+import { REGION_HEADING } from "./ui/headingRank";
 import type { ScheduleResult, Session } from "@/lib/sessions";
 
 const session = (overrides: Partial<Session> = {}): Session => ({
@@ -138,6 +139,50 @@ describe("SessionSchedule", () => {
     expect(
       screen.getByText(/Tue, Sep 8/).className.includes("text-purple"),
     ).toBe(true);
+  });
+
+  /**
+   * ADR-0014, on the page that decision knowingly left behind. See #139.
+   *
+   * "Upcoming sessions" was label register at 10px and the session titles
+   * inside it are display register at 18px, so the child outranked its parent
+   * -- the same defect ADR-0014 fixed on `/conditions`, on a page outside the
+   * brief it was taken under.
+   *
+   * The colour is the half that needed deciding rather than deriving. It was
+   * `ACCENTS[program]`, so the heading's colour was a function of which program
+   * was rendering; it now inherits, as `REGION_HEADING` does everywhere and as
+   * the `<h1>` above it already did. Asserting the same string at both programs
+   * is what proves that, and a per-program class would fail here rather than
+   * only on the page nobody screenshotted.
+   *
+   * The accent is not gone from the component -- the date line above each title
+   * still carries it, which the test above this one holds.
+   */
+  test("the list's heading outranks the titles inside it, at either program", () => {
+    const { rerender } = render(
+      <SessionSchedule
+        {...slot}
+        program="art"
+        result={ok([session({ program: "art" })])}
+      />,
+    );
+
+    const named = () =>
+      screen.getByRole("heading", { level: 2, name: "Upcoming sessions" })
+        .className;
+
+    expect(named()).toBe(REGION_HEADING);
+
+    rerender(
+      <SessionSchedule
+        {...slot}
+        program="coop"
+        result={ok([session({ program: "coop" })])}
+      />,
+    );
+
+    expect(named()).toBe(REGION_HEADING);
   });
 
   // The page's own title is an h1 and session titles are h3, so the list owes

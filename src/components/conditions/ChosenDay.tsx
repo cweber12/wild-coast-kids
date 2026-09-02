@@ -41,7 +41,7 @@
 
 import type { ReactNode } from "react";
 import { HourChart, type HourSeries } from "./HourChart";
-import { REGION_HEADING } from "./headingRank";
+import { REGION_HEADING } from "../ui/headingRank";
 import { resolveSelected, useSelectedDay } from "./selectedDay";
 import type { SparkPoint } from "./DaySpark";
 

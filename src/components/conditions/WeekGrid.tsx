@@ -62,7 +62,7 @@ import { MIN_USEFUL_SPARK_WIDTH_PX } from "./DaySpark";
 import { useHydrated } from "./hydrated";
 import { resolveSelected, useSelectedDay } from "./selectedDay";
 import { TOUCH_TARGET } from "../ui/touchTarget";
-import { REGION_HEADING } from "./headingRank";
+import { REGION_HEADING } from "../ui/headingRank";
 import { ProvenanceLine } from "./ProvenanceLine";
 import { ReservedSlot } from "../ui/ReservedSlot";
 

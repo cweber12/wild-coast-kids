@@ -45,7 +45,7 @@
 
 import type { InventoryReach } from "@/lib/beaches";
 import { Caveats } from "./Caveats";
-import { REGION_HEADING } from "./headingRank";
+import { REGION_HEADING } from "../ui/headingRank";
 
 /** One thing worth understanding about every figure of its kind. */
 const NOTES = [
