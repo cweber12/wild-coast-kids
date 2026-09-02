@@ -1,6 +1,7 @@
 import { expect, test } from "vitest";
 import { render, screen } from "@testing-library/react";
 import { REGION_HEADING } from "../ui/headingRank";
+import { TOUCH_TARGET } from "../ui/touchTarget";
 import {
   MIN_SPARK_BLOCK_PX,
   NARROWEST_CELL_CLEARS_FLOOR,
@@ -93,9 +94,13 @@ test("names every day it was given, in the order it was given them", () => {
   // Today's column reads its date without a weekday, because the chip beside
   // it already says which day this is -- and dropping that token is what lets
   // the chip sit on the date's line instead of reserving a line above it in all
-  // seven columns. The space before "Today" is a real text node: two elements
-  // with nothing between them read aloud as "Aug 17Today", the concatenation
-  // `ReadingCard` records hitting in the accessible-name algorithm.
+  // seven columns. The space before "Today" is a real text node, and this is
+  // the assertion that keeps it there: without it these headings read
+  // "Aug 17Today". It was recorded as protecting the *accessible* name against
+  // the concatenation `ReadingCard` describes; measured in Chrome on
+  // 2026-09-02 that is no longer what it buys, because the chip and the
+  // control are separated whether or not a text node sits between them. What
+  // it still buys is this string, which is the surface jsdom can see at all.
   expect(headings).toEqual(["Aug 17 Today", "Tue, Aug 18", "Wed, Aug 19"]);
 });
 
@@ -378,6 +383,54 @@ test("the chip follows the date rather than sitting above it", () => {
     chip.compareDocumentPosition(heading.firstChild!) &
       Node.DOCUMENT_POSITION_PRECEDING,
   ).toBeTruthy();
+});
+
+/**
+ * The control was a 15px strip in a 195.4x275 cell — 38.8px wide on today and
+ * 74.8px on a named day, measured at 1536 on 2026-09-02. It is the heading's
+ * date and nothing more, because a `<button>` around the cell would take its
+ * figures as presentational children and hide the week's whole text equivalent
+ * from the accessibility tree. So the target grows *within* the cell instead:
+ * the row's full width and 32px, measured 169.4x32 after this change.
+ *
+ * jsdom applies no stylesheets (ADR-0001), so what is assertable here is the
+ * composition. `TOUCH_TARGET` and the height above `md`, both rather than
+ * either: 32px is additive, and a `md:` rule that replaced the floor instead of
+ * adding above it would read identically in the markup while quietly removing
+ * ADR-0004's guarantee on a phone.
+ */
+test("the day control fills its row and keeps the touch floor under it", () => {
+  const { container } = renderGrid();
+
+  const controls = [...container.querySelectorAll("[data-day-choice]")];
+  expect(controls).toHaveLength(3);
+  for (const control of controls) {
+    expect(control.className).toContain(TOUCH_TARGET);
+    expect(control.className).toContain("md:min-h-8");
+    expect(control.className).toContain("flex-1");
+  }
+
+  // The button grows because its heading is the flex row it grows inside. On
+  // today that row also holds the chip, which is what `flex-1` pushes to the
+  // far end rather than off a second line.
+  for (const heading of container.querySelectorAll("ol > li h3")) {
+    expect(heading.className).toContain("flex");
+  }
+});
+
+/**
+ * Asserted by name, not by tag, because the name is what growing the control
+ * could have cost. The chip stays a sibling of the button: moving it inside to
+ * simplify the row would have renamed today's control from "Aug 17" to
+ * "Aug 17 Today", which is a different thing for a screen reader to announce
+ * and would read here as a failure rather than a layout choice.
+ */
+test("growing the control does not rename it", () => {
+  renderGrid();
+
+  for (const name of ["Aug 17", "Tue, Aug 18", "Wed, Aug 19"]) {
+    expect(screen.getByRole("button", { name })).toBeTruthy();
+  }
 });
 
 /**

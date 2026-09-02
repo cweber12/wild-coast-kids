@@ -124,14 +124,25 @@ export type DaySparkProps = {
  * -- which, with a full day chart coming below the grid, is a duplication the
  * brief's first principle exists to avoid. 8:1 renders 21px there and reads as
  * an annotation on the row instead: the same information, at the weight a
- * sparkline is supposed to carry. Measured 2026-08-28 against the built page:
+ * sparkline is supposed to carry. Shape measured 2026-08-28 against the built
+ * page and unchanged since; grid height re-measured 2026-09-02:
  *
  * | viewport | cell | shape        | grid height |
  * | -------- | ---- | ------------ | ----------- |
- * | 1536     | 168  | 169 x 21.2   | 275.0       |
- * | 1280     | 132  | 133 x 16.6   | 270.4       |
- * | 1024     | 196  | 197 x 24.6   | 568.9       |
- * | 375      | 300  | 301 x 37.6   | 1753.1      |
+ * | 1536     | 168  | 169 x 21.2   | 292.0       |
+ * | 1280     | 132  | 133 x 16.6   | 287.4       |
+ * | 1024     | 196  | 197 x 24.6   | 602.9       |
+ * | 375      | 300  | 301 x 37.6   | 1956.1      |
+ *
+ * **The grid height column is context, not the measurement this docstring
+ * turns on**, which is the shape's own height -- and it is the column that
+ * goes stale, because anything in a day block moves it. Two things moved it
+ * since it was written. The day control grew to 32px above `md` (#183), which
+ * is +17 on every cell and nothing at 375, where the touch floor already made
+ * it 44px -- so +17 at 1536 and 1280, where the week is one row, and +34 at
+ * 1024, where four columns make it two. And the 375 figure was already 203px
+ * out before that, from work between 2026-08-28 and now that nobody
+ * re-measured here.
  *
  * The vertical range costs real resolution -- 24 user units of swing where
  * there were 42 -- and that is the trade, not an oversight. What a reader takes
