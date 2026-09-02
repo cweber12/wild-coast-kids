@@ -1,7 +1,7 @@
 import { expect, test } from "vitest";
 import { render, screen } from "@testing-library/react";
 import { ConditionsNotes } from "./ConditionsNotes";
-import { REGION_HEADING } from "./headingRank";
+import { REGION_HEADING } from "../ui/headingRank";
 
 const ENTRIES = [
   "beach_type is UNKNOWN upstream for most of these beaches.",
