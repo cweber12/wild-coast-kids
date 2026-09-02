@@ -376,8 +376,11 @@ export function WeekGrid({
                 `inline-size` containment only, which is what `@container`
                 sets. The block's width already comes from the grid track and
                 its height still comes from its contents, so nothing here sizes
-                differently for it -- measured before and after: 195.4 x 275.0
-                at 1536, unchanged.
+                differently for it -- measured with the containment and with it
+                switched off: 195.4 x 292.0 at 1536 either way. Re-measured
+                2026-09-02, when the day control's height moved the second
+                figure from 275.0; the claim is that the two columns match, so
+                it is checked again whenever one of them moves.
               */
               className={`@container overflow-hidden rounded-tile border-[1.5px] bg-white/60 ${
                 day.localDate === showing ? "border-ocean" : "border-lavender"
@@ -391,7 +394,15 @@ export function WeekGrid({
                 }`}
               >
                 <h3
-                  className={`text-2xs font-extrabold tracking-widest uppercase ${
+                  /*
+                    A flex row, so the control inside it can grow to the row's
+                    full width while the chip stays a sibling of the button
+                    rather than a child of it. `gap-1` is 4px, which is what
+                    the space text node below rendered as at 4.9px and stops
+                    rendering as here: a whitespace-only text node between two
+                    flex items generates no box.
+                  */
+                  className={`flex items-center gap-1 text-2xs font-extrabold tracking-widest uppercase ${
                     day.localDate === showing ? "text-white" : "text-ocean"
                   }`}
                 >
@@ -417,18 +428,28 @@ export function WeekGrid({
                     over mid-week, which was the objection to shortening this
                     heading the first time.
 
-                    `leading-none` on the chip, so its padding fits inside the
-                    heading's own line box. Without it the chip is 16px against
-                    the other columns' 15px, and today's band renders a pixel
-                    taller than the six beside it -- which is the same
-                    misalignment in miniature that the reserved line was
-                    introduced to prevent.
+                    `leading-none` on the chip keeps it tight -- 59.1x14
+                    against 59.1x17 without it. **It no longer holds the row's
+                    alignment**, which is what it was introduced for: it was
+                    the chip that set the band's height when the heading was
+                    one inline line, and the control's 32px sets it now.
+                    Measured both ways at 1536, the band is 67.7 either way.
+                    So this is a look, and the misalignment it used to prevent
+                    can no longer happen.
 
-                    Inline rather than a flex row, and with a real space text
-                    node before the chip. Two flex items with nothing between
-                    them read aloud as "Aug 28Today", which is the
-                    concatenation `ReadingCard` records hitting in the
-                    accessible-name algorithm.
+                    **The space text node before the chip stays, and the
+                    reason it stays has changed.** It was recorded here as what
+                    keeps the accessible name from reading "Aug 28Today". That
+                    is no longer what it buys: measured in Chrome on the built
+                    page with the heading as a flex row, today's heading is
+                    named "SEP 2 TODAY" with the text node and without it,
+                    because the two elements are separated whether or not
+                    anything sits between them. What
+                    it still buys is the DOM text -- `heading.textContent` is
+                    "Aug 17 Today" with it and "Aug 17Today" without -- and
+                    that is the surface this repo can assert, because jsdom
+                    applies no stylesheets (ADR-0001) and computes no layout.
+                    A rendered separator is `gap-1` on the heading above.
                   */}
                   {/*
                     The date is the control, and only the date.
@@ -453,6 +474,22 @@ export function WeekGrid({
                     the current item of a set of dates, which is the token's
                     own definition, where a pressed button is a toggle that
                     stays down.
+
+                    **So the target grows inside the cell rather than becoming
+                    it.** It was the width of its own text: 38.8x15 on today
+                    and 74.8x15 on a named day, in a 195.4x275 cell at 1536.
+                    `flex-1` takes the heading's full row and `md:min-h-8`
+                    takes 32px of it, measured 169.4x32, which costs the band
+                    50.7 -> 67.7 and every cell 275 -> 292 -- the same 17px in
+                    all seven, so no column moves against its neighbours.
+
+                    On today the same `flex-1` is what carries the chip to the
+                    far end of the row instead of wrapping it to a second line.
+                    That is the one visible change to the header band, and it
+                    is why the chip could not simply move inside the button:
+                    the control would be renamed from "Aug 17" to
+                    "Aug 17 Today", which `WeekGrid.test.tsx` asserts against
+                    by name rather than by tag.
                   */}
                   {hydrated ? (
                     <button
@@ -475,7 +512,20 @@ export function WeekGrid({
                         already knows means "this one", it needs no legend, and
                         it leaves the header's text exactly what it was.
                       */
-                      className={`${TOUCH_TARGET} md:min-h-0 inline-flex cursor-pointer items-center text-left ${
+                      /*
+                        `md:min-h-8` rather than the `md:min-h-0` most callers
+                        of `TOUCH_TARGET` take. Both compose the floor rather
+                        than replacing it, so ADR-0004 still holds below `md`
+                        and the button is 44px on a phone either way; the
+                        difference is that this one is a pointer target above
+                        `md` too, where `min-h-0` lets an element fall back to
+                        the height of its own text. 15px of it, here.
+
+                        `flex` rather than `inline-flex`: a flex item's
+                        `inline-flex` computes to `flex`, so the inline form
+                        would describe a layout that is not there.
+                      */
+                      className={`${TOUCH_TARGET} md:min-h-8 flex flex-1 cursor-pointer items-center text-left ${
                         day.localDate === showing
                           ? "text-white underline decoration-2 underline-offset-4"
                           : "text-ocean"
@@ -492,7 +542,7 @@ export function WeekGrid({
                   {day.isToday && (
                     <>
                       {" "}
-                      <span className="leading-none rounded-pill bg-yellow px-1.5 py-0.5 align-[0.1em] text-dark">
+                      <span className="leading-none rounded-pill bg-yellow px-1.5 py-0.5 text-dark">
                         Today
                       </span>
                     </>
