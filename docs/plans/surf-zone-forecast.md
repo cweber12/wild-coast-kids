@@ -264,3 +264,65 @@ never as a competing surf reading, and never adjacent to the MOP swell.
 here. Rejected on the measurement above: the join is containment rather than
 proximity and fails at the water's edge for 10 of 51 beaches, and the zone is
 not per-beach data in the first place.
+
+## Addenda
+
+### 2026-09-02 — the product has a headline, and it outranks the day
+
+Capturing fixtures surfaced an element the design above does not account for.
+The `CAZ043` section may open with a headline in the National Weather Service's
+own emphasis markers, before the first period:
+
+```
+...HIGH RIP CURRENT RISK...
+```
+
+Read across all 14 issuances:
+
+| Issued (UTC) | First period's risk | Headline                                                   |
+| ------------ | ------------------- | ---------------------------------------------------------- |
+| 09-02 08:54  | Low                 | —                                                          |
+| 09-01 19:20  | Moderate            | `...MODERATE RIP CURRENT RISK...`                          |
+| 09-01 08:44  | Moderate            | —                                                          |
+| 08-31 20:15  | High                | `...HIGH RIP CURRENT RISK...`                              |
+| 08-31 08:20  | Moderate            | —                                                          |
+| 08-30 19:09  | High                | `...HIGH RIP CURRENT RISK...`                              |
+| 08-30 07:59  | High                | `...HIGH RIP CURRENT RISK...`                              |
+| 08-29 21:01  | High                | `...HIGH RIP CURRENT RISK...`                              |
+| 08-29 07:11  | High                | `...HIGH RIP CURRENT RISK...`                              |
+| 08-28 19:44  | High                | `...HIGH RIP CURRENT RISK...`                              |
+| 08-28 07:11  | **Moderate**        | **`...HIGH RIP CURRENT RISK...`**                          |
+| 08-27 20:39  | High                | `...BEACH HAZARDS STATEMENT THROUGH 11 PM THIS EVENING...` |
+| 08-27 08:17  | High                | `...BEACH HAZARDS STATEMENT THROUGH 11 PM THIS EVENING...` |
+| 08-26 19:10  | High                | `...BEACH HAZARDS STATEMENT THROUGH 11 PM THURSDAY...`     |
+
+Three facts, and the third is why this changes the plan.
+
+**It is optional** — absent on 3 of 14. A parser that requires it fails on a
+quiet day.
+
+**It is scoped to the product, not to a period.** On 2026-08-28 07:11 the
+headline read `HIGH RIP CURRENT RISK` while `TODAY` read Moderate; the second
+period, `SATURDAY`, read High. Verified in the product text rather than
+inferred. So the headline and the per-day field can differ, legitimately, and
+neither is wrong.
+
+**It sometimes announces an active Beach Hazards Statement** — 3 of 14. That is
+the event-driven signal measured above as the thing this page has none of, and
+it arrives inside a read this slice already makes.
+
+**Decision: the headline is relayed**, as a product-level line above the
+per-day risk, worded so that its scope is the issuance rather than the chosen
+day. Omitting it would let the page print "Moderate" on a day the forecaster
+headlined `HIGH RIP CURRENT RISK`, and stay silent while a Beach Hazards
+Statement is running — which is the same failure of omission the whole feature
+exists to correct.
+
+**What this costs**: two risk words on screen that can differ, one above the
+other. That is the product being honest about scope rather than a
+contradiction, but it only reads that way if the wording carries the scope, and
+no gate can check that it does. It is why #217 is `needs-human`.
+
+**What it does not do**: deliver active alerts. The headline is the SGX
+forecaster's announcement text, not the alert product, and it appears only when
+that office chooses to lead with it. `Active alerts` stays out of scope above.
