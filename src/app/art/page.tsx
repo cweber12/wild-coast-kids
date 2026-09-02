@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { REGION_HEADING } from "@/components/ui/headingRank";
 import { PillLink } from "@/components/ui/PillLink";
 import { Placeholder } from "@/components/ui/Placeholder";
 import { SessionSchedule } from "@/components/SessionSchedule";
@@ -121,10 +122,15 @@ export default async function Art() {
             because "what is this?" comes before "when is it?" — a parent who has
             not been sold yet has no use for a list of dates. */}
         <section aria-labelledby={APPROACH_HEADING_ID} className="mb-12">
-          <h2
-            id={APPROACH_HEADING_ID}
-            className="text-2xs mb-3 font-extrabold tracking-widest text-purple uppercase"
-          >
+          {/*
+            Display register, colour inherited. See ADR-0014 and #139: at 10px
+            this heading was outranked by the approach cards beneath it, which
+            are display register at `text-base`. The accent goes rather than
+            growing with it -- `REGION_HEADING` carries no colour, as the `<h1>`
+            above does not, which leaves purple meaning "label" on this page
+            instead of meaning two things.
+          */}
+          <h2 id={APPROACH_HEADING_ID} className={REGION_HEADING}>
             What makes it different
           </h2>
           <ul className="grid gap-3 md:grid-cols-2">
@@ -144,10 +150,13 @@ export default async function Art() {
         {/* Pricing sits between the pitch and the dates: a parent who wants in
             asks the cost before they ask which Tuesday. */}
         <section aria-labelledby={PRICING_HEADING_ID} className="mb-12">
-          <h2
-            id={PRICING_HEADING_ID}
-            className="text-2xs mb-3 font-extrabold tracking-widest text-purple uppercase"
-          >
+          {/*
+            Nothing inside this section outranked it -- the tier headings are
+            label register too. It converts because two region headings on one
+            page at two different ranks is its own defect, and a rule that held
+            only in the section someone happened to look at is not a rule.
+          */}
+          <h2 id={PRICING_HEADING_ID} className={REGION_HEADING}>
             Packages &amp; pricing
           </h2>
           <p className="leading-relaxed mb-4 max-w-130 text-base text-fog">
