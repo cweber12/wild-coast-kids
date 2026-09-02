@@ -62,7 +62,7 @@ less of.
 
 ## PR 1 — The page opens on the readings
 
-Four slices. The top of the page, in reading order. Sequential: slices 1, 3 and 4
+Five slices. The top of the page, in reading order. Sequential: slices 1, 3 and 5
 all edit `ConditionsSection`'s header block, so working them in order avoids
 conflicts inside one file.
 
@@ -103,33 +103,58 @@ conflicts inside one file.
       `ChosenDay`, `ConditionsNotes`._
       _ADR-0014 still holds — region headings outrank card headings, just
       quieter._
-      _The new `--text-region` token needs a `REQUIRED` row in
+      _The new `--text-tool-region` token needs a `REQUIRED` row in
       `scripts/built-css.mjs`: without it, deleting the token would leave
-      `text-region` in the markup compiling to nothing, with every jsdom test
-      still green. This is the same guard `min-h-footer` already carries._
+      `text-tool-region` in the markup compiling to nothing, with every jsdom
+      test still green. This is the same guard `min-h-footer` already carries._
 
-- [ ] **Slice 3 — Move the measured readings into a now-strip.**
-      New `NowStrip` component: a compressed dark band beside the beach selector
-      carrying waves (height, period, water temperature) and air (temperature,
-      wind, gust). Built from `ReadingCard` / `StatGroup` so it inherits the
-      measured contrast ratios. Rendered from `ConditionsSection` inside its own
-      Suspense boundary, **outside `SelectedDayProvider`**. Remove the measured
-      block from `ChosenDay` / `DayPanel` — see the decision above.
-      **Done looks like**: the live readings are at the top of the page; picking
+> **Addendum, 2026-09-02, during implementation.** What was one slice here is
+> now two. Moving the readings and restyling them into a band cannot be
+> described without an "and", and the reason is in the code: `MeasuredToday` is
+> 502 lines against a 983-line test file, every branch of it reasoned about in
+> its own docstring. Rewriting its presentation in the same commit that moves it
+> would put a large refactor and a structural move in one diff, where a
+> regression in either reads as a regression in the other. The move deletes the
+> absence branch and nothing else; the band is presentation only. Slices 4 and 5
+> below are renumbered accordingly.
+
+- [ ] **Slice 3 — Move the live readings to the top of the page.**
+      Render `MeasuredPanel` from `ConditionsSection`, in its own Suspense
+      boundary, **outside `SelectedDayProvider`**. Remove it from `DayPanel` and
+      drop `DayView.measured` from `ChosenDay`. Presentation unchanged — this
+      slice moves the block, it does not restyle it.
+      **Done looks like**: the live readings are above the week grid; picking
       Thursday does not change them.
-      **Test**: (a) `NowStrip` renders finished readings without a network, the
-      way `MeasuredToday` is tested today; (b) `ConditionsSection` renders the
-      strip above the week region; (c) **changing the selected day leaves the
-      strip's values untouched** — this is the seam that catches "frozen to now"
-      being broken later.
-      _New: `NowStrip`. Modifies: `ConditionsSection`, `ChosenDay`, `DayPanel`.
-      Reuses: `ReadingCard`, `StatGroup`, `ProvenanceLine`, `MeasuredPanel`'s two
-      reads._
+      **Test**: (a) `ConditionsSection` renders the readings above the week
+      region; (b) **changing the selected day leaves them untouched** — the seam
+      that catches "frozen to now" being broken later; (c) `ChosenDay` no longer
+      renders a measured block on any of the seven days.
+      _Modifies: `ConditionsSection`, `ChosenDay`, `DayPanel`, `MeasuredToday`._
+      _Deletes: `MeasuredToday`'s `readings === null` branch and its `when` prop,
+      with the tests that cover them. Once the day panel stops rendering the
+      block, nothing can reach that branch — and `CLAUDE.md` forbids leaving it
+      as dead code for a caller that no longer exists._
+
+- [ ] **Slice 4 — Compress the two reading cards into one band.**
+      Two `rounded-card bg-dark` cards side by side become one dark band with a
+      yellow `RIGHT NOW · <beach>` eyebrow: one surface, one set of padding, the
+      two readings as groups inside it rather than as separate sections.
+      Presentation only — every state branch and every wording helper stays
+      exactly as it is.
+      **Done looks like**: the same figures in materially less height, and the
+      band is the one loud thing the brief asks for.
+      **Test**: the existing `MeasuredToday` assertions pass unchanged. Any that
+      break should break because a figure moved, not because a wrapper did — if
+      a wording assertion fails here, the slice has overreached.
+      **Depends on**: Slice 3.
+      _Modifies: `MeasuredToday` (presentation), `ReadingCard` if the band needs
+      a surface-less variant. Reuses: `StatGroup`, `ProvenanceLine`, ADR-0015's
+      glyphs._
       _This is the aesthetic-direction slice: the brief's "one loud thing". Get
       the strip's look agreed here, because everything after it is quiet by
       contrast._
 
-- [ ] **Slice 4 — Add today's rip current level to the strip.**
+- [ ] **Slice 5 — Add today's rip current level to the strip.**
       Read the surf zone at page level, find today's `SurfZoneDay` by
       `localDate`, and print its `level` word in the strip. No gloss, no surf or
       water ranges, no period name — those stay in the day panel's full block,
@@ -141,8 +166,8 @@ conflicts inside one file.
       guess; (b) a bulletin that does not reach today renders the absence rather
       than silently borrowing another day's level; (c) **no severity colour** —
       assert the level's classes do not vary by level, per ADR-0015.
-      **Depends on**: Slice 3.
-      _Modifies: `NowStrip`, `ConditionsSection`. Reuses: `readSurfZone`._
+      **Depends on**: Slice 4.
+      _Modifies: the band, `ConditionsSection`. Reuses: `readSurfZone`._
       _Costs no extra upstream request: `readSurfZone` is a `next.revalidate`
       fetch and `DayPanel` already calls it, so the Data Cache dedupes. **Verify
       this holds at build time** — the brief's fallback is to pass the value down
@@ -153,9 +178,9 @@ conflicts inside one file.
 ## PR 2 — Changing the day without leaving the chart
 
 Two slices. Independent of PR 1 in principle; sequence after it so `ChosenDay`
-is edited once by slice 1 before slice 5 restructures around it.
+is edited once by slice 2 before slice 6 restructures around it.
 
-- [ ] **Slice 5 — Put a day strip above the hourly chart.**
+- [ ] **Slice 6 — Put a day strip above the hourly chart.**
       New `DayStrip` client component: seven day pills in one row, directly above
       `HourChart` inside `ChosenDay`. Calls `useSelectedDay()`, so it and
       `WeekGrid` are one control over one fact — choosing in either moves both.
@@ -176,7 +201,7 @@ is edited once by slice 1 before slice 5 restructures around it.
       `outline-offset` clips against it. Use `overflow-x-auto` with vertical
       padding._
 
-- [ ] **Slice 6 — Remove the week grid's daylight note, and record why.**
+- [ ] **Slice 7 — Remove the week grid's daylight note, and record why.**
       Delete the single unconditional note pushed at the top of `WeekPanel`'s
       `notes`. **Keep all seven conditional failure notes exactly as they are.**
       Write an ADR superseding that one clause of ADR-0023, carrying the
@@ -201,7 +226,7 @@ is edited once by slice 1 before slice 5 restructures around it.
 
 Two slices. Independent of both PRs above and of each other.
 
-- [ ] **Slice 7 — Collapse "How to read these numbers".**
+- [ ] **Slice 8 — Collapse "How to read these numbers".**
       Wrap the whole `ConditionsNotes` region in one `<details>`, closed by
       default, using `DISCLOSURE_TARGET` on the `<summary>`. The `<summary>`
       carries the heading text so the region keeps its landmark; the `<h2>` stays
@@ -216,7 +241,7 @@ Two slices. Independent of both PRs above and of each other.
       guarantees every caveat reaches a reader.
       _Modifies: `ConditionsNotes`. Reuses: `DISCLOSURE_TARGET`._
 
-- [ ] **Slice 8 — Gather each region's attributions into one `▸ Sources`.**
+- [ ] **Slice 9 — Gather each region's attributions into one `▸ Sources`.**
       New `SourcesDisclosure` wrapping a region's `ProvenanceLine`s in one closed
       `<details>`. Applied to the now-strip, the day panel and the week panel.
       **Done looks like**: each region ends in a single `▸ Sources` line instead
@@ -227,7 +252,7 @@ Two slices. Independent of both PRs above and of each other.
       one line, which is the exact failure that ADR forbids.
       _New: `SourcesDisclosure`. Modifies: `NowStrip`, `DayPanel`, `WeekPanel`.
       Reuses: `ProvenanceLine`, `DISCLOSURE_TARGET`._
-      _Depends on Slice 3 only for the strip's own sources; the day and week
+      _Depends on Slice 4 only for the band's own sources; the day and week
       halves are independent._
 
 ---
