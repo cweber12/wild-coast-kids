@@ -316,6 +316,43 @@ export function tideStationFor(
 }
 
 /**
+ * Why the surf zone forecast does not describe this beach, or null when it does.
+ *
+ * **Half the inventory has no surf zone.** The National Weather Service issues
+ * `CAZ043` for San Diego County *Coastal Areas*, and 25 of the 51 beaches here
+ * are bays, lagoons and inlets. Printing "Rip Current Risk: High" over Sail Bay
+ * would alarm about a hazard that is not there, and would teach a reader that
+ * the line is not about the beach they chose — which costs it on the 26 beaches
+ * where it is the most important thing on the page.
+ *
+ * This is the same withholding the wave join already makes, for the same
+ * reason, and it is deliberately *not* the readout's rule: the readout is drawn
+ * on all 51 because wind blows on a bay, so a wind figure there is true.
+ *
+ * **Read off the tide station's water class rather than off the region.** Both
+ * classify the inventory identically — checked 51 of 51 — but the region is a
+ * grouping for a dropdown while the water class is a joined fact about the
+ * water, carried because the tide join has to bind an open-coast beach to an
+ * open-coast station. A beach with no tide station at all is treated as having
+ * no surf zone, because nothing here then says which water it is in.
+ */
+export function surfZoneWithheldReason(beach: Beach): string | null {
+  const station = tideStationFor(beach);
+  if (station === null) {
+    return (
+      "no tide station is bound to this beach, so nothing here says whether it is open " +
+      "coast or sheltered water, and a surf zone forecast is only true of the one"
+    );
+  }
+  if (station.water === "open-coast") return null;
+  return (
+    "the National Weather Service issues this forecast for San Diego County's coastal " +
+    "areas, and a bay, lagoon or inlet has no surf zone, so it does not describe the " +
+    "water here"
+  );
+}
+
+/**
  * The wave buoy a beach reads, or null when the join bound none.
  *
  * Throws when a beach names a buoy the table does not describe -- a broken pair

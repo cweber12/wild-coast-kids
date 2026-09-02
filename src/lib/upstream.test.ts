@@ -10,6 +10,7 @@ import {
   fetchLatestWave,
   fetchMopForecast,
   fetchSkyWording,
+  fetchSurfZoneForecast,
   fetchTideExtremes,
   MAX_OBSERVATION_AGE_MINUTES,
   MAX_WAVE_AGE_MINUTES,
@@ -17,6 +18,7 @@ import {
   OBSERVATIONS_REVALIDATE_SECONDS,
   PREDICTIONS_REVALIDATE_SECONDS,
   SKY_WORDING_REVALIDATE_SECONDS,
+  SURF_ZONE_REVALIDATE_SECONDS,
   WAVES_REVALIDATE_SECONDS,
 } from "./upstream";
 
@@ -1062,4 +1064,266 @@ describe("fetchSkyWording", () => {
     if (result.kind !== "unavailable") throw new Error("expected unavailable");
     expect(result.drift).toBe(true);
   });
+});
+
+/**
+ * The surf zone bulletin, which is two requests rather than one.
+ *
+ * The listing has no stable id in it, so what is asserted here is the policy
+ * around the pair: that both are cached, that the second is addressed by the id
+ * the first returned, and that a failure names the URL that actually failed
+ * rather than the one this read started at.
+ */
+describe("fetchSurfZoneForecast", () => {
+  const SRF_LIST = JSON.parse(
+    readFileSync(
+      join(
+        process.cwd(),
+        "src/lib/__fixtures__/nws-srf-sgx-products-20260902.json",
+      ),
+      "utf8",
+    ),
+  );
+  const SRF_TEXT = readFileSync(
+    join(process.cwd(), "src/lib/__fixtures__/nws-srf-sgx-20260902-0854z.txt"),
+    "utf8",
+  );
+  const NEWEST_ID = "36f48a5d-9b57-4fe2-9808-5f6a68ec4c64";
+
+  function servingTheBulletin() {
+    fetchMock
+      .mockResolvedValueOnce(jsonResponse(SRF_LIST))
+      .mockResolvedValueOnce(jsonResponse({ productText: SRF_TEXT }));
+  }
+
+  test("opts both requests into caching and asks for the newest bulletin by id", async () => {
+    servingTheBulletin();
+
+    const result = await fetchSurfZoneForecast();
+
+    expect(result.kind).toBe("ok");
+    const [listUrl, listOptions] = fetchMock.mock.calls[0];
+    const [textUrl, textOptions] = fetchMock.mock.calls[1];
+    expect(listUrl).toBe(
+      "https://api.weather.gov/products/types/SRF/locations/SGX",
+    );
+    // The listing is JSON-LD; the default media type is a different shape.
+    expect(listOptions.headers.Accept).toBe("application/ld+json");
+    expect(textUrl).toBe(`https://api.weather.gov/products/${NEWEST_ID}`);
+    expect(listOptions.next.revalidate).toBe(SURF_ZONE_REVALIDATE_SECONDS);
+    expect(textOptions.next.revalidate).toBe(SURF_ZONE_REVALIDATE_SECONDS);
+    expect(textOptions.headers["User-Agent"]).toContain("wild-coast-kids");
+  });
+
+  test("reads the San Diego zone out of a bulletin that also carries Orange County", async () => {
+    servingTheBulletin();
+
+    const result = await fetchSurfZoneForecast();
+
+    expect(result.kind).toBe("ok");
+    if (result.kind !== "ok") return;
+    expect(result.forecast.zoneId).toBe("CAZ043");
+    expect(result.forecast.periods.map((period) => period.level)).toEqual([
+      "Low",
+      "Low",
+    ]);
+    // The issuance instant comes from the listing, not from the bulletin's own
+    // "154 AM PDT Wed Sep 2 2026" line, which carries no machine-readable zone.
+    expect(result.forecast.issuedMs).toBe(
+      Date.parse("2026-09-02T08:54:00+00:00"),
+    );
+  });
+
+  test("a quiet listing is reported against the listing's URL", async () => {
+    fetchMock.mockResolvedValueOnce(jsonResponse({}, 503));
+
+    const result = await fetchSurfZoneForecast();
+
+    expect(result.kind).toBe("unavailable");
+    if (result.kind !== "unavailable") return;
+    expect(result.url).toBe(
+      "https://api.weather.gov/products/types/SRF/locations/SGX",
+    );
+    expect(result.reason).toContain("503");
+    expect(result.drift).toBe(false);
+    // The bulletin is never asked for when the listing did not answer.
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  /**
+   * No walking back down the listing to an older bulletin. A surf zone forecast
+   * is a judgement with a stated window, and serving yesterday's under today's
+   * date is the failure this page can least afford.
+   */
+  test("a bulletin the listing named but cannot serve is unavailable, not the one before it", async () => {
+    fetchMock
+      .mockResolvedValueOnce(jsonResponse(SRF_LIST))
+      .mockResolvedValueOnce(jsonResponse({}, 404));
+
+    const result = await fetchSurfZoneForecast();
+
+    expect(result.kind).toBe("unavailable");
+    if (result.kind !== "unavailable") return;
+    expect(result.url).toBe(`https://api.weather.gov/products/${NEWEST_ID}`);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  test("a bulletin with no San Diego section is unavailable rather than Orange County's", async () => {
+    const orangeOnly = SRF_TEXT.slice(0, SRF_TEXT.indexOf("CAZ043-"));
+    fetchMock
+      .mockResolvedValueOnce(jsonResponse(SRF_LIST))
+      .mockResolvedValueOnce(jsonResponse({ productText: orangeOnly }));
+
+    const result = await fetchSurfZoneForecast();
+
+    expect(result.kind).toBe("unavailable");
+    if (result.kind !== "unavailable") return;
+    expect(result.reason).toContain("CAZ043");
+  });
+
+  test("a bulletin missing its body is drift, not a quiet office", async () => {
+    fetchMock
+      .mockResolvedValueOnce(jsonResponse(SRF_LIST))
+      .mockResolvedValueOnce(jsonResponse({ id: NEWEST_ID }));
+
+    const result = await fetchSurfZoneForecast();
+
+    expect(result.kind).toBe("unavailable");
+    if (result.kind !== "unavailable") return;
+    expect(result.drift).toBe(true);
+  });
+
+  test("a network error on the listing is reported rather than thrown", async () => {
+    fetchMock.mockRejectedValueOnce(new Error("ECONNRESET"));
+
+    const result = await fetchSurfZoneForecast();
+
+    expect(result.kind).toBe("unavailable");
+    if (result.kind !== "unavailable") return;
+    expect(result.reason).toContain("ECONNRESET");
+  });
+
+  test("a network error on the bulletin names the bulletin's URL, not the listing's", async () => {
+    fetchMock
+      .mockResolvedValueOnce(jsonResponse(SRF_LIST))
+      .mockRejectedValueOnce(new Error("socket hang up"));
+
+    const result = await fetchSurfZoneForecast();
+
+    expect(result.kind).toBe("unavailable");
+    if (result.kind !== "unavailable") return;
+    expect(result.url).toBe(`https://api.weather.gov/products/${NEWEST_ID}`);
+    expect(result.reason).toContain("socket hang up");
+  });
+
+  test("a listing that is not JSON is reported against the listing", async () => {
+    fetchMock.mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      json: async () => {
+        throw new Error("Unexpected token <");
+      },
+    });
+
+    const result = await fetchSurfZoneForecast();
+
+    expect(result.kind).toBe("unavailable");
+    if (result.kind !== "unavailable") return;
+    expect(result.reason).toContain("Unexpected token <");
+  });
+
+  test("a bulletin body that is not JSON is reported against the bulletin", async () => {
+    fetchMock
+      .mockResolvedValueOnce(jsonResponse(SRF_LIST))
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => {
+          throw new Error("Unexpected end of JSON input");
+        },
+      });
+
+    const result = await fetchSurfZoneForecast();
+
+    expect(result.kind).toBe("unavailable");
+    if (result.kind !== "unavailable") return;
+    expect(result.url).toBe(`https://api.weather.gov/products/${NEWEST_ID}`);
+    expect(result.reason).toContain("Unexpected end of JSON input");
+  });
+
+  /**
+   * An office serving no bulletins at all is a quiet feed, not a bug here, so
+   * it must not be flagged as drift -- the two are kept apart everywhere in
+   * this module because drift is something to chase and quiet is something to
+   * wait out.
+   */
+  test("an empty listing is quiet rather than drift", async () => {
+    fetchMock.mockResolvedValueOnce(jsonResponse({ "@graph": [] }));
+
+    const result = await fetchSurfZoneForecast();
+
+    expect(result.kind).toBe("unavailable");
+    if (result.kind !== "unavailable") return;
+    expect(result.drift).toBe(false);
+  });
+
+  test("a listing in the wrong shape is drift", async () => {
+    fetchMock.mockResolvedValueOnce(jsonResponse({ features: [] }));
+
+    const result = await fetchSurfZoneForecast();
+
+    expect(result.kind).toBe("unavailable");
+    if (result.kind !== "unavailable") return;
+    expect(result.drift).toBe(true);
+  });
+
+  test("a risk level the bulletin does not define is drift", async () => {
+    const at = SRF_TEXT.indexOf("CAZ043-");
+    const invented =
+      SRF_TEXT.slice(0, at) +
+      SRF_TEXT.slice(at).replace(
+        "Rip Current Risk*.............Low.",
+        "Rip Current Risk*.............Extreme.",
+      );
+    fetchMock
+      .mockResolvedValueOnce(jsonResponse(SRF_LIST))
+      .mockResolvedValueOnce(jsonResponse({ productText: invented }));
+
+    const result = await fetchSurfZoneForecast();
+
+    expect(result.kind).toBe("unavailable");
+    if (result.kind !== "unavailable") return;
+    expect(result.drift).toBe(true);
+  });
+});
+
+/**
+ * The zone and office are parameters with defaults rather than constants baked
+ * into the request, which is what lets the Orange County section of the same
+ * bulletin be read at all. Nothing on this site asks for it -- the inventory is
+ * one county -- so this is the test that keeps the seam honest.
+ */
+test("reads a zone other than the default when asked for one", async () => {
+  const SRF_LIST = JSON.parse(
+    readFileSync(
+      join(
+        process.cwd(),
+        "src/lib/__fixtures__/nws-srf-sgx-products-20260902.json",
+      ),
+      "utf8",
+    ),
+  );
+  const SRF_TEXT = readFileSync(
+    join(process.cwd(), "src/lib/__fixtures__/nws-srf-sgx-20260902-0854z.txt"),
+    "utf8",
+  );
+  fetchMock
+    .mockResolvedValueOnce(jsonResponse(SRF_LIST))
+    .mockResolvedValueOnce(jsonResponse({ productText: SRF_TEXT }));
+
+  const result = await fetchSurfZoneForecast("CAZ552", "SGX");
+
+  expect(result.kind).toBe("ok");
+  if (result.kind !== "ok") return;
+  expect(result.forecast.zoneId).toBe("CAZ552");
 });

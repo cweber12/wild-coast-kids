@@ -244,6 +244,30 @@ export function localMidnightOf(
  * behind Greenwich — this coast included — names the day before. So the
  * calendar value is put back exactly where it was parsed from.
  */
+/**
+ * The weekday a local date falls on, in full: `Thursday`.
+ *
+ * For matching a publisher's own weekday word back onto the calendar, which is
+ * what `nws-surf-zone.ts` does with a surf zone forecast period named
+ * `THURSDAY`. That product names its periods by weekday and never by date, so
+ * resolving the word is the only way to know which day it describes.
+ *
+ * Full rather than short, because the words being matched are the publisher's
+ * and they are spelled out. Comparison is the caller's to case-fold: this
+ * returns what `Intl` calls the day, not a token shaped for one consumer.
+ *
+ * Same UTC round-trip as `localDayLabel` below, for the reason recorded there —
+ * a date carries no zone, and rendering it anywhere behind Greenwich would name
+ * the day before.
+ */
+export function localWeekdayOf(localDate: string): string {
+  const [year, month, day] = partsOf(localDate);
+  return new Intl.DateTimeFormat("en-US", {
+    timeZone: "UTC",
+    weekday: "long",
+  }).format(new Date(Date.UTC(year, month - 1, day)));
+}
+
 export function localDayLabel(localDate: string): string {
   const [year, month, day] = partsOf(localDate);
   return new Intl.DateTimeFormat("en-US", {

@@ -16,6 +16,7 @@ import {
   type Beach,
   beachBySlug,
   mopLineFor,
+  surfZoneWithheldReason,
   tideStationFor,
   waveBuoyFor,
   type ObservationStation,
@@ -39,10 +40,12 @@ import type {
   WeatherHour,
 } from "./nws-gridpoint";
 import type { ForecastPeriod } from "./nws-forecast";
+import type { RiskLevel } from "./nws-surf-zone";
 import {
   fetchGridForecast,
   fetchHourlyTide,
   fetchSkyWording,
+  fetchSurfZoneForecast,
   fetchLatestNdbcAir,
   fetchLatestObservation,
   fetchLatestWave,
@@ -1837,4 +1840,127 @@ export async function readSkyWording(
   });
 
   return { ...binding, state: { kind: "week", days } };
+}
+
+/** One day of the surf zone forecast, as the panel prints it. */
+export type SurfZoneDay = {
+  localDate: string;
+  /** The publisher's own name for the period this day was read from. */
+  periodName: string;
+  level: RiskLevel;
+  /** The bulletin's own sentence for that level. */
+  meaning: string;
+};
+
+export type SurfZoneView = {
+  beachName: string;
+  state:
+    | {
+        kind: "forecast";
+        issuedMs: number;
+        /**
+         * The office's own emphasis line, or null.
+         *
+         * Scoped to the bulletin rather than to a day, and it may name a level
+         * no day below it does -- measured 2026-08-28, headline HIGH over a
+         * TODAY that read Moderate. Carried unreconciled, because both are
+         * correct at their own scope.
+         */
+        headline: string | null;
+        /** Only the days the bulletin reached, ascending. Never padded. */
+        days: SurfZoneDay[];
+      }
+    | { kind: "unavailable"; detail: string; drift: boolean }
+    /** This beach has no surf zone, so the product is not about it. */
+    | { kind: "no-surf-zone"; reason: string };
+};
+
+/**
+ * The surf zone forecast for one beach.
+ *
+ * **The zone is the inventory's, not the beach's.** Every beach here resolves
+ * to `CAZ043`, so this read takes no zone argument and there is no per-beach
+ * binding to go stale -- see `SURF_ZONE_ID` for the measurement that decided
+ * it. What is per-beach is whether the product describes this water at all.
+ *
+ * **The withholding is decided before the fetch.** A bay beach does not reach
+ * the National Weather Service at all, which is the right order: asking for a
+ * forecast in order to throw it away would put 25 beaches' worth of requests on
+ * a publisher for nothing.
+ *
+ * `nowMs` is injected for the reason every read here injects it: day selection
+ * is asserted against fixed instants and no clock is read during a render.
+ */
+export async function readSurfZone(
+  slug: string,
+  nowMs: number = Date.now(),
+): Promise<SurfZoneView> {
+  const beach = beachBySlug(slug);
+  if (!beach) {
+    throw new Error(
+      `readSurfZone: no beach in the inventory with slug "${slug}".`,
+    );
+  }
+
+  const withheld = surfZoneWithheldReason(beach);
+  if (withheld !== null) {
+    return {
+      beachName: beach.name,
+      state: { kind: "no-surf-zone", reason: withheld },
+    };
+  }
+
+  const result = await fetchSurfZoneForecast();
+  if (result.kind === "unavailable") {
+    return {
+      beachName: beach.name,
+      state: {
+        kind: "unavailable",
+        detail: result.reason,
+        drift: result.drift,
+      },
+    };
+  }
+
+  const { forecast } = result;
+  const meanings = new Map(
+    forecast.meanings.map((entry) => [entry.level, entry.meaning]),
+  );
+
+  // Flattened from periods to days, because the panel is indexed by day and the
+  // product is not: an afternoon bulletin's first period covers two dates, and
+  // both of them are that period's risk.
+  const byDate = new Map<string, SurfZoneDay>();
+  for (const period of forecast.periods) {
+    for (const localDate of period.localDates) {
+      byDate.set(localDate, {
+        localDate,
+        periodName: period.name,
+        level: period.level,
+        meaning:
+          meanings.get(period.level) ??
+          // The bulletin defines its levels in its own body, so a missing gloss
+          // means the office changed the bulletin rather than that this level
+          // has no meaning. Said plainly rather than left blank.
+          "The bulletin did not carry its usual explanation of this level.",
+      });
+    }
+  }
+
+  // Walked over this page's own week rather than over the payload's dates, so
+  // this cannot disagree with the rows above it about which day is Tuesday.
+  const days = weekOfDays(nowMs).flatMap((frame) => {
+    const day = byDate.get(frame.localDate);
+    return day === undefined ? [] : [day];
+  });
+
+  return {
+    beachName: beach.name,
+    state: {
+      kind: "forecast",
+      issuedMs: forecast.issuedMs,
+      headline: forecast.headline,
+      days,
+    },
+  };
 }

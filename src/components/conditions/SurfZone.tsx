@@ -1,0 +1,179 @@
+/**
+ * The National Weather Service's surf zone forecast for one day.
+ *
+ * The page's only relayed judgement, and the only thing on it that answers
+ * "should my kid go in the water today" rather than handing a reader a number
+ * to interpret. Everything else here is an instrument reading or a model.
+ *
+ * **The words are the publisher's, including the ones that explain the words.**
+ * ADR-0009 forbids this site forming a forecaster's judgement, and authoring
+ * the sentence that says what "Moderate" means would be forming it one step
+ * removed. The bulletin carries its own glossary, so the gloss under the level
+ * is quoted from it. Nothing here rewords either.
+ *
+ * **The headline is scoped to the bulletin and the level is scoped to the
+ * day, and they can differ.** Measured 2026-08-28: the office headlined `HIGH
+ * RIP CURRENT RISK` over a `TODAY` that read Moderate, because Saturday was the
+ * High one. Both are correct, so both are shown and the copy says which is
+ * which. Reconciling them here -- taking the worse, or hiding the headline when
+ * it disagrees -- would be this site editing a safety product.
+ *
+ * **The period's own name is printed beside the day.** The bulletin names its
+ * periods and never dates them; `resolvePeriodDates` works out which days a
+ * period covers, and that is our arithmetic rather than the office's. Showing
+ * the name is what keeps the two apart: on an afternoon bulletin a reader sees
+ * "THIS AFTERNOON THROUGH WEDNESDAY" against a Wednesday and can tell that one
+ * period covers both days.
+ *
+ * **No colour by level, and that is deliberate rather than unfinished.**
+ * ADR-0015 records that a surface on this page is decoration and not a verdict,
+ * because ADR-0009 forbids the verdict. A three-step severity palette would be
+ * this site choosing what red means, on top of a scale the office already
+ * publishes in words. The level is emphasised by size and weight, identically
+ * at all three. Whether that is enough emphasis for `High` is a question for a
+ * human looking at the page, which is why #217 is `needs-human`.
+ */
+
+import type { SurfZoneDay, SurfZoneView } from "@/lib/conditions";
+import { localTimeOf } from "@/lib/pacific-time";
+import { PAGE_MUTED } from "./cardText";
+import { ProvenanceLine } from "./ProvenanceLine";
+
+/**
+ * The label register, on the page ground rather than on a card.
+ *
+ * A card heading rather than a region one: this block sits inside the day
+ * panel, whose `<h2>` is the region. ADR-0014 is what makes that distinction
+ * load-bearing -- a region, a card inside it and a day inside that were all
+ * rendering at the same 10px before it. `text-ocean` because this is the page's
+ * ground, where the cards' yellow is measured against `bg-dark` and nothing
+ * else.
+ */
+const BLOCK_HEADING =
+  "text-2xs mb-3 font-extrabold tracking-widest text-ocean uppercase";
+
+/** What the office calls this product, as the provenance line names it. */
+const SOURCE = "Surf zone forecast, San Diego County Coastal Areas";
+
+export type SurfZoneProps = {
+  /** The read's own state: a forecast, a quiet office, or water with no surf zone. */
+  state: SurfZoneView["state"];
+  /** The day being shown, `YYYY-MM-DD`. */
+  localDate: string;
+  /** That day, worded for a reader: `Thursday`. Matches the panel's heading. */
+  when: string;
+};
+
+/** The one sentence a reader gets when there is nothing to relay. */
+function Absence({ children }: { children: React.ReactNode }) {
+  /*
+    `PAGE_MUTED` rather than the card's colour, for the reason `MeasuredToday`
+    records: `CARD_MUTED` paints 1.03:1 on this ground and says nothing at all.
+    On the 25 sheltered beaches this sentence is what a reader always sees, so
+    it is not the rare path.
+  */
+  return (
+    <p className={`leading-relaxed text-base ${PAGE_MUTED}`}>{children}</p>
+  );
+}
+
+function Reading({ day, when }: { day: SurfZoneDay; when: string }) {
+  return (
+    <>
+      <p className="leading-display mb-1 text-2xl font-black italic">
+        {day.level}
+      </p>
+      {/*
+        The publisher's sentence, verbatim. It is the whole reason the level
+        word is safe to print at this size: "High" alone is a rating this site
+        would then owe a reader an explanation for, and the office already
+        wrote one.
+      */}
+      <p className="leading-relaxed mb-2 max-w-130 text-base">{day.meaning}</p>
+      <p className={`leading-relaxed text-sm ${PAGE_MUTED}`}>
+        For {when}, from the period the office called &ldquo;{day.periodName}
+        &rdquo;.
+      </p>
+    </>
+  );
+}
+
+export function SurfZone({ state, localDate, when }: SurfZoneProps) {
+  if (state.kind === "no-surf-zone") {
+    return (
+      <section>
+        <h3 className={BLOCK_HEADING}>Rip current risk</h3>
+        <Absence>
+          The National Weather Service does not forecast one here:{" "}
+          {state.reason}.
+        </Absence>
+      </section>
+    );
+  }
+
+  if (state.kind === "unavailable") {
+    return (
+      <section>
+        <h3 className={BLOCK_HEADING}>Rip current risk</h3>
+        {/*
+          The upstream reason is shown rather than summarised. It is the same
+          policy every other panel here follows: a reader owed an absence is
+          owed the reason, and "temporarily unavailable" is what a site says
+          when it has not looked.
+        */}
+        <Absence>
+          The National Weather Service&apos;s surf zone forecast could not be
+          read: {state.detail}
+        </Absence>
+      </section>
+    );
+  }
+
+  const day = state.days.find((entry) => entry.localDate === localDate) ?? null;
+
+  return (
+    <section>
+      <h3 className={BLOCK_HEADING}>Rip current risk</h3>
+
+      {state.headline !== null && (
+        /*
+          Above the day's level, because it is the office's own emphasis and
+          leading with it is what the office did. The scope is spelled out in
+          the same breath: this line covers the whole bulletin, so it can name a
+          level the day below does not, and a reader who is not told that reads
+          the pair as a contradiction.
+        */
+        <p className="leading-relaxed mb-3 max-w-130 text-base">
+          The forecast office headlined this bulletin{" "}
+          <strong className="font-black">{state.headline}</strong>. A headline
+          covers the whole bulletin rather than one day, so it can name a level
+          no single day below it does.
+        </p>
+      )}
+
+      {day === null ? (
+        <Absence>
+          This forecast does not reach {when}. It is issued twice a day and
+          reaches about two days ahead.
+        </Absence>
+      ) : (
+        <Reading day={day} when={when} />
+      )}
+
+      {/*
+        `surface="page"`, because this block renders on the page ground and not
+        on a card. The issuance is in the note rather than left off: a judgement
+        reissued twice a day is one whose age a reader can act on, and this is
+        the only place the page says when it was made.
+      */}
+      <div className="mt-3">
+        <ProvenanceLine
+          source={SOURCE}
+          network="NWS"
+          note={`issued ${localTimeOf(state.issuedMs)}`}
+          surface="page"
+        />
+      </div>
+    </section>
+  );
+}

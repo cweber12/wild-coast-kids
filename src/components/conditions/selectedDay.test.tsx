@@ -101,6 +101,8 @@ function dayView(index: number): DayView {
       },
     ],
     wording: <p>Words for {localDate}</p>,
+    // A stand-in: what these tests assert is the day selection, not this block.
+    surfZone: <p>Rip current risk on {localDate}</p>,
     measured: <p>Measured on {localDate}</p>,
   };
 }
