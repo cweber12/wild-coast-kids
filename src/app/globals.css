@@ -70,6 +70,13 @@
   --text-title: clamp(32px, 5vw, 56px);
   --text-card: clamp(30px, 3vw, 44px);
   --text-quote: clamp(20px, 2.8vw, 34px);
+  /* The tool register. `/conditions` is a page somebody reads a number off
+     rather than a document they arrive at, and the display sizes above are
+     scaled for arrival: the same `<h1>` that opens /art at 56px pushes the
+     first measurement off a 639px window here. Its own token rather than a
+     smaller `--text-title`, because six other pages take that one and none of
+     them has this problem. */
+  --text-tool-title: clamp(24px, 3vw, 36px);
 
   --leading-display: 1;
   --leading-tight: 1.1;

@@ -12,8 +12,27 @@ vi.mock("@/components/conditions/DayPanel", () => ({
 }));
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push: vi.fn() }) }));
 
-const { default: Conditions, revalidate } = await import("./page");
+const { default: Conditions, revalidate, metadata } = await import("./page");
 const { DEFAULT_BEACH_SLUG } = await import("@/lib/beaches");
+
+/**
+ * The sentence that introduces this page now lives only here.
+ *
+ * It used to be a lead paragraph on the page as well, above the readings, where
+ * it described the site to somebody who had just clicked "Conditions" to reach
+ * it. That copy came off for the space; this is the copy that was always doing
+ * the work, because a description is read by people who have *not* arrived.
+ *
+ * Asserted rather than assumed: with the on-page paragraph gone, nothing else
+ * in the suite would notice this string being deleted, and the page would
+ * quietly stop describing itself to search and to a shared link.
+ */
+test("the page still introduces itself where an introduction is read", () => {
+  expect(metadata.description).toContain(
+    "Real-time surf, tide, wind and visibility for San Diego's coast",
+  );
+  expect(metadata.description).toContain("families planning tidepool visits");
+});
 
 test("the conditions page exposes its landmark and heading", () => {
   render(<Conditions />);

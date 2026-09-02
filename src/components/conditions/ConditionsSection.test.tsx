@@ -109,11 +109,36 @@ test("the page says these are instruments and not a safety assessment", () => {
   render(<ConditionsSection slug={DEFAULT_BEACH_SLUG} />);
 
   expect(
-    screen.getByText(/readings from public instruments, not a safety/),
+    screen.getByText(/Instrument readings, not a safety assessment/),
   ).toBeDefined();
   expect(
-    screen.getByText(/Lifeguards and the signs posted at the beach are the/),
+    screen.getByText(/signs posted at the beach are the authority on the day/),
   ).toBeDefined();
+});
+
+/**
+ * The introduction came off, and this is what may not come off with it.
+ *
+ * The eyebrow and the lead paragraph described the page to a reader who had
+ * already clicked "Conditions" to reach it, and the three of them together with
+ * a 56px headline put the first measurement off a 639px window. Removing them
+ * is the point of the slice; removing either half of the notice beside them
+ * would make a shipped ADR untrue, and the two edits look identical in a diff
+ * that is mostly deletions.
+ *
+ * The lead copy is asserted gone here and asserted present in
+ * `src/app/conditions/page.test.tsx`, which checks the metadata description. It
+ * is one sentence with two jobs, and only one of them was ever done on the page
+ * itself.
+ */
+test("the self-description is gone and the standing notice is not", () => {
+  render(<ConditionsSection slug={DEFAULT_BEACH_SLUG} />);
+
+  expect(screen.queryByText(/Surf · Tide · Wind · Visibility/)).toBeNull();
+  expect(screen.queryByText(/built by a local/)).toBeNull();
+  expect(screen.queryByText(/Know before you go/)).toBeNull();
+
+  expect(screen.getByText(/not a safety assessment/)).toBeDefined();
 });
 
 /**

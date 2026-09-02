@@ -32,54 +32,67 @@ export function ConditionsSection({ slug }: { slug: string }) {
   return (
     <section className="px-gutter-sm py-section-sm md:px-gutter md:py-section">
       {/*
-        The chooser sits beside the title rather than under the lead paragraph,
-        and the move is worth about 103px of the first screen — enough to decide
-        whether the readings land above the fold on a 639px window or below it.
+        THE PAGE INTRODUCES ITSELF IN ONE LINE, BECAUSE THE READER ARRIVED ON
+        PURPOSE.
 
-        It is also where the control belongs. It decides what every figure on
-        the page means, and it was the fourth element down, under a paragraph,
-        with a 13px label. Bottom-aligned so the two columns finish on the same
-        line; stacked below `md`, where there is no width to share.
+        The chooser sits beside the title rather than under it, and it decides
+        what every figure on the page means: it was the fourth element down,
+        under a paragraph, with a 13px label. Bottom-aligned so the two columns
+        finish on the same line; stacked below `md`, where there is no width to
+        share.
+
+        An eyebrow reading "Surf · Tide · Wind · Visibility" and a paragraph
+        saying the site is real-time surf, tide, wind and visibility for San
+        Diego's coast stood above this. Both described the page to somebody who
+        had just clicked "Conditions" to reach it, and together with a 56px
+        headline they meant the first measurement on a page about measurements
+        was off a 639px window entirely.
+
+        The lead paragraph is not lost, it is where it was always doing the
+        work: the `metadata` export in ../../app/conditions/page.tsx carries it
+        verbatim as the description, which is the place a sentence introducing
+        this page to somebody who has *not* arrived at it is actually read.
+        `ConditionsTeaser` on the landing page carries the other copy of it, for
+        the reader who has not clicked yet.
+
+        The `<h1>` keeps the site's voice and drops a register: `--text-tool-
+        title`, not `--text-title`. See the token's own note -- six other pages
+        take the larger one and none of them opens on a figure.
       */}
-      <div className="mb-9 md:flex md:items-end md:justify-between md:gap-10">
+      <div className="mb-7 md:flex md:items-end md:justify-between md:gap-10">
         <div>
-          <p className="mb-5 text-2xs font-extrabold tracking-widest text-ocean uppercase">
-            Surf · Tide · Wind · Visibility
-          </p>
-          <h1 className="text-title leading-display mb-4 font-black italic">
+          <h1 className="text-tool-title leading-display mb-3 font-black italic">
             Check <span className="text-ocean">conditions</span> first.
           </h1>
+
+          {/*
+            The standing notice ADR-0009 turns on: that decision rejects an
+            embed partly because "the host page is asserting something it does
+            not control", and this sentence is the assertion. It said less than
+            this and sat fourth of four at the bottom of a 2171px page until
+            2026-08-25.
+
+            It moved from the chooser's column to the title's when the lead
+            paragraph came out, and the move is what keeps the row balanced: the
+            row is `md:items-end`, so with nothing under the title this column
+            was a lone heading bottom-aligned against a two-element one. The
+            notice is now the thing the title sits above, which is also the
+            reading order ADR-0009 wants -- the qualification arrives with the
+            page's name rather than as a footnote to the control.
+
+            One sentence rather than two, and both claims kept: instrument
+            readings are not a safety assessment, and the authority on the day
+            is someone else. Those two halves are what the ADR names, and
+            `ConditionsSection.test.tsx` asserts each of them separately so a
+            later tightening cannot quietly drop the liability half.
+          */}
           <p className="leading-relaxed max-w-130 text-base text-fog">
-            Real-time surf, tide, wind and visibility for San Diego&apos;s coast
-            — built by a local, for families planning tidepool visits and hikes.
-            Know before you go.
+            Instrument readings, not a safety assessment — lifeguards and the
+            signs posted at the beach are the authority on the day.
           </p>
         </div>
 
-        {/*
-          The standing notice ADR-0009 turns on: that decision rejects an embed
-          partly because "the host page is asserting something it does not
-          control", and this sentence is the assertion. It said less than this
-          and sat fourth of four at the bottom of a 2171px page until now.
-
-          Here rather than in a band of its own above the readings, and the
-          reason is measured. The row is `md:items-end`, so this column is
-          bottom-aligned to a taller one and 85px sat empty in it; the notice
-          fills waste and costs the first screen 25px, where a band above the
-          readings cost 63px and put the air card's second attribution below
-          the fold. ADR-0010 turns on those two distances being comparable at a
-          glance. See the 2026-08-25 addendum in docs/plans/conditions-tool.md
-          for the three placements and their numbers.
-
-          Above the chooser, not below it, so it is read before the control
-          rather than as a footnote to it.
-        */}
-        <div className="mt-7 md:mt-0 md:w-72">
-          <p className="leading-relaxed mb-4 text-base text-fog">
-            These are readings from public instruments, not a safety assessment.
-            Lifeguards and the signs posted at the beach are the authority on
-            the day.
-          </p>
+        <div className="mt-6 md:mt-0 md:w-72">
           <BeachSelector groups={groups} current={slug} />
         </div>
       </div>
