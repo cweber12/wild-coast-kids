@@ -145,6 +145,21 @@ export type HourSeries = {
   label: string;
   /** The unit the values are in: "ft", "mph". */
   unitLabel: string;
+  /**
+   * How many decimal places this product's figures print to.
+   *
+   * **Beside the unit because it is the same kind of fact**: what a reader is
+   * told this number is. ADR-0042 settles where it comes from — a figure prints
+   * at the resolution its publisher issues — and that resolution differs per
+   * product, so a chart drawing four of them cannot hold one rule. The decision
+   * a caller is making here is which publisher's grid this series came off, and
+   * the reason for the answer belongs at the call site with the rest of the
+   * series' words.
+   *
+   * Every place this component states a value reads it, which is the whole
+   * point: four of them agreeing and a fifth going its own way is #191.
+   */
+  decimals: number;
   /** The series, in time order. Empty renders `absence` in place of the plot. */
   points: readonly SparkPoint[];
   /** The spoken equivalent of this plot. Composed by the caller. */
@@ -497,7 +512,8 @@ export function HourChart({
   // prop's docstring: picking the first one with data would be a rule a reader
   // could not see.
   const active = series[mounted ? tab : 0] ?? series[0];
-  const { points, unitLabel, description, absence, provenance } = active;
+  const { points, unitLabel, decimals, description, absence, provenance } =
+    active;
 
   const onTabKeyDown = (event: React.KeyboardEvent) => {
     const moves: Record<string, number> = { ArrowLeft: -1, ArrowRight: 1 };
@@ -742,7 +758,7 @@ export function HourChart({
       // which is the position that found it. On a fall-back day those are
       // different hours from position 3 onward -- see ADR-0040.
       hourLabelAt(selectedPoint.atMs),
-      `${selectedPoint.value.toFixed(1)} ${unitLabel}`,
+      `${selectedPoint.value.toFixed(decimals)} ${unitLabel}`,
       cloudAt === undefined ? "no cloud forecast" : `${cloudAt}% cloud`,
       dark ? "before sunrise or after sunset" : "in daylight",
       selectedPoint.published ? null : "between published points",
@@ -885,10 +901,10 @@ export function HourChart({
         */}
           <div className="text-2xs flex w-12 shrink-0 flex-col justify-between py-px text-right text-fog">
             <span data-axis="high">
-              {highValue.toFixed(1)} {unitLabel}
+              {highValue.toFixed(decimals)} {unitLabel}
             </span>
             <span data-axis="low">
-              {lowValue.toFixed(1)} {unitLabel}
+              {lowValue.toFixed(decimals)} {unitLabel}
             </span>
           </div>
 
@@ -1116,8 +1132,8 @@ export function HourChart({
                       has just selected.
                     */}
                       <span className="absolute -m-px h-px w-px overflow-hidden">
-                        {hourLabelAt(point.atMs)}, {point.value.toFixed(1)}{" "}
-                        {unitLabel}
+                        {hourLabelAt(point.atMs)},{" "}
+                        {point.value.toFixed(decimals)} {unitLabel}
                         {cloudAt === undefined ? "" : `, ${cloudAt}% cloud`}
                       </span>
                     </button>
@@ -1239,8 +1255,9 @@ export function HourChart({
         </div>
 
         <p className="text-2xs leading-relaxed mt-3 text-fog">
-          Low {lowValue.toFixed(1)} {unitLabel}, high {highValue.toFixed(1)}{" "}
-          {unitLabel} {when}. Night is shaded; cloud is the band above.
+          Low {lowValue.toFixed(decimals)} {unitLabel}, high{" "}
+          {highValue.toFixed(decimals)} {unitLabel} {when}. Night is shaded;
+          cloud is the band above.
         </p>
 
         {/*

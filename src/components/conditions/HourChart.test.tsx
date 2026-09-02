@@ -89,6 +89,7 @@ const TIDE = {
   key: "tide",
   label: "Tide",
   unitLabel: "ft",
+  decimals: 1,
   points: OVERNIGHT_DIP as readonly SparkPoint[],
   description: "Tide through Monday, 0.2 to 4.8 feet",
   absence: "No hourly prediction for this day.",
@@ -104,6 +105,7 @@ const SWELL = {
   key: "swell",
   label: "Swell",
   unitLabel: "ft",
+  decimals: 1,
   points: Array.from({ length: 24 }, (_, hour) => ({
     atMs: START + hour * HOUR,
     value: 2 + Math.sin(hour / 4),

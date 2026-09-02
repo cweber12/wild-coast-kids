@@ -479,6 +479,7 @@ export async function DayPanel({ slug }: { slug: string }) {
         key: "tide",
         label: "Tide",
         unitLabel: "ft",
+        decimals: 1,
         points: tideDay === undefined ? [] : tidePoints(tideDay),
         description:
           tideDay === undefined
@@ -496,6 +497,7 @@ export async function DayPanel({ slug }: { slug: string }) {
         key: "swell",
         label: "Swell",
         unitLabel: "ft",
+        decimals: 1,
         points: waveDay === undefined ? [] : swellPoints(waveDay),
         description:
           waveDay === undefined
@@ -513,6 +515,7 @@ export async function DayPanel({ slug }: { slug: string }) {
         key: "wind",
         label: "Wind",
         unitLabel: "mph",
+        decimals: 1,
         points: gridDay === undefined ? [] : gridPoints(gridDay.windMph),
         description: gridDescription(
           "Wind",
@@ -542,6 +545,7 @@ export async function DayPanel({ slug }: { slug: string }) {
         key: "temperature",
         label: "Temp",
         unitLabel: "°F",
+        decimals: 1,
         points: gridDay === undefined ? [] : gridPoints(gridDay.airTempF),
         description: gridDescription(
           "Air temperature",
