@@ -52,7 +52,6 @@
  * instant rather than for a day. See `ConditionsSection`.
  */
 
-import { Suspense } from "react";
 import {
   readDaylightWeek,
   readGridpointWeek,

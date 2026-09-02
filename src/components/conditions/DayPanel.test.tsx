@@ -1,7 +1,7 @@
 import { beforeEach, expect, test, vi } from "vitest";
-import { fireEvent, render, screen, within } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { localMidnightOf } from "@/lib/pacific-time";
-import { SelectedDayProvider, useSelectedDay } from "./selectedDay";
+import { SelectedDayProvider } from "./selectedDay";
 
 const readSkyWording = vi.fn();
 const readSurfZone = vi.fn();
