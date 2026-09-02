@@ -351,3 +351,45 @@ describe("shapes the captured week did not contain", () => {
     );
   });
 });
+
+describe("the two figures beside the risk", () => {
+  /**
+   * Verbatim, including the second sentence. Across the sampled week the field
+   * read `3 to 5 feet`, `3 to 5 feet. Sets to 6 feet.`, `3 to 5 feet, local
+   * sets to 6 feet` and `3 to 5 feet with sets to 6 feet` — so a parser
+   * extracting a range would drop the set height on three of those four, which
+   * is the number a parent actually needs.
+   */
+  it("relays each period's surf height whole", () => {
+    const forecast = parseSurfZoneForecast(MORNING, MORNING_ISSUED);
+
+    expect(forecast.periods.map((period) => period.surfHeight)).toEqual([
+      "1 to 3 feet. Sets to 4 feet.",
+      "1 to 3 feet. Sets to 4 feet.",
+    ]);
+  });
+
+  /**
+   * The first period only, on all 14 sampled issuances. So the last day a
+   * bulletin covers never carries one, and null here is the product's shape
+   * rather than a feed having a bad day.
+   */
+  it("finds a water temperature in the first period and none in the second", () => {
+    const forecast = parseSurfZoneForecast(MORNING, MORNING_ISSUED);
+
+    expect(forecast.periods[0].waterTemperature).toBe("70 to 74 degrees.");
+    expect(forecast.periods[1].waterTemperature).toBeNull();
+  });
+
+  it("refuses a period that stopped publishing a surf height", () => {
+    const dropped = inSanDiego(
+      MORNING,
+      /^Surf Height\.+.*$/m,
+      "Thunderstorm Potential........None expected.",
+    );
+
+    expect(() => parseSurfZoneForecast(dropped, MORNING_ISSUED)).toThrow(
+      NwsSurfZoneDriftError,
+    );
+  });
+});

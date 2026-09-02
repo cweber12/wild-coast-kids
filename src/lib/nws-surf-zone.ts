@@ -119,6 +119,32 @@ export interface SurfZonePeriod {
   localDates: string[];
   /** The published level, one of three. */
   level: RiskLevel;
+  /**
+   * The published surf height, verbatim: `3 to 5 feet. Sets to 6 feet.`
+   *
+   * **Not parsed into numbers, and not reworded.** It is prose as often as it
+   * is a range -- across the 14 sampled issuances it read `3 to 5 feet`,
+   * `3 to 5 feet. Sets to 6 feet.`, `3 to 5 feet, local sets to 6 feet` and
+   * `3 to 5 feet with sets to 6 feet`. The set height is the part a parent
+   * needs and the part a range would drop, so the sentence is relayed whole.
+   *
+   * Present in every period of every sampled issuance, so its absence is drift.
+   */
+  surfHeight: string;
+  /**
+   * The published water temperature, verbatim: `70 to 74 degrees`. Null where
+   * the bulletin published none.
+   *
+   * **Null is the product's shape rather than an outage.** It appears in the
+   * first period only -- 14 of 14 -- so the last day a bulletin covers never
+   * carries one, every time. A caller must not read null here as a feed having
+   * a bad day.
+   *
+   * `degrees` rather than `°F`, because it is quoted. This site's own figures
+   * are °F (the presentation rule in `docs/plans/conditions-tool.md`), and this
+   * one is the office's sentence sitting under the office's attribution.
+   */
+  waterTemperature: string | null;
 }
 
 /** One line of the bulletin's own glossary of its risk levels. */
@@ -386,8 +412,26 @@ export function parseSurfZoneForecast(
       );
     }
 
+    const surfHeight = fieldIn(block, "Surf Height");
+    if (surfHeight === null || surfHeight.length === 0) {
+      throw new NwsSurfZoneDriftError(
+        `The period ${JSON.stringify(name)} of the ${zoneId} surf zone bulletin published ` +
+          `no "Surf Height" field. Every period of every sampled issuance carried one, ` +
+          `and it is what the risk above it is evidence of.`,
+      );
+    }
+
     const localDates = resolvePeriodDates(name, searchFrom);
-    periods.push({ name, localDates, level: levelOf(risk, name) });
+    periods.push({
+      name,
+      localDates,
+      level: levelOf(risk, name),
+      surfHeight,
+      // Absent in the second period of every sampled bulletin, so an empty
+      // value is not distinguished from a missing key: both mean the office
+      // published no water temperature for this period.
+      waterTemperature: fieldIn(block, "Water Temperature") || null,
+    });
     searchFrom = addLocalDays(localDates[localDates.length - 1], 1);
   }
 

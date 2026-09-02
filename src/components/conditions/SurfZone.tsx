@@ -90,6 +90,46 @@ function Reading({ day, when }: { day: SurfZoneDay; when: string }) {
         wrote one.
       */}
       <p className="leading-relaxed mb-2 max-w-130 text-base">{day.meaning}</p>
+
+      {/*
+        The two published figures, under the risk they belong to rather than
+        beside the day's swell.
+
+        **Surf height is the evidence for the level, not a surf reading.**
+        "High" alone is a bare word; "High -- 3 to 5 feet. Sets to 6 feet." is
+        one statement. It deliberately does not sit next to CDIP's swell, which
+        the hour chart's swell tab and the map readout both carry: those are
+        significant wave height at 10 m depth and this is breaking surf face
+        height, so the two disagree by several times over and a reader with both
+        in view would take one instrument for broken. Same region, never
+        adjacent, and co-visible only when a reader has chosen the swell tab.
+
+        **Both are relayed verbatim, "degrees" included.** This site's own
+        figures are °F and feet, and reformatting these to match would edit a
+        quoted product to look like our own. They sit under the office's
+        attribution, which is what says whose sentence they are. The set height
+        is the part a range would drop and the part a parent needs.
+      */}
+      <dl className="leading-relaxed mb-2 max-w-130 text-base">
+        <div className="flex gap-2">
+          <dt className={PAGE_MUTED}>Surf</dt>
+          <dd>{day.surfHeight}</dd>
+        </div>
+        {day.waterTemperature !== null && (
+          <div className="flex gap-2">
+            <dt className={PAGE_MUTED}>Water</dt>
+            <dd>{day.waterTemperature}</dd>
+          </div>
+        )}
+      </dl>
+
+      {/*
+        No sentence when the water temperature is missing. It is absent from the
+        last day of every bulletin -- the office publishes it in the first
+        period only, 14 of 14 -- so an absence line would appear on a day out of
+        every two or three and would read as a fault that is really a cadence.
+        The days that have it show it; the days that do not say nothing.
+      */}
       <p className={`leading-relaxed text-sm ${PAGE_MUTED}`}>
         For {when}, from the period the office called &ldquo;{day.periodName}
         &rdquo;.
@@ -161,6 +201,29 @@ export function SurfZone({ state, localDate, when }: SurfZoneProps) {
           <strong className="font-black">{state.headline}</strong>. A headline
           covers the whole bulletin rather than one day, so it can name a level
           no single day below it does.
+        </p>
+      )}
+
+      {state.staleAfterHours !== null && (
+        /*
+          Stated rather than withheld, which is the opposite of what a stale
+          buoy reading gets. `MAX_WAVE_AGE_MINUTES` drops an old measurement
+          because a number with no time attached reads as now; a judgement is
+          different. The office's last published one is still the best
+          information anyone has about this water, and hiding it would leave the
+          page silent on the day that matters most. So it stays, and the reader
+          is told the office has missed a cycle.
+
+          Above the level, because it changes how everything under it should be
+          read.
+        */
+        <p className="leading-relaxed mb-3 max-w-130 text-base">
+          <strong className="font-black">
+            This is {state.staleAfterHours} hours old.
+          </strong>{" "}
+          The National Weather Service issues it twice a day, so a gap this long
+          means one has been missed. What it says below was true when it was
+          written.
         </p>
       )}
 

@@ -326,3 +326,31 @@ no gate can check that it does. It is why #217 is `needs-human`.
 **What it does not do**: deliver active alerts. The headline is the SGX
 forecaster's announcement text, not the alert product, and it appears only when
 that office chooses to lead with it. `Active alerts` stays out of scope above.
+
+### 2026-09-02 — the work is done, and what it cost
+
+All five slices shipped: #216 (the horizon correction), #218 (the block, the
+zone binding, the period resolution) and #219 (the two figures and staleness).
+Three things are worth recording against the plan above.
+
+**Slices 2 and 3 shipped as one commit.** Separating them would have meant a
+parser that deliberately discarded a second period it had already read. The
+boundary was drawn for this document's benefit rather than the code's.
+
+**The rendered page caught two copy defects the fixtures could not**, both in
+the withheld sentence at the 25 sheltered beaches. The publisher was named
+twice in one sentence; and the obvious short fix — "none is forecast here" —
+reads as _there is no rip current risk here_, a claim about the water rather
+than about the product's coverage, which ADR-0009 forbids and which would have
+landed at exactly the beaches least able to carry it. The copy is now about the
+forecast, and a test holds all four states to that line. **Nothing in the test
+suite could have found either.** Rendering against the live feed is what did.
+
+**The surf height sits nearer the buoy than intended.** The decision above
+keeps it away from CDIP's modelled swell, and it does. But `MeasuredToday` is
+the next block down and carries the buoy's measured height, and on 2026-09-02
+the page read "Surf 1 to 3 feet. Sets to 4 feet." above "🏄 3.0 ft — about waist
+high". Those are breaking surf face height and significant wave height at a
+buoy: different quantities, similar numbers that day, two blocks apart. Not
+resolved here — recorded, because it is the same collision the plan reasoned
+about and it turned up against a neighbour the reasoning did not consider.

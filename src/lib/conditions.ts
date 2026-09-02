@@ -1842,6 +1842,23 @@ export async function readSkyWording(
   return { ...binding, state: { kind: "week", days } };
 }
 
+/**
+ * How old a surf zone bulletin may be before the page says so, in hours.
+ *
+ * Eighteen, against a product issued twice a day. Measured 2026-09-02 across
+ * the 14 issuances SGX still held: every one fell at roughly 1 AM or 1 PM
+ * Pacific, and the sampled week held no off-cycle reissue -- so the longest
+ * ordinary gap is about twelve hours, and eighteen clears it with room for a
+ * late issuance without waiting out a whole missed cycle.
+ *
+ * A judgement is not a measurement that merely gets older. `MAX_WAVE_AGE_MINUTES`
+ * withholds a stale buoy reading outright; this one is stated rather than
+ * withheld, because the office's last published judgement is still the best
+ * information anyone has about the water and hiding it would leave the page
+ * saying nothing at all on the day it most matters.
+ */
+export const STALE_AFTER_HOURS = 18;
+
 /** One day of the surf zone forecast, as the panel prints it. */
 export type SurfZoneDay = {
   localDate: string;
@@ -1850,6 +1867,16 @@ export type SurfZoneDay = {
   level: RiskLevel;
   /** The bulletin's own sentence for that level. */
   meaning: string;
+  /** The published surf height, verbatim. The evidence the level rests on. */
+  surfHeight: string;
+  /**
+   * The published water temperature, verbatim, or null.
+   *
+   * Null on the last day a bulletin covers, every time -- the office publishes
+   * it in the first period only. It is the product's shape, not an outage, and
+   * the panel must not word it as one.
+   */
+  waterTemperature: string | null;
 };
 
 export type SurfZoneView = {
@@ -1869,6 +1896,18 @@ export type SurfZoneView = {
         headline: string | null;
         /** Only the days the bulletin reached, ascending. Never padded. */
         days: SurfZoneDay[];
+        /**
+         * How many hours old the bulletin is, rounded down, when that is long
+         * enough to mean the office missed a cycle. Null when it is current.
+         *
+         * The bulletin is issued twice a day and the sampled week held no
+         * off-cycle reissue, so anything past `STALE_AFTER_HOURS` means a cycle
+         * did not happen. A judgement is not a measurement that merely ages:
+         * presenting a missed cycle as current is the one failure this page can
+         * least afford, so the age is carried here and stated rather than left
+         * for a reader to work out of the issuance time.
+         */
+        staleAfterHours: number | null;
       }
     | { kind: "unavailable"; detail: string; drift: boolean }
     /** This beach has no surf zone, so the product is not about it. */
@@ -1937,6 +1976,8 @@ export async function readSurfZone(
         localDate,
         periodName: period.name,
         level: period.level,
+        surfHeight: period.surfHeight,
+        waterTemperature: period.waterTemperature,
         meaning:
           meanings.get(period.level) ??
           // The bulletin defines its levels in its own body, so a missing gloss
@@ -1954,6 +1995,14 @@ export async function readSurfZone(
     return day === undefined ? [] : [day];
   });
 
+  /*
+    Rounded down, so "18 hours old" is never said of something 17 hours and 50
+    minutes old. Negative ages -- a bulletin issued in the future, which a clock
+    skew can produce -- are not stale, and `Math.floor` on a negative would
+    otherwise report a large one after the comparison.
+  */
+  const ageHours = Math.floor((nowMs - forecast.issuedMs) / 3_600_000);
+
   return {
     beachName: beach.name,
     state: {
@@ -1961,6 +2010,7 @@ export async function readSurfZone(
       issuedMs: forecast.issuedMs,
       headline: forecast.headline,
       days,
+      staleAfterHours: ageHours >= STALE_AFTER_HOURS ? ageHours : null,
     },
   };
 }

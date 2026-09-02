@@ -18,14 +18,25 @@ function forecast(
     localDate: string;
     periodName: string;
     level: "Low" | "Moderate" | "High";
+    surfHeight?: string;
+    waterTemperature?: string | null;
   }[],
   headline: string | null = null,
+  staleAfterHours: number | null = null,
 ): SurfZoneView["state"] {
   return {
     kind: "forecast",
     issuedMs: ISSUED,
     headline,
-    days: days.map((day) => ({ ...day, meaning: MEANING[day.level] })),
+    staleAfterHours,
+    days: days.map(
+      ({ surfHeight = "1 to 3 feet.", waterTemperature = null, ...day }) => ({
+        ...day,
+        surfHeight,
+        waterTemperature,
+        meaning: MEANING[day.level],
+      }),
+    ),
   };
 }
 
@@ -278,4 +289,121 @@ test("no state implies the water is safe", () => {
 
     unmount();
   }
+});
+
+/**
+ * Surf height is the evidence for the level rather than a surf reading, so it
+ * is relayed whole -- the set height is the part a parsed range would drop and
+ * the part a parent needs.
+ */
+test("relays the surf height verbatim, sets and all", () => {
+  render(
+    <SurfZone
+      state={forecast([
+        {
+          localDate: "2026-09-02",
+          periodName: "TODAY",
+          level: "High",
+          surfHeight: "3 to 5 feet. Sets to 6 feet.",
+        },
+      ])}
+      localDate="2026-09-02"
+      when="today"
+    />,
+  );
+
+  expect(screen.getByText("3 to 5 feet. Sets to 6 feet.")).toBeDefined();
+});
+
+/**
+ * `degrees`, not `°F`. This site's own figures are °F, and reformatting a
+ * quoted product to match this site's conventions edits the office's sentence
+ * to look like ours. It sits under the office's attribution, which is what says
+ * whose sentence it is.
+ */
+test("relays the water temperature in the bulletin's own words", () => {
+  render(
+    <SurfZone
+      state={forecast([
+        {
+          localDate: "2026-09-02",
+          periodName: "TODAY",
+          level: "Low",
+          waterTemperature: "70 to 74 degrees",
+        },
+      ])}
+      localDate="2026-09-02"
+      when="today"
+    />,
+  );
+
+  expect(screen.getByText("70 to 74 degrees")).toBeDefined();
+});
+
+/**
+ * The office publishes water temperature in the first period only -- 14 of 14 --
+ * so the last day of every bulletin lacks one. An absence sentence would appear
+ * on one day in every two or three and would read as a fault that is really a
+ * cadence, so the row is simply not drawn.
+ */
+test("says nothing at all when the bulletin published no water temperature", () => {
+  render(
+    <SurfZone
+      state={forecast([
+        {
+          localDate: "2026-09-02",
+          periodName: "THURSDAY",
+          level: "Low",
+          waterTemperature: null,
+        },
+      ])}
+      localDate="2026-09-02"
+      when="Thursday"
+    />,
+  );
+
+  expect(screen.queryByText("Water")).toBeNull();
+  expect(screen.queryByText(/no water temperature/i)).toBeNull();
+  // The surf height beside it is unaffected: only one of the two is per-period.
+  expect(screen.getByText("Surf")).toBeDefined();
+});
+
+/**
+ * Stated, not withheld -- the opposite of what a stale buoy reading gets.
+ * `MAX_WAVE_AGE_MINUTES` drops an old measurement because a number with no time
+ * attached reads as now. The office's last published judgement is still the
+ * best information anyone has about this water, so hiding it would leave the
+ * page silent on the day that matters most.
+ */
+test("a bulletin past a missed cycle says so and still shows the risk", () => {
+  render(
+    <SurfZone
+      state={forecast(
+        [{ localDate: "2026-09-02", periodName: "TODAY", level: "High" }],
+        null,
+        26,
+      )}
+      localDate="2026-09-02"
+      when="today"
+    />,
+  );
+
+  expect(screen.getByText(/26 hours old/i)).toBeDefined();
+  expect(screen.getByText(/one has been missed/i)).toBeDefined();
+  // Withholding would be the worse failure, so the level is still there.
+  expect(screen.getByText("High")).toBeDefined();
+});
+
+test("a current bulletin carries no staleness line", () => {
+  render(
+    <SurfZone
+      state={forecast([
+        { localDate: "2026-09-02", periodName: "TODAY", level: "Low" },
+      ])}
+      localDate="2026-09-02"
+      when="today"
+    />,
+  );
+
+  expect(screen.queryByText(/hours old/i)).toBeNull();
 });

@@ -1988,9 +1988,16 @@ function servingSurfZone(
     name: string;
     localDates: string[];
     level: "Low" | "Moderate" | "High";
+    surfHeight?: string;
+    waterTemperature?: string | null;
   }[],
   headline: string | null = null,
 ) {
+  periods = periods.map((period) => ({
+    surfHeight: "1 to 3 feet.",
+    waterTemperature: null,
+    ...period,
+  }));
   fetchSurfZoneForecast.mockResolvedValue({
     kind: "ok",
     url: "https://api.weather.gov/products/abc",
@@ -2154,4 +2161,105 @@ test("a level whose gloss the bulletin dropped says so rather than rendering bla
   expect(view.state.kind).toBe("forecast");
   if (view.state.kind !== "forecast") return;
   expect(view.state.days[0].meaning).toMatch(/did not carry/i);
+});
+
+/**
+ * The first period covers two dates on an afternoon bulletin, and its water
+ * temperature belongs to both -- it is one period's figure, not one day's.
+ */
+test("both dates of a merged period carry that period's two figures", async () => {
+  const { readSurfZone } = await import("./conditions");
+  servingSurfZone([
+    {
+      name: "THIS AFTERNOON THROUGH WEDNESDAY",
+      localDates: ["2026-09-01", "2026-09-02"],
+      level: "Moderate",
+      surfHeight: "2 to 4 feet.",
+      waterTemperature: "70 to 76 degrees.",
+    },
+    {
+      name: "THURSDAY",
+      localDates: ["2026-09-03"],
+      level: "High",
+      surfHeight: "3 to 5 feet. Sets to 6 feet.",
+      waterTemperature: null,
+    },
+  ]);
+
+  const view = await readSurfZone(BEACH, SURF_ZONE_NOW);
+
+  expect(view.state.kind).toBe("forecast");
+  if (view.state.kind !== "forecast") return;
+  expect(view.state.days[0].waterTemperature).toBe("70 to 76 degrees.");
+  expect(view.state.days[0].surfHeight).toBe("2 to 4 feet.");
+  // The last day the bulletin reaches never has a water temperature.
+  expect(view.state.days[1].waterTemperature).toBeNull();
+  expect(view.state.days[1].surfHeight).toBe("3 to 5 feet. Sets to 6 feet.");
+});
+
+/**
+ * Eighteen hours against a product issued twice a day. The office's last
+ * judgement is still shown -- withholding would leave the page silent on the
+ * day it matters most -- but the reader is told a cycle was missed.
+ */
+test("a bulletin past a missed cycle reports its age", async () => {
+  const { readSurfZone, STALE_AFTER_HOURS } = await import("./conditions");
+  // Two periods, so the bulletin still reaches a day that is in the week when
+  // it is finally read. A stale bulletin whose only day has passed is a
+  // different case -- it correctly has no days at all, which is what the
+  // horizon test above already covers, and asserting a day here would have
+  // been asserting that the week never moves.
+  servingSurfZone([
+    { name: "TODAY", localDates: ["2026-09-02"], level: "High" },
+    { name: "THURSDAY", localDates: ["2026-09-03"], level: "High" },
+  ]);
+
+  // The bulletin is issued 2026-09-02T08:54Z; read it a clear cycle later.
+  const late =
+    Date.parse("2026-09-02T08:54:00+00:00") +
+    (STALE_AFTER_HOURS + 8) * 3_600_000;
+  const view = await readSurfZone(BEACH, late);
+
+  expect(view.state.kind).toBe("forecast");
+  if (view.state.kind !== "forecast") return;
+  expect(view.state.staleAfterHours).toBe(STALE_AFTER_HOURS + 8);
+  // Still shown. Withholding a judgement is the worse failure here.
+  expect(view.state.days.map((day) => day.localDate)).toContain("2026-09-03");
+});
+
+test("a bulletin inside its cadence reports no age at all", async () => {
+  const { readSurfZone } = await import("./conditions");
+  servingSurfZone([
+    { name: "TODAY", localDates: ["2026-09-02"], level: "Low" },
+  ]);
+
+  const view = await readSurfZone(
+    BEACH,
+    Date.parse("2026-09-02T08:54:00+00:00") + 3 * 3_600_000,
+  );
+
+  expect(view.state.kind).toBe("forecast");
+  if (view.state.kind !== "forecast") return;
+  expect(view.state.staleAfterHours).toBeNull();
+});
+
+/**
+ * A clock skew can put an issuance in the future. That is not stale, and
+ * `Math.floor` on a negative age would report a large one if the comparison
+ * were written the other way round.
+ */
+test("a bulletin issued in the future is not stale", async () => {
+  const { readSurfZone } = await import("./conditions");
+  servingSurfZone([
+    { name: "TODAY", localDates: ["2026-09-02"], level: "Low" },
+  ]);
+
+  const view = await readSurfZone(
+    BEACH,
+    Date.parse("2026-09-02T08:54:00+00:00") - 2 * 3_600_000,
+  );
+
+  expect(view.state.kind).toBe("forecast");
+  if (view.state.kind !== "forecast") return;
+  expect(view.state.staleAfterHours).toBeNull();
 });
