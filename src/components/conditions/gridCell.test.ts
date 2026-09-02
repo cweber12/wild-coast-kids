@@ -3,18 +3,19 @@ import { localMidnightOf } from "@/lib/pacific-time";
 import { windFigure, windPeakLabel } from "./gridCell";
 
 describe("windFigure", () => {
-  test("one decimal, which is the precision the day chart states", () => {
-    // Four of the five places this page prints a wind figure use one decimal
-    // and the fifth uses none, which is issue #191: the same reader is told the
-    // day tops at 12 mph and then, on reaching the hour it happens at, that it
-    // is 11.5. A sixth statement of that figure joins the four.
-    expect(windFigure(11.52)).toBe("11.5 mph");
+  test("whole miles per hour, which is the resolution the office issues", () => {
+    // 11.52 mph is ten knots, and whole knots are what the National Weather
+    // Service publishes for this cell -- so a tenth here would be a precision
+    // this repo produced in converting km/h rather than one anybody forecast.
+    // ADR-0042.
+    expect(windFigure(11.52)).toBe("12 mph");
   });
 
-  test("keeps a trailing zero on a whole number", () => {
-    // "14 mph" and "14.0 mph" claim different precisions, and the axis this
-    // figure has to agree with prints the second.
-    expect(windFigure(14)).toBe("14.0 mph");
+  test("no trailing zero, because none of the six statements carries one", () => {
+    // This kept a ".0" while the axis printed one, on the argument that "14
+    // mph" and "14.0 mph" claim different precisions. Still true about the
+    // claim; the axis no longer makes it.
+    expect(windFigure(14)).toBe("14 mph");
   });
 
   test("no speed is no figure, rather than a drawn calm", () => {
@@ -34,15 +35,15 @@ describe("windPeakLabel", () => {
     // ADR-0034 thought the week grid did too, and ADR-0035 records that
     // `WeekPanel` declines wind deliberately.
     expect(windPeakLabel({ atMs: sixPm, value: 14 })).toBe(
-      "Biggest wind in daylight, 14.0 mph at 6:00 PM",
+      "Biggest wind in daylight, 14 mph at 6:00 PM",
     );
   });
 
   test("rounds the figure exactly as the row beside it does", () => {
     // One rounding, two callers. A label that re-rounded would be a second
     // opinion about a figure this page holds once.
-    expect(windPeakLabel({ atMs: sixPm, value: 11.52 })).toContain("11.5 mph");
-    expect(windFigure(11.52)).toBe("11.5 mph");
+    expect(windPeakLabel({ atMs: sixPm, value: 11.52 })).toContain("12 mph");
+    expect(windFigure(11.52)).toBe("12 mph");
   });
 
   test("names the hour from the instant rather than from an index", () => {

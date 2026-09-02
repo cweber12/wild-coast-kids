@@ -147,6 +147,36 @@ function waveWeek(dates: string[]) {
 }
 
 /**
+ * A knot, in the miles per hour this page states.
+ *
+ * The National Weather Service issues this cell's wind on a whole-knot grid --
+ * measured over 400 values across six of this coast's cells, with not one off
+ * it, which is the finding ADR-0042 rests on. A knot is 1.15078 mph, so almost
+ * nothing the office forecasts arrives here whole.
+ */
+const KNOT_MPH = 1.852 / 1.609344;
+
+/**
+ * A day of wind at the resolution the office actually publishes it.
+ *
+ * **A fixture of whole miles per hour cannot fail the way #191 failed.** Every
+ * rule for rounding a whole number agrees with every other, which is why that
+ * defect was invisible on the temperature tab and why the wind fixture above
+ * -- 5, 8, 11 and 14 mph -- could not see it either. One knot per six-hour
+ * block, which is the shape a real run has at this range.
+ */
+function knotWind(localDate: string, knotsPerBlock: readonly number[]) {
+  return {
+    kind: "published" as const,
+    hours: Array.from({ length: 24 }, (_, hour) => ({
+      atMs: localMidnightOf(localDate) + hour * HOUR,
+      value: knotsPerBlock[Math.floor(hour / 6)] * KNOT_MPH,
+      published: hour % 6 === 0,
+    })),
+  };
+}
+
+/**
  * The cell's wind and air temperature as the read hands them over: hourly
  * hours, but published only where a block began. Six-hour blocks, which is
  * what the far end of a real run looks like.
@@ -154,7 +184,9 @@ function waveWeek(dates: string[]) {
 function gridWeek(
   dates: string[],
   overrides: {
-    windMph?: { kind: "absent"; reason: string };
+    // Published as well as absent, because the values themselves are under
+    // test once precision is: see `knotWind`.
+    windMph?: { kind: "absent"; reason: string } | ReturnType<typeof knotWind>;
     airTempF?: { kind: "absent"; reason: string };
     windDirDegT?: { kind: "absent"; reason: string };
   } = {},
@@ -573,6 +605,56 @@ test("the wind tab marks each block the office issued, not every hour", async ()
   );
 });
 
+test("the wind range a reader is told is the wind range the axis shows", async () => {
+  /*
+    #191. Four places on the chart printed this figure to a decimal and the
+    plot's own accessible name printed it to none, so one reader was told the
+    day tops at 12 mph and then, on arrowing to the hour it happens at, that it
+    is 11.5. Two numbers, not two renderings of one.
+
+    **Both sides of every assertion here are read off the page.** A test
+    pinning "from 2 to 12 mph" would pass with the axis still saying 11.5,
+    which is the shape of the suites that let this ship: `HourChart`'s tests
+    assert its own figures, `DayPanel`'s assert the description strings, each
+    is internally consistent and neither reads the other.
+  */
+  gridWeek([TODAY, TOMORROW], { windMph: knotWind(TODAY, [2, 6, 10, 4]) });
+
+  const { container } = render(
+    await DayPanel({ slug: "la-jolla-shores-beach" }),
+  );
+
+  fireEvent.click(container.querySelector('[data-series-tab="wind"]')!);
+
+  const spoken =
+    container
+      .querySelector('svg[aria-label^="Wind today"]')
+      ?.getAttribute("aria-label") ?? "";
+  const range = /from (\S+) to (\S+) mph/.exec(spoken);
+  expect(range).not.toBeNull();
+  const [, low, high] = range!;
+
+  expect(container.querySelector('[data-axis="low"]')?.textContent).toBe(
+    `${low} mph`,
+  );
+  expect(container.querySelector('[data-axis="high"]')?.textContent).toBe(
+    `${high} mph`,
+  );
+
+  // And the hour the day's high falls on states it the same way -- which is
+  // the second half of the contradiction, since arrowing to that hour is how
+  // the reader who was told "12" finds out it is called something else.
+  const peak = [...container.querySelectorAll("[data-hour-column]")].find(
+    (column) => (column.textContent ?? "").includes(`, ${high} mph`),
+  );
+  expect(peak).toBeDefined();
+
+  fireEvent.click(peak!);
+  expect(container.querySelector("[data-hour-readout]")?.textContent).toContain(
+    `${high} mph`,
+  );
+});
+
 test("the temperature tab is the air, in Fahrenheit, and says so in full", async () => {
   // "Temp" fits four tabs across a phone where "Temperature" does not. The word
   // it drops is put back everywhere a reader is not paying for the width.
@@ -892,9 +974,9 @@ test("the wind row prints this hour's speed, and the day's biggest moves to the 
 
   expect(
     container.querySelector("[data-readout-figure='wind']")!.textContent,
-  ).toBe("11.0 mph");
+  ).toBe("11 mph");
   expect(screen.getByText(/^Biggest wind in daylight/).textContent).toBe(
-    "Biggest wind in daylight, 14.0 mph at 6:00 PM ",
+    "Biggest wind in daylight, 14 mph at 6:00 PM ",
   );
 });
 
@@ -1069,7 +1151,7 @@ test("the rows follow the hour and the wedge behind them does not", async () => 
     container.querySelector("[data-readout-figure='wind']")!.textContent;
 
   // 2 PM: 180 + (14 % 4) * 10, and the third six-hour block of speeds.
-  expect(figure()).toBe("11.0 mph");
+  expect(figure()).toBe("11 mph");
   expect(
     screen.getByRole("img", { name: /^Wind at 2 PM, from the south, 200°/ }),
   ).toBeDefined();
@@ -1081,7 +1163,7 @@ test("the rows follow the hour and the wedge behind them does not", async () => 
   expect(container.querySelector("[data-readout-caption]")!.textContent).toBe(
     "9 AM",
   );
-  expect(figure()).toBe("8.0 mph");
+  expect(figure()).toBe("8 mph");
   expect(
     screen.getByRole("img", { name: /^Wind at 9 AM, from the south, 190°/ }),
   ).toBeDefined();
@@ -1332,9 +1414,9 @@ test("a bay beach with no model line gets both a coast and its wind row", async 
   // day's biggest on the line beneath.
   expect(
     container.querySelector("[data-readout-figure='wind']")!.textContent,
-  ).toBe("11.0 mph");
+  ).toBe("11 mph");
   expect(screen.getByText(/^Biggest wind in daylight/).textContent).toBe(
-    "Biggest wind in daylight, 14.0 mph at 6:00 PM ",
+    "Biggest wind in daylight, 14 mph at 6:00 PM ",
   );
 });
 

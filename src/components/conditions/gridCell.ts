@@ -69,18 +69,41 @@ export function gridCellCaveat(elevationM: number | null): string | null {
 }
 
 /**
+ * How many decimals the cell's own figures print to, which is none.
+ *
+ * **Because that is the resolution the office issues them at.** The gridpoint
+ * endpoint declares km/h and °C, and both are conversions of something
+ * coarser: every wind speed it publishes is an exact whole knot and every
+ * temperature an exact whole degree Fahrenheit -- 400 and 606 values across
+ * six of this coast's cells, with not one off the grid. So a tenth of a mile
+ * per hour on this page is arithmetic this repo performed rather than a figure
+ * anybody forecast, and `11.5 mph` is ten knots wearing a decimal.
+ *
+ * Rounding to whole miles per hour throws nothing away, which is what makes
+ * this affordable: a knot is 1.15078 mph, so no two forecasts this coast can
+ * produce collapse onto the same figure. The gaps it leaves -- no whole-knot
+ * wind lands on 4, 11 or 19 mph -- are the forecaster's own grid showing
+ * through.
+ *
+ * ADR-0042, which is also why the day chart's four products do not share one
+ * rule: the tide and the swell come off far finer sources and keep a tenth.
+ */
+export const GRID_DECIMALS = 0;
+
+/**
  * A wind speed as this page states it.
  *
- * **One decimal, which is the precision the day chart states.** Four of the
- * five places this page prints a wind figure use it and the fifth uses none --
- * that is issue #191, where a reader is told the day tops at 12 mph and then,
- * on reaching the hour it happens at, that it is 11.5. Anything printing a
- * sixth wind figure joins the four rather than the one, so that issue stays a
- * defect about `gridDescription` alone.
+ * **Whole miles per hour, which is the precision every other statement of this
+ * figure uses.** Six places on this page print a wind speed -- the day chart's
+ * axis, its summary, its readout and its per-hour label, the plot's own
+ * accessible name, and this -- and #191 is what happened when one of them
+ * chose differently: a reader was told the day tops at 12 mph and then, on
+ * reaching the hour it happens at, that it is 11.5.
  *
- * The trailing zero is kept for the same reason `swellFigure` keeps one: "14
- * mph" and "14.0 mph" claim different precisions, and the axis this figure has
- * to agree with prints the second.
+ * No trailing zero, which reverses what this said before. It kept one on the
+ * argument that "14 mph" and "14.0 mph" claim different precisions and the
+ * axis printed the second. That is still true about the claim and the axis no
+ * longer prints it, because the claim was the false one.
  *
  * `null` in and `null` out, like `mopLineDistanceKm`: a cell that published a
  * direction and no speed is a ragged forecast, not a fault.
@@ -91,7 +114,7 @@ export function windFigure(mph: number | null): string | null {
 
 /** The rounding itself, so the two callers below cannot round differently. */
 function windWords(mph: number): string {
-  return `${mph.toFixed(1)} mph`;
+  return `${mph.toFixed(GRID_DECIMALS)} mph`;
 }
 
 /**

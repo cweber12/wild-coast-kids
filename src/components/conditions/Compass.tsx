@@ -97,15 +97,16 @@ export type CompassNeedle = {
    */
   swing: { fromDegT: number; spreadDeg: number } | null;
   /**
-   * How much of it there was, worded and rounded by the caller: "11.5 mph",
+   * How much of it there was, worded and rounded by the caller: "12 mph",
    * "3.4 ft · 14 s".
    *
    * **A string rather than a number, because the rounding is a decision made
    * elsewhere and has to survive verbatim.** The swell's is `swellFigure` and
-   * the wind's `windFigure`, which is where the precision issue #191 is about
-   * is settled; a component that re-rounded either would be a second opinion
-   * about a figure the page holds once. `ProvenanceLine.distanceKm` is a string
-   * for the same reason.
+   * the wind's `windFigure`, and what each of them rounds to is ADR-0042: a
+   * figure prints at the resolution its publisher issues, so the two examples
+   * above differ by a decimal place for a reason. A component that re-rounded
+   * either would be a second opinion about a figure the page holds once, which
+   * is #191. `ProvenanceLine.distanceKm` is a string for the same reason.
    *
    * **The week grid and this block may now print different numbers for one
    * day**, and that reverses an invariant `DayPanel` used to state. The grid

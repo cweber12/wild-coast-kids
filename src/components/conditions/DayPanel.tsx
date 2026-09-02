@@ -82,6 +82,7 @@ import {
 import { hourOfDay, instantOfHour } from "./dayFrame";
 import { SelectedHourProvider } from "./selectedHour";
 import {
+  GRID_DECIMALS,
   GRID_MODEL_NOTE,
   GRID_NETWORK,
   GRID_SOURCE,
@@ -217,6 +218,23 @@ function gridAbsenceFor(
 }
 
 /**
+ * How many decimals the water's two products print to, which is one.
+ *
+ * **A coarsening of both, which is what makes it honest.** NOAA publishes its
+ * tide predictions to thousandths of a foot and CDIP's model publishes a wave
+ * height to eight decimal places of metres; a tenth of a foot claims less than
+ * either issued rather than more. That is the whole difference between these
+ * two and the forecast cell, whose own `GRID_DECIMALS` is none because the
+ * National Weather Service issues whole knots. ADR-0042.
+ *
+ * One constant for two publishers, because they arrive at the same figure
+ * through the same argument -- a source finer than a reader can use, cut to
+ * what a reader can. A third product finer still would share it; one issued
+ * coarsely would not.
+ */
+const WATER_DECIMALS = 1;
+
+/**
  * What a reader who cannot see the plot is told instead.
  *
  * **The extremes are named as the lowest and highest *hour*, not as the day's
@@ -224,16 +242,21 @@ function gridAbsenceFor(
  * same reason. These are hourly samples of a continuous curve, so the real
  * turning point is lower than any of them and falls between two, which is why
  * this page asks NOAA for the turning points separately.
+ *
+ * The precision is the caller's rather than this function's, which is
+ * ADR-0042: it has to be the one the axis prints, and only the caller knows
+ * which series this is.
  */
 function chartDescription(
   day: TideHourlyDay,
   when: string,
   sunriseLabel: string,
   sunsetLabel: string,
+  decimals: number,
 ): string {
   const feet = day.hours.map((hour) => hour.feet);
-  const low = Math.min(...feet).toFixed(1);
-  const high = Math.max(...feet).toFixed(1);
+  const low = Math.min(...feet).toFixed(decimals);
+  const high = Math.max(...feet).toFixed(decimals);
   return (
     `Tide ${when}, hour by hour from midnight to midnight: ${low} ft at its lowest hour, ` +
     `${high} ft at its highest. Night is shaded; the sun is up from ${sunriseLabel} to ` +
@@ -250,17 +273,20 @@ function chartDescription(
  * one thing this design added to distinguish an hourly model from a
  * three-hourly one would be visual only, which is the failure ADR-0025's
  * argument against a canvas turns on.
+ *
+ * The precision is the caller's, for `chartDescription`'s reason.
  */
 function swellDescription(
   day: WaveWeekDay,
   when: string,
   sunriseLabel: string,
   sunsetLabel: string,
+  decimals: number,
 ): string {
   const heights = day.hours.map((hour) => hour.heightFt);
   const published = day.hours.filter((hour) => hour.published).length;
-  const low = Math.min(...heights).toFixed(1);
-  const high = Math.max(...heights).toFixed(1);
+  const low = Math.min(...heights).toFixed(decimals);
+  const high = Math.max(...heights).toFixed(decimals);
   return (
     `Swell ${when}, from ${low} ft to ${high} ft. CDIP publishes every three hours and ` +
     `issued ${published} estimates for it; the curve between them is drawn here rather ` +
@@ -277,6 +303,14 @@ function swellDescription(
  * and the plot marks the instant each block began. A reader who cannot see the
  * marks would otherwise be told a forecast is hourly when a day of it is four
  * numbers.
+ *
+ * **The precision is the caller's, and this is the function that proves why.**
+ * It used to round to whole units while the chart beside it kept a tenth, and
+ * the two only ever disagreed on the wind -- #191, where the same reader was
+ * told the day tops at 12 mph and then, on arrowing to the hour it happens at,
+ * that it is 11.5. Both figures were defensible and the pair was not, because
+ * a range and the hour inside it are one statement. ADR-0042 settles which
+ * number is right; taking it as an argument is what stops there being two.
  */
 function gridDescription(
   name: string,
@@ -286,6 +320,7 @@ function gridDescription(
   sunriseLabel: string,
   sunsetLabel: string,
   outOfReach: string,
+  decimals: number,
 ): string {
   if (series === undefined) return outOfReach;
   if (series.kind === "absent") return series.reason;
@@ -293,8 +328,8 @@ function gridDescription(
 
   const values = series.hours.map((hour) => hour.value);
   const blocks = series.hours.filter((hour) => hour.published).length;
-  const low = Math.min(...values).toFixed(0);
-  const high = Math.max(...values).toFixed(0);
+  const low = Math.min(...values).toFixed(decimals);
+  const high = Math.max(...values).toFixed(decimals);
   return (
     `${name} ${when}, from ${low} to ${high} ${unit}. The National Weather Service forecasts ` +
     `this cell in blocks rather than by the hour, and this day's is made of ${blocks} of them; ` +
@@ -479,6 +514,7 @@ export async function DayPanel({ slug }: { slug: string }) {
         key: "tide",
         label: "Tide",
         unitLabel: "ft",
+        decimals: WATER_DECIMALS,
         points: tideDay === undefined ? [] : tidePoints(tideDay),
         description:
           tideDay === undefined
@@ -488,6 +524,7 @@ export async function DayPanel({ slug }: { slug: string }) {
                 when,
                 day.sunriseLabel,
                 day.sunsetLabel,
+                WATER_DECIMALS,
               ),
         absence: absenceFor(hourly, WORDS.tide, when),
         provenance: tideProvenance,
@@ -496,6 +533,7 @@ export async function DayPanel({ slug }: { slug: string }) {
         key: "swell",
         label: "Swell",
         unitLabel: "ft",
+        decimals: WATER_DECIMALS,
         points: waveDay === undefined ? [] : swellPoints(waveDay),
         description:
           waveDay === undefined
@@ -505,6 +543,7 @@ export async function DayPanel({ slug }: { slug: string }) {
                 when,
                 day.sunriseLabel,
                 day.sunsetLabel,
+                WATER_DECIMALS,
               ),
         absence: absenceFor(waves, WORDS.swell, when),
         provenance: swellProvenance,
@@ -513,6 +552,7 @@ export async function DayPanel({ slug }: { slug: string }) {
         key: "wind",
         label: "Wind",
         unitLabel: "mph",
+        decimals: GRID_DECIMALS,
         points: gridDay === undefined ? [] : gridPoints(gridDay.windMph),
         description: gridDescription(
           "Wind",
@@ -522,6 +562,7 @@ export async function DayPanel({ slug }: { slug: string }) {
           day.sunriseLabel,
           day.sunsetLabel,
           WORDS.wind.outOfReach(when),
+          GRID_DECIMALS,
         ),
         absence: gridAbsenceFor(grid, gridDay?.windMph, WORDS.wind, when),
         provenance: cellProvenance("Wind"),
@@ -542,6 +583,7 @@ export async function DayPanel({ slug }: { slug: string }) {
         key: "temperature",
         label: "Temp",
         unitLabel: "°F",
+        decimals: GRID_DECIMALS,
         points: gridDay === undefined ? [] : gridPoints(gridDay.airTempF),
         description: gridDescription(
           "Air temperature",
@@ -551,6 +593,7 @@ export async function DayPanel({ slug }: { slug: string }) {
           day.sunriseLabel,
           day.sunsetLabel,
           WORDS.temperature.outOfReach(when),
+          GRID_DECIMALS,
         ),
         absence: gridAbsenceFor(
           grid,
@@ -804,13 +847,12 @@ export async function DayPanel({ slug }: { slug: string }) {
             fromDegT: windAt.fromDegT,
             swing: wind,
             /*
-              **One decimal on the wind, which is the precision the chart
-              states.** Four of the five places this page prints a wind figure
-              use `toFixed(1)` and the fifth uses `toFixed(0)`, which is issue
-              #191 -- 11.5 spoken as 12 to the one reader who cannot see the
-              axis. This is a sixth statement of that figure and it joins the
-              four rather than the one, so #191 stays a defect about
-              `gridDescription` alone rather than gaining a second site.
+              **`windFigure`, so this is the same rounding as the chart's own
+              and not a sixth opinion about one number.** All six statements of
+              a wind speed on this page now print whole miles per hour, which
+              is the resolution the office issues -- ADR-0042, and #191 is what
+              the page read like while five of them agreed and the sixth did
+              not.
             */
             figure: windFigure(windAt.mph),
             provenance: windSource,
