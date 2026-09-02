@@ -1,5 +1,9 @@
 # The surf zone forecast on the conditions page (issue #217)
 
+> **Historical.** Planned 2026-09-02, shipped in PRs #216, #218 and #220 on
+> 2026-09-02. It records what was intended then, not what the code does now,
+> and is not maintained. See [`README.md`](README.md).
+
 Date: 2026-09-02.
 
 ## Problem, from the reader's point of view
