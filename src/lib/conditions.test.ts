@@ -10,9 +10,11 @@ const fetchLatestNdbcAir = vi.fn();
 const fetchMopForecast = vi.fn();
 const fetchGridForecast = vi.fn();
 const fetchSkyWording = vi.fn();
+const fetchSurfZoneForecast = vi.fn();
 vi.mock("./upstream", () => ({
   fetchGridForecast,
   fetchSkyWording,
+  fetchSurfZoneForecast,
   fetchHourlyTide,
   fetchTideExtremes,
   fetchLatestWave,
@@ -1953,4 +1955,203 @@ test("this read fails apart from the cloud row's, being a separate product", asy
 
   expect(sky.state.kind).toBe("week");
   expect(wording.state.kind).toBe("unavailable");
+});
+
+/**
+ * The surf zone forecast, which is the page's only relayed judgement.
+ *
+ * `readSurfZone` is asserted against fixed instants like every read here. The
+ * bulletin itself is parsed elsewhere; what is under test is the flattening
+ * from the publisher's periods onto this page's days, and the withholding.
+ */
+const SURF_ZONE_MEANINGS = [
+  {
+    level: "Low" as const,
+    meaning:
+      "Life threatening rip currents are unlikely but still could occur.",
+  },
+  {
+    level: "Moderate" as const,
+    meaning: "Life threatening rip currents are possible.",
+  },
+  {
+    level: "High" as const,
+    meaning: "Life threatening rip currents are likely.",
+  },
+];
+
+/** Wednesday 2026-09-02, 9 AM Pacific. */
+const SURF_ZONE_NOW = localMidnightOf("2026-09-02") + 9 * 3_600_000;
+
+function servingSurfZone(
+  periods: {
+    name: string;
+    localDates: string[];
+    level: "Low" | "Moderate" | "High";
+  }[],
+  headline: string | null = null,
+) {
+  fetchSurfZoneForecast.mockResolvedValue({
+    kind: "ok",
+    url: "https://api.weather.gov/products/abc",
+    forecast: {
+      zoneId: "CAZ043",
+      issuedMs: Date.parse("2026-09-02T08:54:00+00:00"),
+      headline,
+      periods,
+      meanings: SURF_ZONE_MEANINGS,
+    },
+  });
+}
+
+test("a period covering two dates becomes two days, both at that period's risk", async () => {
+  const { readSurfZone } = await import("./conditions");
+  // An afternoon bulletin's shape: today's remainder merged with tomorrow.
+  servingSurfZone([
+    {
+      name: "THIS AFTERNOON THROUGH WEDNESDAY",
+      localDates: ["2026-09-01", "2026-09-02"],
+      level: "Moderate",
+    },
+    { name: "THURSDAY", localDates: ["2026-09-03"], level: "High" },
+  ]);
+
+  const view = await readSurfZone(BEACH, SURF_ZONE_NOW);
+
+  expect(view.state.kind).toBe("forecast");
+  if (view.state.kind !== "forecast") return;
+  // 2026-09-01 is behind this page's week, so it is not a day here; the panel
+  // shows the days it has, and the flattening does not invent a past one.
+  expect(view.state.days.map((day) => day.localDate)).toEqual([
+    "2026-09-02",
+    "2026-09-03",
+  ]);
+  expect(view.state.days.map((day) => day.level)).toEqual(["Moderate", "High"]);
+  // Both dates of the merged period keep the publisher's name for it, because
+  // that name is what the page prints rather than a date we chose.
+  expect(view.state.days[0].periodName).toBe(
+    "THIS AFTERNOON THROUGH WEDNESDAY",
+  );
+});
+
+test("the gloss on each day is the bulletin's own sentence", async () => {
+  const { readSurfZone } = await import("./conditions");
+  servingSurfZone([
+    { name: "TODAY", localDates: ["2026-09-02"], level: "High" },
+  ]);
+
+  const view = await readSurfZone(BEACH, SURF_ZONE_NOW);
+
+  expect(view.state.kind).toBe("forecast");
+  if (view.state.kind !== "forecast") return;
+  expect(view.state.days[0].meaning).toBe(
+    "Life threatening rip currents are likely.",
+  );
+});
+
+/**
+ * The headline is the bulletin's and the level is the day's, and on 2026-08-28
+ * they disagreed: HIGH RIP CURRENT RISK over a TODAY that read Moderate,
+ * because Saturday was the High one. Both are correct at their own scope, so
+ * this asserts the read does not quietly reconcile them.
+ */
+test("a headline naming a level no day carries is relayed unreconciled", async () => {
+  const { readSurfZone } = await import("./conditions");
+  servingSurfZone(
+    [{ name: "TODAY", localDates: ["2026-09-02"], level: "Moderate" }],
+    "HIGH RIP CURRENT RISK",
+  );
+
+  const view = await readSurfZone(BEACH, SURF_ZONE_NOW);
+
+  expect(view.state.kind).toBe("forecast");
+  if (view.state.kind !== "forecast") return;
+  expect(view.state.headline).toBe("HIGH RIP CURRENT RISK");
+  expect(view.state.days[0].level).toBe("Moderate");
+});
+
+test("the days the bulletin did not reach are absent rather than padded", async () => {
+  const { readSurfZone } = await import("./conditions");
+  servingSurfZone([
+    { name: "TODAY", localDates: ["2026-09-02"], level: "Low" },
+  ]);
+
+  const view = await readSurfZone(BEACH, SURF_ZONE_NOW);
+
+  expect(view.state.kind).toBe("forecast");
+  if (view.state.kind !== "forecast") return;
+  expect(view.state.days).toHaveLength(1);
+});
+
+/**
+ * Half the inventory. A *surf zone* forecast for coastal areas does not
+ * describe a lagoon, and the request is not made at all rather than made and
+ * discarded.
+ */
+test("a bay beach is withheld with a reason, and the office is not asked", async () => {
+  const { readSurfZone } = await import("./conditions");
+  fetchSurfZoneForecast.mockReset();
+
+  const view = await readSurfZone("mission-bay-sail-bay", SURF_ZONE_NOW);
+
+  expect(view.state.kind).toBe("no-surf-zone");
+  if (view.state.kind !== "no-surf-zone") return;
+  expect(view.state.reason).toContain("no surf zone");
+  expect(fetchSurfZoneForecast).not.toHaveBeenCalled();
+});
+
+test("a quiet office is reported to the reader with its reason", async () => {
+  const { readSurfZone } = await import("./conditions");
+  fetchSurfZoneForecast.mockResolvedValue({
+    kind: "unavailable",
+    reason:
+      "The National Weather Service returned HTTP 503 for SGX's bulletins.",
+    drift: false,
+    url: "https://api.weather.gov/products/types/SRF/locations/SGX",
+  });
+
+  const view = await readSurfZone(BEACH, SURF_ZONE_NOW);
+
+  expect(view.state.kind).toBe("unavailable");
+  if (view.state.kind !== "unavailable") return;
+  expect(view.state.detail).toContain("503");
+  expect(view.state.drift).toBe(false);
+});
+
+test("an unknown slug is a caller's bug rather than an empty forecast", async () => {
+  const { readSurfZone } = await import("./conditions");
+
+  await expect(readSurfZone("not-a-beach", SURF_ZONE_NOW)).rejects.toThrow(
+    /no beach in the inventory/,
+  );
+});
+
+/**
+ * The bulletin defines its own levels in its own body, so a level arriving
+ * without a gloss means the office changed the bulletin -- not that this level
+ * has no meaning. Said plainly rather than left as a blank line under a word
+ * like "High", which is the one place on this page a reader must not be left
+ * to guess.
+ */
+test("a level whose gloss the bulletin dropped says so rather than rendering blank", async () => {
+  const { readSurfZone } = await import("./conditions");
+  fetchSurfZoneForecast.mockResolvedValue({
+    kind: "ok",
+    url: "https://api.weather.gov/products/abc",
+    forecast: {
+      zoneId: "CAZ043",
+      issuedMs: Date.parse("2026-09-02T08:54:00+00:00"),
+      headline: null,
+      periods: [
+        { name: "TODAY", localDates: ["2026-09-02"], level: "High" as const },
+      ],
+      meanings: [],
+    },
+  });
+
+  const view = await readSurfZone(BEACH, SURF_ZONE_NOW);
+
+  expect(view.state.kind).toBe("forecast");
+  if (view.state.kind !== "forecast") return;
+  expect(view.state.days[0].meaning).toMatch(/did not carry/i);
 });

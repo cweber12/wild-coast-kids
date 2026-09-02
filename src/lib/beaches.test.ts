@@ -9,6 +9,7 @@ import {
   inventoryReach,
   airStationFor,
   mopLineFor,
+  surfZoneWithheldReason,
   tideStationFor,
   waveBuoyFor,
 } from "./beaches";
@@ -563,5 +564,58 @@ describe("the air station binding", () => {
         `${beach.slug}: ${beach.air_station_null_reason}`,
       ).not.toBeNull();
     }
+  });
+});
+
+describe("which beaches the surf zone forecast describes", () => {
+  /**
+   * Asserted against the shipped inventory rather than a fixture, so it is
+   * evidence about this county's beaches rather than about a file written to
+   * make it pass. The split was 26 open coast to 25 sheltered on 2026-09-02.
+   */
+  test("half the inventory has no surf zone", () => {
+    const withheld = allBeaches().filter(
+      (beach) => surfZoneWithheldReason(beach) !== null,
+    );
+
+    expect(allBeaches()).toHaveLength(51);
+    expect(withheld).toHaveLength(25);
+  });
+
+  /**
+   * Two independent classifications of the same water: the region a beach is
+   * grouped under for the chooser, and the water class its tide station was
+   * bound by. They agreed on all 51, which is why reading either is defensible
+   * and why this holds the agreement still -- a beach that moved region without
+   * moving station, or the reverse, would be a data error worth stopping on
+   * rather than a silent change in who sees a rip current risk.
+   */
+  test("the water class and the region agree on every beach", () => {
+    for (const beach of allBeaches()) {
+      const sheltered = surfZoneWithheldReason(beach) !== null;
+      expect({
+        slug: beach.slug,
+        sheltered,
+      }).toEqual({
+        slug: beach.slug,
+        sheltered: beach.region === "Bays, lagoons and inlets",
+      });
+    }
+  });
+
+  test("an open-coast beach is not withheld", () => {
+    expect(surfZoneWithheldReason(beachBySlug(DEFAULT_BEACH_SLUG)!)).toBeNull();
+  });
+
+  /**
+   * The reason is written for a reader, in the voice `wave_buoy_null_reason`
+   * already uses at these same beaches -- it says what is true of the place,
+   * not that a lookup returned nothing.
+   */
+  test("a sheltered beach's reason names the water rather than the lookup", () => {
+    const reason = surfZoneWithheldReason(beachBySlug("mission-bay-sail-bay")!);
+
+    expect(reason).toContain("bay, lagoon or inlet has no surf zone");
+    expect(reason).not.toMatch(/null|undefined|lookup|binding/i);
   });
 });

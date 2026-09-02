@@ -1,0 +1,85 @@
+
+000
+FZUS56 KSGX 020854
+SRFSGX
+
+Surf Zone Forecast
+National Weather Service San Diego CA
+154 AM PDT Wed Sep 2 2026
+
+CAZ552-022130-
+Orange County Coastal Areas-
+154 AM PDT Wed Sep 2 2026
+
+
+.TODAY...
+Rip Current Risk*.............Low.
+Surf Height...................1 to 3 feet. Sets to 4 feet.
+Thunderstorm Potential........None expected.
+Water Temperature.............71 to 78 degrees.
+Tides.........................
+        Newport Beach.........High 3.4 feet (MLLW) 01:02 AM PDT.
+                              Low 1.9 feet (MLLW) 06:04 AM PDT.
+                              High 5.4 feet (MLLW) 12:55 PM PDT.
+                              Low 1.0 feet (MLLW) 08:25 PM PDT.
+Remarks.......................Mixed swell from 180 and 280 degrees.
+
+.THURSDAY...
+Rip Current Risk*.............Low.
+Surf Height...................1 to 3 feet. Sets to 4 feet
+Thunderstorm Potential........None expected.
+Tides.........................
+        Newport Beach.........High 2.9 feet (MLLW) 02:46 AM PDT.
+                              Low 2.4 feet (MLLW) 06:28 AM PDT.
+                              High 5.4 feet (MLLW) 01:54 PM PDT.
+                              Low 0.8 feet (MLLW) 10:13 PM PDT.
+Remarks.......................Mixed swell from 190 and 270 degrees.
+
+
+&&
+
+Rip Current Risks:
+* Low Risk - Life threatening rip currents are unlikely but still could occur.
+* Moderate Risk - Life threatening rip currents are possible.
+* High Risk - Life threatening rip currents are likely.
+
+$$
+
+
+CAZ043-022130-
+San Diego County Coastal Areas-
+154 AM PDT Wed Sep 2 2026
+
+
+.TODAY...
+Rip Current Risk*.............Low.
+Surf Height...................1 to 3 feet. Sets to 4 feet.
+Thunderstorm Potential........None expected.
+Water Temperature.............70 to 74 degrees.
+Tides.........................
+        La Jolla..............High 3.4 feet (MLLW) 12:57 AM PDT.
+                              Low 1.9 feet (MLLW) 06:01 AM PDT.
+                              High 5.4 feet (MLLW) 12:50 PM PDT.
+                              Low 1.0 feet (MLLW) 08:24 PM PDT.
+Remarks.......................Mixed swell from 280 and 210 degrees.
+
+.THURSDAY...
+Rip Current Risk*.............Low.
+Surf Height...................1 to 3 feet. Sets to 4 feet.
+Thunderstorm Potential........None expected.
+Tides.........................
+        La Jolla..............High 2.8 feet (MLLW) 02:44 AM PDT.
+                              Low 2.5 feet (MLLW) 06:24 AM PDT.
+                              High 5.4 feet (MLLW) 01:50 PM PDT.
+                              Low 0.8 feet (MLLW) 10:11 PM PDT.
+Remarks.......................Mixed swell from 210 and 280 degrees.
+
+
+&&
+
+Rip Current Risks:
+* Low Risk - Life threatening rip currents are unlikely but still could occur.
+* Moderate Risk - Life threatening rip currents are possible.
+* High Risk - Life threatening rip currents are likely.
+
+$$

@@ -84,6 +84,19 @@ export type DayView = {
    * with the daylight read that knows which day is today, not here.
    */
   measured: ReactNode;
+  /**
+   * The National Weather Service's relayed judgement for this day, already
+   * rendered: the risk on the days the bulletin reaches, a sentence on the
+   * days it does not, and on a sheltered beach a sentence saying the product
+   * is not about this water at all.
+   *
+   * A finished node for the reason `measured` is one -- a server read handed
+   * to a client component -- and present on all seven days rather than only on
+   * the ones the forecast reaches, so that stepping across the week never
+   * leaves a reader wondering whether the block failed or the day is simply
+   * beyond the horizon.
+   */
+  surfZone: ReactNode;
 };
 
 export function ChosenDay({
@@ -168,6 +181,21 @@ export function ChosenDay({
           {map}
         </div>
       </div>
+
+      {/*
+        Between the chart and the measured block, which is reading order rather
+        than layout convenience: the sky, then the day's shape, then what the
+        forecaster judges, then what the instruments read. The relayed
+        judgement comes before the instrument readings because the standing
+        notice at the top of the page says in as many words that the numbers
+        are not a safety assessment and that the authority is someone else's.
+
+        Below the chart and not above it, for the same reason the measured block
+        is: this is several lines on the days the bulletin reaches and one line
+        on the days it does not, so putting it above would move the plot up and
+        down the page as a reader steps across the week.
+      */}
+      <div className="mt-6">{day.surfZone}</div>
 
       {/*
         Under the chart, which is the order the brief lists this region in:

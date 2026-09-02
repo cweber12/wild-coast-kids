@@ -68,63 +68,7 @@ import {
 } from "./tideStation";
 import { TideWeek, TIDE_WEEK_ROW } from "./TideWeek";
 import { WaveWeek, WAVE_WEEK_ROW } from "./WaveWeek";
-import { WeekGrid, type ReservedRow, type WeekRow } from "./WeekGrid";
-
-/**
- * The forecasts this grid is shaped for and does not yet carry.
- *
- * **The wave slot is gone**, because the row it stood in for exists. It came out
- * in the same change that filled it: a slot removed before its replacement
- * would leave the page promising less than it did, and a slot left in beside a
- * filled row would promise it twice.
- *
- * **The gridded slot is gone**, because the row it stood in for exists. Same
- * rule the wave slot came out under: a slot removed before its replacement
- * would leave the page promising less than it did, and a slot left in beside a
- * filled row would promise it twice.
- *
- * **It promises sky and nothing else, and both halves of that are measured.**
- * Visibility cannot follow: the gridpoint declares `visibility` and
- * `ceilingHeight` as keys and publishes no values for either -- measured
- * 2026-08-26, zero entries at every one of the 21 cells covering this
- * inventory, against 34-37 for `skyCover` -- so a row promising visibility
- * would promise a product that does not exist. Temperature and wind must not
- * follow: they come from the air
- * station rather than an airport, measured at p50 3.7 km and max 7.4 km, and
- * ADR-0012 records them as among the best-founded readings here. Moving those
- * to a forecast is the displacement ADR-0019 declined to decide, and this row
- * previously promised it.
- *
- * The surf zone forecast is zone-level; it is the product the tide heights on
- * this page were checked against.
- *
- * **It reaches about two days, not three, and the slot said three until now.**
- * Measured 2026-09-02 against all fourteen issuances NWS SGX still held —
- * seven days of them — every one carried exactly two periods for `CAZ043`.
- * A morning issuance reads `TODAY` then a weekday; an afternoon one reads
- * `THIS AFTERNOON THROUGH <weekday>` then the day after, which is why the
- * reach is worth stating as "about" rather than as a number of days. The
- * three-day figure came from `docs/plans/conditions-tool.md`'s source table,
- * recorded from a 2026-08-17 measurement. It stays wrong there: that plan is
- * historical, and `docs/plans/README.md` is explicit that a shipped plan is a
- * dated record which is never corrected. What is still binding lives in
- * `docs/adr/`, which is why the measurement above is here and not there.
- *
- * The cadence is in the copy because it is the part a reader can act on: a
- * product reissued twice a day is one they should look at again, and a horizon
- * alone does not say that.
- *
- * No issue numbers in the copy. A reader is owed what is coming, not our
- * backlog — the sighting map's slot set that precedent.
- */
-const RESERVED: readonly ReservedRow[] = [
-  {
-    emoji: "🏖️",
-    headline: "The surf zone forecast is coming.",
-    detail:
-      "Rip current risk, surf height and water temperature, issued for this stretch of coast twice a day and reaching about two days ahead.",
-  },
-];
+import { WeekGrid, type WeekRow } from "./WeekGrid";
 
 /** What a day says when the window this page asked NOAA for did not reach it. */
 const NO_SERIES = "No hourly prediction for this day.";
@@ -503,7 +447,6 @@ export async function WeekPanel({ slug }: { slug: string }) {
       days={days}
       rows={rows}
       notes={notes}
-      reserved={RESERVED}
     />
   );
 }

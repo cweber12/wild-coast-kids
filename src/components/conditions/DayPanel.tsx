@@ -29,12 +29,19 @@
  * the chart's "now" line is drawn at. `WeekPanel` takes its columns from the
  * same read, so the two regions cannot disagree about which day is which.
  *
- * **Five reads, made concurrently and failing apart.** The hourly heights come
+ * **Six reads, made concurrently and failing apart.** The hourly heights come
  * from NOAA, the swell from CDIP, the cloud from the National Weather Service's
- * numbers and the wording from its sentences -- five products, five outages. A
- * quiet cloud feed costs the band and not the curve; a quiet NOAA costs the
- * tide tab and not the swell tab; and each tab that is quiet says which
- * publisher went quiet rather than saying only that something is missing.
+ * numbers, the wording from its sentences and the rip current risk from its
+ * surf zone bulletin -- six products, six outages. A quiet cloud feed costs the
+ * band and not the curve; a quiet NOAA costs the tide tab and not the swell
+ * tab; and each tab that is quiet says which publisher went quiet rather than
+ * saying only that something is missing.
+ *
+ * The surf zone read is the odd one of the six twice over. It is the only
+ * relayed *judgement* here rather than a measurement or a model, which is what
+ * ADR-0009 permits and constrains; and it is the only one that reaches no
+ * publisher at all on 25 of the 51 beaches, because a bay, lagoon or inlet has
+ * no surf zone to forecast.
  *
  * **And, on today alone, what was measured.** Every read above is a model or a
  * prediction; the buoy and the shore station are the only instruments this
@@ -52,6 +59,7 @@ import {
   readHourlyTide,
   readSkyWeek,
   readSkyWording,
+  readSurfZone,
   readWaveWeek,
   type GridDaySeries,
   type GridpointWeekView,
@@ -110,6 +118,7 @@ import {
 } from "./needles";
 import type { ProvenanceFacts } from "./ProvenanceLine";
 import { ShoreMap } from "./ShoreMap";
+import { SurfZone } from "./SurfZone";
 import { shoreViewFor } from "./shore";
 import { SkyWording } from "./SkyWording";
 import { gridPoints, swellPoints, tidePoints } from "./series";
@@ -378,12 +387,18 @@ function mapDescription(beachName: string): string {
 
 export async function DayPanel({ slug }: { slug: string }) {
   const daylight = readDaylightWeek(slug);
-  const [hourly, waves, sky, grid, wording] = await Promise.all([
+  const [hourly, waves, sky, grid, wording, surfZone] = await Promise.all([
     readHourlyTide(slug),
     readWaveWeek(slug),
     readSkyWeek(slug),
     readGridpointWeek(slug),
     readSkyWording(slug),
+    // A sixth read and a third publisher's product, joining the others for the
+    // reason they are all here: five agencies go quiet independently, and the
+    // surf zone bulletin failing must cost its own block and nothing else. It
+    // is the only one of the six that reaches no network at all on 25 of the
+    // 51 beaches, because a bay has no surf zone to forecast.
+    readSurfZone(slug),
   ]);
 
   /*
@@ -666,6 +681,27 @@ export async function DayPanel({ slug }: { slug: string }) {
         </Suspense>
       ) : (
         <MeasuredToday when={when} readings={null} />
+      ),
+      /*
+        Rendered here and handed over finished, the precedent `wording` and
+        `measured` both set: the read is the server's and `ChosenDay` is a
+        client component.
+
+        Not behind a Suspense boundary of its own, unlike the measured block.
+        That block suspends because it is a second wave of reads taken inside
+        `MeasuredPanel`; this one is already resolved by the `Promise.all`
+        above, so a boundary here would render a loading line that never shows.
+
+        The same `state` on all seven days and only `localDate` varying, which
+        is what lets one bulletin answer for every day it reaches without being
+        read seven times.
+      */
+      surfZone: (
+        <SurfZone
+          state={surfZone.state}
+          localDate={day.localDate}
+          when={when}
+        />
       ),
     };
   });

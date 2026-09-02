@@ -246,40 +246,20 @@ test("asks for the slug it was given and renders both live rows", async () => {
   expect(daylightWindows()).toHaveLength(2);
 });
 
-test("the forecasts that are not built yet are named, and waves are no longer among them", async () => {
-  readWeekOfLowestLows.mockResolvedValue({
-    ...BINDING,
-    state: { kind: "week", days: [tideDay(0, "6:41 PM", 0.9)] },
-  });
-
-  render(await WeekPanel({ slug: "la-jolla-shores-beach" }));
-
-  // The wave slot came out in the same change that filled its row: a slot left
-  // in beside a live row promises the same product twice.
-  expect(screen.queryByText(/A wave forecast is coming/i)).toBeNull();
-  // The gridded slot went the same way in the change that filled its row.
-  expect(screen.queryByText(/A gridded forecast is coming/i)).toBeNull();
-  expect(screen.getByText(/surf zone forecast/i)).toBeDefined();
-});
-
 /**
- * The horizon the slot promises, held still.
+ * Nothing is reserved here any more, and this is the test that says so.
  *
- * It said "about three days ahead" until 2026-09-02, when all fourteen
- * issuances NWS SGX still held — seven days of them — were read and every one
- * carried exactly two periods for `CAZ043`. This asserts the sentence rather
- * than the ocean: nothing in CI reaches the National Weather Service, so a
- * change in what SGX issues is invisible here. The measurement is the
- * evidence; the test only stops the claim reverting silently, which is the
- * same division `inventoryCaveats()` is tested under.
+ * Three slots stood under this grid. Each came out in the change that filled
+ * it, never before -- a slot removed early leaves the page promising less than
+ * it did, and a slot left beside its live row promises the same product twice.
+ * The surf zone forecast is the last of the three, and it is now a block in the
+ * day panel rather than a promise under the week.
  *
- * "three days" is asserted absent by name because that is the specific wrong
- * figure, and it still stands in `docs/plans/conditions-tool.md`'s source
- * table — permanently, since that plan is historical and never corrected. So
- * the phrase remains copyable out of a document this repo keeps and reads,
- * which is exactly the reverting this test exists to catch.
+ * The band's own sentence goes with them: "Each of these will join the week
+ * above as a row of its own" is a claim about a band that no longer has
+ * anything in it.
  */
-test("the surf zone slot states the reach the product actually has", async () => {
+test("every reserved forecast has been filled, and none is promised twice", async () => {
   readWeekOfLowestLows.mockResolvedValue({
     ...BINDING,
     state: { kind: "week", days: [tideDay(0, "6:41 PM", 0.9)] },
@@ -287,11 +267,11 @@ test("the surf zone slot states the reach the product actually has", async () =>
 
   render(await WeekPanel({ slug: "la-jolla-shores-beach" }));
 
-  const detail = screen.getByText(/Rip current risk/i).textContent ?? "";
-  expect(detail).toMatch(/about two days ahead/i);
-  expect(detail).not.toMatch(/three days/i);
-  // The cadence is the half a reader can act on, so it is in the copy too.
-  expect(detail).toMatch(/twice a day/i);
+  expect(screen.queryByText(/A wave forecast is coming/i)).toBeNull();
+  expect(screen.queryByText(/A gridded forecast is coming/i)).toBeNull();
+  expect(screen.queryByText(/surf zone forecast is coming/i)).toBeNull();
+  // The band that introduced them is gone too, not left over an empty grid.
+  expect(screen.queryByText(/will join the week above/i)).toBeNull();
 });
 
 /**
@@ -486,18 +466,28 @@ test("a failure to resolve the beach is not swallowed into a rendered nothing", 
 });
 
 /**
- * ADR-0015 marked the gridded slot with the air card's glyph while it was a
- * promise about that card. The slot is gone, so the glyph question goes with
- * it: rows in this grid carry no glyph at all -- a full-colour emoji at 10px is
- * a smudge rather than a mark -- and the only glyph left in this band belongs
- * to the one slot still reserved.
+ * No glyph is left in this band at all, and that discharges ADR-0015's open
+ * note.
  *
- * The day headers now carry a decorative sun, which is why this counts *text*
+ * That decision closed the reading cards' vocabulary at 🐚 🏄 💨 and recorded
+ * one thing it had not fixed: "🏖️ still marks the surf-zone forecast, and that
+ * is still wrong" -- the product is rip-current risk and the glyph is a beach
+ * parasol. It was left because the mark sat on a reserved slot rather than on a
+ * card, which put it outside that decision's subject. The slot is now gone, and
+ * the block that replaced it in the day panel takes no glyph: the vocabulary is
+ * scoped to cards, that block is not one, and borrowing 🏄 would put "waves and
+ * water" over a rip current risk.
+ *
+ * So the wrong glyph was never corrected. It left with the thing it was wrong
+ * about, which is the outcome ADR-0015 said it was recording the omission
+ * against.
+ *
+ * The day headers carry a decorative sun, which is why this counts *text*
  * rather than every `aria-hidden` node. That mark is a stroked SVG on
  * `currentColor` and contributes no characters, so it cannot be the smudge the
  * rule is about; the assertion below is that it stays that way.
  */
-test("the filled row brings no glyph, and only the reserved slot still has one", async () => {
+test("no glyph is left in the week band, the parasol included", async () => {
   readWeekOfLowestLows.mockResolvedValue({
     beachName: "La Jolla Shores Beach",
     station: { name: "La Jolla (Scripps Institution Wharf)", distanceM: 1369 },
@@ -511,7 +501,7 @@ test("the filled row brings no glyph, and only the reserved slot still has one",
   const glyphs = [...container.querySelectorAll('[aria-hidden="true"]')]
     .map((node) => node.textContent)
     .filter((text) => text !== "");
-  expect(glyphs).toEqual(["🏖️"]);
+  expect(glyphs).toEqual([]);
 
   // The header's mark draws rather than spells, so a day block contributes no
   // glyph text of its own.

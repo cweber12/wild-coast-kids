@@ -92,6 +92,18 @@ import {
   parseNwsObservation,
   type StationObservation,
 } from "./nws-observation";
+import {
+  NwsSurfZoneDriftError,
+  NwsSurfZoneNoDataError,
+  parseSurfZoneForecast,
+  parseSurfZoneProductList,
+  SURF_ZONE_ID,
+  SURF_ZONE_OFFICE,
+  type SurfZoneForecast,
+  type SurfZoneProductRef,
+  surfZoneProductsUrl,
+  surfZoneProductUrl,
+} from "./nws-surf-zone";
 
 /** Six hours. Astronomical predictions do not change; the window only rolls forward. */
 export const PREDICTIONS_REVALIDATE_SECONDS = 21600;
@@ -847,5 +859,155 @@ export async function fetchSkyWording(
     if (cause instanceof NwsForecastNoDataError)
       return unavailable(cause.message);
     return unavailable(cause instanceof Error ? cause.message : String(cause));
+  }
+}
+
+/**
+ * Thirty minutes, against a bulletin issued twice a day.
+ *
+ * Its own constant rather than a reuse, per the one-per-product convention
+ * above. The cadence is measured rather than assumed: all 14 issuances SGX held
+ * on 2026-09-02 fell at roughly 1 AM and 1 PM Pacific, with no off-cycle
+ * reissue in the seven days they covered. So a fifteen-minute poll would ask
+ * the office 96 times for two changes, and an hour would leave a new bulletin
+ * unread for up to an hour on a morning the risk has gone up.
+ */
+export const SURF_ZONE_REVALIDATE_SECONDS = 1800;
+
+export type SurfZoneResult =
+  | { kind: "ok"; forecast: SurfZoneForecast; url: string }
+  | { kind: "unavailable"; reason: string; drift: boolean; url: string };
+
+/**
+ * Fetch the surf zone forecast for one zone.
+ *
+ * Never throws.
+ *
+ * TWO REQUESTS, BECAUSE THE PRODUCT HAS NO STABLE URL. Every other read here
+ * addresses its data directly; a bulletin is addressed by an id that changes
+ * with each issuance, so the listing is asked first and the newest id taken
+ * from it. Both requests are reported against the URL that actually failed,
+ * because "the National Weather Service is quiet" and "the bulletin we were
+ * told about has gone" are different things to chase.
+ *
+ * NO FALLBACK TO AN OLDER BULLETIN. If the newest id 404s, this reports
+ * unavailable rather than walking back down the listing. A surf zone forecast
+ * is a judgement with a stated window, and serving yesterday's under today's
+ * date is the failure mode this page is least able to afford.
+ */
+export async function fetchSurfZoneForecast(
+  zoneId: string = SURF_ZONE_ID,
+  office: string = SURF_ZONE_OFFICE,
+): Promise<SurfZoneResult> {
+  const listUrl = surfZoneProductsUrl(office);
+
+  const unavailable = (
+    reason: string,
+    url: string,
+    drift = false,
+  ): SurfZoneResult => ({ kind: "unavailable", reason, drift, url });
+
+  let listResponse: Response;
+  try {
+    listResponse = await fetch(listUrl, {
+      headers: { "User-Agent": USER_AGENT, Accept: "application/ld+json" },
+      next: { revalidate: SURF_ZONE_REVALIDATE_SECONDS },
+    });
+  } catch (cause) {
+    return unavailable(
+      `The request to the National Weather Service for ${office}'s surf zone bulletins ` +
+        `did not complete: ` +
+        `${cause instanceof Error ? cause.message : String(cause)}`,
+      listUrl,
+    );
+  }
+
+  if (!listResponse.ok) {
+    return unavailable(
+      `The National Weather Service returned HTTP ${listResponse.status} for ${office}'s ` +
+        `surf zone bulletins.`,
+      listUrl,
+    );
+  }
+
+  let ref: SurfZoneProductRef;
+  try {
+    ref = parseSurfZoneProductList(await listResponse.json(), office);
+  } catch (cause) {
+    if (cause instanceof NwsSurfZoneDriftError)
+      return unavailable(cause.message, listUrl, true);
+    if (cause instanceof NwsSurfZoneNoDataError)
+      return unavailable(cause.message, listUrl);
+    return unavailable(
+      cause instanceof Error ? cause.message : String(cause),
+      listUrl,
+    );
+  }
+
+  const url = surfZoneProductUrl(ref.id);
+
+  let response: Response;
+  try {
+    response = await fetch(url, {
+      headers: { "User-Agent": USER_AGENT },
+      next: { revalidate: SURF_ZONE_REVALIDATE_SECONDS },
+    });
+  } catch (cause) {
+    return unavailable(
+      `The request to the National Weather Service for surf zone bulletin ${ref.id} did ` +
+        `not complete: ` +
+        `${cause instanceof Error ? cause.message : String(cause)}`,
+      url,
+    );
+  }
+
+  if (!response.ok) {
+    return unavailable(
+      `The National Weather Service returned HTTP ${response.status} for surf zone ` +
+        `bulletin ${ref.id}, which its own listing had just named as the newest.`,
+      url,
+    );
+  }
+
+  let payload: unknown;
+  try {
+    payload = await response.json();
+  } catch (cause) {
+    return unavailable(
+      `The National Weather Service's surf zone bulletin ${ref.id} was not JSON: ` +
+        `${cause instanceof Error ? cause.message : String(cause)}`,
+      url,
+    );
+  }
+
+  const text =
+    typeof payload === "object" && payload !== null
+      ? (payload as Record<string, unknown>).productText
+      : undefined;
+
+  if (typeof text !== "string") {
+    return unavailable(
+      `The National Weather Service's surf zone bulletin ${ref.id} carried no ` +
+        `productText. This read pins the field the bulletin's body arrives in.`,
+      url,
+      true,
+    );
+  }
+
+  try {
+    return {
+      kind: "ok",
+      forecast: parseSurfZoneForecast(text, ref.issuedMs, zoneId),
+      url,
+    };
+  } catch (cause) {
+    if (cause instanceof NwsSurfZoneDriftError)
+      return unavailable(cause.message, url, true);
+    if (cause instanceof NwsSurfZoneNoDataError)
+      return unavailable(cause.message, url);
+    return unavailable(
+      cause instanceof Error ? cause.message : String(cause),
+      url,
+    );
   }
 }

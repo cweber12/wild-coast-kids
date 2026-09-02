@@ -5,6 +5,7 @@ import { MeasuredToday, type MeasuredReadings } from "./MeasuredToday";
 import { SelectedDayProvider, useSelectedDay } from "./selectedDay";
 
 const readSkyWording = vi.fn();
+const readSurfZone = vi.fn();
 const readDaylightWeek = vi.fn();
 const readHourlyTide = vi.fn();
 const readSkyWeek = vi.fn();
@@ -12,6 +13,7 @@ const readWaveWeek = vi.fn();
 const readGridpointWeek = vi.fn();
 vi.mock("@/lib/conditions", () => ({
   readSkyWording,
+  readSurfZone,
   readDaylightWeek,
   readHourlyTide,
   readSkyWeek,
@@ -277,8 +279,34 @@ function curve(container: HTMLElement): Element | null {
   return container.querySelector('svg[aria-label^="Tide today"] [data-curve]');
 }
 
+/**
+ * The surf zone bulletin, defaulted so that every test in this file gets a
+ * block rather than a crash. What it says is asserted in `SurfZone.test.tsx`
+ * and in `conditions.test.ts`; here it only has to exist, because this panel's
+ * job is to hand one node per day to `ChosenDay`.
+ */
+function surfZoneWeek(
+  days: { localDate: string; level: "Low" | "Moderate" | "High" }[],
+) {
+  readSurfZone.mockResolvedValue({
+    beachName: "La Jolla Shores Beach",
+    state: {
+      kind: "forecast",
+      issuedMs: localMidnightOf(TODAY) + 3_600_000,
+      headline: null,
+      days: days.map((day) => ({
+        ...day,
+        periodName: "TODAY",
+        meaning: "Life threatening rip currents are possible.",
+      })),
+    },
+  });
+}
+
 beforeEach(() => {
   readSkyWording.mockReset();
+  readSurfZone.mockReset();
+  surfZoneWeek([{ localDate: TODAY, level: "Moderate" }]);
   readDaylightWeek.mockReset();
   readHourlyTide.mockReset();
   readSkyWeek.mockReset();
@@ -311,6 +339,7 @@ test("asks every read for the slug it was given", async () => {
     readSkyWeek,
     readWaveWeek,
     readGridpointWeek,
+    readSurfZone,
   ]) {
     expect(read).toHaveBeenCalledWith("la-jolla-shores-beach");
   }

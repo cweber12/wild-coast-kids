@@ -220,6 +220,27 @@ than a shoreline, which the sentence under it says. It reads no feed — every
 position on it is committed.
 _Avoid_: locator, mini map, station map, chart (that word is the plot's)
 
+**Surf zone forecast**:
+The National Weather Service's twice-daily bulletin for San Diego County
+Coastal Areas — the only **judgement** on this site rather than a reading or a
+model, quoted verbatim and attributed (ADR-0009). Its rip current risk is the
+one thing on `/conditions` that answers whether to put children in the water;
+everything else is a figure a reader interprets. It appears as a block in the
+day panel, below the hour chart and above what was measured.
+
+It is the publisher's product and keeps the publisher's name, so "forecast"
+here is theirs rather than ours — the `Conditions` entry's _Avoid_ list still
+governs how this site describes **itself**. Its three levels and the sentence
+explaining each are the bulletin's own, and nothing here rewords them.
+
+It reaches **26 of the 51 beaches**. A surf zone forecast for coastal areas does
+not describe a bay, lagoon or inlet, so the other 25 are told so in the same
+voice their missing wave buoy is (ADR-0043). It reaches two calendar days from a
+morning bulletin and three from an afternoon one, because its periods are named
+and never dated (ADR-0044).
+_Avoid_: surf report (banned outright), rip current forecast, safety rating,
+hazard level, SRF (the product code is not a word for a reader)
+
 **Readout**:
 The wind and swell block laid over a corner of the shore map: one row per
 source, each an arrow pointing the way the weather travels with a faint wedge
