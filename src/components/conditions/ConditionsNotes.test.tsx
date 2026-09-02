@@ -1,7 +1,7 @@
 import { expect, test } from "vitest";
 import { render, screen } from "@testing-library/react";
 import { ConditionsNotes } from "./ConditionsNotes";
-import { REGION_HEADING } from "../ui/headingRank";
+import { TOOL_REGION_HEADING } from "../ui/headingRank";
 
 const ENTRIES = [
   "beach_type is UNKNOWN upstream for most of these beaches.",
@@ -199,9 +199,9 @@ test("the block's heading takes the region rank", () => {
     name: "How to read these numbers",
   });
 
-  expect(heading.className).toBe(REGION_HEADING);
+  expect(heading.className).toBe(TOOL_REGION_HEADING);
   // Per ADR-0001 jsdom applies no stylesheets, so this proves the rank is
-  // referred to, not that 34px renders. That stays a human check.
+  // referred to, not that 22px renders. That stays a human check.
   expect(heading.className).not.toContain("text-2xs");
 });
 

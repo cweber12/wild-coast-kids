@@ -68,6 +68,12 @@ type ReadingCardProps = {
    * component to move a card has to answer the question rather than inherit an
    * answer taken for somewhere else.
    *
+   * The next component to move a card was the measured block itself, which
+   * left the day region for the top of the page and took `h2` back with it.
+   * That is the prop doing its job rather than a reversal: page-level cards
+   * are siblings of the three region headings under the `<h1>`, and `h3`
+   * there would have skipped a level with nothing in between.
+   *
    * Only the outline moves. The visual register is `text-2xs` at either rank,
    * which is what ADR-0014 decided and what a level says nothing about.
    */

@@ -77,6 +77,26 @@ the `<h1>` already uses, so the brief's rule that any new surface is checked
 before it ships is not engaged. At 34px and 20px it is large text besides,
 needing 3:1 rather than 4.5:1.
 
+> **Amended 2026-09-02.** The rule holds; the sizes it names are no longer the
+> only ones. `/conditions` now takes a **tool register** — `--text-tool-title`
+> for its `<h1>` and `--text-tool-region` for its three region headings, named
+> as `TOOL_REGION_HEADING` beside `REGION_HEADING` — giving 36 / 22 / 10 at 1536
+> and 24 / 17 / 10 at 375. The page is read for a figure rather than arrived at,
+> and the display sizes above are scaled for arrival: at 56 / 34 the first
+> measurement fell off a 639px window.
+>
+> **What this ADR decided is unaffected**, and that is why this is an amendment
+> rather than a superseding decision. A region heading is still display register
+> and a card or day heading still label register; the three levels are still
+> clear at both ends of the clamp, which is the property this decision says
+> actually matters. Only the token pair changes, and only on the page that
+> needed it — `/art` and `SessionSchedule` keep `REGION_HEADING` untouched.
+>
+> The contrast clause survives too, with one narrowing: at 17px the smaller rank
+> is no longer large text under WCAG's 18.66px bold threshold, so it needs
+> 4.5:1 rather than 3:1. It inherits the same ink on the same cream as before,
+> which the page already holds to 4.5:1, so nothing new is owed a measurement.
+
 ## Consequences
 
 `/conditions` gains the middle level its outline always had. The two region

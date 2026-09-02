@@ -1,6 +1,6 @@
 import { expect, test } from "vitest";
 import { render, screen } from "@testing-library/react";
-import { REGION_HEADING } from "../ui/headingRank";
+import { TOOL_REGION_HEADING } from "../ui/headingRank";
 import { TOUCH_TARGET } from "../ui/touchTarget";
 import {
   MIN_SPARK_BLOCK_PX,
@@ -282,13 +282,13 @@ test("the week's heading outranks the day headings inside it", () => {
   const { container } = renderGrid();
 
   const region = screen.getByRole("heading", { name: "The week ahead" });
-  expect(region.className).toBe(REGION_HEADING);
+  expect(region.className).toBe(TOOL_REGION_HEADING);
 
   // The other half of the rank: the label register stays where it is. A day
   // heading moving with the region would restore the flat scale one level down.
   const day = container.querySelector("h3");
   expect(day?.className).toContain("text-2xs");
-  expect(day?.className).not.toContain("text-quote");
+  expect(day?.className).not.toContain("text-tool-region");
 
   // And the outline the register is drawn over, stated rather than implied.
   // #181 moves the measured cards to level 3, which is the rank these day

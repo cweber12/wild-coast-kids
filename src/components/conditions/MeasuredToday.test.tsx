@@ -57,45 +57,11 @@ function readings(
  * ========================================================================= */
 
 test("today carries both instruments, and only today", () => {
-  render(<MeasuredToday when="today" readings={readings()} />);
+  render(<MeasuredToday readings={readings()} />);
 
   expect(screen.getByText("2.6 ft")).toBeDefined();
   expect(screen.getByText("71°F")).toBeDefined();
   expect(screen.queryByText(/Nothing has been measured/)).toBeNull();
-});
-
-/**
- * The region is any of seven days now. A day that has not happened has no
- * measurement and never will have one taken in advance, and the failure this
- * page is built to avoid is a blank where a figure goes -- under a chart full
- * of curves, an empty block reads as a load that did not finish.
- */
-test("a day nobody has measured says so, and names the day", () => {
-  render(<MeasuredToday when="Thu, Aug 27" readings={null} />);
-
-  const sentence = screen.getByText(/Nothing has been measured/);
-  expect(sentence.textContent).toContain("Thu, Aug 27");
-  expect(sentence.textContent).toContain("the day has not happened");
-  // No figure anywhere that a reader could take for a reading of that day.
-  expect(screen.queryByText("2.6 ft")).toBeNull();
-  expect(screen.queryByText(/Buoy/)).toBeNull();
-});
-
-/**
- * The trap this whole slice was warned about. `CARD_MUTED` and `CARD_PROSE` are
- * measured against the reading card's `bg-dark` and paint about 1.03:1 on the
- * page's cream ground -- the bug #175's last commit fixed in three places. This
- * sentence renders outside a card, so it takes the page's own role.
- *
- * jsdom applies no stylesheets (ADR-0001), so this proves the class is
- * referenced; `cardText.test.ts` is what proves the ratio.
- */
-test("the absence sentence takes the page's colour, not the card's", () => {
-  render(<MeasuredToday when="Thu, Aug 27" readings={null} />);
-
-  const sentence = screen.getByText(/Nothing has been measured/);
-  expect(sentence.className).toContain("text-fog");
-  expect(sentence.className).not.toContain("text-white");
 });
 
 /**
@@ -105,9 +71,7 @@ test("the absence sentence takes the page's colour, not the card's", () => {
  * a gentle breeze", which is the forbidden shape exactly.
  */
 test("the two instruments are two cards, each with its own attribution", () => {
-  const { container } = render(
-    <MeasuredToday when="today" readings={readings()} />,
-  );
+  const { container } = render(<MeasuredToday readings={readings()} />);
 
   const cards = container.querySelectorAll("section");
   expect(cards).toHaveLength(2);
@@ -119,9 +83,7 @@ test("the two instruments are two cards, each with its own attribution", () => {
 });
 
 test("one stat group never spans the two sources", () => {
-  const { container } = render(
-    <MeasuredToday when="today" readings={readings()} />,
-  );
+  const { container } = render(<MeasuredToday readings={readings()} />);
 
   const groups = [...container.querySelectorAll("dl")];
   expect(groups).toHaveLength(2);
@@ -141,7 +103,7 @@ test("one stat group never spans the two sources", () => {
  * is that these numbers came off an instrument.
  */
 test("nothing predicted or modelled is in the block", () => {
-  render(<MeasuredToday when="today" readings={readings()} />);
+  render(<MeasuredToday readings={readings()} />);
 
   expect(screen.queryByText(/Lowest daylight tide/)).toBeNull();
   expect(screen.queryByText(/Lowest all day/)).toBeNull();
@@ -155,7 +117,7 @@ test("nothing predicted or modelled is in the block", () => {
  * ========================================================================= */
 
 test("a wave reading leads with the height and puts it in plain words", () => {
-  render(<MeasuredToday when="today" readings={readings()} />);
+  render(<MeasuredToday readings={readings()} />);
 
   expect(screen.getByText("2.6 ft")).toBeDefined();
   // A height alone tells a surfer what they need and a parent very little, so
@@ -165,7 +127,7 @@ test("a wave reading leads with the height and puts it in plain words", () => {
 });
 
 test("water temperature comes from the same reading, rounded", () => {
-  render(<MeasuredToday when="today" readings={readings()} />);
+  render(<MeasuredToday readings={readings()} />);
 
   // The buoy publishes 69.98 and nobody swims to two decimal places.
   expect(screen.getByText("70°F")).toBeDefined();
@@ -174,7 +136,6 @@ test("water temperature comes from the same reading, rounded", () => {
 test("a buoy reporting no water temperature says so rather than omitting it", () => {
   render(
     <MeasuredToday
-      when="today"
       readings={readings({
         waves: {
           state: { ...WAVE_READING, periodS: null, waterTempF: null },
@@ -214,7 +175,6 @@ test("every wave height band has its own words", () => {
   for (const [heightFt, words] of bands) {
     const { unmount } = render(
       <MeasuredToday
-        when="today"
         readings={readings({ waves: { state: { ...WAVE_READING, heightFt } } })}
       />,
     );
@@ -225,7 +185,7 @@ test("every wave height band has its own words", () => {
 });
 
 test("a nearby buoy is credited without a distance", () => {
-  render(<MeasuredToday when="today" readings={readings()} />);
+  render(<MeasuredToday readings={readings()} />);
 
   const line = screen.getByText(/NDBC/).textContent ?? "";
   expect(line).toContain(NEAR_BUOY.name);
@@ -235,7 +195,6 @@ test("a nearby buoy is credited without a distance", () => {
 test("a distant buoy discloses how far away it is", () => {
   render(
     <MeasuredToday
-      when="today"
       readings={readings({
         waves: { beachName: "Tijana River", buoy: FAR_BUOY },
       })}
@@ -249,7 +208,6 @@ test("a distant buoy discloses how far away it is", () => {
 test("a bay beach is told this is expected, not a fault", () => {
   render(
     <MeasuredToday
-      when="today"
       readings={readings({
         waves: {
           beachName: "Agua Hedionda Lagoon",
@@ -299,12 +257,7 @@ const MODELLED_BEACH = {
 };
 
 test("a beach no buoy reaches is told its wave heights are modelled", () => {
-  render(
-    <MeasuredToday
-      when="today"
-      readings={readings({ waves: MODELLED_BEACH })}
-    />,
-  );
+  render(<MeasuredToday readings={readings({ waves: MODELLED_BEACH })} />);
 
   expect(screen.getByText(/nothing here is measured/)).toBeDefined();
   const sentence =
@@ -316,12 +269,7 @@ test("a beach no buoy reaches is told its wave heights are modelled", () => {
 test("the disclosure points at where the modelled heights actually are", () => {
   // It used to say "the wave heights below", which was true when a forecast
   // block sat beneath it on the card. Below this sentence now is the air card.
-  render(
-    <MeasuredToday
-      when="today"
-      readings={readings({ waves: MODELLED_BEACH })}
-    />,
-  );
+  render(<MeasuredToday readings={readings({ waves: MODELLED_BEACH })} />);
 
   const sentence =
     screen.getByText(/nothing here is measured/).textContent ?? "";
@@ -332,12 +280,7 @@ test("the disclosure points at where the modelled heights actually are", () => {
 test("it does not tell an open-coast beach that swell does not reach it", () => {
   // The bay sentence was written for enclosed water. On these ten it states the
   // reason their beach is fine as the reason it is not.
-  render(
-    <MeasuredToday
-      when="today"
-      readings={readings({ waves: MODELLED_BEACH })}
-    />,
-  );
+  render(<MeasuredToday readings={readings({ waves: MODELLED_BEACH })} />);
 
   expect(
     screen.queryByText(/Every wave buoy sits out on the open coast/),
@@ -348,12 +291,7 @@ test("it does not tell an open-coast beach that swell does not reach it", () => 
 test("the refused buoy and the line that replaced it both reach the reader", () => {
   // Either half alone misleads, and this is the last place the pair can be
   // dropped between `beaches.json` and a person.
-  render(
-    <MeasuredToday
-      when="today"
-      readings={readings({ waves: MODELLED_BEACH })}
-    />,
-  );
+  render(<MeasuredToday readings={readings({ waves: MODELLED_BEACH })} />);
 
   const why = screen.getByText(/nearest delivering buoy 46232/);
   expect(why.textContent).toContain("28.2 km");
@@ -364,7 +302,6 @@ test("the refused buoy and the line that replaced it both reach the reader", () 
 test("an unavailable buoy is a sentence with the reason behind a disclosure", () => {
   render(
     <MeasuredToday
-      when="today"
       readings={readings({
         waves: {
           state: {
@@ -387,7 +324,6 @@ test("an unavailable buoy is a sentence with the reason behind a disclosure", ()
 test("wave drift is named as a bug here rather than a problem at the buoy", () => {
   render(
     <MeasuredToday
-      when="today"
       readings={readings({
         waves: {
           state: {
@@ -414,7 +350,6 @@ test("wave drift is named as a bug here rather than a problem at the buoy", () =
 test("a beach with no buoy is never told to come back later", () => {
   const { unmount } = render(
     <MeasuredToday
-      when="today"
       readings={readings({
         waves: {
           buoy: null,
@@ -433,7 +368,6 @@ test("a beach with no buoy is never told to come back later", () => {
 
   render(
     <MeasuredToday
-      when="today"
       readings={readings({
         waves: {
           state: {
@@ -457,13 +391,13 @@ test("a beach with no buoy is never told to come back later", () => {
  * ========================================================================= */
 
 test("the temperature is the air card's largest figure", () => {
-  render(<MeasuredToday when="today" readings={readings()} />);
+  render(<MeasuredToday readings={readings()} />);
 
   expect(screen.getByText("71°F").className).toContain("text-stat");
 });
 
 test("wind is a figure beneath the temperature, not a sentence", () => {
-  render(<MeasuredToday when="today" readings={readings()} />);
+  render(<MeasuredToday readings={readings()} />);
 
   expect(screen.getByText("Wind")).toBeDefined();
   expect(screen.getByText("8 mph from the north-west")).toBeDefined();
@@ -476,7 +410,7 @@ test("wind is a figure beneath the temperature, not a sentence", () => {
  * a field comes back by accident.
  */
 test("no sky and no visibility appear in the block at all", () => {
-  render(<MeasuredToday when="today" readings={readings()} />);
+  render(<MeasuredToday readings={readings()} />);
 
   expect(screen.queryByText("Sky")).toBeNull();
   expect(screen.queryByText("Visibility")).toBeNull();
@@ -487,7 +421,7 @@ test("no sky and no visibility appear in the block at all", () => {
 test("the air station is named, with its distance", () => {
   // The distance is what tells a reader how near this reading was taken, which
   // is the claim the card is making.
-  render(<MeasuredToday when="today" readings={readings()} />);
+  render(<MeasuredToday readings={readings()} />);
 
   const air = screen.getByText(/Scripps Pier/).textContent ?? "";
   expect(air).toContain("Temperature and wind");
@@ -497,7 +431,6 @@ test("the air station is named, with its distance", () => {
 test("a gust is shown when the station published one", () => {
   render(
     <MeasuredToday
-      when="today"
       readings={readings({ air: { air: { ...AIR_READING, gustMph: 14.2 } } })}
     />,
   );
@@ -509,7 +442,6 @@ test("a gust is shown when the station published one", () => {
 test("wind with no direction is still given as a speed", () => {
   render(
     <MeasuredToday
-      when="today"
       readings={readings({
         air: { air: { ...AIR_READING, windDirDegT: null } },
       })}
@@ -522,7 +454,6 @@ test("wind with no direction is still given as a speed", () => {
 test("no wind value says so rather than reading as calm", () => {
   render(
     <MeasuredToday
-      when="today"
       readings={readings({
         air: { air: { ...AIR_READING, windMph: null, windDirDegT: null } },
       })}
@@ -536,7 +467,6 @@ test("no wind value says so rather than reading as calm", () => {
 test("a genuine calm is named as calm, not as a missing reading", () => {
   render(
     <MeasuredToday
-      when="today"
       readings={readings({
         air: { air: { ...AIR_READING, windMph: 0, windDirDegT: 0 } },
       })}
@@ -555,7 +485,6 @@ test("a genuine calm is named as calm, not as a missing reading", () => {
 test("a calm wind reports no gust, however the instrument twitched", () => {
   render(
     <MeasuredToday
-      when="today"
       readings={readings({
         air: {
           air: { ...AIR_READING, windMph: 0.4, windDirDegT: 0, gustMph: 2.1 },
@@ -573,7 +502,6 @@ test("a gust with no wind speed at all is not reported either", () => {
   // different hat: a gust is a property of a wind we do not have.
   render(
     <MeasuredToday
-      when="today"
       readings={readings({
         air: {
           air: {
@@ -594,7 +522,6 @@ test("a gust with no wind speed at all is not reported either", () => {
 test("a missing temperature says so rather than leaving the card headed by nothing", () => {
   render(
     <MeasuredToday
-      when="today"
       readings={readings({ air: { air: { ...AIR_READING, airTempF: null } } })}
     />,
   );
@@ -605,7 +532,6 @@ test("a missing temperature says so rather than leaving the card headed by nothi
 test("an unavailable air reading says so and does not blank the card", () => {
   render(
     <MeasuredToday
-      when="today"
       readings={readings({
         air: {
           air: {
@@ -626,7 +552,6 @@ test("an unavailable air reading says so and does not blank the card", () => {
 test("air drift is disclosed as a bug here rather than a problem upstream", () => {
   render(
     <MeasuredToday
-      when="today"
       readings={readings({
         air: {
           air: {
@@ -647,7 +572,6 @@ test("air drift is disclosed as a bug here rather than a problem upstream", () =
 test("no air station is a permanent fact about the place, with its reason", () => {
   render(
     <MeasuredToday
-      when="today"
       readings={readings({
         air: {
           airStation: null,
@@ -669,7 +593,7 @@ test("no air station is a permanent fact about the place, with its reason", () =
 });
 
 test("the air card says what its figures mean in plain words", () => {
-  render(<MeasuredToday when="today" readings={readings()} />);
+  render(<MeasuredToday readings={readings()} />);
 
   // 71°F and 8 mph, restated. Never advice: ADR-0009 forbids a verdict, so a
   // Beaufort-style "a gentle breeze" is available and "a good day for it" is
@@ -680,7 +604,6 @@ test("the air card says what its figures mean in plain words", () => {
 test("a calm wind is calm in the words and in the figure", () => {
   render(
     <MeasuredToday
-      when="today"
       readings={readings({
         air: { air: { ...AIR_READING, windMph: 0.4, gustMph: 2 } },
       })}
@@ -695,7 +618,6 @@ test("a calm wind is calm in the words and in the figure", () => {
 test("either air figure alone still makes a sentence", () => {
   const { unmount } = render(
     <MeasuredToday
-      when="today"
       readings={readings({
         air: { air: { ...AIR_READING, windMph: null, gustMph: null } },
       })}
@@ -706,7 +628,6 @@ test("either air figure alone still makes a sentence", () => {
 
   render(
     <MeasuredToday
-      when="today"
       readings={readings({ air: { air: { ...AIR_READING, airTempF: null } } })}
     />,
   );
@@ -716,7 +637,6 @@ test("either air figure alone still makes a sentence", () => {
 test("no line at all when neither air figure arrived", () => {
   render(
     <MeasuredToday
-      when="today"
       readings={readings({
         air: {
           air: {
@@ -755,7 +675,6 @@ test("every temperature band has its own word", () => {
   for (const [airTempF, word] of bands) {
     const { unmount } = render(
       <MeasuredToday
-        when="today"
         readings={readings({
           air: {
             air: { ...AIR_READING, airTempF, windMph: null, gustMph: null },
@@ -786,7 +705,6 @@ test("every wind band has its own words", () => {
   for (const [windMph, words] of bands) {
     const { unmount } = render(
       <MeasuredToday
-        when="today"
         readings={readings({
           air: {
             air: { ...AIR_READING, airTempF: null, windMph, gustMph: null },
@@ -817,7 +735,6 @@ test("every compass point has its own words", () => {
   for (const [windDirDegT, words] of bearings) {
     const { unmount } = render(
       <MeasuredToday
-        when="today"
         readings={readings({ air: { air: { ...AIR_READING, windDirDegT } } })}
       />,
     );
@@ -832,7 +749,6 @@ test("a station past ten kilometres loses the decimal its neighbours keep", () =
   // is most of what the figure says at this range -- and pointless past it.
   render(
     <MeasuredToday
-      when="today"
       readings={readings({
         air: { airStation: { name: "Miramar MCAS", distanceM: 10_430 } },
       })}
@@ -845,7 +761,6 @@ test("a station past ten kilometres loses the decimal its neighbours keep", () =
 test("a station with no recorded distance is still named", () => {
   render(
     <MeasuredToday
-      when="today"
       readings={readings({
         air: { airStation: { name: "Scripps Pier", distanceM: null } },
       })}
@@ -874,7 +789,6 @@ test("every disclosure this block can render composes the touch-target floor", (
   const renders = [
     render(
       <MeasuredToday
-        when="today"
         readings={readings({
           waves: {
             buoy: null,
@@ -893,7 +807,6 @@ test("every disclosure this block can render composes the touch-target floor", (
     ),
     render(
       <MeasuredToday
-        when="today"
         readings={readings({
           waves: {
             state: {
@@ -930,9 +843,7 @@ test("every disclosure this block can render composes the touch-target floor", (
  * instrument readings was the objection to it.
  */
 test("each card keeps the glyph its subject was given", () => {
-  const { container } = render(
-    <MeasuredToday when="today" readings={readings()} />,
-  );
+  const { container } = render(<MeasuredToday readings={readings()} />);
 
   const glyphs = [...container.querySelectorAll('[aria-hidden="true"]')].map(
     (node) => node.textContent,
@@ -948,7 +859,6 @@ test("each card keeps the glyph its subject was given", () => {
 test("a quiet buoy leaves the air standing, and the reverse", () => {
   const { unmount } = render(
     <MeasuredToday
-      when="today"
       readings={readings({
         waves: {
           state: {
@@ -966,7 +876,6 @@ test("a quiet buoy leaves the air standing, and the reverse", () => {
 
   render(
     <MeasuredToday
-      when="today"
       readings={readings({
         air: {
           air: {

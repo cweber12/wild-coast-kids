@@ -1,4 +1,4 @@
-import { expect, test, vi } from "vitest";
+import { beforeEach, expect, test, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 
 /*
@@ -24,6 +24,32 @@ vi.mock("@/components/conditions/WeekPanel", () => ({
     return <p>week for {slug}</p>;
   },
 }));
+/*
+  The measured block moved up here from the day panel, and its reads came with
+  it. Mocked at the component rather than at `@/lib/conditions`, which is the
+  shape the two panels above already use and which is also what proves its
+  Suspense boundary is real: a block folded into this section synchronously
+  could not be stubbed this way.
+
+  `measuredPanel` is reassigned by the two tests that need the real cards
+  rendered, because a stub's heading is whatever the stub says and the outline
+  is exactly what those two are about.
+*/
+const measuredPanel = vi.fn();
+vi.mock("@/components/conditions/MeasuredPanel", () => ({
+  MeasuredPanel: (props: { slug: string }) => measuredPanel(props),
+}));
+
+// Reset between tests, because two of them swap in the real cards and the spy
+// would otherwise carry that swap into every test after them -- silently, since
+// the real cards render figures rather than throwing.
+beforeEach(() => {
+  measuredPanel.mockReset();
+  measuredPanel.mockImplementation(({ slug }: { slug: string }) => {
+    if (slug === "suspend-the-panels") throw new Promise(() => {});
+    return <p>measured for {slug}</p>;
+  });
+});
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push: vi.fn() }) }));
 
 const { ConditionsSection } = await import("./ConditionsSection");
@@ -49,33 +75,151 @@ test("the view carries the chooser, the two regions and the caveats", () => {
 });
 
 /**
- * The slab is gone, and this is the assertion that it stays gone. Three cards
- * stood between the header and the week -- today's lowest tide, the buoy, the
- * air station -- and every figure on two of them moved into the day panel
- * while the third was already printed by the week grid's first column.
+ * The order the brief asks for: what is measured, then the week, then the day.
  *
- * Asserted as an absence of the components rather than of their text, because
- * their text is exactly what `MeasuredToday` still renders one region down. A
- * check for "2.6 ft" would pass whether the readings moved or were copied.
+ * The slab that stood here once is still gone and this still asserts that.
+ * Three cards sat between the header and the week -- today's lowest tide, the
+ * buoy, the air station -- and the tide one was removed as a duplicate of the
+ * week grid's own first column. What came back is the other two, which were
+ * never duplicated anywhere: the buoy and the shore station are the only
+ * instruments this site reports.
+ *
+ * Asserted as a sequence rather than as three separate presence checks, because
+ * "the readings are on the page" is true of the arrangement this replaces as
+ * well. Being *first* is the change.
  */
-test("no reading stands between the header and the week", () => {
+test("what is measured comes before the week, and the week before the day", () => {
   const { container } = render(<ConditionsSection slug={DEFAULT_BEACH_SLUG} />);
 
+  // The tide card stays gone: its figure is the week grid's first column.
   expect(screen.queryByText(`panel for ${DEFAULT_BEACH_SLUG}`)).toBeNull();
-  expect(screen.queryByText(`waves for ${DEFAULT_BEACH_SLUG}`)).toBeNull();
-  expect(screen.queryByText(`wind for ${DEFAULT_BEACH_SLUG}`)).toBeNull();
 
-  // And the week is the first thing under the header, which is the order the
-  // brief asks for: header, week, day.
   const regions = [...container.querySelectorAll("p")]
     .map((node) => node.textContent ?? "")
     .filter(
-      (text) => text.startsWith("week for ") || text.startsWith("day for "),
+      (text) =>
+        text.startsWith("measured for ") ||
+        text.startsWith("week for ") ||
+        text.startsWith("day for "),
     );
   expect(regions).toEqual([
+    `measured for ${DEFAULT_BEACH_SLUG}`,
     `week for ${DEFAULT_BEACH_SLUG}`,
     `day for ${DEFAULT_BEACH_SLUG}`,
   ]);
+});
+
+/**
+ * The contract of the whole slice, and the one a later change is most likely to
+ * break without noticing: the block says what the instruments read *now*, and
+ * picking Thursday must not move it.
+ *
+ * Asserted as the shape of the call rather than by choosing a day and re-reading
+ * the figures. That second test would pass here whatever the wiring did -- this
+ * file mocks the panel, so its output is a stub's and would not move either way
+ * -- and it would pass in the real page too, because React does not re-render
+ * `children` a provider merely passes through.
+ *
+ * What is actually true is that there is nothing to follow. The block is
+ * rendered outside `SelectedDayProvider` and is handed the beach and nothing
+ * else, so no day is in scope for it to read even by mistake. A later change
+ * that wired one in would have to add an argument, and that is what fails here.
+ */
+test("the measured block is asked for a beach and never for a day", () => {
+  render(<ConditionsSection slug={DEFAULT_BEACH_SLUG} />);
+
+  expect(measuredPanel).toHaveBeenCalledWith({ slug: DEFAULT_BEACH_SLUG });
+
+  // Spelled out rather than left to `toHaveBeenCalledWith`'s exact match, so a
+  // reader of this test can see which argument is the forbidden one.
+  const [props] = measuredPanel.mock.calls[0] as [Record<string, unknown>];
+  expect(Object.keys(props)).toEqual(["slug"]);
+});
+
+/**
+ * Both instruments, as `MeasuredPanel` hands them over once its reads land.
+ * Every other test here stands the panel down to a paragraph, which is all they
+ * need; the outline needs the real cards, because a stub's heading is whatever
+ * the stub says.
+ *
+ * These two tests came from `DayPanel.test.tsx` with the block itself. Left
+ * there they would have asserted a containment that no longer exists.
+ */
+const MEASURED = {
+  waves: {
+    beachName: "La Jolla Shores Beach",
+    buoy: { name: "Scripps Nearshore", distanceM: 1400 },
+    state: {
+      kind: "reading" as const,
+      heightFt: 2.62,
+      periodS: 5,
+      directionDegT: 278,
+      waterTempF: 69.98,
+    },
+  },
+  air: {
+    beachName: "La Jolla Shores Beach",
+    airStation: { name: "Scripps Pier", distanceM: 1381 },
+    air: {
+      kind: "reading" as const,
+      airTempF: 71.42,
+      windMph: 8.05,
+      gustMph: null,
+      windDirDegT: 320,
+    },
+  },
+};
+
+/**
+ * The rank followed the block back up, and this is what says so.
+ *
+ * `ReadingCard` requires `headingLevel` rather than defaulting it, precisely so
+ * that a component moving a card has to answer the question. #176 moved these
+ * two into the day region and left `h2` behind, making them siblings-in-outline
+ * of the heading that contained them. The move back to page level makes `h2`
+ * right again -- they are siblings of the three region headings under the
+ * `<h1>`, and `h3` here would skip a level with nothing in between.
+ */
+test("the measured cards rank as page regions, beside the week and the day", async () => {
+  const { MeasuredToday } = await import("./MeasuredToday");
+  measuredPanel.mockImplementation(() => <MeasuredToday readings={MEASURED} />);
+
+  render(<ConditionsSection slug={DEFAULT_BEACH_SLUG} />);
+
+  const ranks = screen
+    .getAllByRole("heading", { level: 2 })
+    .map((heading) => heading.textContent);
+  expect(ranks).toContain("Waves and water");
+  expect(ranks).toContain("Air");
+
+  // And nothing dropped to a rank that would skip a level under the <h1>.
+  expect(
+    screen
+      .queryAllByRole("heading", { level: 3 })
+      .map((heading) => heading.textContent),
+  ).not.toContain("Waves and water");
+});
+
+/**
+ * The rank moved and the name did not. The accessible name is composed on the
+ * `<section>` from the title and the beach -- `ReadingCard` records why it is an
+ * `aria-label` rather than a hidden span -- so it is reachable from the tag and
+ * must survive a change to it.
+ */
+test("a card is still called what it was called, at its new rank", async () => {
+  const { MeasuredToday } = await import("./MeasuredToday");
+  measuredPanel.mockImplementation(() => <MeasuredToday readings={MEASURED} />);
+
+  render(<ConditionsSection slug={DEFAULT_BEACH_SLUG} />);
+
+  expect(
+    screen.getByRole("region", {
+      name: "Waves and water · La Jolla Shores Beach",
+    }),
+  ).toBeDefined();
+  expect(screen.getByRole("heading", { name: "Waves and water" }).id).toBe(
+    "waves-today-heading",
+  );
 });
 
 test("every caveat the data files carry reaches this page", () => {
@@ -109,11 +253,36 @@ test("the page says these are instruments and not a safety assessment", () => {
   render(<ConditionsSection slug={DEFAULT_BEACH_SLUG} />);
 
   expect(
-    screen.getByText(/readings from public instruments, not a safety/),
+    screen.getByText(/Instrument readings, not a safety assessment/),
   ).toBeDefined();
   expect(
-    screen.getByText(/Lifeguards and the signs posted at the beach are the/),
+    screen.getByText(/signs posted at the beach are the authority on the day/),
   ).toBeDefined();
+});
+
+/**
+ * The introduction came off, and this is what may not come off with it.
+ *
+ * The eyebrow and the lead paragraph described the page to a reader who had
+ * already clicked "Conditions" to reach it, and the three of them together with
+ * a 56px headline put the first measurement off a 639px window. Removing them
+ * is the point of the slice; removing either half of the notice beside them
+ * would make a shipped ADR untrue, and the two edits look identical in a diff
+ * that is mostly deletions.
+ *
+ * The lead copy is asserted gone here and asserted present in
+ * `src/app/conditions/page.test.tsx`, which checks the metadata description. It
+ * is one sentence with two jobs, and only one of them was ever done on the page
+ * itself.
+ */
+test("the self-description is gone and the standing notice is not", () => {
+  render(<ConditionsSection slug={DEFAULT_BEACH_SLUG} />);
+
+  expect(screen.queryByText(/Surf · Tide · Wind · Visibility/)).toBeNull();
+  expect(screen.queryByText(/built by a local/)).toBeNull();
+  expect(screen.queryByText(/Know before you go/)).toBeNull();
+
+  expect(screen.getByText(/not a safety assessment/)).toBeDefined();
 });
 
 /**
@@ -161,11 +330,12 @@ test("no panel's loading line uses a word the glossary rejects", () => {
     .map((node) => node.textContent ?? "")
     .filter((text) => text.startsWith("Reading "));
 
-  // Two suspended regions, the week and the day. It was four while the three
-  // cards stood here; the measured block's own line is one boundary further in
-  // and is checked in `DayPanel.test.tsx`. Asserted so this cannot pass by
-  // finding none of them.
-  expect(loading.length).toBe(2);
+  // Three suspended regions: the measured block, the week and the day. It was
+  // two while the measured block sat inside the day panel, on a boundary this
+  // check could not see from here -- so its line was asserted in
+  // `DayPanel.test.tsx` instead, and moved back here with the block. Asserted
+  // as a count so this cannot pass by finding none of them.
+  expect(loading.length).toBe(3);
   for (const line of loading) {
     expect(line.toLowerCase()).not.toContain("weather");
     expect(line.toLowerCase()).not.toContain("forecast");

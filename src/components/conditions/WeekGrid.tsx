@@ -62,7 +62,7 @@ import { MIN_USEFUL_SPARK_WIDTH_PX } from "./DaySpark";
 import { useHydrated } from "./hydrated";
 import { resolveSelected, useSelectedDay } from "./selectedDay";
 import { TOUCH_TARGET } from "../ui/touchTarget";
-import { REGION_HEADING } from "../ui/headingRank";
+import { TOOL_REGION_HEADING } from "../ui/headingRank";
 import { ProvenanceLine } from "./ProvenanceLine";
 import { ReservedSlot } from "../ui/ReservedSlot";
 
@@ -301,7 +301,7 @@ export function WeekGrid({
 
   return (
     <section aria-labelledby={headingId}>
-      <h2 id={headingId} className={REGION_HEADING}>
+      <h2 id={headingId} className={TOOL_REGION_HEADING}>
         {title}
       </h2>
 

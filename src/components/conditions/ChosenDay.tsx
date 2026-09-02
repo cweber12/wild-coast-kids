@@ -3,12 +3,14 @@
  *
  * **It holds no reads and makes no choices about the data.** `DayPanel` does
  * every read on the server and hands over seven finished days -- their series,
- * their words, their absences, and what was measured. This picks one. Today's
- * measured block arrives as a suspended node rather than a resolved one, which
- * changes nothing here: it is a `ReactNode` either way. That split is what lets
- * the whole week ship from the first render, which is the point: choosing
- * Thursday costs no request, because every feed here already returns the week
- * in one call and the page has been holding it since it loaded.
+ * their words and their absences. This picks one. That split is what lets the
+ * whole week ship from the first render, which is the point: choosing Thursday
+ * costs no request, because every feed here already returns the week in one
+ * call and the page has been holding it since it loaded.
+ *
+ * **Nothing in this region is measured.** The buoy and the shore station sit
+ * at the top of the page now, outside the provider this component reads,
+ * because they answer for an instant rather than for a day.
  *
  * **Seven days of series is what this costs, and it is the trade the brief
  * asked for.** Four products of twenty-four points across seven days is a few
@@ -41,7 +43,7 @@
 
 import type { ReactNode } from "react";
 import { HourChart, type HourSeries } from "./HourChart";
-import { REGION_HEADING } from "../ui/headingRank";
+import { TOOL_REGION_HEADING } from "../ui/headingRank";
 import { resolveSelected, useSelectedDay } from "./selectedDay";
 import type { SparkPoint } from "./DaySpark";
 
@@ -74,27 +76,16 @@ export type DayView = {
   /** The publisher's own wording for this day, already rendered. */
   wording: ReactNode;
   /**
-   * What was measured on this day, already rendered: two cards on today, and
-   * on the other six a sentence saying nothing has been measured about a day
-   * that has not happened.
-   *
-   * A finished node for the same reason `wording` is one. The measurements are
-   * server reads and this is a client component, so the alternative is fetching
-   * from the client -- and the decision about which day carries them belongs
-   * with the daylight read that knows which day is today, not here.
-   */
-  measured: ReactNode;
-  /**
    * The National Weather Service's relayed judgement for this day, already
    * rendered: the risk on the days the bulletin reaches, a sentence on the
    * days it does not, and on a sheltered beach a sentence saying the product
    * is not about this water at all.
    *
-   * A finished node for the reason `measured` is one -- a server read handed
-   * to a client component -- and present on all seven days rather than only on
-   * the ones the forecast reaches, so that stepping across the week never
-   * leaves a reader wondering whether the block failed or the day is simply
-   * beyond the horizon.
+   * A finished node for the reason `wording` is one -- a server read handed to
+   * a client component -- and present on all seven days rather than only on the
+   * ones the forecast reaches, so that stepping across the week never leaves a
+   * reader wondering whether the block failed or the day is simply beyond the
+   * horizon.
    */
   surfZone: ReactNode;
 };
@@ -136,7 +127,7 @@ export function ChosenDay({
 
   return (
     <>
-      <h2 id="day-panel-heading" className={REGION_HEADING}>
+      <h2 id="day-panel-heading" className={TOOL_REGION_HEADING}>
         {day.dayName}, hour by hour
       </h2>
 
@@ -159,9 +150,9 @@ export function ChosenDay({
 
         Below `xl` they stack, chart first. The map does not go full width when
         it does: it is square, so a 1,184px column would draw a 1,184px-tall
-        picture and push the measured block off the screen entirely. Capping the
-        width is what "the map beneath at a reduced height" comes to for a shape
-        that is as tall as it is wide.
+        picture and push the rip current block off the screen entirely. Capping
+        the width is what "the map beneath at a reduced height" comes to for a
+        shape that is as tall as it is wide.
       */}
       <div className="xl:flex xl:items-start xl:gap-6">
         <div className="min-w-0 xl:basis-2/3">
@@ -183,31 +174,19 @@ export function ChosenDay({
       </div>
 
       {/*
-        Between the chart and the measured block, which is reading order rather
-        than layout convenience: the sky, then the day's shape, then what the
-        forecaster judges, then what the instruments read. The relayed
-        judgement comes before the instrument readings because the standing
-        notice at the top of the page says in as many words that the numbers
-        are not a safety assessment and that the authority is someone else's.
+        Last, which is reading order rather than layout convenience: the sky in
+        words, then the day's shape, then what the forecaster judges. The
+        instruments are no longer below it -- they are at the top of the page,
+        ahead of all three, which is what the standing notice beside them
+        already implies: the numbers are not a safety assessment and the
+        authority is someone else's.
 
-        Below the chart and not above it, for the same reason the measured block
-        is: this is several lines on the days the bulletin reaches and one line
-        on the days it does not, so putting it above would move the plot up and
-        down the page as a reader steps across the week.
+        Below the chart and not above it, because this is several lines on the
+        days the bulletin reaches and one line on the days it does not, so
+        putting it above would move the plot up and down the page as a reader
+        steps across the week.
       */}
       <div className="mt-6">{day.surfZone}</div>
-
-      {/*
-        Under the chart, which is the order the brief lists this region in:
-        heading, sky wording, chart, and today's measured block.
-
-        It also keeps the chart still. The block is two cards on today and one
-        sentence on the other six, so putting it above would move the plot up
-        and down the page as a reader steps across the week -- and comparing
-        one day's curve with the next is the whole reason the week is the
-        selector.
-      */}
-      <div className="mt-6">{day.measured}</div>
     </>
   );
 }
