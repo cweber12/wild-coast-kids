@@ -284,6 +284,17 @@ test("the week's heading outranks the day headings inside it", () => {
   const day = container.querySelector("h3");
   expect(day?.className).toContain("text-2xs");
   expect(day?.className).not.toContain("text-quote");
+
+  // And the outline the register is drawn over, stated rather than implied.
+  // #181 moves the measured cards to level 3, which is the rank these day
+  // headings already hold: the two sets share it, so a change to one of them
+  // that reached the other would go unnoticed here otherwise.
+  expect(
+    screen
+      .getAllByRole("heading", { level: 3 })
+      .map((each) => each.textContent),
+  ).toEqual(["Aug 17 Today", "Tue, Aug 18", "Wed, Aug 19"]);
+  expect(screen.getAllByRole("heading", { level: 2 })).toHaveLength(1);
 });
 
 /**
