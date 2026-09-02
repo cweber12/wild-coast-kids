@@ -2,7 +2,7 @@ import { expect, test } from "vitest";
 import { render, screen } from "@testing-library/react";
 import { ReadingCard } from "./ReadingCard";
 
-function card(figure?: string | null) {
+function card(figure?: string | null, gloss?: string | null) {
   return (
     <ReadingCard
       emoji="🐚"
@@ -11,6 +11,7 @@ function card(figure?: string | null) {
       title="Lowest tide today"
       context="La Jolla Shores Beach"
       figure={figure}
+      gloss={gloss}
     >
       <p>the body of the reading</p>
     </ReadingCard>
@@ -199,4 +200,44 @@ test("the card sets no arbitrary glyph size of its own", () => {
   const { container } = render(card("6:24 AM"));
 
   expect(container.innerHTML).not.toContain("text-[34px]");
+});
+
+/**
+ * The gloss shares the figure's row, and that is the whole of what it buys.
+ *
+ * It used to be a paragraph the caller rendered underneath, costing a row per
+ * card -- and there are two cards, at the top of the page, on the block this
+ * compression was for. Beside the figure it costs nothing above `sm` and wraps
+ * to its own line below, which is the layout it had at every width before.
+ *
+ * Asserted as shared parentage rather than as a class, for the reason the glyph
+ * test above uses the same check: jsdom applies no stylesheets (ADR-0001), so
+ * "same row" is a fact about the tree here and a human confirms it renders as
+ * one.
+ */
+test("the gloss sits on the figure's row rather than under it", () => {
+  const { container } = render(card("3.0 ft", "about waist high."));
+
+  const figure = container.querySelector(".text-stat");
+  const gloss = screen.getByText("about waist high.");
+
+  expect(gloss.parentElement).toBe(figure?.parentElement);
+  // And it is not the body: a caller's children still render beneath the row.
+  expect(gloss.parentElement).not.toBe(
+    screen.getByText("the body of the reading").parentElement,
+  );
+});
+
+/**
+ * A station that answered with a figure and no words is not owed a blank row.
+ * The same argument the empty figure slot loses on, one element along -- and
+ * the reason this is a prop with a null case rather than a caller's paragraph
+ * wrapped in a condition each time.
+ */
+test("a card given no gloss has no empty line where one would go", () => {
+  const { container } = render(card("3.0 ft"));
+
+  const row = container.querySelector(".text-stat")?.parentElement;
+  // The glyph and the figure, and nothing standing in for absent words.
+  expect(row?.children.length).toBe(2);
 });

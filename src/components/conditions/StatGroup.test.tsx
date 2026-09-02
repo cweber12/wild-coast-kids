@@ -100,3 +100,25 @@ test("an absent figure is set apart from a real one, not styled as a value", () 
   const value = container.querySelector("dd");
   expect(value?.className).not.toContain("font-extrabold");
 });
+
+/**
+ * Label beside value rather than above it, which is a row per pair rather than
+ * two -- the height this component gave back when the block it sits in moved to
+ * the top of the page.
+ *
+ * The `dt`/`dd` pairing is what is *not* asserted by this: that is checked
+ * above, and it is the half that carries the relationship for a reader who
+ * cannot see either arrangement. This one is only about the row, so the two can
+ * break independently.
+ */
+test("a label and its figure share one row", () => {
+  const { container } = render(
+    <StatGroup stats={[{ label: "Period", value: "7 s" }]} />,
+  );
+
+  const term = container.querySelector("dt");
+  const value = container.querySelector("dd");
+
+  expect(term?.parentElement).toBe(value?.parentElement);
+  expect(term?.parentElement?.className).toContain("items-baseline");
+});

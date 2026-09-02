@@ -52,6 +52,7 @@
  */
 
 import type { ReactNode } from "react";
+import { CARD_PROSE } from "./cardText";
 
 type ReadingCardProps = {
   /** Sets the subject at a glance; hidden from assistive tech, which reads the heading. */
@@ -106,6 +107,26 @@ type ReadingCardProps = {
    * The one figure that leads. `null` renders no slot rather than an empty one.
    */
   figure?: string | null;
+  /**
+   * The figure in plain words, on the figure's own line: "about waist high",
+   * "Mild, with a light breeze".
+   *
+   * **A prop rather than the first child, and that is what buys the height.**
+   * It used to be a paragraph the caller rendered underneath, which cost a full
+   * row per card -- a 13px line plus its margin, twice over, on the block that
+   * had just moved to the top of the page. Baseline-aligned beside the figure it
+   * glosses, it costs nothing at all above `sm` and wraps to its own line below,
+   * which is the layout it used to have everywhere.
+   *
+   * **It stays per-card, which is the point ADR-0010 turns on.** The temptation
+   * once the cards are being compressed is to merge them; that decision refuses
+   * two provenances behind one sentence, and this is that sentence. A card has
+   * one figure, one gloss for it and one attribution, or it is not a card.
+   *
+   * `null` renders nothing rather than an empty line: a station that answered
+   * with a figure and no words is not owed a blank row.
+   */
+  gloss?: string | null;
   /** Everything this particular reading has to say: sentences, stats, disclosures, provenance. */
   children: ReactNode;
 };
@@ -117,6 +138,7 @@ export function ReadingCard({
   title,
   context = null,
   figure = null,
+  gloss = null,
   children,
 }: ReadingCardProps) {
   // The tag itself, not a branch on it: one rendered path, so there is no arm
@@ -139,13 +161,22 @@ export function ReadingCard({
       </Heading>
 
       {/*
-        One row for the glyph and the figure, and the row renders whether or not
-        there is a figure. A card with no station still has a subject, and
-        dropping its mark when the reading goes quiet makes the card read as
-        more broken than it is -- the same argument the empty figure slot loses
-        on, in the opposite direction.
+        One row for the glyph, the figure and the words for it, and the row
+        renders whether or not there is a figure. A card with no station still
+        has a subject, and dropping its mark when the reading goes quiet makes
+        the card read as more broken than it is -- the same argument the empty
+        figure slot loses on, in the opposite direction.
+
+        `items-baseline` rather than `items-center`, which is what lets three
+        things at 30px, 36px and 13px sit on one line without the smallest of
+        them floating. The glyph takes `leading-none` so its own box does not
+        push that baseline down.
+
+        `flex-wrap` so the gloss drops to its own line when the card is too
+        narrow to hold it -- which is the layout this used to have at every
+        width, so the narrow case is not a compromise, it is where it started.
       */}
-      <div className="mb-2 flex items-center gap-3">
+      <div className="mb-2 flex flex-wrap items-baseline gap-x-3 gap-y-1">
         <span aria-hidden="true" className="text-3xl leading-none">
           {emoji}
         </span>
@@ -154,6 +185,10 @@ export function ReadingCard({
           <p className="text-stat leading-none font-black text-white italic">
             {figure}
           </p>
+        )}
+
+        {gloss !== null && (
+          <p className={`leading-relaxed text-base ${CARD_PROSE}`}>{gloss}</p>
         )}
       </div>
 

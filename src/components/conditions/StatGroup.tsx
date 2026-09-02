@@ -49,9 +49,23 @@ export type Stat = {
 
 export function StatGroup({ stats }: { stats: readonly Stat[] }) {
   return (
-    <dl className="mb-3 flex flex-wrap gap-x-7 gap-y-2">
+    <dl className="mb-3 flex flex-wrap gap-x-6 gap-y-1">
       {stats.map(({ label, value }) => (
-        <div key={label}>
+        /*
+          Label beside value rather than above it, which is a row per pair
+          rather than two. The block these sit in moved to the top of the page
+          and every row it does not need is a row the week grid gets back.
+
+          The `dt`/`dd` pairing is untouched, and that is the half that matters:
+          this file's contract is that the relationship is structural rather
+          than a visual accident of one line sitting above another. It is no
+          more an accident side by side than stacked, and a reader who cannot
+          see either layout reads the same list.
+
+          `items-baseline` because the two are 10px and 13px: centred, the caps
+          label floats above the figure it names.
+        */
+        <div key={label} className="flex items-baseline gap-2">
           <dt
             className={`text-2xs font-extrabold tracking-widest uppercase ${CARD_MUTED}`}
           >
