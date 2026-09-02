@@ -323,6 +323,27 @@ row of the week grid are all above the fold**. That is the measurement this
 brief is judged on, and it must be taken on the branch and against `main` before
 any claim is made about it.
 
+> **Addendum, 2026-09-02, measured after slices 1-3.** The target as stated is
+> not reachable, and it was set without measuring the week cell.
+>
+> | at 1536×639          | `main` | slices 1-3 |
+> | -------------------- | -----: | ---------: |
+> | selector bottom      |  343px |  **259px** |
+> | week heading top     |  379px |      526px |
+> | first week cell ends |  807px |      938px |
+> | whole page           | 3424px | **3296px** |
+>
+> The header is 84px shorter and the page 128px shorter, and the readings now
+> land inside the first screen -- they were three regions down. But a week cell
+> is 292px tall on its own, so even with the readings compressed to zero the
+> first row could not finish above 639px from a grid that starts below 340px.
+>
+> **The target is restated**: the selector, the readings in full, and the week's
+> heading with the top of its first row. That is what slices 1-3 deliver.
+> Getting a whole week cell above the fold as well is a change to the week grid,
+> which this brief puts out of scope, and it should not be smuggled in as a
+> consequence of compressing something else.
+
 ## Out of Scope
 
 - **The shore map, the compass readout and the hourly chart's internals.** Not

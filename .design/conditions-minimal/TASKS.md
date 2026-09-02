@@ -135,6 +135,36 @@ conflicts inside one file.
       block, nothing can reach that branch — and `CLAUDE.md` forbids leaving it
       as dead code for a caller that no longer exists._
 
+> **Addendum, 2026-09-02, after slice 3 shipped. Slice 4 as written below is
+> blocked, and must not be built as described.** `MeasuredToday`'s docstring
+> settles it: _"Two cards, not one, and that is ADR-0010 rather than a layout
+> preference. The buoy and the air station are two provenances, which that
+> decision permits behind one *panel* and refuses behind one *sentence*... merging
+> them would produce exactly the sentence ADR-0010 forbids."_
+>
+> A second constraint sits under it. `CARD_PROSE` and `CARD_MUTED` are measured
+> against `bg-dark` and against nothing else -- white at 55% on the page's cream
+> ground is 1.03:1, a bug already fixed once in three places. Any band that is
+> not itself dark takes those two colours out of the surface they were measured
+> on.
+>
+> Three ways forward, for the designer to pick:
+>
+> 1. **Drop it.** The two cards are already the brief's "one loud thing", and
+>    slices 1-3 delivered the compression by other means. Measured cost: the pair
+>    is 223px.
+> 2. **Compress inside the two-card structure.** Each card keeps its own
+>    sentence, its own lead figure and its own provenance line -- which is all
+>    ADR-0010 actually requires -- and the height comes out of padding and row
+>    count instead. No ADR is engaged.
+> 3. **One dark band holding two attributed groups.** Satisfies both constraints
+>    on a literal reading (two sentences, two provenances, still `bg-dark`), but
+>    it reads against the docstring's intent and would need ADR-0010 amended
+>    rather than merely cited. Saves only the gap and one set of padding.
+>
+> Option 2 is the recommendation: it is the only one that recovers height without
+> touching a decision.
+
 - [ ] **Slice 4 — Compress the two reading cards into one band.**
       Two `rounded-card bg-dark` cards side by side become one dark band with a
       yellow `RIGHT NOW · <beach>` eyebrow: one surface, one set of padding, the
