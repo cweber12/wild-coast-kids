@@ -41,7 +41,7 @@
 
 import type { ReactNode } from "react";
 import { HourChart, type HourSeries } from "./HourChart";
-import { REGION_HEADING } from "../ui/headingRank";
+import { TOOL_REGION_HEADING } from "../ui/headingRank";
 import { resolveSelected, useSelectedDay } from "./selectedDay";
 import type { SparkPoint } from "./DaySpark";
 
@@ -136,7 +136,7 @@ export function ChosenDay({
 
   return (
     <>
-      <h2 id="day-panel-heading" className={REGION_HEADING}>
+      <h2 id="day-panel-heading" className={TOOL_REGION_HEADING}>
         {day.dayName}, hour by hour
       </h2>
 

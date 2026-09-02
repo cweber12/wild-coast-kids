@@ -28,3 +28,41 @@
  */
 export const REGION_HEADING =
   "text-quote leading-display mb-4 font-black italic";
+
+/**
+ * The same rank, on a page that is a tool rather than a document. ADR-0014 is
+ * unaffected: a region heading still outranks a card heading, and this is still
+ * the display register against the label one.
+ *
+ * **Why a second rank rather than a smaller first one.** `REGION_HEADING` is
+ * also `/art`'s two section headings and `SessionSchedule`'s, which reaches
+ * `/art` and `/coop`. Those pages spread their regions down a document, where a
+ * 34px heading is an arrival. `/conditions` stacks three of them inside one
+ * scroll -- the week, the day, the notes -- and a reader there is not arriving
+ * three times, they are looking for a number. Editing the shared constant would
+ * have quietened three pages to answer a complaint only one of them has.
+ *
+ * **It stays in the display register.** `font-black italic` at a size token
+ * with `leading-display`, exactly as the constant above is. The alternative --
+ * dropping these three headings to the label register -- is the flat scale
+ * ADR-0014 was written to escape, where `/conditions` rendered a region, a card
+ * inside it and a day inside that at the same 10px. The rank gets quieter; it
+ * does not change kind.
+ *
+ * **The clamp is legible at both ends, which is the test the constant above
+ * sets itself.** 17px at 375 against the conditions `<h1>`'s 24px, and 22px at
+ * 1536 against its 36px. `--text-quote` fails that here for the mirror image of
+ * the reason `--text-card` failed it there: 34px under a 36px title is not a
+ * second rank, it is the same one twice.
+ *
+ * **`mb-3` rather than `mb-4`.** A smaller heading owns less space beneath it,
+ * and 16px under a 22px line reads as a gap rather than as attachment.
+ *
+ * Like the constant above, this is asserted by reference rather than by
+ * rendered size -- jsdom applies no stylesheets (ADR-0001). The token behind it
+ * carries a `REQUIRED` row in `scripts/built-css.mjs` instead, because a
+ * deleted token leaves `text-tool-region` sitting in the markup where every
+ * jsdom test still finds it, compiling to nothing.
+ */
+export const TOOL_REGION_HEADING =
+  "text-tool-region leading-display mb-3 font-black italic";

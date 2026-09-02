@@ -77,6 +77,10 @@
      smaller `--text-title`, because six other pages take that one and none of
      them has this problem. */
   --text-tool-title: clamp(24px, 3vw, 36px);
+  /* The same register one rank down, for the region headings under that title.
+     `--text-quote` is the rank they had, and at 34px beside a 36px title it
+     stops being a second rank at all. See `TOOL_REGION_HEADING`. */
+  --text-tool-region: clamp(17px, 1.6vw, 22px);
 
   --leading-display: 1;
   --leading-tight: 1.1;
