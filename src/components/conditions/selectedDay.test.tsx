@@ -345,6 +345,46 @@ test("the chosen hour survives it too, resolved against the new day", () => {
   expect(drawnDay(container)).toBe(`Tide on ${DATES[1]}`);
 });
 
+/**
+ * The same two properties again, driven from the new control instead of the
+ * grid. Worth asserting twice rather than trusting the shared provider: the
+ * strip is mounted *inside* `ChosenDay`, where the grid is a sibling above it,
+ * so a re-render that resets the chart would show up here and nowhere else.
+ * These are the two things a second day control is most likely to break.
+ */
+test("the day strip moves the day without disturbing the tab or the hour", () => {
+  const { container } = renderBoth();
+
+  fireEvent.click(container.querySelector('[data-series-tab="swell"]')!);
+  fireEvent.click(container.querySelector('[data-hour-column="9"]')!);
+  expect(drawnDay(container)).toBe(`Swell on ${DATES[0]}`);
+
+  fireEvent.click(container.querySelector(`[data-day-pill="${DATES[2]}"]`)!);
+
+  expect(drawnDay(container)).toBe(`Swell on ${DATES[2]}`);
+  expect(container.querySelector("[data-hour-readout]")?.textContent).toContain(
+    "9 AM",
+  );
+});
+
+/**
+ * One fact, two controls, and this is what stops them holding different
+ * answers. The strip writes to the provider the grid reads, so choosing in one
+ * has to mark the other -- a reader who picks Wednesday down at the chart and
+ * then scrolls up must not find the grid still saying Monday.
+ */
+test("choosing in the strip marks the day in the week grid too", () => {
+  const { container } = renderBoth();
+
+  fireEvent.click(container.querySelector(`[data-day-pill="${DATES[2]}"]`)!);
+
+  const marked = container.querySelector(`[data-day-choice="${DATES[2]}"]`);
+  expect(marked?.className).toContain("underline");
+  expect(
+    container.querySelector(`[data-day-choice="${DATES[0]}"]`)?.className,
+  ).not.toContain("underline");
+});
+
 test("without a script the week is whole and offers no control", () => {
   // This is what the day selection falls back *to*, and why it needs no
   // `noscript` list of its own the way `BeachSelector` does: the week grid is

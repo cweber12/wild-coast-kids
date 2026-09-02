@@ -37,11 +37,18 @@
  * today.** It says "Today, hour by hour" on arrival and on today, and the
  * grid's own label for the day otherwise, so the two regions call Thursday the
  * same thing.
+ *
+ * **There is a day control in here now.** `DayStrip`, under the heading, which
+ * writes to the same provider the week grid does. It is here because the grid
+ * is ~290px of cells above the chart, so changing the day used to mean
+ * scrolling away from the thing being changed. See that file for why a second
+ * control over one fact is worth having.
  */
 
 "use client";
 
 import type { ReactNode } from "react";
+import { DayStrip } from "./DayStrip";
 import { HourChart, type HourSeries } from "./HourChart";
 import { TOOL_REGION_HEADING } from "../ui/headingRank";
 import { resolveSelected, useSelectedDay } from "./selectedDay";
@@ -130,6 +137,18 @@ export function ChosenDay({
       <h2 id="day-panel-heading" className={TOOL_REGION_HEADING}>
         {day.dayName}, hour by hour
       </h2>
+
+      {/*
+        The control, directly under the heading that names what it changed.
+
+        Above the wording rather than below it, though the chart is what it is
+        really for: the office's sentences run one to three lines depending on
+        the day, so a control under them would move as a reader stepped across
+        the week. This region already orders itself on that rule -- it is why
+        the rip block and the measured block sat below the chart rather than
+        above it -- and a control is the element that can least afford to move.
+      */}
+      <DayStrip days={days} />
 
       <div className="mb-4">{day.wording}</div>
 
