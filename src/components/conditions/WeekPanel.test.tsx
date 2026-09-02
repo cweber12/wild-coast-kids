@@ -733,58 +733,163 @@ test("a line with no recorded distance is still named, without one", async () =>
 });
 
 /**
- * ADR-0023 dropped the day's own extremes from the week's cells, and this
- * sentence is the condition it was allowed under. Without it a reader who saw a
- * -0.2 ft at 3:38 AM last week finds it gone with nothing to explain the
- * change -- the silent failure this repo is built to avoid.
+ * ADR-0045. The unconditional daylight sentence is gone: ADR-0023 scoped the
+ * loss it covered as lasting "until a day view carries them", the day view now
+ * draws all twenty-four hours with night shaded, and half the sentence pointed
+ * at cards that no longer exist.
  *
  * Asserted here rather than in `WeekGrid`, because the grid prints whatever
- * notes it is handed and the decision to hand it this one is the panel's.
+ * notes it is handed and deciding what to hand it is the panel's job.
  */
-test("the week says it shows only the daylight window, once", async () => {
+test("no note qualifies the grid when every feed answered", async () => {
   readWeekOfLowestLows.mockResolvedValue({
     ...BINDING,
     state: { kind: "week", days: [tideDay(0, "6:41 PM", 0.9)] },
-  });
-
-  render(await WeekPanel({ slug: "la-jolla-shores-beach" }));
-
-  expect(
-    screen.getAllByText(/shows what falls between sunrise and sunset/i),
-  ).toHaveLength(1);
-  // And says where the missing figure went, rather than only that it is gone.
-  // It pointed at the tide card until that card came off the page; it points
-  // at the day chart now, which is where an overnight low is actually drawn.
-  expect(
-    screen.getByText(/the day below draws the whole twenty-four hours/i),
-  ).toBeDefined();
-});
-
-test("the scope sentence stands whether or not a feed also failed", async () => {
-  // It qualifies every figure in the grid rather than reporting one feed's
-  // trouble, so an outage must not displace it -- and it leads, because a
-  // reader hits it before the figures it qualifies.
-  readWeekOfLowestLows.mockResolvedValue({
-    ...BINDING,
-    state: {
-      kind: "unavailable",
-      detail: "NOAA returned HTTP 503.",
-      drift: false,
-    },
   });
 
   const { container } = render(
     await WeekPanel({ slug: "la-jolla-shores-beach" }),
   );
 
-  const notes = [...container.querySelectorAll("section > p")].map(
-    (node) => node.textContent,
-  );
-  expect(notes[0]).toMatch(/shows what falls between sunrise and sunset/i);
   expect(
-    notes.some((note) => /could not get this week/i.test(note ?? "")),
-  ).toBe(true);
+    screen.queryByText(/shows what falls between sunrise and sunset/i),
+  ).toBeNull();
+  expect(
+    screen.queryByText(/the day below draws the whole twenty-four hours/i),
+  ).toBeNull();
+  // A healthy week goes from heading to grid, so there is no note at all.
+  expect(container.querySelectorAll("section > p")).toHaveLength(0);
 });
+
+/**
+ * The other half of ADR-0045, and the half that matters more.
+ *
+ * Removing the intro must not take an outage message with it. These seven are
+ * conditional and each names the publisher that went quiet, which is what
+ * `CLAUDE.md`'s "nothing fails silently" is actually about — the intro was a
+ * qualification, and these are failures.
+ *
+ * One state at a time rather than one fixture with everything broken: several
+ * of these are mutually exclusive by construction, and a combined fixture would
+ * assert a page no reader can reach.
+ */
+/**
+ * `beforeEach` resets the tide read with no default, so a fixture that breaks
+ * only the wave or cloud feed leaves the panel with no week at all — which is a
+ * different failure from the one under test. Every case that is not itself
+ * about the tide starts from a healthy one.
+ */
+function healthyTide() {
+  readWeekOfLowestLows.mockResolvedValue({
+    ...BINDING,
+    state: { kind: "week", days: [tideDay(0, "6:41 PM", 0.9)] },
+  });
+}
+
+const OUTAGES: [string, () => void, RegExp][] = [
+  [
+    "NOAA could not be reached",
+    () =>
+      readWeekOfLowestLows.mockResolvedValue({
+        ...BINDING,
+        state: {
+          kind: "unavailable",
+          detail: "NOAA returned HTTP 503.",
+          drift: false,
+        },
+      }),
+    /could not get this week's tide predictions from NOAA/i,
+  ],
+  [
+    "the beach has no tide station",
+    () =>
+      readWeekOfLowestLows.mockResolvedValue({
+        ...BINDING,
+        state: { kind: "no-station", reason: "no station within range" },
+      }),
+    /no tide station for this beach/i,
+  ],
+  [
+    "the hourly heights are missing but the figures are not",
+    () => {
+      readWeekOfLowestLows.mockResolvedValue({
+        ...BINDING,
+        state: { kind: "week", days: [tideDay(0, "6:41 PM", 0.9)] },
+      });
+      readHourlyTide.mockResolvedValue({
+        ...BINDING,
+        state: {
+          kind: "unavailable",
+          detail: "NOAA returned HTTP 500.",
+          drift: false,
+        },
+      });
+    },
+    /hour-by-hour shape behind each day's figure is missing/i,
+  ],
+  [
+    "the beach has no MOP line",
+    () => {
+      healthyTide();
+      readWaveWeek.mockResolvedValue({
+        ...BINDING,
+        state: { kind: "no-line", reason: "inside a bay" },
+      });
+    },
+    /no wave forecast for this beach/i,
+  ],
+  [
+    "CDIP could not be reached",
+    () => {
+      healthyTide();
+      readWaveWeek.mockResolvedValue({
+        ...BINDING,
+        state: {
+          kind: "unavailable",
+          detail: "CDIP returned HTTP 502.",
+          drift: false,
+        },
+      });
+    },
+    /could not get this week's wave forecast from CDIP/i,
+  ],
+  [
+    "the beach sits in no forecast cell",
+    () => {
+      healthyTide();
+      readSkyWeek.mockResolvedValue({
+        ...BINDING,
+        state: { kind: "no-cell", reason: "outside the published grid" },
+      });
+    },
+    /no cloud forecast for this beach/i,
+  ],
+  [
+    "the National Weather Service could not be reached",
+    () => {
+      healthyTide();
+      readSkyWeek.mockResolvedValue({
+        ...BINDING,
+        state: {
+          kind: "unavailable",
+          detail: "the request timed out.",
+          drift: false,
+        },
+      });
+    },
+    /could not get this week's cloud forecast/i,
+  ],
+];
+
+for (const [name, arrange, sentence] of OUTAGES) {
+  test(`${name}: the note survives the intro's removal`, async () => {
+    arrange();
+
+    render(await WeekPanel({ slug: "la-jolla-shores-beach" }));
+
+    expect(screen.getByText(sentence)).toBeDefined();
+  });
+}
 
 /* =========================================================================
  * The shape behind each day's figure
@@ -862,8 +967,11 @@ test("the figure and the window are unchanged by the shape above them", async ()
     "Daylight, 6:14 AM to 7:32 PM",
   );
 
-  // And the sentence ADR-0023 allowed the drop under is still beneath the grid.
-  expect(screen.getByText(/overnight are real and often bigger/)).toBeDefined();
+  // ADR-0045: the sentence ADR-0023 allowed the drop under is gone, because the
+  // day chart it was waiting for now draws the overnight dip it described. What
+  // still carries the scope is that decision's other half -- the window in the
+  // header, asserted just above.
+  expect(screen.queryByText(/overnight are real and often bigger/)).toBeNull();
 });
 
 test("a failed hourly read costs the shape and not the grid", async () => {

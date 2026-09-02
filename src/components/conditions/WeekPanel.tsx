@@ -330,24 +330,19 @@ export async function WeekPanel({ slug }: { slug: string }) {
   const notes: string[] = [];
 
   /*
-    First, because it qualifies every figure in the grid rather than reporting
-    one feed's trouble. ADR-0023 dropped the day's own extremes from these
-    cells -- a lowest low at 3:38 AM is a real prediction and a useless plan,
-    and the labels naming it never fitted -- and this sentence is the condition
-    that was allowed under. Without it a reader who saw a -0.2 ft here last
-    week finds it gone with nothing to explain the change, which is the silent
-    failure this repo is built to avoid.
+    ADR-0045. An unconditional sentence stood first here, saying that the week
+    shows only the daylight window and that overnight lows are real and often
+    bigger. ADR-0023 named it as the condition its removal of the day's own
+    extremes was allowed under, and it is gone anyway, because that decision
+    scoped the loss as lasting "until a day view carries them" and the day view
+    now draws all twenty-four hours with night shaded. Half the sentence had
+    also stopped being true: it ended by pointing at cards that no longer exist.
 
-    Unconditional, and one sentence rather than seven: the scope is a fact
-    about the grid, the same shape as every other note here. It says where the
-    figure went as well as that it is missing, because "not shown" alone reads
-    as an omission rather than a decision.
+    What is left in this array reports outages and nothing else. Every push
+    below is conditional, and each one names the publisher that went quiet --
+    which is the half `CLAUDE.md`'s "nothing fails silently" is about, and the
+    half this file's tests assert one state at a time.
   */
-  notes.push(
-    "This week shows what falls between sunrise and sunset. Lows and swells " +
-      "overnight are real and often bigger — the day below draws the whole " +
-      "twenty-four hours, with night shaded.",
-  );
 
   /*
     The upstream reason is printed here now rather than pointed at.
