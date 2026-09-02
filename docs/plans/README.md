@@ -16,8 +16,21 @@ Each file carries a note under its title:
 > It records what was intended then, not what the code does now, and is not
 > maintained. See [`README.md`](README.md).
 
-A plan still being worked carries no such note. Today every plan here is
-historical; nothing is in flight.
+A plan still being worked carries the other marker instead, under its title:
+
+> Planned 2026-08-31. In flight.
+
+**Every plan carries one or the other, and which one is the note's whole
+purpose**, because it decides whether the file may be amended — see below. The
+marker changes exactly once, in the pull request that merges the work.
+
+This used to say "a plan still being worked carries no such note" and then
+counted: "today every plan here is historical; nothing is in flight." Both
+halves were wrong. An in-flight plan does carry a marker, and one has been in
+flight since 2026-08-31. A census in a file nobody re-counts goes stale the
+first time someone starts a plan, and this one did — it was read on 2026-09-02
+as licence to freeze a live plan, which is the one mistake these markers exist
+to prevent. The rule is stated here now and the count is not.
 
 ## What that means in practice
 
