@@ -133,6 +133,7 @@ function SeaCard({ beachName, buoy, state }: WavesView) {
   return (
     <ReadingCard
       emoji="🏄"
+      headingLevel="h3"
       headingId="waves-today-heading"
       title="Waves and water"
       context={beachName}
@@ -406,6 +407,7 @@ function AirCard({ beachName, airStation, air }: AirView) {
   return (
     <ReadingCard
       emoji="💨"
+      headingLevel="h3"
       headingId="wind-today-heading"
       title="Air"
       context={beachName}

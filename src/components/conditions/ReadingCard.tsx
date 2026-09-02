@@ -56,6 +56,22 @@ import type { ReactNode } from "react";
 type ReadingCardProps = {
   /** Sets the subject at a glance; hidden from assistive tech, which reads the heading. */
   emoji: string;
+  /**
+   * The heading's rank. Callers own it, because they own where the card sits,
+   * and rank is a fact about placement rather than about a card.
+   *
+   * It was hardcoded `h2`, which was right while these were page-level
+   * regions. #176 moved both inside the day region and the rank stayed, so two
+   * card headings became siblings-in-outline of the heading that contains
+   * them — the arrangement ADR-0014 was written against, reached from the
+   * other direction. Required rather than defaulted for that reason: the next
+   * component to move a card has to answer the question rather than inherit an
+   * answer taken for somewhere else.
+   *
+   * Only the outline moves. The visual register is `text-2xs` at either rank,
+   * which is what ADR-0014 decided and what a level says nothing about.
+   */
+  headingLevel: "h2" | "h3";
   /** The heading's own id. Callers own it, because they own the anchor. */
   headingId: string;
   /** What this reading is. Short: these sit side by side. */
@@ -90,12 +106,17 @@ type ReadingCardProps = {
 
 export function ReadingCard({
   emoji,
+  headingLevel,
   headingId,
   title,
   context = null,
   figure = null,
   children,
 }: ReadingCardProps) {
+  // The tag itself, not a branch on it: one rendered path, so there is no arm
+  // of this component that only one rank exercises.
+  const Heading = headingLevel;
+
   return (
     // flex-col so a card fills the height of its row in the measured block.
     // Cards of unequal content otherwise leave a ragged surface beside the
@@ -104,12 +125,12 @@ export function ReadingCard({
       aria-label={context !== null ? `${title} · ${context}` : title}
       className="rounded-card flex h-full flex-col bg-dark px-6 py-4"
     >
-      <h2
+      <Heading
         id={headingId}
         className="text-2xs mb-3 font-extrabold tracking-widest text-yellow uppercase"
       >
         {title}
-      </h2>
+      </Heading>
 
       {/*
         One row for the glyph and the figure, and the row renders whether or not

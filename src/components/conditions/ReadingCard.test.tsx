@@ -6,6 +6,7 @@ function card(figure?: string | null) {
   return (
     <ReadingCard
       emoji="🐚"
+      headingLevel="h3"
       headingId="test-heading"
       title="Lowest tide today"
       context="La Jolla Shores Beach"
@@ -64,7 +65,7 @@ test("a card with no figure has no empty slot where one would go", () => {
 
 test("a card given no figure at all behaves the same as one given null", () => {
   const { container } = render(
-    <ReadingCard emoji="🌊" headingId="h" title="Waves">
+    <ReadingCard emoji="🌊" headingLevel="h3" headingId="h" title="Waves">
       <p>body</p>
     </ReadingCard>,
   );
@@ -111,7 +112,7 @@ test("the beach reaches the accessible name without being printed three times", 
 
 test("a card given no context is named by its title alone", () => {
   const { container } = render(
-    <ReadingCard emoji="🌊" headingId="h" title="Waves">
+    <ReadingCard emoji="🌊" headingLevel="h3" headingId="h" title="Waves">
       <p>body</p>
     </ReadingCard>,
   );

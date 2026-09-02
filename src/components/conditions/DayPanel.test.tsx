@@ -1,6 +1,7 @@
 import { beforeEach, expect, test, vi } from "vitest";
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import { localMidnightOf } from "@/lib/pacific-time";
+import { MeasuredToday, type MeasuredReadings } from "./MeasuredToday";
 import { SelectedDayProvider, useSelectedDay } from "./selectedDay";
 
 const readSkyWording = vi.fn();
@@ -792,6 +793,105 @@ test("today carries the measured block, and it is asked for this beach", async (
   expect(measuredPanel).toHaveBeenCalledWith({
     slug: "la-jolla-shores-beach",
   });
+});
+
+/**
+ * Both instruments, as `MeasuredPanel` would hand them over once its reads
+ * land. Every other test here stands the panel down to a paragraph, which is
+ * all they need; the outline needs the real cards, because a stub's heading is
+ * whatever the stub says.
+ */
+const MEASURED: MeasuredReadings = {
+  waves: {
+    beachName: BINDING.beachName,
+    buoy: { name: "Scripps Nearshore", distanceM: 1400 },
+    state: {
+      kind: "reading",
+      heightFt: 2.62,
+      periodS: 5,
+      directionDegT: 278,
+      waterTempF: 69.98,
+    },
+  },
+  air: {
+    beachName: BINDING.beachName,
+    airStation: { name: "Scripps Pier", distanceM: 1381 },
+    air: {
+      kind: "reading",
+      airTempF: 71.42,
+      windMph: 8.05,
+      gustMph: null,
+      windDirDegT: 320,
+    },
+  },
+};
+
+/**
+ * The outline, asserted where the containment it turns on is real. See #181.
+ *
+ * The cards were page-level regions and their `<h2>` was right; #176 moved them
+ * inside this one and left the rank behind, so "Waves and water" and "Air"
+ * became siblings-in-outline of the heading that contains them. ADR-0014 was
+ * written against the arrangement where cards are siblings of regions, and that
+ * arrangement no longer holds.
+ *
+ * The rank is asserted **inside the region** rather than by counting `<h3>`s: a
+ * test that only says the card renders a level 3 would pass with the card
+ * outside the day region entirely, which is the half of the defect that is
+ * about placement rather than about a tag. The real `MeasuredToday` stands in
+ * for the mocked panel for the same reason -- the substitution replaces the
+ * fetch, not the render.
+ */
+test("the cards inside the day region rank below the heading that names it", async () => {
+  measuredPanel.mockImplementation(() => (
+    <MeasuredToday when="today" readings={MEASURED} />
+  ));
+
+  const { container } = render(
+    await DayPanel({ slug: "la-jolla-shores-beach" }),
+  );
+
+  const region = container.querySelector<HTMLElement>(
+    'section[aria-labelledby="day-panel-heading"]',
+  )!;
+
+  // One level 2 in the region, and it is the region's own name. Two cards
+  // sitting at that rank is exactly what this test exists to catch.
+  expect(
+    within(region)
+      .getAllByRole("heading", { level: 2 })
+      .map((heading) => heading.textContent),
+  ).toEqual(["Today, hour by hour"]);
+
+  // And both cards one level under it, inside it.
+  const inside = within(region)
+    .getAllByRole("heading", { level: 3 })
+    .map((heading) => heading.textContent);
+  expect(inside).toContain("Waves and water");
+  expect(inside).toContain("Air");
+});
+
+/**
+ * The rank moved and the name did not. The accessible name is composed on the
+ * `<section>` from the title and the beach -- `ReadingCard` records why it is
+ * an `aria-label` rather than a hidden span -- so it is reachable from the tag
+ * and must survive a change to it.
+ */
+test("a card is still called what it was called, at its new rank", async () => {
+  measuredPanel.mockImplementation(() => (
+    <MeasuredToday when="today" readings={MEASURED} />
+  ));
+
+  render(await DayPanel({ slug: "la-jolla-shores-beach" }));
+
+  expect(
+    screen.getByRole("region", {
+      name: `Waves and water · ${BINDING.beachName}`,
+    }),
+  ).toBeDefined();
+  expect(screen.getByRole("heading", { name: "Waves and water" }).id).toBe(
+    "waves-today-heading",
+  );
 });
 
 test("a day that has not happened says so rather than showing nothing", async () => {
