@@ -17,6 +17,7 @@ import {
 import { BeachSelector } from "./BeachSelector";
 import { ConditionsNotes } from "./ConditionsNotes";
 import { DayPanel } from "./DayPanel";
+import { MeasuredPanel } from "./MeasuredPanel";
 import { SelectedDayProvider } from "./selectedDay";
 import { WeekPanel } from "./WeekPanel";
 
@@ -98,29 +99,50 @@ export function ConditionsSection({ slug }: { slug: string }) {
       </div>
 
       {/*
-        THE PAGE OPENS ON THE WEEK, AND THE READINGS ARE INSIDE THE DAY.
+        WHAT IS TRUE NOW, BEFORE ANYTHING THAT IS TRUE OF A DAY.
 
-        A band of three cards stood here: today's lowest tide, the buoy, the
-        air station. It was the right answer while it was the only answer --
-        a parent weighing a tide time against a wave height had them three
-        screens apart before it, and could not see both at once. What made it
-        wrong is what landed under it. The week grid prints today's lowest
-        daylight tide in its first column and the day chart draws the whole
-        tide, the whole swell and the cell's own wind and temperature, so the
-        band and the two regions below it said the same things in two
-        registers -- which is the redundancy this brief exists to remove.
+        The buoy and the shore station are the only instruments this site
+        reports, and they answer for one instant: now. Everything below this
+        point is a prediction or a model, and everything below this point is
+        scoped to a day a reader chooses.
 
-        The two measurements that were not duplicated moved rather than went.
-        `MeasuredToday` carries them inside the day panel, under the chart, on
-        today alone, because the buoy and the shore station are the only
-        instruments this site reports and today is the only day anybody took a
-        reading of. The other six days say so in a sentence.
+        That is why the block sits here and, more to the point, why it sits
+        OUTSIDE `SelectedDayProvider`. Frozen to the present is the whole
+        contract of this region, and putting it outside the provider is what
+        makes that structural rather than a convention: there is no day in
+        scope here to accidentally read. A later change cannot quietly make
+        these figures follow Thursday, because there is nothing to follow.
 
-        Nothing that was on this page is off it. The tide's daylight low is in
-        the week's today column; its overnight low and CDIP's biggest-all-day
-        are the dips in the curves the chart draws, which is what the brief
-        asked those curves to be for.
+        It used to live inside the day panel, under the chart, rendered on
+        today alone -- with a sentence on the other six days explaining that
+        nothing had been measured about a day that had not happened. That
+        sentence is gone with the move. It existed because the block sat in a
+        position where its absence would have read as an outage; no measured
+        block lives down there now, so there is no gap left to explain, and
+        this band says which instant it means.
+
+        A band of three cards stood in this spot once -- today's lowest tide,
+        the buoy, the air station -- and was removed as redundant against the
+        week grid and the day chart, which print the tide and the swell
+        themselves. The two readings here are the half of that band that was
+        never duplicated: nothing else on this page is measured.
+
+        Its own Suspense boundary, like every region on this page. Five
+        agencies go quiet independently and a slow buoy must not hold up the
+        week.
       */}
+      <div className="mb-9">
+        <Suspense
+          fallback={
+            <p className="text-base text-fog">
+              Reading the buoy and the air station…
+            </p>
+          }
+        >
+          <MeasuredPanel slug={slug} />
+        </Suspense>
+      </div>
+
       {/*
         The week and the day are one instrument at two zoom levels, and from
         here on they share a fact: which day is being shown. It is a client

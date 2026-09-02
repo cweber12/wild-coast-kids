@@ -8,15 +8,17 @@
  * **This is the whole of what the page measures.** Everything else on
  * `/conditions` is a prediction or a model -- NOAA's harmonic tide, CDIP's
  * swell, the National Weather Service's grid cell. The buoy and the air station
- * are the only instruments this site reports at all, which is why they move
- * into the day rather than being deleted with the slab they sat in.
+ * are the only instruments this site reports at all, which is why they were
+ * kept when the slab they sat in was deleted.
  *
- * **Today only, and the other six days say so rather than rendering nothing.**
- * A blank where a measurement goes is the failure this whole page is built to
- * avoid, and it is worse here than anywhere: an empty region under a chart full
- * of curves reads as a load that did not finish. The sentence names the day,
- * because the region is any of seven now -- `DayPanel`'s `WORDS` object takes
- * the same `when` for the same reason.
+ * **Now only, and it takes no day.** This block spent a while inside the day
+ * panel, rendered on today alone, with a sentence on the other six saying
+ * nothing had been measured about a day that had not happened. It is at the top
+ * of the page now, above `SelectedDayProvider`, so there is no day in scope to
+ * name and no absent day to apologise for: an instrument answers for an
+ * instant, and the only instant it answers for is this one. The `when` prop and
+ * the absence sentence went with the move -- with nothing rendering this block
+ * for a future day, neither had a caller left.
  *
  * **Two cards, not one, and that is ADR-0010 rather than a layout preference.**
  * The buoy and the air station are two provenances, which that decision permits
@@ -44,7 +46,7 @@
 
 import type { AirView, WavesView } from "@/lib/conditions";
 import { compassWords } from "./bearing";
-import { CARD_PROSE, PAGE_MUTED } from "./cardText";
+import { CARD_PROSE } from "./cardText";
 import { DISCLOSURE_TARGET } from "./disclosure";
 import { ProvenanceLine } from "./ProvenanceLine";
 import { ReadingCard } from "./ReadingCard";
@@ -57,14 +59,8 @@ export type MeasuredReadings = {
 };
 
 export type MeasuredTodayProps = {
-  /**
-   * How this day is named inside a sentence: "today", or the grid's own label
-   * for one of the other six. Only the absence sentence uses it, because only
-   * the other six days have one.
-   */
-  when: string;
-  /** The measurements, or `null` on a day nobody has taken a reading of. */
-  readings: MeasuredReadings | null;
+  /** The two newest observations. Never null: this block only renders for now. */
+  readings: MeasuredReadings;
 };
 
 /* =========================================================================
@@ -133,7 +129,7 @@ function SeaCard({ beachName, buoy, state }: WavesView) {
   return (
     <ReadingCard
       emoji="🏄"
-      headingLevel="h3"
+      headingLevel="h2"
       headingId="waves-today-heading"
       title="Waves and water"
       context={beachName}
@@ -407,7 +403,7 @@ function AirCard({ beachName, airStation, air }: AirView) {
   return (
     <ReadingCard
       emoji="💨"
-      headingLevel="h3"
+      headingLevel="h2"
       headingId="wind-today-heading"
       title="Air"
       context={beachName}
@@ -470,23 +466,7 @@ function AirCard({ beachName, airStation, air }: AirView) {
  * The block
  * ========================================================================= */
 
-export function MeasuredToday({ when, readings }: MeasuredTodayProps) {
-  if (readings === null) {
-    return (
-      /*
-        `PAGE_MUTED`, not the card's colour: this sentence renders straight onto
-        the page ground, where `CARD_MUTED` paints 1.03:1 and says nothing at
-        all. An absence nobody can see is worse than no absence sentence, and
-        this is the one the reader meets on six days of seven.
-      */
-      <p className={`leading-relaxed text-base ${PAGE_MUTED}`}>
-        Nothing has been measured for {when}: the day has not happened. The buoy
-        and the air station only ever answer for now, so everything above is a
-        prediction or a model.
-      </p>
-    );
-  }
-
+export function MeasuredToday({ readings }: MeasuredTodayProps) {
   /*
     Two across from `sm`, which is where the three-card band above the page
     used to go two across as well. `items-stretch` so a quiet buoy beside a

@@ -103,7 +103,6 @@ function dayView(index: number): DayView {
     wording: <p>Words for {localDate}</p>,
     // A stand-in: what these tests assert is the day selection, not this block.
     surfZone: <p>Rip current risk on {localDate}</p>,
-    measured: <p>Measured on {localDate}</p>,
   };
 }
 
@@ -203,12 +202,14 @@ test("choosing a day in the week redraws the panel below", () => {
   );
   expect(drawnDay(container)).toBe(`Tide on ${DATES[2]}`);
   expect(screen.getByText(`Words for ${DATES[2]}`)).toBeDefined();
-  // The measured block moves with the rest of the panel. It is the one region
-  // whose content differs in *kind* between today and the other six -- two
-  // cards against one sentence -- so a block left behind would be the most
-  // visible way for the panel to disagree with its own heading.
-  expect(screen.getByText(`Measured on ${DATES[2]}`)).toBeDefined();
-  expect(screen.queryByText(`Measured on ${DATES[0]}`)).toBeNull();
+  // The rip current block moves with the rest of the panel. It is now the
+  // region whose content differs most between one day and the next -- several
+  // lines where the bulletin reaches, one where it does not -- so a block left
+  // behind is the most visible way for the panel to disagree with its heading.
+  // The measured block used to be checked here; it is no longer in this panel,
+  // and `ConditionsSection.test.tsx` asserts where it went.
+  expect(screen.getByText(`Rip current risk on ${DATES[2]}`)).toBeDefined();
+  expect(screen.queryByText(`Rip current risk on ${DATES[0]}`)).toBeNull();
 });
 
 /**

@@ -43,13 +43,13 @@
  * publisher at all on 25 of the 51 beaches, because a bay, lagoon or inlet has
  * no surf zone to forecast.
  *
- * **And, on today alone, what was measured.** Every read above is a model or a
- * prediction; the buoy and the shore station are the only instruments this
- * site reports at all. They arrive through `MeasuredPanel` on a Suspense
- * boundary of their own rather than joining the five above, because they draw
- * no part of the chart and a slow buoy must not hold up a curve it has nothing
- * to do with. The other six days get a sentence instead, naming the day, for
- * the reason `WORDS` below takes a `when` at all.
+ * **Nothing here is measured, and that is the point of where it sits.** Every
+ * read in this panel is a model or a prediction. The buoy and the shore
+ * station -- the only instruments this site reports at all -- used to arrive
+ * here too, on today alone, with a sentence on the other six days saying
+ * nothing had been measured about a day that had not happened. They now sit at
+ * the top of the page, above `SelectedDayProvider`, because they answer for an
+ * instant rather than for a day. See `ConditionsSection`.
  */
 
 import { Suspense } from "react";
@@ -77,8 +77,6 @@ import {
 } from "@/lib/pacific-time";
 import { ChosenDay, type DayView } from "./ChosenDay";
 import type { HourSeries } from "./HourChart";
-import { MeasuredPanel } from "./MeasuredPanel";
-import { MeasuredToday } from "./MeasuredToday";
 import { ReservedSlot } from "../ui/ReservedSlot";
 import type { CompassNeedle } from "./Compass";
 import {
@@ -658,39 +656,12 @@ export async function DayPanel({ slug }: { slug: string }) {
       series,
       wording: <SkyWording view={wording} localDate={day.localDate} />,
       /*
-        Rendered here and handed over finished, which is the `wording` field's
-        precedent one line up: the reads are the server's and `ChosenDay` is a
-        client component, so a measured block that fetched for itself would
-        have to become one too.
+        Rendered here and handed over finished, the precedent `wording` sets:
+        the read is the server's and `ChosenDay` is a client component.
 
-        `day.isToday` decides it here rather than `ChosenDay` testing
-        `nowMs !== null` downstream. That test would work -- six days carry
-        null -- and it would be reading a coincidence of construction as if it
-        were a contract. The daylight read states which day is today, and this
-        is the one place that fact is already in hand.
-      */
-      measured: day.isToday ? (
-        <Suspense
-          fallback={
-            <p className="text-base text-fog">
-              Reading the buoy and the air station…
-            </p>
-          }
-        >
-          <MeasuredPanel slug={slug} />
-        </Suspense>
-      ) : (
-        <MeasuredToday when={when} readings={null} />
-      ),
-      /*
-        Rendered here and handed over finished, the precedent `wording` and
-        `measured` both set: the read is the server's and `ChosenDay` is a
-        client component.
-
-        Not behind a Suspense boundary of its own, unlike the measured block.
-        That block suspends because it is a second wave of reads taken inside
-        `MeasuredPanel`; this one is already resolved by the `Promise.all`
-        above, so a boundary here would render a loading line that never shows.
+        Not behind a Suspense boundary of its own: it is already resolved by
+        the `Promise.all` above, so a boundary here would render a loading line
+        that never shows.
 
         The same `state` on all seven days and only `localDate` varying, which
         is what lets one bulletin answer for every day it reaches without being

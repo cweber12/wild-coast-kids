@@ -36,5 +36,5 @@ export async function MeasuredPanel({ slug }: { slug: string }) {
     readLatestAir(slug),
   ]);
 
-  return <MeasuredToday when="today" readings={{ waves, air }} />;
+  return <MeasuredToday readings={{ waves, air }} />;
 }
