@@ -279,7 +279,7 @@ is edited once by slice 2 before slice 6 restructures around it.
 
 Two slices. Independent of both PRs above and of each other.
 
-- [ ] **Slice 8 — Collapse "How to read these numbers".**
+- [x] **Slice 8 — Collapse "How to read these numbers".**
       Wrap the whole `ConditionsNotes` region in one `<details>`, closed by
       default, using `DISCLOSURE_TARGET` on the `<summary>`. The `<summary>`
       carries the heading text so the region keeps its landmark; the `<h2>` stays
@@ -293,6 +293,33 @@ Two slices. Independent of both PRs above and of each other.
       `src/components/conditions/` today and adding one would break the gate that
       guarantees every caveat reaches a reader.
       _Modifies: `ConditionsNotes`. Reuses: `DISCLOSURE_TARGET`._
+
+> **Addendum, 2026-09-02, measured. Slice 9 is not built, and should not be
+> built as written.** The numbers are against it in both directions, taken on the
+> built page at 1536x639:
+>
+> | thing                           |  height |
+> | ------------------------------- | ------: |
+> | one `ProvenanceLine`            |    18px |
+> | the week grid's three, together |    54px |
+> | a `DISCLOSURE_TARGET` summary   | 44-49px |
+>
+> **Only one region has more than one line.** The week grid has three — low
+> tide, biggest swell, cloud cover. `HourChart`, `SkyWording`, `SurfZone`,
+> `Compass` and each of the two reading cards have exactly one apiece.
+>
+> So collapsing the week's three saves **10px** and costs an interaction. And
+> everywhere else a single 18px line would be replaced by a 44px summary, making
+> six regions **26px taller each** while hiding the attribution that is most of
+> what this site is for. ADR-0004's touch-target floor is what does it: a
+> disclosure cannot be cheaper than 44px, and provenance lines are 10px text.
+>
+> The pain point behind this slice was answered by slice 8 instead, which took
+> 616px off the page. That is sixty times what this one could recover.
+>
+> **If the designer still wants the sources hidden**, the honest version is the
+> week grid's three only, and it is worth 10px. It is left unbuilt rather than
+> decided here.
 
 - [ ] **Slice 9 — Gather each region's attributions into one `▸ Sources`.**
       New `SourcesDisclosure` wrapping a region's `ProvenanceLine`s in one closed
