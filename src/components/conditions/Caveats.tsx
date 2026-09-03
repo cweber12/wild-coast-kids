@@ -11,9 +11,12 @@
  * The inventory's reach is the same obligation pointed the other way. The chooser
  * offers the beaches this site can measure at, which is fewer than the county
  * lists, and a parent looking for one that is missing cannot tell whether the
- * county never listed it or this site left it out. That sentence sits outside the
- * disclosures, because it is the one thing here a reader may need before they
- * have a question.
+ * county never listed it or this site left it out. That sentence is the one thing
+ * here a reader may need *before* they have a question, so it sits outside every
+ * disclosure -- including the one that now closes this whole region. That is why
+ * it is rendered by `ConditionsNotes` rather than here: this component is inside
+ * the closed `<details>` in its entirety, and a sentence that must stay visible
+ * cannot live in it. It still takes `reach`, for the excluded list below.
  *
  * Everything else sits behind a disclosure: the reader came for a tide time and a
  * wall of qualifications would bury it. The disclosure is the compromise that lets
@@ -36,12 +39,7 @@ export function Caveats({
   reach: InventoryReach;
 }) {
   return (
-    <div className="mt-9 max-w-130 text-sm text-fog">
-      <p className="leading-relaxed">
-        This site answers for {reach.served} of the {reach.listed} beaches San
-        Diego County lists.
-      </p>
-
+    <div className="mt-6 max-w-130 text-sm text-fog">
       {reach.excluded.length > 0 && (
         <details className="mt-3">
           <summary className={DISCLOSURE_TARGET}>

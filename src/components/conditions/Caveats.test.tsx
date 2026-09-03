@@ -33,16 +33,12 @@ test("every caveat given is rendered, not a summary of them", () => {
   }
 });
 
-test("says how far the site reaches, in beaches, without being opened", () => {
-  // A reader looking for a beach that is not in the chooser has no way to
-  // tell whether the county never listed it or this site left it out. The
-  // sentence is outside the disclosures for that reason.
-  render(<Caveats entries={ENTRIES} reach={REACH} />);
-
-  expect(
-    screen.getByText(/answers for 41 of the 73 beaches San Diego County lists/),
-  ).toBeDefined();
-});
+/*
+  The reach sentence used to be asserted here. It is rendered by
+  `ConditionsNotes` now -- this whole component sits inside that region's closed
+  disclosure, and the sentence has to stay visible -- so the test moved with it.
+  Left here it would have asserted a sentence this component no longer renders.
+*/
 
 test("names every beach it does not serve, and the reason for each", () => {
   render(<Caveats entries={ENTRIES} reach={REACH} />);
@@ -73,9 +69,6 @@ test("claims no exclusions when there are none", () => {
   );
 
   expect(screen.queryByText(/are not here/)).toBeNull();
-  expect(
-    screen.getByText(/answers for 41 of the 41 beaches San Diego County lists/),
-  ).toBeDefined();
 });
 
 test("they sit behind a disclosure, so the tide time is not buried", () => {
@@ -89,14 +82,12 @@ test("they sit behind a disclosure, so the tide time is not buried", () => {
 
 test("the uncertainty disclosure is absent when there is nothing to disclose", () => {
   // An empty disclosure inviting a reader to open it and find nothing is worse
-  // than no disclosure. The reach sentence stays: it is a statement about what
-  // this site covers rather than a caveat, and it is true either way.
+  // than no disclosure.
   render(<Caveats entries={[]} reach={REACH} />);
 
   expect(
     screen.queryByText("What we are unsure about in this data"),
   ).toBeNull();
-  expect(screen.getByText(/answers for 41 of the 73/)).toBeDefined();
 });
 
 /**
