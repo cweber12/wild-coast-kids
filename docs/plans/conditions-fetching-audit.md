@@ -19,6 +19,27 @@ The defects live in the panels and the readers, which both route shapes share.
 or `selectedDay.tsx`, which is everything this plan changes. The two can run
 concurrently.
 
+> **Addendum, 2026-09-03. Both caveats above are discharged: #229 and this
+> plan's own PR #230 have merged, and `main` is now `e046333`.**
+>
+> The two paragraphs above hedge against a gap that no longer exists. The
+> figures were taken against the nested route on an unmerged branch, and that
+> route is now what `main` serves — so they describe `main` directly rather than
+> a branch it had yet to take. The prediction that #229 would not collide held:
+> it moved none of the lines this plan cites.
+>
+> **Every finding was re-derived against `e046333` and none moved.**
+> `DayPanel.tsx:386` and `WeekPanel.tsx:138` still read their clocks either side
+> of the await; `readSkyWeek` and `readGridpointWeek` still sit at
+> `conditions.ts:1421` and `:1608` with two calls to `fetchGridForecast`;
+> `Caveats.tsx:71` still keys on `entry`; `src/` still contains no
+> `React.cache()`; `conditions.ts` is still 2,016 lines.
+>
+> **This does not retire the preflight.** These figures were re-derived once, on
+> the day they were written, which is the cheapest possible case. The rule in
+> _Working these issues_ stands for every session that follows: re-derive, and
+> close the issue if the finding has gone.
+
 ## The problem, from the reader's point of view
 
 Nothing here is visible to a reader today except one bug, and that one only at
