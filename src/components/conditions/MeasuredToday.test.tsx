@@ -1,6 +1,7 @@
 import { expect, test } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { MeasuredToday, type MeasuredReadings } from "./MeasuredToday";
+import { SelectedDayProvider, useSelectedDay } from "./selectedDay";
 import { DISCLOSURE_TARGET } from "./disclosure";
 
 const NEAR_BUOY = { name: "Scripps Nearshore", distanceM: 1400 };
@@ -889,4 +890,55 @@ test("a quiet buoy leaves the air standing, and the reverse", () => {
   );
   expect(screen.getByText("2.6 ft")).toBeDefined();
   expect(screen.getByText("No temperature just now")).toBeDefined();
+});
+
+/**
+ * The guarantee that used to be structural.
+ *
+ * This block reports instruments, and an instrument answers for one instant:
+ * now. It sat *outside* `SelectedDayProvider` in the tree so that there was no
+ * day in scope for it to read — "a later change cannot quietly make these
+ * figures follow Thursday, because there is nothing to follow".
+ *
+ * The provider moved out to `app/conditions/layout.tsx` when the tool grew a
+ * second route, so a chosen day survives a move from an area to one of its
+ * beaches (ADR-0047). The whole page is inside it now and the tree no longer
+ * says anything, so the claim is asserted instead of arranged — which is the
+ * stronger form of it: the block is rendered with a day chosen and with none,
+ * and the markup must be identical.
+ *
+ * **The probe is what stops this being a test that can only pass.** Choosing a
+ * day has to actually reach the context, or "the markup did not change" is true
+ * for the wrong reason. So a sibling inside the same provider prints the chosen
+ * day, and the test requires it to change before it requires the block not to.
+ */
+function DayProbe() {
+  const { selected, choose } = useSelectedDay();
+  return (
+    <button onClick={() => choose("2026-09-10")}>
+      probe:{selected ?? "none"}
+    </button>
+  );
+}
+
+test("the measured block does not follow the chosen day", () => {
+  const { container } = render(
+    <SelectedDayProvider>
+      <DayProbe />
+      <MeasuredToday readings={readings()} />
+    </SelectedDayProvider>,
+  );
+
+  const blockOf = (html: string) =>
+    html.slice(html.indexOf("</button>") + "</button>".length);
+
+  expect(screen.getByText("probe:none")).toBeDefined();
+  const beforeBlock = blockOf(container.innerHTML);
+
+  fireEvent.click(screen.getByRole("button"));
+
+  // The provider is live: the choice reached a sibling in the same tree. Without
+  // this the assertion below would hold whether or not a day was ever chosen.
+  expect(screen.getByText("probe:2026-09-10")).toBeDefined();
+  expect(blockOf(container.innerHTML)).toBe(beforeBlock);
 });
