@@ -4,7 +4,6 @@ import {
   document,
   dropReplacedBuoy,
   MODELLED_SOURCE_TOLERANCE_M,
-  regionOf,
   segmentFault,
   SERVICE_TOLERANCE_M,
   serviceFault,
@@ -245,20 +244,6 @@ describe("slugify", () => {
 
   it("refuses a name that slugifies to nothing", () => {
     expect(() => slugify("!!!")).toThrow(/slugified to nothing/);
-  });
-});
-
-describe("regionOf", () => {
-  it("groups bays together wherever they are", () => {
-    expect(regionOf("bay", 33.2)).toBe("Bays, lagoons and inlets");
-    expect(regionOf("bay", 32.6)).toBe("Bays, lagoons and inlets");
-  });
-
-  it("bands the open coast by latitude", () => {
-    expect(regionOf("open-coast", 33.2)).toBe("North County coast");
-    expect(regionOf("open-coast", 32.85)).toBe("La Jolla and Pacific Beach");
-    expect(regionOf("open-coast", 32.7)).toBe("Point Loma and Ocean Beach");
-    expect(regionOf("open-coast", 32.58)).toBe("South County coast");
   });
 });
 

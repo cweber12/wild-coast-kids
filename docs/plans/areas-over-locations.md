@@ -354,8 +354,11 @@ to make cheap.
 > or "Fiesta Island" is local usage this plan cannot verify, and substituting a
 > better name later is a one-line edit to an authored table.
 >
-> **Area slugs may collide with beach slugs, and four do** — `pacific-beach`,
-> `mission-beach`, `ocean-beach`, `coronado-cays`. They sit in different
+> **Area slugs may collide with beach slugs, and three do** — `pacific-beach`,
+> `mission-beach`, `ocean-beach`. §5 counted five; splitting the bays removed
+> two of them, because `mission-bay` and `san-diego-bay` are no longer area
+> slugs. (`coronado-cays` is not a fourth: the beach is `coronado-cays-nr`.)
+> They sit in different
 > positions of the nested route decided in §5, so `/conditions/pacific-beach` is
 > the area and `/conditions/pacific-beach/pacific-beach` the location, with no
 > ambiguity to resolve. The consequence is that those four beaches' old URLs

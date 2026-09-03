@@ -13,7 +13,6 @@
   "_schema": {
     "slug": "Stable primary key, from the published name. Never change after first write.",
     "name": "Display name, as the resource publishes it.",
-    "region": "Display grouping only, derived from water class and mean latitude. Never a join input.",
     "segment": "The shoreline extent, upper and lower endpoints, WGS84 decimal degrees.",
     "upstream": "Fields reproduced from the resource, unmodified.",
     "tide_station": "Joined, never typed: the nearest delivering station of the beach's own water class. Re-runnable with scripts/seed-beaches.mjs --check. null means the join could not bind one, and tide_station_null_reason says why.",
@@ -36,7 +35,6 @@
     {
       "slug": "del-mar-city-beach",
       "name": "Del Mar City Beach",
-      "region": "La Jolla and Pacific Beach",
       "segment": {
         "upper": {
           "lat": 32.980308,
@@ -76,7 +74,6 @@
     {
       "slug": "torrey-pines-state-beach",
       "name": "Torrey Pines State Beach",
-      "region": "La Jolla and Pacific Beach",
       "segment": {
         "upper": {
           "lat": 32.948992,
@@ -116,7 +113,6 @@
     {
       "slug": "torrey-pines-city-beach",
       "name": "Torrey Pines City Beach",
-      "region": "La Jolla and Pacific Beach",
       "segment": {
         "upper": {
           "lat": 32.895772,
@@ -156,7 +152,6 @@
     {
       "slug": "la-jolla-shores-beach",
       "name": "La Jolla Shores Beach",
-      "region": "La Jolla and Pacific Beach",
       "segment": {
         "upper": {
           "lat": 32.883647,
@@ -196,7 +191,6 @@
     {
       "slug": "la-jolla-cove",
       "name": "La Jolla Cove",
-      "region": "La Jolla and Pacific Beach",
       "segment": {
         "upper": {
           "lat": 32.850235,
@@ -236,7 +230,6 @@
     {
       "slug": "shell-beach",
       "name": "Shell Beach",
-      "region": "La Jolla and Pacific Beach",
       "segment": {
         "upper": {
           "lat": 32.850043,
@@ -276,7 +269,6 @@
     {
       "slug": "childrens-pool",
       "name": "Childrens Pool",
-      "region": "La Jolla and Pacific Beach",
       "segment": {
         "upper": {
           "lat": 32.8478,
@@ -318,7 +310,6 @@
     {
       "slug": "south-casa-beach-s-d",
       "name": "South Casa Beach S.D.",
-      "region": "La Jolla and Pacific Beach",
       "segment": {
         "upper": {
           "lat": 32.847306,
@@ -358,7 +349,6 @@
     {
       "slug": "whispering-sands-nicholson-pt",
       "name": "Whispering Sands  Nicholson Pt.",
-      "region": "La Jolla and Pacific Beach",
       "segment": {
         "upper": {
           "lat": 32.845887,
@@ -398,7 +388,6 @@
     {
       "slug": "marine-street-beach",
       "name": "Marine Street Beach",
-      "region": "La Jolla and Pacific Beach",
       "segment": {
         "upper": {
           "lat": 32.839494,
@@ -438,7 +427,6 @@
     {
       "slug": "la-jolla-community-beach",
       "name": "La Jolla Community Beach",
-      "region": "La Jolla and Pacific Beach",
       "segment": {
         "upper": {
           "lat": 32.854717,
@@ -478,7 +466,6 @@
     {
       "slug": "windansea-beach",
       "name": "WindanSea Beach",
-      "region": "La Jolla and Pacific Beach",
       "segment": {
         "upper": {
           "lat": 32.836703,
@@ -518,7 +505,6 @@
     {
       "slug": "bird-rock-nr",
       "name": "Bird Rock (NR)",
-      "region": "La Jolla and Pacific Beach",
       "segment": {
         "upper": {
           "lat": 32.815476,
@@ -558,7 +544,6 @@
     {
       "slug": "tourmaline-surfing-park",
       "name": "Tourmaline Surfing Park",
-      "region": "La Jolla and Pacific Beach",
       "segment": {
         "upper": {
           "lat": 32.8079,
@@ -598,7 +583,6 @@
     {
       "slug": "pacific-beach",
       "name": "Pacific Beach",
-      "region": "Point Loma and Ocean Beach",
       "segment": {
         "upper": {
           "lat": 32.8008,
@@ -638,7 +622,6 @@
     {
       "slug": "mission-bay-campland-on-the-bay",
       "name": "Mission Bay, Campland On The Bay",
-      "region": "Bays, lagoons and inlets",
       "segment": {
         "upper": {
           "lat": 32.794406,
@@ -680,7 +663,6 @@
     {
       "slug": "mission-bay-de-anza-cove",
       "name": "Mission Bay, De Anza Cove",
-      "region": "Bays, lagoons and inlets",
       "segment": {
         "upper": {
           "lat": 32.794,
@@ -722,7 +704,6 @@
     {
       "slug": "mission-bay-visitor-s-center",
       "name": "Mission Bay, Visitor's Center",
-      "region": "Bays, lagoons and inlets",
       "segment": {
         "upper": {
           "lat": 32.7932,
@@ -764,7 +745,6 @@
     {
       "slug": "mission-bay-fanuel-park",
       "name": "Mission Bay, Fanuel Park",
-      "region": "Bays, lagoons and inlets",
       "segment": {
         "upper": {
           "lat": 32.7913,
@@ -806,7 +786,6 @@
     {
       "slug": "mission-bay-leisure-lagoon",
       "name": "Mission Bay, Leisure Lagoon",
-      "region": "Bays, lagoons and inlets",
       "segment": {
         "upper": {
           "lat": 32.7868,
@@ -848,7 +827,6 @@
     {
       "slug": "mission-bay-crown-point-shores",
       "name": "Mission Bay, Crown Point Shores",
-      "region": "Bays, lagoons and inlets",
       "segment": {
         "upper": {
           "lat": 32.788545,
@@ -890,7 +868,6 @@
     {
       "slug": "mission-bay-riviera-shores",
       "name": "Mission Bay, Riviera Shores",
-      "region": "Bays, lagoons and inlets",
       "segment": {
         "upper": {
           "lat": 32.78596,
@@ -932,7 +909,6 @@
     {
       "slug": "mission-bay-north-pacific-passage",
       "name": "Mission Bay, north pacific passage",
-      "region": "Bays, lagoons and inlets",
       "segment": {
         "upper": {
           "lat": 32.784023,
@@ -974,7 +950,6 @@
     {
       "slug": "mission-bay-san-juan-cove",
       "name": "Mission Bay, San Juan Cove",
-      "region": "Bays, lagoons and inlets",
       "segment": {
         "upper": {
           "lat": 32.781296,
@@ -1016,7 +991,6 @@
     {
       "slug": "mission-bay-sail-bay",
       "name": "Mission Bay, Sail Bay",
-      "region": "Bays, lagoons and inlets",
       "segment": {
         "upper": {
           "lat": 32.7799,
@@ -1058,7 +1032,6 @@
     {
       "slug": "mission-bay-santa-barbara-cove",
       "name": "Mission Bay, Santa Barbara Cove",
-      "region": "Bays, lagoons and inlets",
       "segment": {
         "upper": {
           "lat": 32.777576,
@@ -1100,7 +1073,6 @@
     {
       "slug": "mission-beach",
       "name": "Mission Beach",
-      "region": "Point Loma and Ocean Beach",
       "segment": {
         "upper": {
           "lat": 32.793314,
@@ -1140,7 +1112,6 @@
     {
       "slug": "tecolote-shores",
       "name": "Tecolote Shores",
-      "region": "Bays, lagoons and inlets",
       "segment": {
         "upper": {
           "lat": 32.777317,
@@ -1182,7 +1153,6 @@
     {
       "slug": "mission-bay-bahia-point",
       "name": "Mission Bay, Bahia Point",
-      "region": "Bays, lagoons and inlets",
       "segment": {
         "upper": {
           "lat": 32.7759,
@@ -1224,7 +1194,6 @@
     {
       "slug": "mission-bay-vacation-isle",
       "name": "Mission Bay, Vacation Isle",
-      "region": "Bays, lagoons and inlets",
       "segment": {
         "upper": {
           "lat": 32.7737,
@@ -1266,7 +1235,6 @@
     {
       "slug": "mission-bay-ventura-cove",
       "name": "Mission Bay, Ventura Cove",
-      "region": "Bays, lagoons and inlets",
       "segment": {
         "upper": {
           "lat": 32.773704,
@@ -1308,7 +1276,6 @@
     {
       "slug": "fiesta-island",
       "name": "Fiesta Island",
-      "region": "Bays, lagoons and inlets",
       "segment": {
         "upper": {
           "lat": 32.7694,
@@ -1350,7 +1317,6 @@
     {
       "slug": "mission-bay-sea-world",
       "name": "Mission Bay, Sea World",
-      "region": "Bays, lagoons and inlets",
       "segment": {
         "upper": {
           "lat": 32.769509,
@@ -1392,7 +1358,6 @@
     {
       "slug": "mission-bay-mariners-basin",
       "name": "Mission Bay, Mariners Basin",
-      "region": "Bays, lagoons and inlets",
       "segment": {
         "upper": {
           "lat": 32.762084,
@@ -1434,7 +1399,6 @@
     {
       "slug": "mission-bay-quivera-basin",
       "name": "Mission Bay, Quivera Basin",
-      "region": "Bays, lagoons and inlets",
       "segment": {
         "upper": {
           "lat": 32.763274,
@@ -1476,7 +1440,6 @@
     {
       "slug": "mission-bay",
       "name": "Mission Bay",
-      "region": "Bays, lagoons and inlets",
       "segment": {
         "upper": {
           "lat": 32.760031,
@@ -1518,7 +1481,6 @@
     {
       "slug": "dog-beach-o-b",
       "name": "Dog Beach, O.B.",
-      "region": "Point Loma and Ocean Beach",
       "segment": {
         "upper": {
           "lat": 32.75617,
@@ -1559,7 +1521,6 @@
     {
       "slug": "ocean-beach",
       "name": "Ocean Beach",
-      "region": "Point Loma and Ocean Beach",
       "segment": {
         "upper": {
           "lat": 32.756524,
@@ -1600,7 +1561,6 @@
     {
       "slug": "spanish-landing-park",
       "name": "Spanish Landing Park",
-      "region": "Bays, lagoons and inlets",
       "segment": {
         "upper": {
           "lat": 32.728278,
@@ -1642,7 +1602,6 @@
     {
       "slug": "sunset-cliffs-park",
       "name": "Sunset Cliffs Park",
-      "region": "Point Loma and Ocean Beach",
       "segment": {
         "upper": {
           "lat": 32.735192,
@@ -1683,7 +1642,6 @@
     {
       "slug": "shoreline-park",
       "name": "Shoreline Park",
-      "region": "Bays, lagoons and inlets",
       "segment": {
         "upper": {
           "lat": 32.708872,
@@ -1725,7 +1683,6 @@
     {
       "slug": "san-diego-bay",
       "name": "San Diego Bay",
-      "region": "Bays, lagoons and inlets",
       "segment": {
         "upper": {
           "lat": 32.707794,
@@ -1767,7 +1724,6 @@
     {
       "slug": "coronado-north-beach",
       "name": "Coronado north beach",
-      "region": "Point Loma and Ocean Beach",
       "segment": {
         "upper": {
           "lat": 32.683267,
@@ -1808,7 +1764,6 @@
     {
       "slug": "coronado-central-beach",
       "name": "Coronado, Central beach",
-      "region": "Point Loma and Ocean Beach",
       "segment": {
         "upper": {
           "lat": 32.684744,
@@ -1849,7 +1804,6 @@
     {
       "slug": "coronado-city-beaches",
       "name": "Coronado City beaches",
-      "region": "Point Loma and Ocean Beach",
       "segment": {
         "upper": {
           "lat": 32.6867,
@@ -1890,7 +1844,6 @@
     {
       "slug": "coronado-cays-nr",
       "name": "Coronado Cays (NR)",
-      "region": "Bays, lagoons and inlets",
       "segment": {
         "upper": {
           "lat": 32.637678,
@@ -1932,7 +1885,6 @@
     {
       "slug": "silver-strand-state-beach",
       "name": "Silver Strand State Beach",
-      "region": "South County coast",
       "segment": {
         "upper": {
           "lat": 32.636836,
@@ -1973,7 +1925,6 @@
     {
       "slug": "north-imperial-beach",
       "name": "north Imperial Beach",
-      "region": "South County coast",
       "segment": {
         "upper": {
           "lat": 32.6089,
@@ -2014,7 +1965,6 @@
     {
       "slug": "imperial-beach-municipal-beach-other",
       "name": "Imperial Beach municipal beach, other",
-      "region": "South County coast",
       "segment": {
         "upper": {
           "lat": 32.587527,
@@ -2055,7 +2005,6 @@
     {
       "slug": "tijuana-slough-national-wildlife-refuge",
       "name": "Tijuana Slough National Wildlife Refuge",
-      "region": "Bays, lagoons and inlets",
       "segment": {
         "upper": {
           "lat": 32.5662,
@@ -2097,7 +2046,6 @@
     {
       "slug": "border-field-state-park",
       "name": "Border Field State Park",
-      "region": "South County coast",
       "segment": {
         "upper": {
           "lat": 32.55282,

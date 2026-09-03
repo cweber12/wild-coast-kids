@@ -32,6 +32,12 @@ export const GATES = [
   // checker. See scripts/sea-side.mjs for why the whole-county form of the
   // check is the wrong one.
   { name: "sea-side", command: "node scripts/check-sea-side.mjs" },
+  // Reads only committed JSON, so it sits with the two rows above. areas.json
+  // is the one table about the beaches a person writes by hand, and
+  // beaches.json beside it is rewritten from an upstream resource by
+  // seed-beaches.mjs -- so a beach can arrive with no area named for it and go
+  // missing from the chooser with nothing thrown. See scripts/areas-partition.mjs.
+  { name: "areas", command: "node scripts/check-areas.mjs" },
   // Runs with coverage so the floor in vitest.config.mts is enforced here:
   // Vitest exits non-zero when a threshold is missed, which is the third way
   // CLAUDE.md says this command must fail.

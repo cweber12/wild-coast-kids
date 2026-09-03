@@ -35,8 +35,6 @@ export interface BeachSegment {
 export interface Beach {
   slug: string;
   name: string;
-  /** Display grouping only. Never an input to any join. */
-  region: string;
   segment: BeachSegment;
   upstream: {
     usepa_id: string;
@@ -276,24 +274,6 @@ export function beachBySlug(slug: string): Beach | null {
 }
 
 /**
- * Beaches grouped for a chooser, in inventory order within each group and with
- * the groups in the order they first appear — which, the inventory being sorted
- * north to south, runs down the coast.
- */
-export function beachesByRegion(): {
-  region: string;
-  beaches: readonly Beach[];
-}[] {
-  const groups = new Map<string, Beach[]>();
-  for (const beach of BEACHES) {
-    const existing = groups.get(beach.region);
-    if (existing) existing.push(beach);
-    else groups.set(beach.region, [beach]);
-  }
-  return [...groups].map(([region, beaches]) => ({ region, beaches }));
-}
-
-/**
  * The station a beach reads, or null when the join could not bind one.
  *
  * Throws when a beach names a station the table does not describe. That is a
@@ -330,11 +310,13 @@ export function tideStationFor(
  * on all 51 because wind blows on a bay, so a wind figure there is true.
  *
  * **Read off the tide station's water class rather than off the region.** Both
- * classify the inventory identically — checked 51 of 51 — but the region is a
+ * classified the inventory identically — checked 51 of 51 — but the region was a
  * grouping for a dropdown while the water class is a joined fact about the
  * water, carried because the tide join has to bind an open-coast beach to an
- * open-coast station. A beach with no tide station at all is treated as having
- * no surf zone, because nothing here then says which water it is in.
+ * open-coast station. That region is gone, replaced by an authored area that
+ * groups by place rather than by water, so the water class is now the only
+ * thing that says which water a beach is in. A beach with no tide station at
+ * all is treated as having no surf zone, for the same reason.
  */
 export function surfZoneWithheldReason(beach: Beach): string | null {
   const station = tideStationFor(beach);
