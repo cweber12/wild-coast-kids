@@ -199,7 +199,12 @@ test("the block's heading takes the region rank", () => {
     name: "How to read these numbers",
   });
 
-  expect(heading.className).toBe(TOOL_REGION_HEADING);
+  // `toContain` rather than `toBe`: the heading sits inside the region's
+  // `<summary>` now and takes `inline` with it, so the marker stays on the
+  // heading's own line rather than above a block. The rank is still composed
+  // rather than spelled, which is what this assertion is for -- and the line
+  // below is what catches a size being added beside it.
+  expect(heading.className).toContain(TOOL_REGION_HEADING);
   // Per ADR-0001 jsdom applies no stylesheets, so this proves the rank is
   // referred to, not that 22px renders. That stays a human check.
   expect(heading.className).not.toContain("text-2xs");
@@ -255,4 +260,95 @@ test("the reader is told why the week leaves the overnight extremes out", () => 
   expect(
     screen.getByText(/nothing here is a judgement about when you should go/),
   ).toBeDefined();
+});
+
+/**
+ * The region is one closed disclosure, and every word is still in the DOM.
+ *
+ * Five multi-sentence notes plus the caveats are the largest block of prose on
+ * this page and they are reference — read once, then never again. Collapsing
+ * them is the point of the slice; losing any of them is the failure it must not
+ * become, and the two are indistinguishable from a height measurement alone.
+ */
+test("the notes are closed on arrival and still entirely present", () => {
+  const { container } = render(
+    <ConditionsNotes entries={ENTRIES} reach={REACH} />,
+  );
+
+  const region = container.querySelector("details")!;
+  expect(region.open).toBe(false);
+
+  // Every note is reachable while it is closed, which is what `getByText`
+  // resolving inside a closed `<details>` proves. This is also why no assertion
+  // in this directory uses `toBeVisible` — see the component.
+  for (const term of [
+    "Tide heights",
+    "Daylight first",
+    "Wave heights",
+    "The wave forecast",
+    "Cloud cover",
+  ]) {
+    expect(screen.getByText(term)).toBeDefined();
+  }
+  for (const caveat of ENTRIES) {
+    expect(screen.getByText(caveat)).toBeDefined();
+  }
+});
+
+/**
+ * `Caveats` records the reason and this is where it is enforced now: a reader
+ * looking for a beach the chooser does not offer cannot tell whether the county
+ * never listed it or this site left it out, so that sentence may not sit behind
+ * a control they have to know to open.
+ *
+ * Asserted as *not inside the details* rather than as merely present — present
+ * is true of the collapsed content too, which is the whole difficulty.
+ */
+test("how far the site reaches is stated outside the disclosure", () => {
+  const { container } = render(
+    <ConditionsNotes entries={ENTRIES} reach={REACH} />,
+  );
+
+  const reach = screen.getByText(
+    /answers for \d+ of the \d+ beaches San Diego County lists/,
+  );
+  expect(container.querySelector("details")!.contains(reach)).toBe(false);
+});
+
+/**
+ * The landmark survives the control. `<summary>`'s content model is phrasing
+ * content optionally intermixed with heading content, so the `<h2>` goes inside
+ * it rather than being replaced by it — which is what keeps the section labelled
+ * by its own heading and keeps the page's outline at four regions rather than
+ * three and a button.
+ */
+test("the region is still labelled by a heading, not by a control", () => {
+  const { container } = render(
+    <ConditionsNotes entries={ENTRIES} reach={REACH} />,
+  );
+
+  const section = container.querySelector("section")!;
+  const heading = screen.getByRole("heading", {
+    name: "How to read these numbers",
+  });
+
+  expect(section.getAttribute("aria-labelledby")).toBe(heading.id);
+  expect(container.querySelector("summary")!.contains(heading)).toBe(true);
+});
+
+/**
+ * ADR-0004, through `DISCLOSURE_TARGET`. This summary carries a heading rather
+ * than a 13px line, so it clears 44px on its own — which is exactly why the
+ * standard is composed rather than judged by eye: the next edit to the heading
+ * rank should not silently drop this below the floor.
+ */
+test("the summary composes the touch-target standard", async () => {
+  const { DISCLOSURE_TARGET } = await import("./disclosure");
+  const { container } = render(
+    <ConditionsNotes entries={ENTRIES} reach={REACH} />,
+  );
+
+  expect(container.querySelector("summary")!.className).toContain(
+    DISCLOSURE_TARGET,
+  );
 });

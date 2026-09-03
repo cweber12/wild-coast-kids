@@ -45,6 +45,7 @@
 
 import type { InventoryReach } from "@/lib/beaches";
 import { Caveats } from "./Caveats";
+import { DISCLOSURE_TARGET } from "./disclosure";
 import { TOOL_REGION_HEADING } from "../ui/headingRank";
 
 /** One thing worth understanding about every figure of its kind. */
@@ -116,11 +117,42 @@ export function ConditionsNotes({
     // No top margin: the reserved slot above carries the gap. Spacing on both
     // is counted twice, which is the failure `SnapSection`'s docstring records.
     <section aria-labelledby="conditions-notes-heading">
-      <h2 id="conditions-notes-heading" className={TOOL_REGION_HEADING}>
-        How to read these numbers
-      </h2>
-
       {/*
+        CLOSED BY DEFAULT, AND STILL ENTIRELY IN THE DOM.
+
+        Five multi-sentence notes and the caveats under them are the largest
+        block of prose on this page, and they are reference: read once, by a
+        reader who wants to know what "mean lower low water" means, and then
+        never again. Open by default they occupied roughly a screen at the
+        bottom of every visit forever.
+
+        Nothing is removed and nothing is summarised. `<details>` keeps every
+        word in the markup, so a screen reader reaches it, a find-in-page finds
+        it, and the gate asserting that every caveat in every data file arrives
+        here still passes -- those assertions use `getByText`, which resolves
+        inside a closed disclosure. **Do not "improve" them to `toBeVisible`.**
+        There are none in this directory, and adding one would convert a check
+        that a caveat reaches the reader into a check that it is on screen
+        without being asked for, which was never the promise.
+
+        The `<h2>` goes inside the `<summary>` rather than being replaced by it.
+        A summary's content model is phrasing content optionally intermixed with
+        heading content, so this is the arrangement the element is specified for
+        -- and it is what keeps the landmark: the section is still labelled by
+        this heading, and the page's outline still has a fourth region rather
+        than losing one to a control.
+      */}
+      <details>
+        <summary className={DISCLOSURE_TARGET}>
+          <h2
+            id="conditions-notes-heading"
+            className={`${TOOL_REGION_HEADING} inline`}
+          >
+            How to read these numbers
+          </h2>
+        </summary>
+
+        {/*
         A description list rather than paragraphs: each entry is a topic and its
         explanation, and the pairing is what a reader is scanning for. It also
         survives for someone who cannot see the bolding.
@@ -146,16 +178,33 @@ export function ConditionsNotes({
         columns at 1024 where each is 288px, about 47 characters, and this ramp
         never takes prose below roughly 52.
       */}
-      <dl className="leading-relaxed text-sm text-fog md:grid md:grid-cols-2 md:gap-x-8 xl:grid-cols-3">
-        {NOTES.map(({ term, detail }) => (
-          <div key={term} className="mb-3 max-w-130">
-            <dt className="font-extrabold text-dark">{term}</dt>
-            <dd>{detail}</dd>
-          </div>
-        ))}
-      </dl>
+        <dl className="leading-relaxed text-sm text-fog md:grid md:grid-cols-2 md:gap-x-8 xl:grid-cols-3">
+          {NOTES.map(({ term, detail }) => (
+            <div key={term} className="mb-3 max-w-130">
+              <dt className="font-extrabold text-dark">{term}</dt>
+              <dd>{detail}</dd>
+            </div>
+          ))}
+        </dl>
 
-      <Caveats entries={entries} reach={reach} />
+        <Caveats entries={entries} reach={reach} />
+      </details>
+
+      {/*
+        Outside the disclosure, deliberately, and the only thing here that is.
+
+        `Caveats` records why: the chooser offers fewer beaches than the county
+        lists, and a parent looking for one that is missing cannot tell whether
+        the county never listed it or this site left it out. That is the one
+        thing in this region a reader may need *before* they have a question, so
+        it cannot sit behind a control they have to know to open. It is rendered
+        here rather than in `Caveats` because that component is now inside the
+        closed `<details>` in its entirety.
+      */}
+      <p className="leading-relaxed mt-4 max-w-130 text-sm text-fog">
+        This site answers for {reach.served} of the {reach.listed} beaches San
+        Diego County lists.
+      </p>
     </section>
   );
 }
