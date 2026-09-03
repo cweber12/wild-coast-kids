@@ -159,18 +159,27 @@ export function ConditionsSection({
         inside it. It sits above the readings on both pages rather than only on
         the area's, so moving between beaches does not mean scrolling past a
         page of figures to find the list you moved with.
+
+        **Not drawn at all where the area holds one beach**, which six of the
+        eighteen do. A list of one is a choice that is not a choice, and a
+        heading over it reads as though something were missing. Those areas show
+        their beach directly instead -- `[area]/page.tsx` passes it as
+        `beachSlug` -- so the reader who picked Sunset Cliffs gets Sunset Cliffs
+        Park's readings rather than a link to them.
       */}
-      <div className="mb-9">
-        <AreaBeaches
-          areaSlug={group.area.slug}
-          areaName={group.area.name}
-          beaches={group.beaches.map((beach) => ({
-            slug: beach.slug,
-            name: beach.name,
-          }))}
-          current={beachSlug}
-        />
-      </div>
+      {group.beaches.length > 1 && (
+        <div className="mb-9">
+          <AreaBeaches
+            areaSlug={group.area.slug}
+            areaName={group.area.name}
+            beaches={group.beaches.map((beach) => ({
+              slug: beach.slug,
+              name: beach.name,
+            }))}
+            current={beachSlug}
+          />
+        </div>
+      )}
 
       {/*
         WHAT IS TRUE NOW, BEFORE ANYTHING THAT IS TRUE OF A DAY.

@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { notFound, permanentRedirect } from "next/navigation";
 import { ConditionsSection } from "@/components/conditions/ConditionsSection";
-import { areaBySlug, areaOfBeach } from "@/lib/areas";
+import { areaBySlug, canonicalConditionsPath, soleBeachOf } from "@/lib/areas";
 import { beachBySlug } from "@/lib/beaches";
 
 /**
@@ -45,11 +45,16 @@ async function resolve(slug: string) {
 
   const beach = beachBySlug(slug);
   if (beach) {
-    const holding = areaOfBeach(beach.slug);
+    // Straight to wherever that beach is actually served, which for the sole
+    // beach of its area is the area's own URL. Asking `canonicalConditionsPath`
+    // rather than composing the nested form here is what stops this from
+    // redirecting into a second redirect.
+    //
     // Never null for a beach in the inventory -- the partition is total and the
-    // `areas` gate row keeps it so. Checked rather than asserted, because a
-    // 404 is a better failure here than a redirect to `/conditions/null/...`.
-    if (holding) permanentRedirect(`/conditions/${holding.slug}/${beach.slug}`);
+    // `areas` gate row keeps it so. Checked rather than asserted, because a 404
+    // is a better failure than a redirect to `/conditions/null/...`.
+    const canonical = canonicalConditionsPath(beach.slug);
+    if (canonical) permanentRedirect(canonical);
   }
 
   return null;
@@ -85,9 +90,16 @@ export default async function AreaConditions({
   // one; a stale link can.
   if (!area) notFound();
 
+  /*
+    An area of one holds no choice, so it shows its beach instead of offering it.
+    ADR-0046 permits a single-member area on the grounds that "a lone member
+    shares everything with itself and its area is the beach page" -- this is
+    where that stops being an argument and becomes the page. Six of the eighteen
+    are like this; for the rest `beachSlug` stays null and the reader picks.
+  */
   return (
     <main className="flex-1">
-      <ConditionsSection areaSlug={area.slug} beachSlug={null} />
+      <ConditionsSection areaSlug={area.slug} beachSlug={soleBeachOf(area)} />
     </main>
   );
 }

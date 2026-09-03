@@ -53,25 +53,13 @@ test("the beach being shown is marked, not removed", () => {
   ).toBeNull();
 });
 
-/**
- * Four areas hold one beach, so the heading has to read as English for both.
- * ADR-0046 permits a single-member area deliberately — it is not a case to
- * design around, so it is one to write copy for.
- */
-test("a one-beach area says 'The beach', not 'Beaches'", () => {
-  render(
-    <AreaBeaches
-      areaSlug="sunset-cliffs"
-      areaName="Sunset Cliffs"
-      beaches={[{ slug: "sunset-cliffs-park", name: "Sunset Cliffs Park" }]}
-      current={null}
-    />,
-  );
-
-  expect(
-    screen.getByRole("heading", { name: "The beach in Sunset Cliffs" }),
-  ).toBeDefined();
-});
+/*
+  A test stood here requiring a one-beach area to say "The beach in Sunset
+  Cliffs" rather than "Beaches". The branch it covered is gone: an area of one
+  does not render this list at all -- it shows its beach instead. The behaviour
+  that replaced it is asserted where it now lives, in `[area]/page.test.tsx` and
+  `ConditionsSection.test.tsx`.
+*/
 
 test("beaches are listed in the order given, which is north to south", () => {
   render(
