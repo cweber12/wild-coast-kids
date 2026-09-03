@@ -31,6 +31,53 @@ export interface Area {
 
 const AREAS: readonly Area[] = areaTable.areas;
 
+/**
+ * The area `/conditions` opens on.
+ *
+ * Named rather than derived, for the reason `DEFAULT_BEACH_SLUG` next door is:
+ * "first in the table" would move the moment somebody adds an area north of
+ * Del Mar. This is the one the National Weather Service means when its surf
+ * zone forecast says "La Jolla", it holds ten beaches, and it is the area the
+ * whole design was worked against.
+ */
+export const DEFAULT_AREA_SLUG = "la-jolla";
+
+/** One area by slug, or null. Null means the slug names no area. */
+export function areaBySlug(slug: string): Area | null {
+  return AREAS.find((area) => area.slug === slug) ?? null;
+}
+
+/**
+ * The area a beach belongs to, or null when the slug names no beach.
+ *
+ * Never null for a beach that is in the inventory: the partition is total, and
+ * the `areas` gate row is what keeps it that way. The nullable return is for
+ * the slug that is not a beach at all, which is what an old or invented URL
+ * looks like from here.
+ */
+export function areaOfBeach(beachSlug: string): Area | null {
+  return AREAS.find((area) => area.beaches.includes(beachSlug)) ?? null;
+}
+
+/**
+ * The default area, or a loud failure.
+ *
+ * `areas.json` is written by hand, so the default can be renamed out from under
+ * this by an ordinary edit. That must stop a build rather than render a page
+ * about nothing -- the argument `defaultBeach()` makes about an upstream
+ * rename, applied to the file a person maintains.
+ */
+export function defaultArea(): Area {
+  const area = areaBySlug(DEFAULT_AREA_SLUG);
+  if (!area) {
+    throw new Error(
+      `areas.json no longer contains ${DEFAULT_AREA_SLUG}, which /conditions opens on. ` +
+        `Pick a new default deliberately.`,
+    );
+  }
+  return area;
+}
+
 /** One area's beaches, resolved, for a chooser or a heading. */
 export interface AreaGroup {
   area: Area;

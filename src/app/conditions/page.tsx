@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { ConditionsSection } from "@/components/conditions/ConditionsSection";
-import { DEFAULT_BEACH_SLUG, defaultBeach } from "@/lib/beaches";
+import { DEFAULT_AREA_SLUG, defaultArea } from "@/lib/areas";
 
 export const metadata: Metadata = {
   title: "Conditions",
@@ -25,21 +25,22 @@ export const metadata: Metadata = {
  * override every fetch to `no-store` and reach NOAA on every request.
  *
  * The value must be statically analyzable, so it is a literal: 900, not 15 * 60.
- * `[slug]/page.tsx` carries the same number for the same reason, and they must
- * agree: the two routes render one section, and which URL a reader arrived at
- * should not decide how fresh their answer is.
+ * `[area]/page.tsx` and `[area]/[beach]/page.tsx` carry the same number for the
+ * same reason, and all three must agree: they render one section, and which URL
+ * a reader arrived at should not decide how fresh their answer is.
  */
 export const revalidate = 900;
 
 export default function Conditions() {
-  // Asserts the named default is still in the inventory, which a script rewrites
-  // from an upstream resource. A rename upstream should stop a build rather than
-  // render a page about nothing.
-  defaultBeach();
+  // Asserts the named default is still in areas.json, which is written by hand.
+  // A rename there should stop a build rather than render a page about nothing.
+  // It opened on a beach until 2026-09-02; the tool is about areas now, so the
+  // door it opens is an area's.
+  defaultArea();
 
   return (
     <main className="flex-1">
-      <ConditionsSection slug={DEFAULT_BEACH_SLUG} />
+      <ConditionsSection areaSlug={DEFAULT_AREA_SLUG} beachSlug={null} />
     </main>
   );
 }

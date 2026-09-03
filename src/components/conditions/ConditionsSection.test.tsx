@@ -1,6 +1,9 @@
 import { beforeEach, expect, test, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 
+/** The area holding `DEFAULT_BEACH_SLUG`, so the header and the list agree with it. */
+const DEFAULT_AREA = "la-jolla";
+
 /*
   Two regions are left with a Suspense boundary this file owns, and both have
   to be holdable open. Each mock throws a never-settling promise for one
@@ -65,9 +68,14 @@ const { ConditionsSection } = await import("./ConditionsSection");
 const { inventoryCaveats, DEFAULT_BEACH_SLUG } = await import("@/lib/beaches");
 
 test("the view carries the chooser, the two regions and the caveats", () => {
-  render(<ConditionsSection slug={DEFAULT_BEACH_SLUG} />);
+  render(
+    <ConditionsSection
+      areaSlug={DEFAULT_AREA}
+      beachSlug={DEFAULT_BEACH_SLUG}
+    />,
+  );
 
-  expect(screen.getByLabelText("Choose a beach")).toBeDefined();
+  expect(screen.getByLabelText("Choose an area")).toBeDefined();
   // Reachable by a reader, not merely built: the two regions mount on their
   // own Suspense boundaries, so a section that dropped one would still render
   // and still pass every other assertion here.
@@ -98,7 +106,12 @@ test("the view carries the chooser, the two regions and the caveats", () => {
  * well. Being *first* is the change.
  */
 test("what is measured comes before the week, and the week before the day", () => {
-  const { container } = render(<ConditionsSection slug={DEFAULT_BEACH_SLUG} />);
+  const { container } = render(
+    <ConditionsSection
+      areaSlug={DEFAULT_AREA}
+      beachSlug={DEFAULT_BEACH_SLUG}
+    />,
+  );
 
   // The tide card stays gone: its figure is the week grid's first column.
   expect(screen.queryByText(`panel for ${DEFAULT_BEACH_SLUG}`)).toBeNull();
@@ -135,7 +148,12 @@ test("what is measured comes before the week, and the week before the day", () =
  * that wired one in would have to add an argument, and that is what fails here.
  */
 test("the measured block is asked for a beach and never for a day", () => {
-  render(<ConditionsSection slug={DEFAULT_BEACH_SLUG} />);
+  render(
+    <ConditionsSection
+      areaSlug={DEFAULT_AREA}
+      beachSlug={DEFAULT_BEACH_SLUG}
+    />,
+  );
 
   expect(measuredPanel).toHaveBeenCalledWith({ slug: DEFAULT_BEACH_SLUG });
 
@@ -193,7 +211,12 @@ test("the measured cards rank as page regions, beside the week and the day", asy
   const { MeasuredToday } = await import("./MeasuredToday");
   measuredPanel.mockImplementation(() => <MeasuredToday readings={MEASURED} />);
 
-  render(<ConditionsSection slug={DEFAULT_BEACH_SLUG} />);
+  render(
+    <ConditionsSection
+      areaSlug={DEFAULT_AREA}
+      beachSlug={DEFAULT_BEACH_SLUG}
+    />,
+  );
 
   const ranks = screen
     .getAllByRole("heading", { level: 2 })
@@ -219,7 +242,12 @@ test("a card is still called what it was called, at its new rank", async () => {
   const { MeasuredToday } = await import("./MeasuredToday");
   measuredPanel.mockImplementation(() => <MeasuredToday readings={MEASURED} />);
 
-  render(<ConditionsSection slug={DEFAULT_BEACH_SLUG} />);
+  render(
+    <ConditionsSection
+      areaSlug={DEFAULT_AREA}
+      beachSlug={DEFAULT_BEACH_SLUG}
+    />,
+  );
 
   expect(
     screen.getByRole("region", {
@@ -232,7 +260,12 @@ test("a card is still called what it was called, at its new rank", async () => {
 });
 
 test("every caveat the data files carry reaches this page", () => {
-  render(<ConditionsSection slug={DEFAULT_BEACH_SLUG} />);
+  render(
+    <ConditionsSection
+      areaSlug={DEFAULT_AREA}
+      beachSlug={DEFAULT_BEACH_SLUG}
+    />,
+  );
 
   // The other half of the check in src/lib/caveats.test.ts: that one asserts
   // nothing is dropped between the files and the loader, this one asserts
@@ -259,7 +292,12 @@ test("every caveat the data files carry reaches this page", () => {
  * on the day are the authority.
  */
 test("the page says these are instruments and not a safety assessment", () => {
-  render(<ConditionsSection slug={DEFAULT_BEACH_SLUG} />);
+  render(
+    <ConditionsSection
+      areaSlug={DEFAULT_AREA}
+      beachSlug={DEFAULT_BEACH_SLUG}
+    />,
+  );
 
   expect(
     screen.getByText(/Instrument readings, not a safety assessment/),
@@ -285,7 +323,12 @@ test("the page says these are instruments and not a safety assessment", () => {
  * itself.
  */
 test("the self-description is gone and the standing notice is not", () => {
-  render(<ConditionsSection slug={DEFAULT_BEACH_SLUG} />);
+  render(
+    <ConditionsSection
+      areaSlug={DEFAULT_AREA}
+      beachSlug={DEFAULT_BEACH_SLUG}
+    />,
+  );
 
   expect(screen.queryByText(/Surf · Tide · Wind · Visibility/)).toBeNull();
   expect(screen.queryByText(/built by a local/)).toBeNull();
@@ -302,7 +345,12 @@ test("the self-description is gone and the standing notice is not", () => {
  * `ConditionsNotes` for real, so a regression there fails here.
  */
 test("the safety framing is stated once, above the readings", () => {
-  render(<ConditionsSection slug={DEFAULT_BEACH_SLUG} />);
+  render(
+    <ConditionsSection
+      areaSlug={DEFAULT_AREA}
+      beachSlug={DEFAULT_BEACH_SLUG}
+    />,
+  );
 
   expect(screen.queryByText(/None of it is a safety assessment/)).toBeNull();
   expect(screen.getAllByText(/not a safety assessment/)).toHaveLength(1);
@@ -333,7 +381,9 @@ test("the safety framing is stated once, above the readings", () => {
  * station".
  */
 test("no panel's loading line uses a word the glossary rejects", () => {
-  const { container } = render(<ConditionsSection slug={SUSPEND} />);
+  const { container } = render(
+    <ConditionsSection areaSlug={DEFAULT_AREA} beachSlug={SUSPEND} />,
+  );
 
   const loading = [...container.querySelectorAll("p")]
     .map((node) => node.textContent ?? "")
@@ -350,4 +400,16 @@ test("no panel's loading line uses a word the glossary rejects", () => {
     expect(line.toLowerCase()).not.toContain("forecast");
     expect(line.toLowerCase()).not.toContain("surf report");
   }
+});
+
+/**
+ * Both routes resolve the slug against `areas.json` before rendering, so this
+ * is unreachable from a URL. It throws rather than defaulting because a section
+ * about an area that is not in the table has nothing true to say — and because
+ * a silent default would render La Jolla's header over somebody else's beaches.
+ */
+test("it refuses an area that is not in the table", () => {
+  expect(() =>
+    render(<ConditionsSection areaSlug="atlantis" beachSlug={null} />),
+  ).toThrow(/names no area in areas.json/);
 });

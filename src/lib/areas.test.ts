@@ -1,5 +1,11 @@
 import { describe, expect, test, vi } from "vitest";
-import { beachesByArea } from "./areas";
+import {
+  areaBySlug,
+  areaOfBeach,
+  DEFAULT_AREA_SLUG,
+  beachesByArea,
+  defaultArea,
+} from "./areas";
 import { allBeaches } from "./beaches";
 
 describe("beachesByArea", () => {
@@ -117,6 +123,57 @@ describe("beachesByArea", () => {
     const { beachesByArea: withBrokenTable } = await import("./areas");
 
     expect(() => withBrokenTable()).toThrow(/beaches\.json has no such beach/);
+
+    vi.doUnmock("@/data/areas.json");
+    vi.resetModules();
+  });
+});
+
+describe("looking one area up", () => {
+  test("finds it by slug, and answers null for a slug that names none", () => {
+    expect(areaBySlug("la-jolla")?.name).toBe("La Jolla");
+    expect(areaBySlug("atlantis")).toBeNull();
+  });
+
+  /**
+   * Never null for a beach in the inventory, because the partition is total and
+   * the `areas` gate row keeps it that way. The nullable return is for a slug
+   * that is not a beach at all, which is what a stale or invented URL looks
+   * like from here.
+   */
+  test("finds the area holding a beach, for every beach there is", () => {
+    expect(areaOfBeach("windansea-beach")?.slug).toBe("la-jolla");
+    expect(areaOfBeach("mission-bay-sail-bay")?.slug).toBe("mission-bay-west");
+    expect(areaOfBeach("no-such-beach")).toBeNull();
+
+    for (const { beaches } of beachesByArea()) {
+      for (const beach of beaches) {
+        expect(areaOfBeach(beach.slug), beach.slug).not.toBeNull();
+      }
+    }
+  });
+
+  test("the default area is in the table", () => {
+    expect(defaultArea().slug).toBe(DEFAULT_AREA_SLUG);
+  });
+
+  /**
+   * `areas.json` is written by hand, so an ordinary edit can rename the default
+   * out from under `/conditions`. That must stop a build rather than render a
+   * page about nothing.
+   */
+  test("throws when the default has been renamed away", async () => {
+    vi.resetModules();
+    vi.doMock("@/data/areas.json", () => ({
+      default: {
+        areas: [
+          { slug: "somewhere-else", name: "Somewhere Else", beaches: [] },
+        ],
+      },
+    }));
+
+    const { defaultArea: withRenamedTable } = await import("./areas");
+    expect(() => withRenamedTable()).toThrow(/no longer contains la-jolla/);
 
     vi.doUnmock("@/data/areas.json");
     vi.resetModules();
