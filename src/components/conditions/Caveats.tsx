@@ -67,8 +67,17 @@ export function Caveats({
             What we are unsure about in this data
           </summary>
           <ul className="leading-relaxed mt-3">
-            {entries.map((entry) => (
-              <li key={entry} className="mb-3">
+            {/*
+              Keyed on the position, not the prose. `inventoryCaveats` returns
+              bare strings, and the paragraph was the obvious key -- but a key
+              is serialized alongside the child it identifies, so keying on the
+              prose shipped every caveat to the browser twice. The list is built
+              from six data files in a fixed order and never reordered or
+              filtered within a render, so the position is stable for exactly as
+              long as a key needs to be.
+            */}
+            {entries.map((entry, position) => (
+              <li key={position} className="mb-3">
                 {entry}
               </li>
             ))}

@@ -33,6 +33,30 @@ test("every caveat given is rendered, not a summary of them", () => {
   }
 });
 
+/**
+ * A caveat costs its bytes once, not twice.
+ *
+ * This component is a server component, so what reaches the browser is not the
+ * HTML above but a serialization of the element tree it returns — and a React
+ * key is part of that tree. Keying a list item on the caveat prose therefore
+ * ships every paragraph twice: once as the key, once as the child. Measured on
+ * a built beach page before this was fixed: 24 caveats, each present twice,
+ * 9,291 bytes of the flight payload spent on the copies.
+ *
+ * `render` above cannot see it. A key never reaches the DOM, so the defect and
+ * the fix produce byte-identical markup and every assertion in this file passes
+ * either way. So this calls the component and counts occurrences in the tree it
+ * returns, which is the thing that gets serialized.
+ */
+test("no caveat is serialized twice, which keying on the prose would do", () => {
+  const tree = JSON.stringify(Caveats({ entries: ENTRIES, reach: REACH }));
+
+  for (const entry of ENTRIES) {
+    const escaped = JSON.stringify(entry).slice(1, -1);
+    expect(tree.split(escaped)).toHaveLength(2);
+  }
+});
+
 /*
   The reach sentence used to be asserted here. It is rendered by
   `ConditionsNotes` now -- this whole component sits inside that region's closed

@@ -22,13 +22,19 @@
  * with the service and the query recorded there. This file's output agreeing
  * with this file's expectations would prove nothing.
  *
- * **What comes back is the computed instant, not a rounded one.** Rounding to
- * the minute is a display decision and it is made where the label is built, in
- * `conditions.ts`. Keeping it out of here is what lets the tests state the
- * accuracy honestly: measured against the instant, this agrees with USNO to
- * within 32 seconds at every reference point, where a rounded value could only
- * ever be shown to be within a minute — a claim that says nothing about whether
- * the astronomy is right or the rounding is lucky.
+ * **What comes back is the instant to the second, and no finer.** Rounding to
+ * the *minute* is a display decision and it is still made where the label is
+ * built, in `conditions.ts`. Keeping that out of here is what lets the tests
+ * state the accuracy honestly: measured to the second, this agrees with USNO to
+ * within 32 seconds at every reference point, where a minute-rounded value
+ * could only ever be shown to be within a minute — a claim that says nothing
+ * about whether the astronomy is right or the rounding is lucky.
+ *
+ * It stops at the second because the second is already about sixty times finer
+ * than the series is, so everything below it is noise — and noise that costs
+ * something. A beach page serializes 28 of these instants into its flight
+ * payload, and as raw floats they spent 136 bytes there on digits stating a
+ * sunrise to a ten-thousandth of a millisecond.
  *
  * **A place, not a segment.** Everything else on this page treats a beach as a
  * shoreline segment, because that is how the state publishes it and because a
@@ -43,6 +49,7 @@ const HORIZON_ZENITH_DEG = 90.833;
 
 const RAD = Math.PI / 180;
 const MS_PER_MINUTE = 60_000;
+const MS_PER_SECOND = 1_000;
 
 /** A point on the coast, WGS84 decimal degrees. Longitude is east-positive, so this coast is negative. */
 export interface Coordinates {
@@ -52,9 +59,9 @@ export interface Coordinates {
 
 /** Sunrise and sunset for one place on one day, as instants. */
 export interface Daylight {
-  /** Instant of sunrise, epoch milliseconds UTC. Not rounded; see the header. */
+  /** Instant of sunrise, epoch milliseconds UTC, to the second; see the header. */
   sunriseMs: number;
-  /** Instant of sunset, epoch milliseconds UTC. Not rounded; see the header. */
+  /** Instant of sunset, epoch milliseconds UTC, to the second; see the header. */
   sunsetMs: number;
 }
 
@@ -213,7 +220,8 @@ export function daylightOn(localDate: string, at: Coordinates): Daylight {
   const jdMidnight = midnightUtcMs / 86_400_000 + 2440587.5;
 
   const toInstant = (minutes: number) =>
-    midnightUtcMs + minutes * MS_PER_MINUTE;
+    Math.round((midnightUtcMs + minutes * MS_PER_MINUTE) / MS_PER_SECOND) *
+    MS_PER_SECOND;
 
   return {
     sunriseMs: toInstant(eventMinutesUtc(jdMidnight, at, localDate, -1)),

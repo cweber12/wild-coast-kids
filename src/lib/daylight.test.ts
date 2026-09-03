@@ -114,6 +114,32 @@ test("the sun rises before it sets, which a sign error would reverse", () => {
   expect((sunsetMs - sunriseMs) / 3_600_000).toBeCloseTo(9.98, 1);
 });
 
+/**
+ * The instants are whole seconds, and the tolerance above is why.
+ *
+ * This series agrees with USNO to within 32 seconds, so a value carrying
+ * fractional milliseconds -- `1788441902729.5322` was one -- is stating four
+ * more digits than the astronomy has, on top of the four the tolerance already
+ * covers. That is not only untidy: the beach page serializes 28 of these into
+ * its flight payload, where the fractions cost a measured 136 bytes.
+ *
+ * Seconds are lossless for every reader in this repo. The labels are rounded to
+ * the minute where they are built, and the day chart's night band turns these
+ * into a pixel boundary. Half a second is also two orders of magnitude below
+ * the accuracy the tests above assert, so rounding here cannot flatter the
+ * comparison with the Naval Observatory -- which is the objection the header
+ * used to raise against rounding at all, and it was an objection to rounding to
+ * the *minute*.
+ */
+test("both instants are whole seconds, not raw float milliseconds", () => {
+  for (const { date, at } of REFERENCES) {
+    const { sunriseMs, sunsetMs } = daylightOn(date, at);
+
+    expect(sunriseMs % 1000).toBe(0);
+    expect(sunsetMs % 1000).toBe(0);
+  }
+});
+
 test("a latitude where the sun does not rise is a coding error, not a NaN", () => {
   // No beach in this inventory is anywhere near it, which is exactly why this
   // must raise: a silent NaN would reach a reader as an empty cell.
