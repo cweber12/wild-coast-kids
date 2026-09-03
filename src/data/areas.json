@@ -1,0 +1,148 @@
+{
+  "version": "0.1.0",
+  "generated": "2026-09-02",
+  "_provenance": "Written by hand. Nothing upstream publishes it: the state's resource names a nearest_city, and it says \"San Diego\" for 43 of the 51 beaches -- the only row it labels \"La Jolla\" is Childrens Pool. Latitude cannot stand in for it either, because Mission Beach falls inside Mission Bay's band and Sunset Cliffs falls below Spanish Landing Park on the far side of a peninsula. So an area is a fact about San Diego that a person asserts, the way a tide station's water class in tide-stations.json is. See docs/plans/areas-over-locations.md.",
+  "_partition": "Total and disjoint, and scripts/check-areas.mjs is the gate row that says so: every beach in beaches.json belongs to exactly one area, every listed slug is in the inventory, and no area is empty. That gate is the point of the file. seed-beaches.mjs rewrites the inventory from an upstream resource, and a beach arriving with no area named for it must stop a build rather than become unreachable from the chooser.",
+  "_order": "Two properties, and they are all that can hold at once. Members run north to south within their area, and areas are ordered by their northernmost member. Areas THEMSELVES INTERLEAVE and flattening them does not give beaches.json's order back: mission-bay-north spans inventory positions 15-22 while mission-bay-west spans 21-32, with Mission Beach at 26 inside both. That is the same interleave that stopped latitude from deriving these groups at all. The gate asserts the two properties against the inventory, so both are checked claims rather than conventions.",
+  "_single_member": "An area may hold one location, and four do. It is not a degenerate case to be avoided: an area publishes what all its members share, so a lone member shares everything with itself and its area is the beach page. Forbidding it would mean folding a place into a neighbour it has nothing in common with, which is what the count is protecting against rather than something to minimise.",
+  "_names": "The two bays carry compass points -- Mission Bay - North, San Diego Bay - Central -- because a compass point is what the committed coordinates support. Whether a reader says \"Sail Bay\" or \"Crown Point\" or \"Quivira\" is local usage this repo cannot verify from data, and substituting a better name is a one-line edit here.",
+  "_schema": {
+    "slug": "Stable key for the area. May equal a beach slug, and three do -- pacific-beach, mission-beach, ocean-beach. They are different namespaces: an area and a location sit at different positions of the route, so /conditions/pacific-beach is the area and /conditions/pacific-beach/pacific-beach the location. Five would have collided before the bays were split; mission-bay and san-diego-bay stopped colliding when those areas took compass points.",
+    "name": "What the chooser and the area's heading say.",
+    "beaches": "Member slugs, north to south, each a slug in beaches.json."
+  },
+  "areas": [
+    {
+      "slug": "del-mar",
+      "name": "Del Mar",
+      "beaches": ["del-mar-city-beach"]
+    },
+    {
+      "slug": "torrey-pines",
+      "name": "Torrey Pines",
+      "beaches": ["torrey-pines-state-beach", "torrey-pines-city-beach"]
+    },
+    {
+      "slug": "la-jolla",
+      "name": "La Jolla",
+      "beaches": [
+        "la-jolla-shores-beach",
+        "la-jolla-cove",
+        "shell-beach",
+        "childrens-pool",
+        "south-casa-beach-s-d",
+        "whispering-sands-nicholson-pt",
+        "marine-street-beach",
+        "la-jolla-community-beach",
+        "windansea-beach",
+        "bird-rock-nr"
+      ]
+    },
+    {
+      "slug": "pacific-beach",
+      "name": "Pacific Beach",
+      "beaches": ["tourmaline-surfing-park", "pacific-beach"]
+    },
+    {
+      "slug": "mission-bay-north",
+      "name": "Mission Bay – North",
+      "beaches": [
+        "mission-bay-campland-on-the-bay",
+        "mission-bay-de-anza-cove",
+        "mission-bay-visitor-s-center",
+        "mission-bay-fanuel-park",
+        "mission-bay-leisure-lagoon",
+        "mission-bay-crown-point-shores",
+        "mission-bay-north-pacific-passage"
+      ]
+    },
+    {
+      "slug": "mission-bay-west",
+      "name": "Mission Bay – West",
+      "beaches": [
+        "mission-bay-riviera-shores",
+        "mission-bay-san-juan-cove",
+        "mission-bay-sail-bay",
+        "mission-bay-santa-barbara-cove",
+        "mission-bay-bahia-point",
+        "mission-bay-vacation-isle",
+        "mission-bay-ventura-cove",
+        "mission-bay-sea-world"
+      ]
+    },
+    {
+      "slug": "mission-beach",
+      "name": "Mission Beach",
+      "beaches": ["mission-beach"]
+    },
+    {
+      "slug": "mission-bay-east",
+      "name": "Mission Bay – East",
+      "beaches": ["tecolote-shores", "fiesta-island"]
+    },
+    {
+      "slug": "mission-bay-south",
+      "name": "Mission Bay – South",
+      "beaches": [
+        "mission-bay-mariners-basin",
+        "mission-bay-quivera-basin",
+        "mission-bay"
+      ]
+    },
+    {
+      "slug": "ocean-beach",
+      "name": "Ocean Beach",
+      "beaches": ["dog-beach-o-b", "ocean-beach"]
+    },
+    {
+      "slug": "san-diego-bay-north",
+      "name": "San Diego Bay – North",
+      "beaches": ["spanish-landing-park"]
+    },
+    {
+      "slug": "sunset-cliffs",
+      "name": "Sunset Cliffs",
+      "beaches": ["sunset-cliffs-park"]
+    },
+    {
+      "slug": "san-diego-bay-central",
+      "name": "San Diego Bay – Central",
+      "beaches": ["shoreline-park", "san-diego-bay"]
+    },
+    {
+      "slug": "coronado",
+      "name": "Coronado",
+      "beaches": [
+        "coronado-north-beach",
+        "coronado-central-beach",
+        "coronado-city-beaches"
+      ]
+    },
+    {
+      "slug": "coronado-cays",
+      "name": "Coronado Cays",
+      "beaches": ["coronado-cays-nr"]
+    },
+    {
+      "slug": "silver-strand",
+      "name": "Silver Strand",
+      "beaches": ["silver-strand-state-beach"]
+    },
+    {
+      "slug": "imperial-beach",
+      "name": "Imperial Beach",
+      "beaches": [
+        "north-imperial-beach",
+        "imperial-beach-municipal-beach-other"
+      ]
+    },
+    {
+      "slug": "tijuana-estuary",
+      "name": "Tijuana Estuary",
+      "beaches": [
+        "tijuana-slough-national-wildlife-refuge",
+        "border-field-state-park"
+      ]
+    }
+  ]
+}

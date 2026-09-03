@@ -2,7 +2,6 @@ import { describe, expect, test } from "vitest";
 import {
   allBeaches,
   beachBySlug,
-  beachesByRegion,
   DEFAULT_BEACH_SLUG,
   defaultBeach,
   inventoryCaveats,
@@ -183,17 +182,26 @@ describe("the tide station binding", () => {
     }
   });
 
-  test("applies the water class to the region label and the join alike", () => {
-    // The class is resolved in one place and read by three joins and the region
-    // label. A beach bound to a bay station but filed under a coastal region
-    // would mean an override reached one reader and not the others -- which is
-    // the failure mode a slug-keyed override invites.
-    for (const beach of allBeaches()) {
-      const station = tideStationFor(beach);
-      if (station === null) continue;
-      expect(station.water === "bay").toBe(beach.region.startsWith("Bays"));
-    }
-  });
+  /*
+    A test stood here asserting that the water class reached the region label
+    and the joins alike. Its whole value was that the two operands were
+    independent: `region` was frozen into beaches.json at seed time from the
+    bound class, and the joins read that class at runtime, so a beach that moved
+    one without the other was a data error worth stopping on.
+
+    `region` is gone -- replaced by an authored area that groups by place rather
+    than by water -- and with it the second operand. What is left cannot be
+    written as a test: `surfZoneWithheldReason` IS `station.water === "bay"`, so
+    comparing them asserts nothing, and `upstream.water_body_type` disagrees at
+    the two beaches tide-join.mjs deliberately overrides. Childrens Pool is the
+    proof: upstream calls it a bay, the tide join binds it an open-coast
+    station, and the mop join refuses it.
+
+    The property is still covered, by the test directly above -- the binding
+    matches upstream except at those two named beaches -- and by the surf zone's
+    withheld count. Recorded rather than replaced with something that can only
+    pass.
+  */
 
   test("never binds to a station that does not deliver", () => {
     for (const beach of allBeaches()) {
@@ -231,32 +239,14 @@ describe("the tide station binding", () => {
   });
 });
 
-describe("grouping for a chooser", () => {
-  test("covers every beach exactly once", () => {
-    const grouped = beachesByRegion().flatMap((group) => group.beaches);
-    expect(grouped).toHaveLength(allBeaches().length);
-    expect(new Set(grouped.map((b) => b.slug)).size).toBe(allBeaches().length);
-  });
-
-  test("names no empty region", () => {
-    for (const group of beachesByRegion()) {
-      expect(group.region).not.toBe("");
-      expect(group.beaches.length).toBeGreaterThan(0);
-    }
-  });
-
-  test("puts bays and inlets in one group regardless of latitude", () => {
-    const bays = beachesByRegion().find((g) => g.region.startsWith("Bays"))!;
-
-    expect(bays.beaches.length).toBeGreaterThan(0);
-    for (const beach of bays.beaches) {
-      // Read from the binding rather than from `upstream.water_body_type`:
-      // that field is what the override in scripts/tide-join.mjs corrects, so
-      // asserting it here would assert the bug instead of the behaviour.
-      expect(tideStationFor(beach)?.water).toBe("bay");
-    }
-  });
-});
+/*
+  `describe("grouping for a chooser")` stood here, over `beachesByRegion`. It is
+  `src/lib/areas.test.ts` now, because the chooser groups by an authored area
+  rather than a derived region. One of its three tests is not carried over on
+  purpose: "puts bays and inlets in one group regardless of latitude" asserted
+  the behaviour this change removes -- Childrens Pool now sits in La Jolla, with
+  the beaches either side of it, rather than with a wildlife refuge 19 km away.
+*/
 
 describe("the default beach", () => {
   test("is in the inventory and has a station", () => {
@@ -582,26 +572,12 @@ describe("which beaches the surf zone forecast describes", () => {
     expect(withheld).toHaveLength(25);
   });
 
-  /**
-   * Two independent classifications of the same water: the region a beach is
-   * grouped under for the chooser, and the water class its tide station was
-   * bound by. They agreed on all 51, which is why reading either is defensible
-   * and why this holds the agreement still -- a beach that moved region without
-   * moving station, or the reverse, would be a data error worth stopping on
-   * rather than a silent change in who sees a rip current risk.
-   */
-  test("the water class and the region agree on every beach", () => {
-    for (const beach of allBeaches()) {
-      const sheltered = surfZoneWithheldReason(beach) !== null;
-      expect({
-        slug: beach.slug,
-        sheltered,
-      }).toEqual({
-        slug: beach.slug,
-        sheltered: beach.region === "Bays, lagoons and inlets",
-      });
-    }
-  });
+  /*
+    And a second test stood here comparing the withheld set against the region
+    each beach was grouped under -- the same pair of operands, and gone for the
+    same reason. The count above is what survives it: 25 withheld of 51, which
+    is the number CONTEXT.md states as "26 of the 51 beaches" reached.
+  */
 
   test("an open-coast beach is not withheld", () => {
     expect(surfZoneWithheldReason(beachBySlug(DEFAULT_BEACH_SLUG)!)).toBeNull();

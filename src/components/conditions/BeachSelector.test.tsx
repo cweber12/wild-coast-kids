@@ -9,14 +9,14 @@ vi.mock("next/navigation", () => ({ useRouter: () => ({ push }) }));
 
 const GROUPS = [
   {
-    region: "La Jolla and Pacific Beach",
+    area: "La Jolla",
     beaches: [
-      { slug: "del-mar-city-beach", name: "Del Mar City Beach" },
       { slug: "la-jolla-shores-beach", name: "La Jolla Shores Beach" },
+      { slug: "la-jolla-cove", name: "La Jolla Cove" },
     ],
   },
   {
-    region: "Bays, lagoons and inlets",
+    area: "Mission Bay – South",
     beaches: [{ slug: "mission-bay", name: "Mission Bay" }],
   },
 ];
@@ -29,7 +29,7 @@ test("the chooser is labelled, so it is reachable without sight of it", () => {
   expect((select as HTMLSelectElement).value).toBe("la-jolla-shores-beach");
 });
 
-test("beaches are grouped by region rather than listed flat", () => {
+test("beaches are grouped by area rather than listed flat", () => {
   const { container } = render(
     <BeachSelector groups={GROUPS} current="la-jolla-shores-beach" />,
   );
@@ -37,11 +37,8 @@ test("beaches are grouped by region rather than listed flat", () => {
   const labels = [...container.querySelectorAll("optgroup")].map((group) =>
     group.getAttribute("label"),
   );
-  // Forty-odd entries is still too many to scan as one list.
-  expect(labels).toEqual([
-    "La Jolla and Pacific Beach",
-    "Bays, lagoons and inlets",
-  ]);
+  // Fifty-one entries is far too many to scan as one list.
+  expect(labels).toEqual(["La Jolla", "Mission Bay – South"]);
 });
 
 test("every beach given is offered exactly once", () => {
@@ -53,8 +50,8 @@ test("every beach given is offered exactly once", () => {
     (option) => (option as HTMLOptionElement).value,
   );
   expect(values).toEqual([
-    "del-mar-city-beach",
     "la-jolla-shores-beach",
+    "la-jolla-cove",
     "mission-bay",
   ]);
 });
@@ -68,12 +65,12 @@ test("a beach without scripting is still reachable, as a link", () => {
   );
 
   expect(markup).toContain("<noscript>");
-  expect(markup).toContain("Del Mar City Beach");
+  expect(markup).toContain("La Jolla Cove");
   expect(markup).toContain("/conditions/mission-bay");
   // Two-sided: markup containing every beach twice would pass the lines above
   // whether or not the fallback exists, so the links must be inside it.
   const fallback = markup.slice(markup.indexOf("<noscript>"));
-  expect(fallback).toContain("/conditions/del-mar-city-beach");
+  expect(fallback).toContain("/conditions/la-jolla-cove");
 });
 
 /**

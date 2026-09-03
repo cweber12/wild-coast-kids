@@ -301,6 +301,71 @@ members do not agree by value either, Mission Bay wants splitting — and that i
 a membership change, not a rule change, which is what the authored table exists
 to make cheap.
 
+> **Addendum, 2026-09-02. Both bays are split, and the table is eighteen areas
+> rather than thirteen.** The paragraph above deferred Mission Bay to what the
+> probe would find. It is settled ahead of the probe instead, because twenty
+> entries under one heading is unusable in the chooser whatever the feeds say,
+> and because a split that survives the strict fallback survives anything the
+> probe could add.
+>
+> **Mission Bay becomes four**, and the four are not arbitrary — they cut along
+> the three axes its bindings actually split on. Tide splits north from south,
+> the two gauges being `9410196` "Mission Bay, Campland" at the north end and
+> `TWC0413` "Quivira Basin" at the entrance. Air splits three ways: Mt. Soledad
+> serves the north and west, Shelter Island the entrance basins, and **San Diego
+> Airport serves Tecolote Shores and Fiesta Island alone** — which is why an
+> east area has to exist at all, since folding those two anywhere else costs
+> that area its air reading. Grid cells split east from west at about
+> −117.228.
+>
+> | area                | n   | reports                  |
+> | ------------------- | --- | ------------------------ |
+> | Mission Bay – North | 7   | tide, air                |
+> | Mission Bay – West  | 8   | tide, sky/wind/temp, air |
+> | Mission Bay – East  | 2   | sky/wind/temp, air       |
+> | Mission Bay – South | 3   | tide, air                |
+>
+> Five partitions were measured. A plain east/west split leaves **both** halves
+> with nothing; a plain north/south split by gauge leaves each with one product.
+> This one leaves every area with at least two of the three a bay can ever
+> report — a bay binds no MOP line and no buoy, and ADR-0043 withholds the surf
+> zone, so tide, the grid cell's products and the air station are the whole
+> field.
+>
+> **`Mission Bay, Sea World` sits in _West_ rather than _South_**, which is the
+> one member placed by its bindings rather than by the map. It binds the west
+> cell and Mt. Soledad; in South it would drop that area from two products to
+> one. Recorded because it is the placement most likely to read wrong to
+> somebody who knows the bay.
+>
+> **San Diego Bay becomes three**, and this one costs nothing: all three report
+> everything. Its four members were never one place — `Coronado Cays` is 12.2 km
+> from `Shoreline Park` and binds a different gauge, a different cell and a
+> different air station.
+>
+> | area                    | n   | reports   |
+> | ----------------------- | --- | --------- |
+> | San Diego Bay – North   | 1   | all three |
+> | San Diego Bay – Central | 2   | all three |
+> | Coronado Cays           | 1   | all three |
+>
+> **The names are compass points because a compass point is what the committed
+> coordinates support.** Whether people say "Sail Bay", "Crown Point", "Quivira"
+> or "Fiesta Island" is local usage this plan cannot verify, and substituting a
+> better name later is a one-line edit to an authored table.
+>
+> **Area slugs may collide with beach slugs, and three do** — `pacific-beach`,
+> `mission-beach`, `ocean-beach`. §5 counted five; splitting the bays removed
+> two of them, because `mission-bay` and `san-diego-bay` are no longer area
+> slugs. (`coronado-cays` is not a fourth: the beach is `coronado-cays-nr`.)
+> They sit in different
+> positions of the nested route decided in §5, so `/conditions/pacific-beach` is
+> the area and `/conditions/pacific-beach/pacific-beach` the location, with no
+> ambiguity to resolve. The consequence is that those four beaches' old URLs
+> cannot redirect to their locations, because the old URL _is_ the new area URL;
+> a reader with that bookmark lands on the area containing the beach they saved,
+> which is the right place rather than a broken one.
+
 ## Test seams
 
 Agreed before starting, and chosen from what exists rather than invented.

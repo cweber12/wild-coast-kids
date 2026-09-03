@@ -139,6 +139,36 @@ teaser is not part of it and sits at the root of `src/components/` as
 the tool (ADR-0018).
 _Avoid_: weather, forecast, surf report
 
+**Area**:
+A named stretch of this county's coast holding one or more beaches — Del Mar,
+La Jolla, Mission Bay – West. It is what a reader chooses on `/conditions`, and
+`src/data/areas.json` is the table that says which beaches are in which. There
+are 18 over the 51, they partition the inventory totally and disjointly, and a
+gate row says so — the table is written by hand while the inventory beside it is
+rewritten from an upstream resource, so a beach arriving with no area named for
+it would otherwise go missing from the chooser with nothing thrown (ADR-0046).
+
+Four areas hold one beach, which is not a defect: an area publishes what its
+members share, so a lone member shares everything with itself.
+
+It replaced the **region**, which was derived from water class and mean
+latitude and grouped `Childrens Pool` with a wildlife refuge 19 km away because
+both sit in sheltered water. That word now means only one thing here, the one
+ADR-0014 gives it: a section of a page.
+_Avoid_: region (that is a page section), neighbourhood, zone, group
+
+**Beach**:
+One entry in `src/data/beaches.json` — 51 of them, and the member unit an area
+holds. The word is upstream's: the state publishes them as beaches, so a
+wildlife refuge and a bay basin are beaches here too, and a beach is a shoreline
+_segment_ rather than a point.
+
+`docs/plans/areas-over-locations.md` says "location" throughout for the same
+thing. That plan is a dated record and is not corrected; this file is the one
+that picks, and it picks the word the code, the data and the chooser already
+use.
+_Avoid_: location, site, spot, break
+
 **Observation station**:
 One of the stations in `src/data/observation-stations.json` — 62 of them, across
 the National Weather Service's network and NDBC's. The table is read by two

@@ -201,20 +201,6 @@ export function slugify(name) {
   return slug;
 }
 
-/**
- * Display grouping only. Never an input to any join — it exists so a reader can
- * find their beach in a long list, and the bands are latitudes rather
- * than anyone's idea of where a neighbourhood ends. Bay and inlet sites group
- * together regardless of latitude, because that is how someone looks for them.
- */
-export function regionOf(waterClass, meanLat) {
-  if (waterClass === "bay") return "Bays, lagoons and inlets";
-  if (meanLat >= 33.0) return "North County coast";
-  if (meanLat >= 32.8) return "La Jolla and Pacific Beach";
-  if (meanLat >= 32.65) return "Point Loma and Ocean Beach";
-  return "South County coast";
-}
-
 export function build(
   rows,
   stations,
@@ -293,7 +279,6 @@ export function build(
     return {
       slug,
       name: row.Beach_Name,
-      region: regionOf(bound.stationId ? bound.waterClass : null, meanLat),
       segment,
       upstream: {
         usepa_id: row.USEPAID,
@@ -681,8 +666,6 @@ export function document(built, now = new Date()) {
     _schema: {
       slug: "Stable primary key, from the published name. Never change after first write.",
       name: "Display name, as the resource publishes it.",
-      region:
-        "Display grouping only, derived from water class and mean latitude. Never a join input.",
       segment:
         "The shoreline extent, upper and lower endpoints, WGS84 decimal degrees.",
       upstream: "Fields reproduced from the resource, unmodified.",

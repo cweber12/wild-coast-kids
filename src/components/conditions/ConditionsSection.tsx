@@ -9,11 +9,8 @@
  */
 
 import { Suspense } from "react";
-import {
-  beachesByRegion,
-  inventoryCaveats,
-  inventoryReach,
-} from "@/lib/beaches";
+import { beachesByArea } from "@/lib/areas";
+import { inventoryCaveats, inventoryReach } from "@/lib/beaches";
 import { BeachSelector } from "./BeachSelector";
 import { ConditionsNotes } from "./ConditionsNotes";
 import { DayPanel } from "./DayPanel";
@@ -23,8 +20,8 @@ import { SelectedDayProvider } from "./selectedDay";
 import { WeekPanel } from "./WeekPanel";
 
 export function ConditionsSection({ slug }: { slug: string }) {
-  const groups = beachesByRegion().map((group) => ({
-    region: group.region,
+  const groups = beachesByArea().map((group) => ({
+    area: group.area.name,
     beaches: group.beaches.map((beach) => ({
       slug: beach.slug,
       name: beach.name,

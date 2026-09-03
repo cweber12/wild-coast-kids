@@ -6,10 +6,16 @@ import { TOUCH_TARGET } from "../ui/touchTarget";
 /**
  * Choosing which beach the conditions view is about.
  *
- * The inventory is too long to scan flat, so it is grouped by region — a
- * display grouping the inventory derives from water class and latitude, and
- * never a join input. Bays, lagoons and inlets group together regardless of
- * where they are, because that is how someone looks for them.
+ * The inventory is too long to scan flat, so it is grouped by **area** — Del
+ * Mar, La Jolla, Mission Bay – West — which is a place a reader already has a
+ * name for. It replaced a grouping derived from water class and latitude, whose
+ * bay band held `Childrens Pool` and a wildlife refuge 19 km away because both
+ * sit in sheltered water.
+ *
+ * The areas run north to south and their members run north to south inside
+ * them, which is what makes the list read down the coast. Those two properties
+ * are all that hold: the areas interleave, so the flattened order is not the
+ * inventory's. `src/lib/areas.ts` carries the reason.
  *
  * The `noscript` list is not decoration. Selecting with a `select` needs
  * JavaScript to navigate, and a family checking the tide on a phone with a
@@ -23,7 +29,8 @@ export interface SelectableBeach {
 }
 
 export interface BeachGroup {
-  region: string;
+  /** The area's display name, which labels the group. */
+  area: string;
   beaches: readonly SelectableBeach[];
 }
 
@@ -61,7 +68,7 @@ export function BeachSelector({
         onChange={(event) => router.push(`/conditions/${event.target.value}`)}
       >
         {groups.map((group) => (
-          <optgroup key={group.region} label={group.region}>
+          <optgroup key={group.area} label={group.area}>
             {group.beaches.map((beach) => (
               <option key={beach.slug} value={beach.slug}>
                 {beach.name}
@@ -73,9 +80,9 @@ export function BeachSelector({
 
       <noscript>
         {groups.map((group) => (
-          <div key={group.region} className="mt-4">
+          <div key={group.area} className="mt-4">
             <p className="text-2xs font-extrabold tracking-widest text-ocean uppercase">
-              {group.region}
+              {group.area}
             </p>
             <ul className="leading-relaxed text-base text-fog">
               {group.beaches.map((beach) => (
