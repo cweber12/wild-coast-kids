@@ -140,8 +140,8 @@ function daylightWeek() {
       ...date,
       sunriseLabel: index === 0 ? "6:14 AM" : "6:15 AM",
       sunsetLabel: index === 0 ? "7:32 PM" : "7:31 PM",
-      // The unrounded instants the night band is drawn from, alongside the
-      // labels the header prints. Roughly 6:14 AM and 7:32 PM Pacific.
+      // The instants the night band is drawn from, alongside the labels the
+      // header prints. Roughly 6:14 AM and 7:32 PM Pacific.
       sunriseMs: localMidnightOf(date.localDate) + 6 * HOUR_MS + 14 * 60_000,
       sunsetMs: localMidnightOf(date.localDate) + 19 * HOUR_MS + 32 * 60_000,
     })),

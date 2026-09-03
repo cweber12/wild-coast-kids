@@ -59,8 +59,8 @@ export function lowestLowOn(
  *
  * **Both ends inclusive.** A low at the instant of sunrise is a low a reader
  * can stand in front of. The alternative excludes a reading for being exactly
- * on a boundary computed to the millisecond from an ephemeris, which is
- * precision neither the sunrise nor the prediction has.
+ * on a boundary computed to the second from an ephemeris, which is precision
+ * neither the sunrise nor the prediction has.
  *
  * Null means no low falls in the window. On this coast that is close to
  * unreachable — two lows about twelve and a half hours apart against ten to

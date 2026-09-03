@@ -559,14 +559,15 @@ export interface DaylightWeekDay extends WeekDayFrame {
   /** Pacific wall-clock sunset, already worded and rounded. */
   sunsetLabel: string;
   /**
-   * The same two instants, unrounded.
+   * The same two instants, before the labels round them to the minute.
    *
    * The labels are for reading and these are for drawing: a plot that shaded
    * night from a formatted string would have to parse it back, and the day
-   * spark needs the boundary to the millisecond it was computed at rather than
-   * to the minute it is printed at. Both come from one `daylightOn` call, so
-   * the shaded edge and the printed time cannot disagree about when the sun
-   * came up.
+   * spark needs the boundary where it was computed rather than where it is
+   * printed. `daylightOn` gives it to the second, which across a day drawn a
+   * few hundred pixels wide is well under a pixel. Both come from one
+   * `daylightOn` call, so the shaded edge and the printed time cannot disagree
+   * about when the sun came up.
    */
   sunriseMs: number;
   sunsetMs: number;
