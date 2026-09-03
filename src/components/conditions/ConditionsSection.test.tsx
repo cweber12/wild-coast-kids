@@ -155,12 +155,39 @@ test("the measured block is asked for a beach and never for a day", () => {
     />,
   );
 
-  expect(measuredPanel).toHaveBeenCalledWith({ slug: DEFAULT_BEACH_SLUG });
-
-  // Spelled out rather than left to `toHaveBeenCalledWith`'s exact match, so a
-  // reader of this test can see which argument is the forbidden one.
   const [props] = measuredPanel.mock.calls[0] as [Record<string, unknown>];
-  expect(Object.keys(props)).toEqual(["slug"]);
+
+  // An allowlist rather than an exact match, and it grew by one deliberately:
+  // `area` arrived when this block learned to answer for an area as well as a
+  // beach, and this test caught it, which is the allowlist working. What it
+  // must never grow is a day, so that is asserted as its own line rather than
+  // left implicit in the list above it.
+  expect(Object.keys(props).sort()).toEqual(["area", "slug"]);
+  expect(Object.keys(props).some((key) => /day|date/i.test(key))).toBe(false);
+
+  // On a beach page there is no area scope at all, so the block is answering
+  // for that beach and nothing wider.
+  expect(props.slug).toBe(DEFAULT_BEACH_SLUG);
+  expect(props.area).toBeUndefined();
+});
+
+/**
+ * And on an area page it is handed the area, plus a beach to read through.
+ *
+ * Which beach cannot matter: a product is only read when every beach in the
+ * area binds the same source for it, which `areas.test.ts` asserts over the
+ * whole table. Asserted here so that a later change passing a *chosen*
+ * representative — rather than any member — has to say so.
+ */
+test("on an area page the measured block is given the area and a member", () => {
+  render(<ConditionsSection areaSlug="la-jolla" beachSlug={null} />);
+
+  const [props] = measuredPanel.mock.calls[0] as [Record<string, unknown>];
+  const area = props.area as { name: string; beaches: number };
+
+  expect(area.name).toBe("La Jolla");
+  expect(area.beaches).toBe(10);
+  expect(props.slug).toBe("la-jolla-shores-beach");
 });
 
 /**

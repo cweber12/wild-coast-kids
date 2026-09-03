@@ -942,3 +942,92 @@ test("the measured block does not follow the chosen day", () => {
   expect(screen.getByText("probe:2026-09-10")).toBeDefined();
   expect(blockOf(container.innerHTML)).toBe(beforeBlock);
 });
+
+/**
+ * An area reports what its beaches share, so a product they do not share gets a
+ * card saying so rather than a figure from one of them.
+ *
+ * Two sentences, because `absent` and `mixed` are two different facts. Thirteen
+ * of the eighteen areas have no wave buoy anywhere in them and two have beaches
+ * that bind different ones; a reader owed "there is none here" must not be told
+ * "they disagree", and the reverse would be worse — it would imply the area has
+ * no instrument when in fact it has several.
+ */
+test("an area with no buoy anywhere says so, and does not blame disagreement", () => {
+  render(
+    <MeasuredToday
+      readings={{
+        waves: {
+          agreement: "absent",
+          areaName: "Mission Bay – West",
+          beaches: 8,
+          distinct: 0,
+        },
+        air: readings().air,
+      }}
+    />,
+  );
+
+  expect(
+    screen.getByText(/No beach in Mission Bay – West has a wave reading/),
+  ).toBeDefined();
+  expect(screen.queryByText(/different sources/)).toBeNull();
+  // The other card still stands: one withheld product must not cost the other.
+  expect(screen.getByText("71°F")).toBeDefined();
+});
+
+test("an area whose beaches disagree names how many, and how many sources", () => {
+  render(
+    <MeasuredToday
+      readings={{
+        waves: {
+          agreement: "mixed",
+          areaName: "La Jolla",
+          beaches: 10,
+          distinct: 2,
+        },
+        air: readings().air,
+      }}
+    />,
+  );
+
+  expect(
+    screen.getByText(
+      /The 10 beaches in La Jolla read 2 different sources for a wave reading/,
+    ),
+  ).toBeDefined();
+});
+
+/**
+ * The withheld card is the card it replaces, not a new one. ADR-0015 makes the
+ * glyph a closed vocabulary, so a second glyph for waves would be a second word
+ * for one thing — and a different heading rank would put a hole in the outline.
+ * A first draft of this component invented both.
+ */
+test("a withheld card keeps the glyph and rank of the card it stands in for", () => {
+  const withReading = render(<MeasuredToday readings={readings()} />);
+  const realHeading = screen.getByRole("heading", { name: "Waves and water" });
+  expect(realHeading.tagName).toBe("H2");
+  withReading.unmount();
+
+  render(
+    <MeasuredToday
+      readings={{
+        waves: {
+          agreement: "absent",
+          areaName: "Coronado",
+          beaches: 3,
+          distinct: 0,
+        },
+        air: readings().air,
+      }}
+    />,
+  );
+
+  const withheldHeading = screen.getByRole("heading", {
+    name: "Waves and water",
+  });
+  expect(withheldHeading.tagName).toBe("H2");
+  expect(withheldHeading.id).toBe("waves-today-heading");
+  expect(screen.getByText("🏄")).toBeDefined();
+});

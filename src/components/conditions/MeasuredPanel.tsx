@@ -27,14 +27,83 @@
  * arranged to avoid.
  */
 
+import { type AreaSources } from "@/lib/areas";
 import { readLatestAir, readLatestWaves } from "@/lib/conditions";
-import { MeasuredToday } from "./MeasuredToday";
+import { MeasuredToday, type NotShared } from "./MeasuredToday";
 
-export async function MeasuredPanel({ slug }: { slug: string }) {
+/**
+ * What this block is about, when it is about an area rather than one beach.
+ *
+ * `slug` is still a beach, because every read here is keyed on one — but which
+ * beach is immaterial for a product the area shares, and that is what "shared"
+ * means: `areas.test.ts` asserts that where `areaSources` says shared, every
+ * beach in the area binds that same source. A product it does not share is not
+ * read at all, so no member's figure can leak into an area's card.
+ */
+export type AreaScope = {
+  name: string;
+  beaches: number;
+  sources: AreaSources;
+};
+
+/** A slot the area cannot fill, or null when it can. */
+function withheldBy(
+  scope: AreaScope | undefined,
+  product: "waves" | "air",
+): NotShared | null {
+  if (!scope) return null;
+
+  const source = scope.sources[product];
+  if (source.kind === "shared") return null;
+
+  return {
+    agreement: source.kind,
+    areaName: scope.name,
+    beaches: scope.beaches,
+    distinct: source.kind === "mixed" ? source.distinct : 0,
+  };
+}
+
+export async function MeasuredPanel({
+  slug,
+  area,
+}: {
+  slug: string;
+  /** Present on an area page, absent on a beach's. */
+  area?: AreaScope;
+}) {
+  const withheldWaves = withheldBy(area, "waves");
+  const withheldAir = withheldBy(area, "air");
+
+  /*
+    Only what will be shown is asked for. A withheld product makes no request:
+    there is nothing an area could do with one beach's buoy, and asking would
+    spend a reader's wait on a figure this page has already decided not to
+    print.
+  */
   const [waves, air] = await Promise.all([
-    readLatestWaves(slug),
-    readLatestAir(slug),
+    withheldWaves ? null : readLatestWaves(slug),
+    withheldAir ? null : readLatestAir(slug),
   ]);
 
-  return <MeasuredToday readings={{ waves, air }} />;
+  /*
+    A shared reading is labelled with the area, not with the beach it was read
+    through. Both cards print `beachName` as their context, and leaving the
+    member's there would name one beach for a figure the whole area shares --
+    "La Jolla Shores Beach" over a station every beach in La Jolla binds, which
+    reads as a reading about that one beach. The area's name is the true label
+    precisely because the source is shared; where it is not shared, nothing is
+    read and there is no label to get wrong.
+  */
+  const labelled = <V extends { beachName: string }>(view: V): V =>
+    area ? { ...view, beachName: area.name } : view;
+
+  return (
+    <MeasuredToday
+      readings={{
+        waves: withheldWaves ?? labelled(waves!),
+        air: withheldAir ?? labelled(air!),
+      }}
+    />
+  );
 }

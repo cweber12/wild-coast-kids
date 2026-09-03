@@ -46,17 +46,17 @@ test("renders the area named in the route", async () => {
 });
 
 /**
- * The area page carries no readings yet — an area reports only what all its
- * beaches share, and measuring that is its own slice. It says so rather than
- * showing an empty frame, and the beaches are one click away.
+ * The area reports what is measured now, and sends the reader to a beach for
+ * what is forecast. Air is shared by all eighteen areas, so every area page has
+ * something measured to say; the week and the day chart are still one beach at
+ * a time.
  */
-test("an area sends the reader to a beach for the readings", async () => {
+test("an area reports what is measured and defers the forecast", async () => {
   render(await AreaConditions(params("la-jolla")));
 
+  expect(screen.getByText(/still shown one beach at a time/)).toBeDefined();
   expect(screen.queryByText(/week for/)).toBeNull();
-  expect(
-    screen.getByText(/reports only the readings every beach in it shares/),
-  ).toBeDefined();
+  expect(screen.queryByText(/day for/)).toBeNull();
 });
 
 /**

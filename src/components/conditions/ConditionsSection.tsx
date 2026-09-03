@@ -18,7 +18,7 @@
  */
 
 import { Suspense } from "react";
-import { areaBySlug, beachesByArea } from "@/lib/areas";
+import { areaBySlug, areaSources, beachesByArea } from "@/lib/areas";
 import { inventoryCaveats, inventoryReach } from "@/lib/beaches";
 import { AreaBeaches } from "./AreaBeaches";
 import { AreaSelector } from "./AreaSelector";
@@ -214,25 +214,39 @@ export function ConditionsSection({
         agencies go quiet independently and a slow buoy must not hold up the
         week.
       */}
-      {beachSlug === null ? (
-        <p className="leading-relaxed max-w-130 mb-9 text-base text-fog">
-          Choose one of these beaches for its tide, swell and wind. An area
-          reports only the readings every beach in it shares, and which those
-          are is measured rather than assumed — so they are not here yet.
-        </p>
-      ) : (
-        <div className="mb-9">
-          <Suspense
-            fallback={
-              <p className="text-base text-fog">
-                Reading the buoy and the air station…
-              </p>
+      <div className="mb-9">
+        <Suspense
+          fallback={
+            <p className="text-base text-fog">
+              Reading the buoy and the air station…
+            </p>
+          }
+        >
+          {/*
+            On an area page this reads through the area's first beach, and which
+            beach that is cannot matter: a product is only read here when every
+            beach in the area binds the same source for it, which is what
+            `areaSources` calls shared and what `areas.test.ts` asserts over the
+            whole table. A product they do not share is not read at all, so no
+            one beach's figure can arrive labelled as the area's.
+
+            Air is shared by all eighteen areas and a buoy by three, so this
+            block is where an area page has something measured to say at all.
+          */}
+          <MeasuredPanel
+            slug={beachSlug ?? group.beaches[0].slug}
+            area={
+              beachSlug === null
+                ? {
+                    name: group.area.name,
+                    beaches: group.beaches.length,
+                    sources: areaSources(group.area),
+                  }
+                : undefined
             }
-          >
-            <MeasuredPanel slug={beachSlug} />
-          </Suspense>
-        </div>
-      )}
+          />
+        </Suspense>
+      </div>
 
       {/*
         The week and the day are one instrument at two zoom levels, and from
@@ -244,7 +258,12 @@ export function ConditionsSection({
         quiet independently and none may hold up another; a shared choice does
         not change that.
       */}
-      {beachSlug !== null && (
+      {beachSlug === null ? (
+        <p className="leading-relaxed max-w-130 text-base text-fog">
+          The week ahead and the day chart are still shown one beach at a time.
+          Choose one above for its tide, swell and sky.
+        </p>
+      ) : (
         <>
           <div className="mb-9">
             <Suspense
