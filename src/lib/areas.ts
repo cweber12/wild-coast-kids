@@ -143,3 +143,98 @@ export function beachesByArea(): readonly AreaGroup[] {
     }),
   }));
 }
+
+/**
+ * The five products `/conditions` draws, named by what a reader calls them
+ * rather than by the table each comes from.
+ *
+ * One product to one binding, which is why this list is five and not four or
+ * six: `tide` is the tide station's, `waves` the wave buoy's measurement,
+ * `swell` the MOP line's forecast, `sky` everything the forecast cell supplies
+ * (cloud, wind and temperature together, because they come from one cell and
+ * fail together), and `air` the shore station's.
+ */
+export type AreaProduct = "tide" | "waves" | "swell" | "sky" | "air";
+
+/**
+ * What an area can say about one product.
+ *
+ * **Three states, and the middle one is the reason there are three.** An area
+ * reports only what all its beaches share, so the obvious model is shared or
+ * not — but "not" runs together two different facts, and the page owes a
+ * different sentence for each. `absent` is every beach lacking the source, which
+ * is the bay's missing buoy and was already true one beach at a time. `mixed` is
+ * the beaches having one each and disagreeing, which is new with areas and is
+ * the only state a reader has never seen before.
+ *
+ * That is the same distinction `beaches.json` draws about `wave_buoy` null,
+ * whose schema note says it "carries TWO meanings and wave_buoy_null_reason
+ * always distinguishes them".
+ */
+export type AreaSource =
+  | { kind: "shared"; source: string }
+  | { kind: "absent" }
+  | { kind: "mixed"; distinct: number };
+
+export type AreaSources = Readonly<Record<AreaProduct, AreaSource>>;
+
+const BINDING: Readonly<Record<AreaProduct, keyof Beach>> = {
+  tide: "tide_station",
+  waves: "wave_buoy",
+  swell: "mop_line",
+  sky: "grid_cell",
+  air: "air_station",
+};
+
+/**
+ * What every beach in an area agrees on, product by product.
+ *
+ * **Identifier equality, which is the strict form and deliberately so.** Two
+ * beaches share a product here only when they bind the very same station, line
+ * or cell. That refuses some agreement it should allow — CDIP's model lines sit
+ * about 100 m apart and come from one run, so La Jolla's nine almost certainly
+ * publish the same forecast to the decimal the page prints — and the measured
+ * form of the rule is its own slice. Until that probe exists this is the version
+ * that cannot overclaim: everything it calls shared *is* one source.
+ *
+ * **No reason strings.** The wording belongs to the page, which is this repo's
+ * rule about who owns the copy; and for `absent` there is no beach sentence to
+ * lift, because they differ. Coronado's three beaches name 20.9, 21.6 and
+ * 21.2 km for the buoy that does not reach them, and Tijuana Estuary's two give
+ * different kinds of reason entirely — one is sheltered water, the other is
+ * simply too far from a buoy. So an area states the fact and sends the reader to
+ * the beach for its own reason.
+ *
+ * Throws for an area naming a beach the inventory does not have, like
+ * `beachesByArea` and for the same reason.
+ */
+export function areaSources(area: Area): AreaSources {
+  const bySlug = new Map(allBeaches().map((beach) => [beach.slug, beach]));
+  const members = area.beaches.map((slug) => {
+    const beach = bySlug.get(slug);
+    if (!beach) {
+      throw new Error(
+        `areas.json puts ${slug} in ${area.slug}, but beaches.json has no such beach.`,
+      );
+    }
+    return beach;
+  });
+
+  const resolve = (product: AreaProduct): AreaSource => {
+    const bound = new Set(members.map((beach) => beach[BINDING[product]]));
+    if (bound.size > 1) return { kind: "mixed", distinct: bound.size };
+
+    const only = [...bound][0];
+    return only === null || only === undefined
+      ? { kind: "absent" }
+      : { kind: "shared", source: String(only) };
+  };
+
+  return {
+    tide: resolve("tide"),
+    waves: resolve("waves"),
+    swell: resolve("swell"),
+    sky: resolve("sky"),
+    air: resolve("air"),
+  };
+}
