@@ -331,11 +331,6 @@ export function ShoreMap({
           />
         )}
 
-        {/*
-            This beach's own stretch, heavier than the coast it sits on. Weight
-            rather than only hue: the two are the same ocean, so a reader who
-            sees no colour still sees which part of the shore they chose.
-          */}
         {marks.map((mark, index) => (
           <line
             key={index}
@@ -351,6 +346,11 @@ export function ShoreMap({
           />
         ))}
 
+        {/*
+            This beach's own stretch, heavier than the coast it sits on. Weight
+            rather than only hue: the two are the same ocean, so a reader who
+            sees no colour still sees which part of the shore they chose.
+          */}
         {drawnSegment.length > 0 && (
           <path
             d={drawnSegment
