@@ -366,7 +366,10 @@ export function shoreViewFor(beach: Beach): ShoreView {
  *
  * Throws for an area naming a beach the inventory does not have, like
  * `areaSources` and for the same reason: two data files disagreeing should stop
- * a build rather than quietly draw a coast with a beach missing from it.
+ * a build rather than quietly draw a coast with a beach missing from it. It
+ * throws a second time, on the same reasoning, where the windowed coast gives
+ * no seaward direction and the frame therefore cannot be squared -- see the
+ * comment on that guard for why it is unreachable and what would make it live.
  */
 export function shoreViewForArea(area: Area): ShoreView {
   const bySlug = new Map(allBeaches().map((beach) => [beach.slug, beach]));
@@ -396,9 +399,38 @@ export function shoreViewForArea(area: Area): ShoreView {
   if (boxed === null)
     return { coast: [], bounds: null, ticks: [], segment: null };
 
+  /*
+    The draft window always has a direction, so failing to find one stops the
+    build rather than quietly returning a frame that is not square.
+
+    It is the same call the missing-beach throw above makes, for the same
+    reason: this function has two data files under it, and a picture drawn from
+    a disagreement between them is worse than no picture. What ADR-0051 promises
+    is a *square* frame -- `boxed` is the un-squared box, so falling back to it
+    would ship the one thing that decision rules out, invisibly, on whichever
+    area happened to trip it.
+
+    Unreachable as the data stands, and the argument is short enough to check.
+    `boxed` is non-null, so at least two coastline points with different
+    coordinates lie inside it; `windowAround` therefore returns a slice of two
+    or more whose first and last sit at different indices; and no coordinate
+    appears at two indices of the committed shore, which `coastline.test.ts`
+    pins. Different coordinates give a direction, so `seawardFrom` answers.
+
+    That last step is the load-bearing one and it is the weakest: it is a
+    property of the traced file rather than of the code. `withoutRepeats` does
+    not give it -- it drops a point equal to its neighbour, and these two are
+    never neighbours -- so a regenerated shore could take it away. The test
+    fails first if that happens, which is the point of stating it there.
+  */
   const draft = windowAround(coastline(), boxed);
   const seaward = seawardFrom(draft);
-  const bounds = seaward === null ? boxed : squareToward(boxed, seaward);
+  if (seaward === null) {
+    throw new Error(
+      `The coast under ${area.slug} gives no seaward direction, so its frame cannot be squared. The traced shoreline has likely gained a repeated coordinate; see coastline.test.ts.`,
+    );
+  }
+  const bounds = squareToward(boxed, seaward);
 
   /*
     A mark per member, at the middle of the coast that member occupies.
