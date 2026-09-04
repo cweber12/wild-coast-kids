@@ -62,6 +62,16 @@ export type SurfZoneProps = {
   localDate: string;
   /** That day, worded for a reader: `Thursday`. Matches the panel's heading. */
   when: string;
+  /**
+   * The area this block is answering for, or undefined on a beach page.
+   *
+   * **Only the withheld sentence reads it**, and that is the whole of what an
+   * area changes here. The bulletin itself is issued for "San Diego County
+   * Coastal Areas" and says nothing about a beach, so a relayed forecast is
+   * already true at either scope; what is not true at either scope is "not
+   * issued for this beach" printed over an area. See ADR-0050.
+   */
+  areaName?: string;
 };
 
 /** The one sentence a reader gets when there is nothing to relay. */
@@ -138,7 +148,7 @@ function Reading({ day, when }: { day: SurfZoneDay; when: string }) {
   );
 }
 
-export function SurfZone({ state, localDate, when }: SurfZoneProps) {
+export function SurfZone({ state, localDate, when, areaName }: SurfZoneProps) {
   if (state.kind === "no-surf-zone") {
     return (
       <section>
@@ -157,8 +167,20 @@ export function SurfZone({ state, localDate, when }: SurfZoneProps) {
           than in a fixture, which is why the absence path is worth looking at
           rather than only asserting.
         */}
+        {/*
+          "any beach in <area>" rather than "this beach" where the block is
+          answering for one, and it is a claim rather than a hedge: reaching
+          this state on an area page means no member of it is open coast, so
+          the reason read through one member is the reason every member gives.
+          `surfZoneBeachOf` is what guarantees that -- it returns a member the
+          forecast is issued for wherever one exists -- and `areas.test.ts`
+          asserts it over the whole table rather than leaving it in this
+          comment.
+        */}
         <Absence>
-          This forecast is not issued for this beach: {state.reason}.
+          This forecast is not issued for{" "}
+          {areaName === undefined ? "this beach" : `any beach in ${areaName}`}:{" "}
+          {state.reason}.
         </Absence>
       </section>
     );

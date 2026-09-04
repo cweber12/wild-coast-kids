@@ -23,7 +23,8 @@
  */
 
 import { Suspense } from "react";
-import { areaBySlug, areaSources, beachesByArea } from "@/lib/areas";
+import { areaBySlug, beachesByArea } from "@/lib/areas";
+import { scopeFor } from "./areaScope";
 import { inventoryCaveats, inventoryReach } from "@/lib/beaches";
 import { AreaBeaches } from "./AreaBeaches";
 import { AreaSelector } from "./AreaSelector";
@@ -74,14 +75,20 @@ export function ConditionsSection({
     reads and draws what it always did.
   */
   const reading = beachSlug ?? group.beaches[0].slug;
-  const scope =
-    beachSlug === null
-      ? {
-          name: group.area.name,
-          beaches: group.beaches.length,
-          sources: areaSources(group.area),
-        }
-      : undefined;
+  const scope = beachSlug === null ? scopeFor(group.area) : undefined;
+
+  /*
+    And the member the surf zone bulletin is read through, which is a different
+    question from `reading` and sometimes a different beach.
+
+    Every other product on this page is a point measurement, and an area
+    publishes one only where all its beaches are served by the same source. The
+    bulletin is not: the National Weather Service issues one for "San Diego
+    County Coastal Areas", a unit larger than any area in this table, so what it
+    needs is not a member they agree about but a member it is *issued* for. See
+    ADR-0050.
+  */
+  const bulletin = scope === undefined ? reading : scope.bulletinBeach;
 
   return (
     <section className="px-gutter-sm py-section-sm md:px-gutter md:py-section">
@@ -162,24 +169,22 @@ export function ConditionsSection({
         <div className="mt-6 md:mt-0 md:w-72">
           <AreaSelector areas={areas} current={areaSlug} />
           {/*
-            The bulletin is scoped to a beach here, so it waits for one. It is
-            the single product an area may report without its beaches agreeing
-            -- the National Weather Service issues it for "San Diego County
-            Coastal Areas", a unit larger than any area in this table, so the
-            intersection rule is a category error against it. That exception
-            lands with the area's readings in PR 3 and gets its own decision.
+            The one relayed judgement on this page, and the one product an area
+            reports without its beaches agreeing about a source. It is on the
+            area page as well as the beach page for that reason: withholding it
+            from an area would be applying a rule about point measurements to
+            something that is not one, and it is the single line here that
+            answers whether to put children in the water.
           */}
-          {beachSlug !== null && (
-            <Suspense
-              fallback={
-                <p className="mt-4 text-base text-fog">
-                  Reading the rip current risk…
-                </p>
-              }
-            >
-              <RipLevel slug={beachSlug} />
-            </Suspense>
-          )}
+          <Suspense
+            fallback={
+              <p className="mt-4 text-base text-fog">
+                Reading the rip current risk…
+              </p>
+            }
+          >
+            <RipLevel slug={bulletin} />
+          </Suspense>
         </div>
       </div>
 

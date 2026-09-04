@@ -530,6 +530,32 @@ test("every region on an area page reads through the same member", () => {
 });
 
 /**
+ * The rip current risk is on an area page, and it is the one product that
+ * reaches it without the area's beaches agreeing about a source: the National
+ * Weather Service issues one bulletin for a unit larger than any area here.
+ * ADR-0050.
+ *
+ * Read through a member the forecast is issued for rather than the member
+ * everything else is read through, which for Tijuana Estuary is a different
+ * beach.
+ */
+test("an area page carries the rip current risk", () => {
+  render(<ConditionsSection areaSlug="la-jolla" beachSlug={null} />);
+
+  expect(screen.getByText(/rip for la-jolla-shores-beach/)).toBeDefined();
+});
+
+test("the bulletin is read through the member it is issued for", () => {
+  render(<ConditionsSection areaSlug="tijuana-estuary" beachSlug={null} />);
+
+  // Everything else reads through the area's first beach, which is the slough.
+  const [week] = weekPanel.mock.calls[0] as [Record<string, unknown>];
+  expect(week.slug).toBe("tijuana-slough-national-wildlife-refuge");
+  // The bulletin does not.
+  expect(screen.getByText(/rip for border-field-state-park/)).toBeDefined();
+});
+
+/**
  * The day chart takes the same pair, and the allowlist is here for the reason
  * the other two carry one: an argument added quietly is how a region comes to
  * answer for something nobody chose.

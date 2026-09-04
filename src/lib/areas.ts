@@ -19,7 +19,7 @@
  */
 
 import areaTable from "@/data/areas.json";
-import { allBeaches, type Beach } from "./beaches";
+import { allBeaches, surfZoneWithheldReason, type Beach } from "./beaches";
 
 /** One area, as `areas.json` carries it. */
 export interface Area {
@@ -142,6 +142,46 @@ export function beachesByArea(): readonly AreaGroup[] {
       return beach;
     }),
   }));
+}
+
+/**
+ * The beach an area reads the surf zone bulletin through.
+ *
+ * **The one product an area may report without its beaches agreeing, and the
+ * exception is a category difference rather than a relaxation.** ADR-0048's
+ * rule is about point measurements: a station, a buoy, a model line and a
+ * forecast cell each stand somewhere, and an area may only publish one every
+ * member is served by. The surf zone bulletin stands nowhere. The National
+ * Weather Service issues `CAZ043` for San Diego County *Coastal Areas* -- one
+ * bulletin, for a unit larger than any area in this table -- so intersecting it
+ * across members asks a question it has no answer to. See ADR-0050.
+ *
+ * **The first member the forecast is issued for, or the first member.** The
+ * choice is not a representative: every open-coast member reads the same
+ * bulletin, because there is only one. What the choice decides is whether the
+ * area gets the bulletin at all, and the fallback is what makes the withheld
+ * case honest -- reaching it means no member is open-coast, so the reason that
+ * comes back is true of every beach in the area rather than of the one it was
+ * read through. `areas.test.ts` asserts that over the whole table.
+ *
+ * Measured over the twelve areas holding more than one beach: seven carry the
+ * bulletin, five are wholly sheltered and withhold it, and exactly one --
+ * Tijuana Estuary, whose northern member is the slough -- reads it through a
+ * beach that is not its first.
+ */
+export function surfZoneBeachOf(area: Area): string {
+  const bySlug = new Map(allBeaches().map((beach) => [beach.slug, beach]));
+  const issued = area.beaches.find((slug) => {
+    const beach = bySlug.get(slug);
+    if (!beach) {
+      throw new Error(
+        `areas.json puts ${slug} in ${area.slug}, but beaches.json has no such beach.`,
+      );
+    }
+    return surfZoneWithheldReason(beach) === null;
+  });
+
+  return issued ?? area.beaches[0];
 }
 
 /**

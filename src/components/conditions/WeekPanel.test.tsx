@@ -1256,13 +1256,9 @@ test("a beach with no tide station is attributed to nothing rather than to a bla
  * two drift apart in exactly the way ADR-0048's counts already drifted once.
  */
 async function areaScope(slug: string) {
-  const { areaBySlug, areaSources } = await import("@/lib/areas");
-  const area = areaBySlug(slug)!;
-  return {
-    name: area.name,
-    beaches: area.beaches.length,
-    sources: areaSources(area),
-  };
+  const { areaBySlug } = await import("@/lib/areas");
+  const { scopeFor } = await import("./areaScope");
+  return scopeFor(areaBySlug(slug)!);
 }
 
 /**

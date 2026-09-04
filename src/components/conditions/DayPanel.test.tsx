@@ -1661,13 +1661,9 @@ test("the map's caption names a spring-forward hour ahead, not behind", async ()
  * the way ADR-0048's own counts drifted once.
  */
 async function areaScope(slug: string) {
-  const { areaBySlug, areaSources } = await import("@/lib/areas");
-  const area = areaBySlug(slug)!;
-  return {
-    name: area.name,
-    beaches: area.beaches.length,
-    sources: areaSources(area),
-  };
+  const { areaBySlug } = await import("@/lib/areas");
+  const { scopeFor } = await import("./areaScope");
+  return scopeFor(areaBySlug(slug)!);
 }
 
 /**
@@ -1854,4 +1850,73 @@ test("the surf zone bulletin is read at either scope", async () => {
   );
 
   expect(readSurfZone).toHaveBeenCalledWith("la-jolla-shores-beach");
+});
+
+/**
+ * The exception, and it is a category difference rather than a relaxation. The
+ * National Weather Service issues one bulletin for "San Diego County Coastal
+ * Areas", so what an area needs is not a member its beaches agree about but a
+ * member the forecast is issued for — which for Tijuana Estuary is not the
+ * member everything else in this region is read through. ADR-0050.
+ */
+test("the bulletin is read through a member the forecast is issued for", async () => {
+  render(
+    await DayPanel({
+      slug: "tijuana-slough-national-wildlife-refuge",
+      area: await areaScope("tijuana-estuary"),
+    }),
+  );
+
+  // Everything else reads through the slug it was given; the bulletin does not.
+  expect(readSurfZone).toHaveBeenCalledWith("border-field-state-park");
+  expect(readSurfZone).not.toHaveBeenCalledWith(
+    "tijuana-slough-national-wildlife-refuge",
+  );
+});
+
+/**
+ * And where the forecast reaches no member, the sentence is about the area
+ * rather than about the beach it was read through. That is a claim rather than
+ * a hedge: `surfZoneBeachOf` falls back only when every member is sheltered,
+ * which `areas.test.ts` asserts over the whole table.
+ */
+test("a wholly sheltered area is told the forecast is not issued for any of it", async () => {
+  readSurfZone.mockResolvedValue({
+    beachName: "Mission Bay, Riviera Shores",
+    state: {
+      kind: "no-surf-zone",
+      reason:
+        "the National Weather Service issues this forecast for San Diego County's coastal " +
+        "areas, and a bay, lagoon or inlet has no surf zone, so it does not describe the " +
+        "water here",
+    },
+  });
+
+  render(
+    await DayPanel({
+      slug: "mission-bay-riviera-shores",
+      area: await areaScope("mission-bay-west"),
+    }),
+  );
+
+  expect(
+    screen.getByText(
+      /This forecast is not issued for any beach in Mission Bay – West/,
+    ),
+  ).toBeDefined();
+  expect(screen.queryByText(/not issued for this beach/)).toBeNull();
+});
+
+/** And a beach page still says "this beach", which is what it is. */
+test("a beach page keeps the beach-scoped wording", async () => {
+  readSurfZone.mockResolvedValue({
+    beachName: "Mission Bay, Riviera Shores",
+    state: { kind: "no-surf-zone", reason: "a bay has no surf zone" },
+  });
+
+  render(await DayPanel({ slug: "mission-bay-riviera-shores" }));
+
+  expect(
+    screen.getByText(/This forecast is not issued for this beach/),
+  ).toBeDefined();
 });

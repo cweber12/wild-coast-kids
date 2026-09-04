@@ -6,8 +6,9 @@ import {
   DEFAULT_AREA_SLUG,
   beachesByArea,
   defaultArea,
+  surfZoneBeachOf,
 } from "./areas";
-import { allBeaches } from "./beaches";
+import { allBeaches, surfZoneWithheldReason } from "./beaches";
 
 describe("beachesByArea", () => {
   test("covers the whole inventory exactly once", () => {
@@ -336,5 +337,76 @@ describe("a mixed product's count", () => {
     // The probe. Without it this loop passes on a table where no mixed product
     // has a gap in it, which is a table this assertion says nothing about.
     expect(withAGap).toBeGreaterThan(0);
+  });
+});
+
+/**
+ * The one product an area reports without its beaches agreeing about a source,
+ * because it has no source to agree about: the National Weather Service issues
+ * one bulletin for "San Diego County Coastal Areas". ADR-0050.
+ */
+describe("the beach an area reads the surf zone bulletin through", () => {
+  const bySlug = () =>
+    new Map(allBeaches().map((beach) => [beach.slug, beach]));
+
+  /**
+   * The claim the page's own wording rests on, asserted rather than argued.
+   *
+   * On an area page the withheld sentence says the forecast is not issued for
+   * *any* beach in the area, having read it through one. That is only true
+   * because the fallback is reached exactly when no member is open coast — so
+   * where this returns a withheld member, every member is withheld.
+   */
+  test("falls back only where the forecast reaches no member at all", () => {
+    const beaches = bySlug();
+    let withheldAreas = 0;
+
+    for (const { area } of beachesByArea()) {
+      const chosen = beaches.get(surfZoneBeachOf(area))!;
+      if (surfZoneWithheldReason(chosen) === null) continue;
+
+      withheldAreas += 1;
+      for (const slug of area.beaches) {
+        expect(surfZoneWithheldReason(beaches.get(slug)!), slug).not.toBeNull();
+      }
+    }
+
+    // The probe, and a count rather than a floor: seven of the eighteen areas
+    // are wholly sheltered today. A table where none was would make the loop
+    // above assert nothing, and a table where that number moved is a real
+    // change to which area pages carry a rip current level.
+    expect(withheldAreas).toBe(7);
+  });
+
+  /** And where it does reach one, that member is one it is issued for. */
+  test("prefers a member the forecast is issued for", () => {
+    const beaches = bySlug();
+
+    for (const { area } of beachesByArea()) {
+      const issued = area.beaches.some(
+        (slug) => surfZoneWithheldReason(beaches.get(slug)!) === null,
+      );
+      if (!issued) continue;
+
+      expect(
+        surfZoneWithheldReason(beaches.get(surfZoneBeachOf(area))!),
+        area.slug,
+      ).toBeNull();
+    }
+  });
+
+  /**
+   * The area the exception is actually worth something to today, named so that
+   * a membership change which quietly removes the case is visible.
+   *
+   * Tijuana Estuary holds the slough, which is sheltered water, and Border
+   * Field State Park, which is not. Read through its first member the area
+   * would withhold a bulletin that is issued for half of it.
+   */
+  test("Tijuana Estuary reads it through the member that is open coast", () => {
+    const area = areaBySlug("tijuana-estuary")!;
+
+    expect(area.beaches[0]).toBe("tijuana-slough-national-wildlife-refuge");
+    expect(surfZoneBeachOf(area)).toBe("border-field-state-park");
   });
 });

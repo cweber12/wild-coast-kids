@@ -1,16 +1,9 @@
 import { expect, test } from "vitest";
-import { areaBySlug, areaSources } from "@/lib/areas";
-import { type AreaScope, withheldBy, withheldWords } from "./areaScope";
+import { areaBySlug } from "@/lib/areas";
+import { scopeFor, withheldBy, withheldWords } from "./areaScope";
 
 /** The scope a page builds, from the table rather than from a fixture. */
-function scopeFor(slug: string): AreaScope {
-  const area = areaBySlug(slug)!;
-  return {
-    name: area.name,
-    beaches: area.beaches.length,
-    sources: areaSources(area),
-  };
-}
+const scopeOf = (slug: string) => scopeFor(areaBySlug(slug)!);
 
 /**
  * The beach page's path, and the reason every panel's beach-scoped behaviour is
@@ -26,7 +19,7 @@ test("no scope withholds nothing", () => {
 test("a shared product is not withheld", () => {
   // Air is shared by all eighteen areas, which is why every area page has
   // something measured on it at all.
-  expect(withheldBy(scopeFor("la-jolla"), "air")).toBeNull();
+  expect(withheldBy(scopeOf("la-jolla"), "air")).toBeNull();
 });
 
 /**
@@ -34,7 +27,7 @@ test("a shared product is not withheld", () => {
  * was already true one beach at a time; `mixed` is new with areas.
  */
 test("an absent product carries the area and no counts", () => {
-  expect(withheldBy(scopeFor("mission-bay-west"), "swell")).toEqual({
+  expect(withheldBy(scopeOf("mission-bay-west"), "swell")).toEqual({
     agreement: "absent",
     areaName: "Mission Bay – West",
     beaches: 8,
@@ -47,7 +40,7 @@ test("a mixed product carries its sources and its gaps apart", () => {
   // Nine of La Jolla's ten read buoy 46254 and `childrens-pool` reads none:
   // one source, one gap. Counting the gap as a source is what made the default
   // area's page say "2 different sources" over it.
-  expect(withheldBy(scopeFor("la-jolla"), "waves")).toEqual({
+  expect(withheldBy(scopeOf("la-jolla"), "waves")).toEqual({
     agreement: "mixed",
     areaName: "La Jolla",
     beaches: 10,
@@ -56,7 +49,7 @@ test("a mixed product carries its sources and its gaps apart", () => {
   });
 
   // And the plain disagreement, which is 13 of the 16 mixed product-instances.
-  expect(withheldBy(scopeFor("la-jolla"), "sky")).toEqual({
+  expect(withheldBy(scopeOf("la-jolla"), "sky")).toEqual({
     agreement: "mixed",
     areaName: "La Jolla",
     beaches: 10,
@@ -72,7 +65,7 @@ test("a mixed product carries its sources and its gaps apart", () => {
  */
 test("an absent product says nobody has it, and does not blame disagreement", () => {
   const words = withheldWords(
-    withheldBy(scopeFor("mission-bay-west"), "swell")!,
+    withheldBy(scopeOf("mission-bay-west"), "swell")!,
     "a swell forecast",
   );
 
@@ -84,7 +77,7 @@ test("an absent product says nobody has it, and does not blame disagreement", ()
 
 test("a plain disagreement counts the sources", () => {
   expect(
-    withheldWords(withheldBy(scopeFor("la-jolla"), "sky")!, "a cloud forecast"),
+    withheldWords(withheldBy(scopeOf("la-jolla"), "sky")!, "a cloud forecast"),
   ).toBe(
     "The 10 beaches in La Jolla read 4 different sources for a cloud forecast, " +
       "so there is no one figure for the whole area. Choose a beach for it.",
@@ -98,7 +91,7 @@ test("a plain disagreement counts the sources", () => {
  */
 test("a disagreement with a gap in it counts the beaches that have the product", () => {
   const words = withheldWords(
-    withheldBy(scopeFor("la-jolla"), "waves")!,
+    withheldBy(scopeOf("la-jolla"), "waves")!,
     "a wave reading",
   );
 
@@ -113,7 +106,7 @@ test("a disagreement with a gap in it counts the beaches that have the product",
 test("a gap and a disagreement are both counted", () => {
   expect(
     withheldWords(
-      withheldBy(scopeFor("la-jolla"), "swell")!,
+      withheldBy(scopeOf("la-jolla"), "swell")!,
       "a swell forecast",
     ),
   ).toBe(

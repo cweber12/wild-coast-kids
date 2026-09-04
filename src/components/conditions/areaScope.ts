@@ -31,7 +31,13 @@
  * Nothing here fetches anything, and nothing here is a component.
  */
 
-import { type AreaProduct, type AreaSources } from "@/lib/areas";
+import {
+  type Area,
+  type AreaProduct,
+  type AreaSources,
+  areaSources,
+  surfZoneBeachOf,
+} from "@/lib/areas";
 
 /**
  * What a panel is about, when it is about an area rather than one beach.
@@ -47,6 +53,18 @@ export type AreaScope = {
   name: string;
   beaches: number;
   sources: AreaSources;
+  /**
+   * The member the surf zone bulletin is read through, which is not the member
+   * everything else is read through.
+   *
+   * **The one product outside `sources` entirely**, because it is outside the
+   * rule `sources` resolves: the National Weather Service issues one bulletin
+   * for "San Diego County Coastal Areas", a unit larger than any area here, so
+   * intersecting it across members asks a question it has no answer to. What it
+   * needs instead is a member the forecast is *issued* for, which
+   * `surfZoneBeachOf` picks. See ADR-0050.
+   */
+  bulletinBeach: string;
 };
 
 /**
@@ -82,6 +100,22 @@ export type NotShared = {
    */
   without: number;
 };
+
+/**
+ * The scope a page hands its panels, built from the area.
+ *
+ * One place composes it, so the three regions of an area page cannot come to
+ * different conclusions about what the area may report -- and so a new field
+ * reaches all of them at once. `bulletinBeach` arrived that way.
+ */
+export function scopeFor(area: Area): AreaScope {
+  return {
+    name: area.name,
+    beaches: area.beaches.length,
+    sources: areaSources(area),
+    bulletinBeach: surfZoneBeachOf(area),
+  };
+}
 
 /**
  * A product the area cannot report, or null when it can.

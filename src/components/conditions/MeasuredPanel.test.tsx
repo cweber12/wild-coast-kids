@@ -125,6 +125,7 @@ test("a failure to resolve the beach is not swallowed into a rendered nothing", 
  */
 test("a withheld card states what the area's beaches really bind", async () => {
   const { areaBySlug, areaSources } = await import("@/lib/areas");
+  const { scopeFor } = await import("./areaScope");
   const area = areaBySlug("la-jolla")!;
 
   // The probe. If La Jolla ever shares a buoy, this test is asserting nothing
@@ -134,11 +135,7 @@ test("a withheld card states what the area's beaches really bind", async () => {
   render(
     await MeasuredPanel({
       slug: "la-jolla-shores-beach",
-      area: {
-        name: area.name,
-        beaches: area.beaches.length,
-        sources: areaSources(area),
-      },
+      area: scopeFor(area),
     }),
   );
 

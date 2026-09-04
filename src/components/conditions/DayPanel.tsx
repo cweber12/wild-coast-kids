@@ -443,13 +443,14 @@ export async function DayPanel({
     // is the only one of the six that reaches no network at all on 25 of the
     // 51 beaches, because a bay has no surf zone to forecast.
     //
-    // Not answered against the area's scope, and that is deliberate rather than
-    // an omission: it is one bulletin for "San Diego County Coastal Areas", a
-    // unit larger than any area in this table, so an intersection rule designed
-    // for point measurements is a category error against it. Read through the
-    // member the rest of this region reads through until that exception lands
-    // with its own decision.
-    readSurfZone(slug),
+    // Not answered against the area's scope, and that is the exception rather
+    // than an omission: it is one bulletin for "San Diego County Coastal
+    // Areas", a unit larger than any area in this table, so an intersection
+    // rule designed for point measurements asks it a question it has no answer
+    // to. What it needs is a member the forecast is *issued* for, which is a
+    // different member from the one everything else here is read through
+    // wherever an area's first beach is sheltered. See ADR-0050.
+    readSurfZone(area?.bulletinBeach ?? slug),
   ]);
 
   /*
@@ -752,6 +753,7 @@ export async function DayPanel({
           state={surfZone.state}
           localDate={day.localDate}
           when={when}
+          areaName={area?.name}
         />
       ),
     };
