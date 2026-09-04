@@ -50,6 +50,31 @@
  * nothing had been measured about a day that had not happened. They now sit at
  * the top of the page, above `SelectedDayProvider`, because they answer for an
  * instant rather than for a day. See `ConditionsSection`.
+ *
+ * **It answers for an area as well as for a beach, one tab at a time.** On an
+ * area page it is handed an `AreaScope`, and a product the area's beaches do
+ * not share is not read and draws no curve -- but keeps its tab, which stands
+ * where it stood and carries the area's sentence where the plot would be.
+ * `HourSeries` already has that slot: an empty `points` renders `absence`, and
+ * that is how a bay with no MOP line has always been told there is no swell
+ * curve. See ADR-0048 and ADR-0049.
+ *
+ * **The tab stays, and dropping it was the alternative.** Four tabs are this
+ * region's whole vocabulary for its four products, and an area that showed
+ * fewer would be a different control rather than the same one with less in it.
+ * La Jolla shares a tide station and nothing else the chart draws, so a bar
+ * gated to what it can draw would be one tab wide -- and a reader would never
+ * learn the swell exists.
+ *
+ * **Three products and four tabs, because the wind and the air temperature are
+ * one cell.** They are withheld or drawn together, and so are the cloud band
+ * behind every tab and the office's own wording above the chart, which come off
+ * that same cell.
+ *
+ * **The map is one beach's, so an area page carries a sentence instead of
+ * one.** The area map is its own slice and its own decision; drawing the first
+ * member's coast under the area's name is the representative-beach lie ADR-0048
+ * refuses. The readout goes with it -- see the note at the map itself.
  */
 
 import {
@@ -74,6 +99,7 @@ import {
   localTimeOf,
   hourLabelAt,
 } from "@/lib/pacific-time";
+import { answer, type AreaScope, withheldBy, withheldWords } from "./areaScope";
 import { ChosenDay, type DayView } from "./ChosenDay";
 import type { HourSeries } from "./HourChart";
 import { ReservedSlot } from "../ui/ReservedSlot";
@@ -382,20 +408,49 @@ function mapDescription(beachName: string): string {
   );
 }
 
-export async function DayPanel({ slug }: { slug: string }) {
+export async function DayPanel({
+  slug,
+  area,
+}: {
+  slug: string;
+  /** Present on an area page, absent on a beach's. */
+  area?: AreaScope;
+}) {
+  /*
+    Which of the three products this area may draw, asked before anything is
+    fetched. Null on a beach page, where nothing is withheld and this whole
+    region behaves as it did before areas existed.
+
+    Three and not four, because the four tabs are three publishers: the wind and
+    the air temperature are both the forecast cell's, so they are withheld or
+    drawn together. The cloud band behind every tab and the office's own wording
+    above the chart are that same cell's, and go with them.
+  */
+  const withheldTide = withheldBy(area, "tide");
+  const withheldSwell = withheldBy(area, "swell");
+  const withheldSky = withheldBy(area, "sky");
+
   const daylight = readDaylightWeek(slug);
   const [hourly, waves, sky, grid, wording, surfZone] = await Promise.all([
-    readHourlyTide(slug),
-    readWaveWeek(slug),
-    readSkyWeek(slug),
-    readGridpointWeek(slug),
-    readSkyWording(slug),
+    answer(withheldTide, () => readHourlyTide(slug)),
+    answer(withheldSwell, () => readWaveWeek(slug)),
+    answer(withheldSky, () => readSkyWeek(slug)),
+    answer(withheldSky, () => readGridpointWeek(slug)),
+    answer(withheldSky, () => readSkyWording(slug)),
     // A sixth read and a third publisher's product, joining the others for the
     // reason they are all here: five agencies go quiet independently, and the
     // surf zone bulletin failing must cost its own block and nothing else. It
     // is the only one of the six that reaches no network at all on 25 of the
     // 51 beaches, because a bay has no surf zone to forecast.
-    readSurfZone(slug),
+    //
+    // Not answered against the area's scope, and that is the exception rather
+    // than an omission: it is one bulletin for "San Diego County Coastal
+    // Areas", a unit larger than any area in this table, so an intersection
+    // rule designed for point measurements asks it a question it has no answer
+    // to. What it needs is a member the forecast is *issued* for, which is a
+    // different member from the one everything else here is read through
+    // wherever an area's first beach is sheltered. See ADR-0050.
+    readSurfZone(area?.bulletinBeach ?? slug),
   ]);
 
   /*
@@ -415,12 +470,12 @@ export async function DayPanel({ slug }: { slug: string }) {
   */
   const cellNote = [
     GRID_MODEL_NOTE,
-    gridCellCaveat(grid.cell?.elevationM ?? null),
+    gridCellCaveat(grid.view?.cell?.elevationM ?? null),
   ]
     .filter((part): part is string => part !== null)
     .join("; ");
 
-  const station = hourly.station;
+  const station = hourly.view?.station ?? null;
   const tideProvenance: ProvenanceFacts | null =
     station === null
       ? null
@@ -433,13 +488,13 @@ export async function DayPanel({ slug }: { slug: string }) {
         };
 
   const swellProvenance: ProvenanceFacts | null =
-    waves.line === null
+    waves.view === null || waves.view.line === null
       ? null
       : {
           label: "Swell",
-          source: mopLineSource(waves.line.id),
+          source: mopLineSource(waves.view.line.id),
           network: MOP_NETWORK,
-          distanceKm: mopLineDistanceKm(waves.line.distanceM),
+          distanceKm: mopLineDistanceKm(waves.view.line.distanceM),
           note: MOP_MODEL_NOTE,
         };
 
@@ -454,7 +509,7 @@ export async function DayPanel({ slug }: { slug: string }) {
     a model line, which stand at a point.
   */
   const cellProvenance = (label: string): ProvenanceFacts | null =>
-    grid.cell === null
+    grid.view === null || grid.view.cell === null
       ? null
       : { label, source: GRID_SOURCE, network: GRID_NETWORK, note: cellNote };
 
@@ -493,24 +548,26 @@ export async function DayPanel({ slug }: { slug: string }) {
     const chartWhen = day.isToday ? "today" : `on ${day.dayLabel}`;
 
     const tideDay =
-      hourly.state.kind === "week"
-        ? hourly.state.days.find((each) => each.localDate === day.localDate)
+      hourly.view?.state.kind === "week"
+        ? hourly.view.state.days.find(
+            (each) => each.localDate === day.localDate,
+          )
         : undefined;
 
     const waveDay =
-      waves.state.kind === "week"
-        ? waves.state.days.find((each) => each.localDate === day.localDate)
+      waves.view?.state.kind === "week"
+        ? waves.view.state.days.find((each) => each.localDate === day.localDate)
         : undefined;
 
     const cloudHours =
-      sky.state.kind === "week"
-        ? (sky.state.days.find((each) => each.localDate === day.localDate)
+      sky.view?.state.kind === "week"
+        ? (sky.view.state.days.find((each) => each.localDate === day.localDate)
             ?.hours ?? [])
         : [];
 
     const gridDay =
-      grid.state.kind === "week"
-        ? grid.state.days.find((each) => each.localDate === day.localDate)
+      grid.view?.state.kind === "week"
+        ? grid.view.state.days.find((each) => each.localDate === day.localDate)
         : undefined;
 
     /*
@@ -538,7 +595,10 @@ export async function DayPanel({ slug }: { slug: string }) {
                 day.sunsetLabel,
                 WATER_DECIMALS,
               ),
-        absence: absenceFor(hourly, WORDS.tide, when),
+        absence:
+          hourly.view === null
+            ? withheldWords(hourly.withheld, "an hour-by-hour tide prediction")
+            : absenceFor(hourly.view, WORDS.tide, when),
         provenance: tideProvenance,
       },
       {
@@ -557,7 +617,10 @@ export async function DayPanel({ slug }: { slug: string }) {
                 day.sunsetLabel,
                 WATER_DECIMALS,
               ),
-        absence: absenceFor(waves, WORDS.swell, when),
+        absence:
+          waves.view === null
+            ? withheldWords(waves.withheld, "a swell forecast")
+            : absenceFor(waves.view, WORDS.swell, when),
         provenance: swellProvenance,
       },
       {
@@ -576,7 +639,10 @@ export async function DayPanel({ slug }: { slug: string }) {
           WORDS.wind.outOfReach(when),
           GRID_DECIMALS,
         ),
-        absence: gridAbsenceFor(grid, gridDay?.windMph, WORDS.wind, when),
+        absence:
+          grid.view === null
+            ? withheldWords(grid.withheld, "a wind forecast")
+            : gridAbsenceFor(grid.view, gridDay?.windMph, WORDS.wind, when),
         provenance: cellProvenance("Wind"),
       },
       {
@@ -607,12 +673,15 @@ export async function DayPanel({ slug }: { slug: string }) {
           WORDS.temperature.outOfReach(when),
           GRID_DECIMALS,
         ),
-        absence: gridAbsenceFor(
-          grid,
-          gridDay?.airTempF,
-          WORDS.temperature,
-          when,
-        ),
+        absence:
+          grid.view === null
+            ? withheldWords(grid.withheld, "an air temperature forecast")
+            : gridAbsenceFor(
+                grid.view,
+                gridDay?.airTempF,
+                WORDS.temperature,
+                when,
+              ),
         // The word the tab drops, put back. Same rule as the spoken
         // description and the sentence under the plot: "Temp" buys width on a
         // 375px tab bar, and nothing else on this page pays for it.
@@ -653,7 +722,20 @@ export async function DayPanel({ slug }: { slug: string }) {
       })),
       cloudDescription: cloudBandDescription(cloudHours, when),
       series,
-      wording: <SkyWording view={wording} localDate={day.localDate} />,
+      /*
+        The office's own sentences about this day, and they are the forecast
+        cell's like the wind and the temperature are. An area whose beaches read
+        different cells gets the area's sentence in their place rather than one
+        member's wording under the whole area's name.
+      */
+      wording:
+        wording.view === null ? (
+          <p className="leading-relaxed mb-4 text-base text-fog">
+            {withheldWords(wording.withheld, "a forecast in words")}
+          </p>
+        ) : (
+          <SkyWording view={wording.view} localDate={day.localDate} />
+        ),
       /*
         Rendered here and handed over finished, the precedent `wording` sets:
         the read is the server's and `ChosenDay` is a client component.
@@ -671,6 +753,7 @@ export async function DayPanel({ slug }: { slug: string }) {
           state={surfZone.state}
           localDate={day.localDate}
           when={when}
+          areaName={area?.name}
         />
       ),
     };
@@ -683,13 +766,33 @@ export async function DayPanel({ slug }: { slug: string }) {
     that travels separately. It is also the one thing in this region that reads
     no feed -- `beaches.json` and `mop-lines.json` are committed -- so it cannot
     go quiet and does not belong behind a Suspense boundary.
+  */
+  /*
+    **No map on an area page, and a sentence in its place.**
+
+    The map draws one beach's own stretch of coast, heavier than the shore
+    either side of it. There is no such run for an area -- the area map, with a
+    tick per member and a frame taking the bbox's own aspect, is its own slice
+    and its own decision, because ADR-0033 says the map draws a place and not an
+    inventory and a mark per beach amends that. Drawing the first member's coast
+    here in the meantime is exactly the representative-beach lie ADR-0048
+    refuses: it would put one beach's shoreline under the area's name.
+
+    The readout goes with it, and that is the part worth stating. ADR-0034's
+    surviving clause has the readout rendered on every beach including the ones
+    with no coast, so a bearing dial without a shoreline is a shape this page
+    already permits -- but `ShoreMap` owns the coupling ADR-0038 settled, one
+    `hasReadout` gating the block and its sources together, and hoisting it out
+    would be a second change to a contract that decision has just finished
+    drawing. It arrives with the area map, over the area's own coast, which is
+    the frame that makes a wind bearing mean anything.
 
     A beach the inventory does not hold is not this component's error to invent
     a map for: the route already answered that question before rendering, and
     `beachBySlug` returning null here would mean the page is showing a beach it
     does not have.
   */
-  const beach = beachBySlug(slug);
+  const beach = area ? null : beachBySlug(slug);
   const shore = beach === null ? null : shoreViewFor(beach);
 
   /*
@@ -709,16 +812,16 @@ export async function DayPanel({ slug }: { slug: string }) {
   */
   const compassDays: CompassDay[] = daylight.days.map((day) => {
     const gridDay =
-      grid.state.kind === "week"
-        ? grid.state.days.find((each) => each.localDate === day.localDate)
+      grid.view?.state.kind === "week"
+        ? grid.view.state.days.find((each) => each.localDate === day.localDate)
         : undefined;
 
     const swellDay =
-      waves.state.kind === "week"
-        ? waves.state.days.find((each) => each.localDate === day.localDate)
+      waves.view?.state.kind === "week"
+        ? waves.view.state.days.find((each) => each.localDate === day.localDate)
         : undefined;
 
-    const line = waves.line;
+    const line = waves.view?.line ?? null;
     const dayStartMs = localMidnightOf(day.localDate);
 
     /*
@@ -919,7 +1022,13 @@ export async function DayPanel({ slug }: { slug: string }) {
         <ChosenDay
           days={days}
           map={
-            shore === null ? null : (
+            area ? (
+              <p className="leading-relaxed text-base text-fog">
+                The map draws one beach&apos;s own stretch of coast, with the
+                day&apos;s wind and swell laid under it. Choose a beach above
+                for {area.name}&apos;s.
+              </p>
+            ) : shore === null ? null : (
               <>
                 <ShoreMap
                   {...shore}

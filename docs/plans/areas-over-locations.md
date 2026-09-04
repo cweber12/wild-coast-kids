@@ -366,6 +366,37 @@ to make cheap.
 > a reader with that bookmark lands on the area containing the beach they saved,
 > which is the right place rather than a broken one.
 
+> **Addendum, 2026-09-04. The week and the day chart answer for an area, and
+> §4's example has expired.**
+>
+> §4 argued the surf zone exemption from La Jolla, saying a strict rule would
+> cost that area its rip current risk "because `Childrens Pool` is bay-class and
+> ADR-0043 withholds the bulletin there". Measured while implementing it:
+> `Childrens Pool` binds `9410230`, which is `open-coast`, and La Jolla is 10 of
+> 10 open coast. The exemption is right for the reason that outlives the
+> example — one bulletin, for a unit larger than any area here — and ADR-0050 is
+> where it is recorded and kept current. Measured today it is worth the bulletin
+> to exactly one area, **Tijuana Estuary**, whose first member is the slough.
+>
+> **The forecast is gated per product inside both panels rather than per
+> panel**, which §"Slices" left open. A withheld product is worded in the slot
+> its own panel already uses for an absence: no row and a note under the week
+> grid, and the tab kept with the sentence where the plot would be in the day
+> chart. ADR-0049. The tab is kept because four tabs are that region's
+> vocabulary for its four products — La Jolla shares only the tide, so a bar
+> gated to what it can draw would be one tab wide.
+>
+> **Two things this slice found rather than planned.** `areaSources` counted a
+> beach binding nothing as a source, so `/conditions/la-jolla` said its ten
+> beaches read two wave buoys when nine read one and `childrens-pool` reads
+> none; fixed with a regression test ahead of the rest. And daylight needs no
+> gating, which is measured rather than assumed: 9 seconds of sunrise spread
+> inside the widest area against a page that prints to the minute.
+>
+> **The area map is still §6's**, and the day region carries a sentence where it
+> will go. The readout goes with it rather than standing alone, because
+> `ShoreMap` owns the coupling ADR-0038 settled.
+
 ## Test seams
 
 Agreed before starting, and chosen from what exists rather than invented.

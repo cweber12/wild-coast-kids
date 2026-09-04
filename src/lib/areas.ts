@@ -19,7 +19,7 @@
  */
 
 import areaTable from "@/data/areas.json";
-import { allBeaches, type Beach } from "./beaches";
+import { allBeaches, surfZoneWithheldReason, type Beach } from "./beaches";
 
 /** One area, as `areas.json` carries it. */
 export interface Area {
@@ -145,6 +145,46 @@ export function beachesByArea(): readonly AreaGroup[] {
 }
 
 /**
+ * The beach an area reads the surf zone bulletin through.
+ *
+ * **The one product an area may report without its beaches agreeing, and the
+ * exception is a category difference rather than a relaxation.** ADR-0048's
+ * rule is about point measurements: a station, a buoy, a model line and a
+ * forecast cell each stand somewhere, and an area may only publish one every
+ * member is served by. The surf zone bulletin stands nowhere. The National
+ * Weather Service issues `CAZ043` for San Diego County *Coastal Areas* -- one
+ * bulletin, for a unit larger than any area in this table -- so intersecting it
+ * across members asks a question it has no answer to. See ADR-0050.
+ *
+ * **The first member the forecast is issued for, or the first member.** The
+ * choice is not a representative: every open-coast member reads the same
+ * bulletin, because there is only one. What the choice decides is whether the
+ * area gets the bulletin at all, and the fallback is what makes the withheld
+ * case honest -- reaching it means no member is open-coast, so the reason that
+ * comes back is true of every beach in the area rather than of the one it was
+ * read through. `areas.test.ts` asserts that over the whole table.
+ *
+ * Measured over the twelve areas holding more than one beach: seven carry the
+ * bulletin, five are wholly sheltered and withhold it, and exactly one --
+ * Tijuana Estuary, whose northern member is the slough -- reads it through a
+ * beach that is not its first.
+ */
+export function surfZoneBeachOf(area: Area): string {
+  const bySlug = new Map(allBeaches().map((beach) => [beach.slug, beach]));
+  const issued = area.beaches.find((slug) => {
+    const beach = bySlug.get(slug);
+    if (!beach) {
+      throw new Error(
+        `areas.json puts ${slug} in ${area.slug}, but beaches.json has no such beach.`,
+      );
+    }
+    return surfZoneWithheldReason(beach) === null;
+  });
+
+  return issued ?? area.beaches[0];
+}
+
+/**
  * The five products `/conditions` draws, named by what a reader calls them
  * rather than by the table each comes from.
  *
@@ -164,8 +204,16 @@ export type AreaProduct = "tide" | "waves" | "swell" | "sky" | "air";
  * not — but "not" runs together two different facts, and the page owes a
  * different sentence for each. `absent` is every beach lacking the source, which
  * is the bay's missing buoy and was already true one beach at a time. `mixed` is
- * the beaches having one each and disagreeing, which is new with areas and is
- * the only state a reader has never seen before.
+ * the beaches not all reading one source, which is new with areas and is the
+ * only state a reader has never seen before.
+ *
+ * **`mixed` covers two shapes and counts them apart.** The plain one is beaches
+ * reading different sources; the other is some reading a source and some
+ * reading none, which is neither `absent` nor agreement. Both mean no single
+ * figure answers for the area, so both are one state -- but the page prints the
+ * numbers, and "two sources" said of nine beaches sharing a buoy and one
+ * lacking it is false. So `distinct` counts sources and `without` counts the
+ * beaches that have none.
  *
  * That is the same distinction `beaches.json` draws about `wave_buoy` null,
  * whose schema note says it "carries TWO meanings and wave_buoy_null_reason
@@ -174,7 +222,32 @@ export type AreaProduct = "tide" | "waves" | "swell" | "sky" | "air";
 export type AreaSource =
   | { kind: "shared"; source: string }
   | { kind: "absent" }
-  | { kind: "mixed"; distinct: number };
+  | {
+      kind: "mixed";
+      /**
+       * How many distinct sources the area's beaches read between them.
+       *
+       * **Sources, so a beach binding nothing is not counted as one.** The
+       * first version of this read the size of a set built over the raw
+       * bindings, `null` included, and La Jolla's ten beaches came back as two
+       * wave buoys: nine read 46254 and `childrens-pool` reads none. The page
+       * prints this figure, so it said the default area's beaches read two
+       * buoys when they read one. At least 1, because a `mixed` product has at
+       * least one beach that has it -- with none it would be `absent`.
+       */
+      distinct: number;
+      /**
+       * How many of the area's beaches bind no source at all.
+       *
+       * **Beside `distinct` rather than folded into it**, because they are two
+       * facts and the sentence needs both: nine beaches reading one buoy and
+       * one reading none is not the same page as ten beaches reading two
+       * buoys, and only the second is what "2 different sources" describes.
+       * Zero for the ordinary disagreement, which is 13 of the 16 mixed
+       * product-instances.
+       */
+      without: number;
+    };
 
 export type AreaSources = Readonly<Record<AreaProduct, AreaSource>>;
 
@@ -196,6 +269,12 @@ const BINDING: Readonly<Record<AreaProduct, keyof Beach>> = {
  * publish the same forecast to the decimal the page prints — and the measured
  * form of the rule is its own slice. Until that probe exists this is the version
  * that cannot overclaim: everything it calls shared *is* one source.
+ *
+ * **A beach binding nothing is a gap and never a source.** Counting `null` in
+ * with the identifiers is how the default area came to say its ten beaches read
+ * two wave buoys when nine read 46254 and `childrens-pool` reads none. It did
+ * not change any area's state -- nine agreeing and one lacking still means no
+ * single figure -- which is why nothing failed.
  *
  * **No reason strings.** The wording belongs to the page, which is this repo's
  * rule about who owns the copy; and for `absent` there is no beach sentence to
@@ -221,13 +300,23 @@ export function areaSources(area: Area): AreaSources {
   });
 
   const resolve = (product: AreaProduct): AreaSource => {
-    const bound = new Set(members.map((beach) => beach[BINDING[product]]));
-    if (bound.size > 1) return { kind: "mixed", distinct: bound.size };
+    const bound = members.map((beach) => beach[BINDING[product]]);
 
-    const only = [...bound][0];
-    return only === null || only === undefined
-      ? { kind: "absent" }
-      : { kind: "shared", source: String(only) };
+    /*
+      Sources and gaps counted apart, because they are different facts and the
+      page states both. A set built over the raw bindings counts `null` as a
+      source, which made La Jolla's ten beaches read "2 different sources" for
+      a buoy nine of them share and one lacks.
+    */
+    const has = (id: (typeof bound)[number]) => id !== null && id !== undefined;
+    const sources = new Set(bound.filter(has));
+    const without = bound.length - bound.filter(has).length;
+
+    if (sources.size === 0) return { kind: "absent" };
+    if (sources.size === 1 && without === 0) {
+      return { kind: "shared", source: String([...sources][0]) };
+    }
+    return { kind: "mixed", distinct: sources.size, without };
   };
 
   return {

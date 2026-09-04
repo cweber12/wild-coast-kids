@@ -962,6 +962,7 @@ test("an area with no buoy anywhere says so, and does not blame disagreement", (
           areaName: "Mission Bay – West",
           beaches: 8,
           distinct: 0,
+          without: 8,
         },
         air: readings().air,
       }}
@@ -982,9 +983,10 @@ test("an area whose beaches disagree names how many, and how many sources", () =
       readings={{
         waves: {
           agreement: "mixed",
-          areaName: "La Jolla",
-          beaches: 10,
+          areaName: "Torrey Pines",
+          beaches: 2,
           distinct: 2,
+          without: 0,
         },
         air: readings().air,
       }}
@@ -993,9 +995,47 @@ test("an area whose beaches disagree names how many, and how many sources", () =
 
   expect(
     screen.getByText(
-      /The 10 beaches in La Jolla read 2 different sources for a wave reading/,
+      /The 2 beaches in Torrey Pines read 2 different sources for a wave reading/,
     ),
   ).toBeDefined();
+});
+
+/**
+ * The other shape of `mixed`, and the one the count was wrong about.
+ *
+ * Nine of La Jolla's ten beaches read buoy 46254 and `childrens-pool` reads
+ * none. That is one source and one gap, and this card said "2 different
+ * sources" over it on the default area's own page — because `areaSources` put
+ * `null` in the set with the identifiers, and because the test above this one
+ * asserted the sentence against a `distinct` nobody had read off the data.
+ *
+ * These numbers are the real ones, and `MeasuredPanel.test.tsx` asserts the
+ * same sentence against `areaSources`' actual output rather than against a
+ * fixture, which is the half that could have caught it.
+ */
+test("an area where some beaches have none says that, not that they disagree", () => {
+  render(
+    <MeasuredToday
+      readings={{
+        waves: {
+          agreement: "mixed",
+          areaName: "La Jolla",
+          beaches: 10,
+          distinct: 1,
+          without: 1,
+        },
+        air: readings().air,
+      }}
+    />,
+  );
+
+  expect(
+    screen.getByText(
+      /Only 9 of the 10 beaches in La Jolla have a wave reading, and they share one source/,
+    ),
+  ).toBeDefined();
+  // The claim that was false: they read one buoy, not two.
+  expect(screen.queryByText(/different sources/)).toBeNull();
 });
 
 /**
@@ -1018,6 +1058,7 @@ test("a withheld card keeps the glyph and rank of the card it stands in for", ()
           areaName: "Coronado",
           beaches: 3,
           distinct: 0,
+          without: 3,
         },
         air: readings().air,
       }}

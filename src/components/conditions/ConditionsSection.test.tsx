@@ -15,17 +15,13 @@ const DEFAULT_AREA = "la-jolla";
   declared beside it is not initialised when the factory is defined.
 */
 const SUSPEND = "suspend-the-panels";
+const dayPanel = vi.fn();
 vi.mock("@/components/conditions/DayPanel", () => ({
-  DayPanel: ({ slug }: { slug: string }) => {
-    if (slug === "suspend-the-panels") throw new Promise(() => {});
-    return <p>day for {slug}</p>;
-  },
+  DayPanel: (props: { slug: string }) => dayPanel(props),
 }));
+const weekPanel = vi.fn();
 vi.mock("@/components/conditions/WeekPanel", () => ({
-  WeekPanel: ({ slug }: { slug: string }) => {
-    if (slug === "suspend-the-panels") throw new Promise(() => {});
-    return <p>week for {slug}</p>;
-  },
+  WeekPanel: (props: { slug: string }) => weekPanel(props),
 }));
 /*
   The measured block moved up here from the day panel, and its reads came with
@@ -56,6 +52,16 @@ beforeEach(() => {
   measuredPanel.mockImplementation(({ slug }: { slug: string }) => {
     if (slug === "suspend-the-panels") throw new Promise(() => {});
     return <p>measured for {slug}</p>;
+  });
+  weekPanel.mockReset();
+  weekPanel.mockImplementation(({ slug }: { slug: string }) => {
+    if (slug === "suspend-the-panels") throw new Promise(() => {});
+    return <p>week for {slug}</p>;
+  });
+  dayPanel.mockReset();
+  dayPanel.mockImplementation(({ slug }: { slug: string }) => {
+    if (slug === "suspend-the-panels") throw new Promise(() => {});
+    return <p>day for {slug}</p>;
   });
 });
 const ripLevel = vi.fn();
@@ -469,4 +475,112 @@ test("an area of several keeps its list while showing one beach", () => {
     screen.getAllByRole("link", { name: /La Jolla|WindanSea|Bird Rock/ })
       .length,
   ).toBeGreaterThan(1);
+});
+
+/**
+ * The week is handed the same pair the measured block is, and the allowlist is
+ * here for the reason that one is: what a panel is given decides what it can
+ * answer for, and an argument added quietly is how a region comes to answer for
+ * something nobody chose.
+ *
+ * What it must never grow is a *chosen* member. "Read through any beach" is
+ * only honest because a product is read only where every beach in the area
+ * binds the same source, which `areas.test.ts` asserts over the whole table; a
+ * representative passed deliberately would be the thing ADR-0048 rejects.
+ */
+test("the week is asked for a beach and the area it stands for", () => {
+  render(<ConditionsSection areaSlug="la-jolla" beachSlug={null} />);
+
+  const [props] = weekPanel.mock.calls[0] as [Record<string, unknown>];
+  expect(Object.keys(props).sort()).toEqual(["area", "slug"]);
+
+  const area = props.area as { name: string; beaches: number };
+  expect(area.name).toBe("La Jolla");
+  expect(area.beaches).toBe(10);
+  expect(props.slug).toBe("la-jolla-shores-beach");
+});
+
+/** And on a beach page there is no scope at all, so nothing is withheld. */
+test("on a beach page the week answers for that beach alone", () => {
+  render(<ConditionsSection areaSlug="la-jolla" beachSlug="windansea-beach" />);
+
+  const [props] = weekPanel.mock.calls[0] as [Record<string, unknown>];
+  expect(props.slug).toBe("windansea-beach");
+  expect(props.area).toBeUndefined();
+});
+
+/**
+ * The week and the measured block read through the same member, which is what
+ * stops one region answering for a different beach than the one beside it.
+ * Asserted rather than assumed, because the two call sites composed the pair
+ * separately until they were lifted into one.
+ */
+test("every region on an area page reads through the same member", () => {
+  render(<ConditionsSection areaSlug="la-jolla" beachSlug={null} />);
+
+  const [measured] = measuredPanel.mock.calls[0] as [Record<string, unknown>];
+  const [week] = weekPanel.mock.calls[0] as [Record<string, unknown>];
+
+  const [day] = dayPanel.mock.calls[0] as [Record<string, unknown>];
+
+  expect(week.slug).toBe(measured.slug);
+  expect(day.slug).toBe(measured.slug);
+  expect(week.area).toEqual(measured.area);
+  expect(day.area).toEqual(measured.area);
+});
+
+/**
+ * The rip current risk is on an area page, and it is the one product that
+ * reaches it without the area's beaches agreeing about a source: the National
+ * Weather Service issues one bulletin for a unit larger than any area here.
+ * ADR-0050.
+ *
+ * Read through a member the forecast is issued for rather than the member
+ * everything else is read through, which for Tijuana Estuary is a different
+ * beach.
+ */
+test("an area page carries the rip current risk", () => {
+  render(<ConditionsSection areaSlug="la-jolla" beachSlug={null} />);
+
+  expect(screen.getByText(/rip for la-jolla-shores-beach/)).toBeDefined();
+});
+
+test("the bulletin is read through the member it is issued for", () => {
+  render(<ConditionsSection areaSlug="tijuana-estuary" beachSlug={null} />);
+
+  // Everything else reads through the area's first beach, which is the slough.
+  const [week] = weekPanel.mock.calls[0] as [Record<string, unknown>];
+  expect(week.slug).toBe("tijuana-slough-national-wildlife-refuge");
+  // The bulletin does not.
+  expect(screen.getByText(/rip for border-field-state-park/)).toBeDefined();
+});
+
+/**
+ * The day chart takes the same pair, and the allowlist is here for the reason
+ * the other two carry one: an argument added quietly is how a region comes to
+ * answer for something nobody chose.
+ */
+test("the day chart is asked for a beach and the area it stands for", () => {
+  render(<ConditionsSection areaSlug="la-jolla" beachSlug={null} />);
+
+  const [props] = dayPanel.mock.calls[0] as [Record<string, unknown>];
+  expect(Object.keys(props).sort()).toEqual(["area", "slug"]);
+
+  const area = props.area as { name: string; beaches: number };
+  expect(area.name).toBe("La Jolla");
+  expect(props.slug).toBe("la-jolla-shores-beach");
+});
+
+/**
+ * All three regions answer for the area now, and the sentence that stood in for
+ * two of them is gone. Asserted as an absence as well as a presence: the
+ * placeholder is the thing a later change is most likely to leave behind.
+ */
+test("an area page carries every region, and no sentence standing in for one", () => {
+  render(<ConditionsSection areaSlug="la-jolla" beachSlug={null} />);
+
+  expect(screen.getByText(/measured for la-jolla-shores-beach/)).toBeDefined();
+  expect(screen.getByText(/week for la-jolla-shores-beach/)).toBeDefined();
+  expect(screen.getByText(/day for la-jolla-shores-beach/)).toBeDefined();
+  expect(screen.queryByText(/one beach at a time/)).toBeNull();
 });

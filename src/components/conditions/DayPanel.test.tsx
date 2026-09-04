@@ -1649,3 +1649,274 @@ test("the map's caption names a spring-forward hour ahead, not behind", async ()
     "3 AM",
   );
 });
+
+/* =========================================================================
+ * The day, answering for an area
+ * ========================================================================= */
+
+/**
+ * The scope a page hands this panel, built from `areas.json` rather than
+ * invented. `areaSources` is not mocked: the point is what this region does
+ * with what the real table says, and a fixture would let the two drift apart in
+ * the way ADR-0048's own counts drifted once.
+ */
+async function areaScope(slug: string) {
+  const { areaBySlug } = await import("@/lib/areas");
+  const { scopeFor } = await import("./areaScope");
+  return scopeFor(areaBySlug(slug)!);
+}
+
+/**
+ * A product the area's beaches share is read and drawn. La Jolla's ten all bind
+ * `9410230`, so the tide curve is the area's.
+ */
+test("an area draws the curve its beaches share", async () => {
+  const { container } = render(
+    await DayPanel({
+      slug: "la-jolla-shores-beach",
+      area: await areaScope("la-jolla"),
+    }),
+  );
+
+  expect(readHourlyTide).toHaveBeenCalledWith("la-jolla-shores-beach");
+  expect(
+    container.querySelector('svg[aria-label^="Tide today"] [data-curve]'),
+  ).not.toBeNull();
+});
+
+/**
+ * And a product they do not share keeps its tab, is not read, and carries the
+ * area's sentence where the plot would be.
+ *
+ * The tab staying is the decision: four tabs are this region's vocabulary for
+ * its four products, and La Jolla shares only the tide, so a bar gated to what
+ * it can draw would be one tab wide and a reader would never learn the swell
+ * exists. ADR-0049.
+ */
+test("a withheld product keeps its tab and says why it is empty", async () => {
+  const { container } = render(
+    await DayPanel({
+      slug: "la-jolla-shores-beach",
+      area: await areaScope("la-jolla"),
+    }),
+  );
+
+  const swell = container.querySelector('[data-series-tab="swell"]');
+  expect(swell).not.toBeNull();
+  fireEvent.click(swell!);
+
+  // No curve, and no request that could have produced one.
+  expect(
+    container.querySelector('svg[aria-label^="Swell today"] [data-curve]'),
+  ).toBeNull();
+  expect(readWaveWeek).not.toHaveBeenCalled();
+
+  // The area's own sentence, and the counts in it are La Jolla's real ones:
+  // nine of ten beaches read eight model lines and one reads none.
+  expect(
+    screen.getByText(
+      /Only 9 of the 10 beaches in La Jolla have a swell forecast, and they read 8 different sources/,
+    ),
+  ).toBeDefined();
+});
+
+/**
+ * The four tabs are three publishers, and the cell's two go together. So do the
+ * cloud band drawn behind every tab and the office's own wording above the
+ * chart, which come off that same cell.
+ */
+test("a withheld cell takes both its tabs, the cloud and the wording", async () => {
+  const { container } = render(
+    await DayPanel({
+      slug: "la-jolla-shores-beach",
+      area: await areaScope("la-jolla"),
+    }),
+  );
+
+  expect(readGridpointWeek).not.toHaveBeenCalled();
+  expect(readSkyWeek).not.toHaveBeenCalled();
+  expect(readSkyWording).not.toHaveBeenCalled();
+
+  // The office's sentences are replaced rather than dropped: one member's
+  // wording under the whole area's name is the thing this refuses.
+  expect(screen.queryByText("Patchy Fog then Mostly Sunny")).toBeNull();
+  expect(
+    screen.getAllByText(
+      /The 10 beaches in La Jolla read 4 different sources for a forecast in words/,
+    ).length,
+  ).toBeGreaterThan(0);
+
+  for (const [tab, product] of [
+    ["wind", "a wind forecast"],
+    ["temperature", "an air temperature forecast"],
+  ] as const) {
+    fireEvent.click(container.querySelector(`[data-series-tab="${tab}"]`)!);
+    expect(
+      screen.getByText(new RegExp(`4 different sources for ${product}`)),
+      tab,
+    ).toBeDefined();
+  }
+});
+
+/**
+ * The bar keeps all four tabs whatever the area shares. This is the assertion
+ * the decision turns on, so it is made against the area that would lose the
+ * most: La Jolla shares one of the chart's three products.
+ */
+test("the tab bar is the same four tabs at either scope", async () => {
+  const tabsOf = (root: HTMLElement) =>
+    [...root.querySelectorAll("[data-series-tab]")].map((node) =>
+      node.getAttribute("data-series-tab"),
+    );
+
+  const beach = render(await DayPanel({ slug: "la-jolla-shores-beach" }));
+  const onBeach = tabsOf(beach.container);
+  beach.unmount();
+
+  const { container } = render(
+    await DayPanel({
+      slug: "la-jolla-shores-beach",
+      area: await areaScope("la-jolla"),
+    }),
+  );
+
+  expect(onBeach).toEqual(["tide", "swell", "wind", "temperature"]);
+  expect(tabsOf(container)).toEqual(onBeach);
+});
+
+/**
+ * The map draws one beach's own stretch of coast. An area has no such run until
+ * the area map lands, and drawing the first member's under the area's name is
+ * the representative-beach lie ADR-0048 refuses -- so the column says what it
+ * is missing rather than showing the wrong thing or nothing at all.
+ */
+test("an area page carries no map, and says what is there instead", async () => {
+  const { container } = render(
+    await DayPanel({
+      slug: "la-jolla-shores-beach",
+      area: await areaScope("la-jolla"),
+    }),
+  );
+
+  expect(container.querySelector("svg[aria-label^='A map of']")).toBeNull();
+  expect(
+    screen.getByText(/The map draws one beach's own stretch of coast/),
+  ).toBeDefined();
+  expect(screen.getByText(/Choose a beach above for La Jolla's/)).toBeDefined();
+});
+
+/** And the beach page still draws it, which is what says the map was gated and not lost. */
+test("a beach page still draws its map", async () => {
+  const { container } = render(
+    await DayPanel({ slug: "la-jolla-shores-beach" }),
+  );
+
+  expect(container.querySelector("svg[aria-label^='A map of']")).not.toBeNull();
+  expect(screen.queryByText(/The map draws one beach's own/)).toBeNull();
+});
+
+/**
+ * The beach page is unchanged, and this says so structurally rather than by
+ * re-asserting every tab: with no scope there is nothing to withhold, so all
+ * six reads are made exactly as they were before areas existed.
+ */
+test("with no area scope every product is still read", async () => {
+  render(await DayPanel({ slug: "la-jolla-shores-beach" }));
+
+  for (const read of [
+    readHourlyTide,
+    readWaveWeek,
+    readSkyWeek,
+    readGridpointWeek,
+    readSkyWording,
+    readSurfZone,
+  ]) {
+    expect(read).toHaveBeenCalledWith("la-jolla-shores-beach");
+  }
+});
+
+/**
+ * The bulletin is not gated by the area's agreement, and that is deliberate
+ * rather than an oversight: the National Weather Service issues one for "San
+ * Diego County Coastal Areas", a unit larger than any area in this table. It is
+ * still read through a member here; the exception gets its own decision.
+ */
+test("the surf zone bulletin is read at either scope", async () => {
+  render(
+    await DayPanel({
+      slug: "la-jolla-shores-beach",
+      area: await areaScope("la-jolla"),
+    }),
+  );
+
+  expect(readSurfZone).toHaveBeenCalledWith("la-jolla-shores-beach");
+});
+
+/**
+ * The exception, and it is a category difference rather than a relaxation. The
+ * National Weather Service issues one bulletin for "San Diego County Coastal
+ * Areas", so what an area needs is not a member its beaches agree about but a
+ * member the forecast is issued for — which for Tijuana Estuary is not the
+ * member everything else in this region is read through. ADR-0050.
+ */
+test("the bulletin is read through a member the forecast is issued for", async () => {
+  render(
+    await DayPanel({
+      slug: "tijuana-slough-national-wildlife-refuge",
+      area: await areaScope("tijuana-estuary"),
+    }),
+  );
+
+  // Everything else reads through the slug it was given; the bulletin does not.
+  expect(readSurfZone).toHaveBeenCalledWith("border-field-state-park");
+  expect(readSurfZone).not.toHaveBeenCalledWith(
+    "tijuana-slough-national-wildlife-refuge",
+  );
+});
+
+/**
+ * And where the forecast reaches no member, the sentence is about the area
+ * rather than about the beach it was read through. That is a claim rather than
+ * a hedge: `surfZoneBeachOf` falls back only when every member is sheltered,
+ * which `areas.test.ts` asserts over the whole table.
+ */
+test("a wholly sheltered area is told the forecast is not issued for any of it", async () => {
+  readSurfZone.mockResolvedValue({
+    beachName: "Mission Bay, Riviera Shores",
+    state: {
+      kind: "no-surf-zone",
+      reason:
+        "the National Weather Service issues this forecast for San Diego County's coastal " +
+        "areas, and a bay, lagoon or inlet has no surf zone, so it does not describe the " +
+        "water here",
+    },
+  });
+
+  render(
+    await DayPanel({
+      slug: "mission-bay-riviera-shores",
+      area: await areaScope("mission-bay-west"),
+    }),
+  );
+
+  expect(
+    screen.getByText(
+      /This forecast is not issued for any beach in Mission Bay – West/,
+    ),
+  ).toBeDefined();
+  expect(screen.queryByText(/not issued for this beach/)).toBeNull();
+});
+
+/** And a beach page still says "this beach", which is what it is. */
+test("a beach page keeps the beach-scoped wording", async () => {
+  readSurfZone.mockResolvedValue({
+    beachName: "Mission Bay, Riviera Shores",
+    state: { kind: "no-surf-zone", reason: "a bay has no surf zone" },
+  });
+
+  render(await DayPanel({ slug: "mission-bay-riviera-shores" }));
+
+  expect(
+    screen.getByText(/This forecast is not issued for this beach/),
+  ).toBeDefined();
+});

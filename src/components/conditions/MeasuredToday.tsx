@@ -45,37 +45,13 @@
  */
 
 import type { AirView, WavesView } from "@/lib/conditions";
+import { type NotShared, withheldWords } from "./areaScope";
 import { compassWords } from "./bearing";
 import { CARD_PROSE } from "./cardText";
 import { DISCLOSURE_TARGET } from "./disclosure";
 import { ProvenanceLine } from "./ProvenanceLine";
 import { ReadingCard } from "./ReadingCard";
 import { type Stat, StatGroup } from "./StatGroup";
-
-/**
- * Why an area cannot report a product, when its beaches do not share one.
- *
- * **Two agreements, because they owe a reader different sentences.** `absent`
- * is every beach in the area lacking the instrument, which is the bay's missing
- * buoy and was already true one beach at a time. `mixed` is the beaches having
- * one each and disagreeing, which is new with areas and is the only state a
- * reader has never seen before.
- *
- * **It carries facts and not a sentence**, which is this repo's rule about who
- * owns the copy on this page. It also could not carry one: the beaches' own
- * reasons differ, and lifting any of them would print one beach's figure as if
- * it were the area's. Coronado's three name 20.9, 21.6 and 21.2 km for the buoy
- * that does not reach them.
- */
-export type NotShared = {
-  agreement: "absent" | "mixed";
-  /** The area's name, for the sentence. */
-  areaName: string;
-  /** How many beaches it holds. */
-  beaches: number;
-  /** How many distinct sources they bind. Only meaningful when `mixed`. */
-  distinct: number;
-};
 
 /** True of a slot the area cannot fill, false of a reading. */
 function notShared(slot: WavesView | AirView | NotShared): slot is NotShared {
@@ -539,11 +515,7 @@ function NotSharedCard({
       title={title}
       context={slot.areaName}
     >
-      <p className={CARD_PROSE}>
-        {slot.agreement === "absent"
-          ? `No beach in ${slot.areaName} has ${product}. Each says why on its own page.`
-          : `The ${slot.beaches} beaches in ${slot.areaName} read ${slot.distinct} different sources for ${product}, so there is no one figure for the whole area. Choose a beach for it.`}
-      </p>
+      <p className={CARD_PROSE}>{withheldWords(slot, product)}</p>
     </ReadingCard>
   );
 }

@@ -6,8 +6,9 @@ import {
   DEFAULT_AREA_SLUG,
   beachesByArea,
   defaultArea,
+  surfZoneBeachOf,
 } from "./areas";
-import { allBeaches } from "./beaches";
+import { allBeaches, surfZoneWithheldReason } from "./beaches";
 
 describe("beachesByArea", () => {
   test("covers the whole inventory exactly once", () => {
@@ -202,10 +203,25 @@ describe("what an area's beaches agree on", () => {
    * a forecast cell and bind four different ones — that is `mixed`, and it is
    * new with areas. Mission Bay – West's eight have no MOP line at all — that is
    * `absent`, and it was already true one beach at a time.
+   *
+   * And the case between them, which is `mixed` too: nine of La Jolla's ten
+   * read buoy 46254 and `childrens-pool` reads none. No single figure answers
+   * for the area either way, so the state is the same — but it is one source
+   * and one gap, and `without` is what keeps the page from calling that two
+   * sources.
    */
   test("disagreeing is not the same as lacking", () => {
-    expect(of("la-jolla").sky).toEqual({ kind: "mixed", distinct: 4 });
+    expect(of("la-jolla").sky).toEqual({
+      kind: "mixed",
+      distinct: 4,
+      without: 0,
+    });
     expect(of("mission-bay-west").swell).toEqual({ kind: "absent" });
+    expect(of("la-jolla").waves).toEqual({
+      kind: "mixed",
+      distinct: 1,
+      without: 1,
+    });
   });
 
   test("a shared product names the one source behind it", () => {
@@ -265,5 +281,159 @@ describe("what an area's beaches agree on", () => {
         }
       }
     }
+  });
+});
+
+/**
+ * `mixed` counts sources, and a beach binding nothing is not one of them.
+ *
+ * `areaSources` builds its set out of the raw bindings, `null` included, so a
+ * product nine beaches share and a tenth lacks reads as two sources. It is not:
+ * it is one source and one gap, and the page prints the number. La Jolla is the
+ * default area, and `/conditions/la-jolla` says "The 10 beaches in La Jolla read
+ * 2 different sources for a wave reading" over nine beaches reading buoy 46254
+ * and `childrens-pool` reading none.
+ *
+ * The state is right either way -- nine agreeing and one lacking still means no
+ * one figure answers for the area -- so nothing failed. Only the count is wrong.
+ *
+ * Derived over the whole table rather than asserted against three copied
+ * numbers, because the three are a property of `beaches.json` today and the
+ * invariant is a property of the resolver. `MeasuredToday.test.tsx` has the
+ * other kind: a hand-written `distinct: 2` for La Jolla, which is why the card
+ * that prints the wrong figure has a passing test over it.
+ */
+describe("a mixed product's count", () => {
+  const FIELD = {
+    tide: "tide_station",
+    waves: "wave_buoy",
+    swell: "mop_line",
+    sky: "grid_cell",
+    air: "air_station",
+  } as const;
+
+  test("never counts a missing binding among the sources", () => {
+    const bySlug = new Map(allBeaches().map((beach) => [beach.slug, beach]));
+    let withAGap = 0;
+
+    for (const { area, beaches } of beachesByArea()) {
+      const sources = areaSources(area);
+      for (const product of Object.keys(FIELD) as (keyof typeof FIELD)[]) {
+        const resolved = sources[product];
+        if (resolved.kind !== "mixed") continue;
+
+        const bound = beaches.map(
+          (beach) => bySlug.get(beach.slug)![FIELD[product]],
+        );
+        const real = bound.filter((id) => id !== null);
+        if (real.length < bound.length) withAGap += 1;
+
+        expect(resolved.distinct, `${area.slug} ${product}`).toBe(
+          new Set(real).size,
+        );
+      }
+    }
+
+    // The probe. Without it this loop passes on a table where no mixed product
+    // has a gap in it, which is a table this assertion says nothing about.
+    expect(withAGap).toBeGreaterThan(0);
+  });
+});
+
+/**
+ * The one product an area reports without its beaches agreeing about a source,
+ * because it has no source to agree about: the National Weather Service issues
+ * one bulletin for "San Diego County Coastal Areas". ADR-0050.
+ */
+describe("the beach an area reads the surf zone bulletin through", () => {
+  const bySlug = () =>
+    new Map(allBeaches().map((beach) => [beach.slug, beach]));
+
+  /**
+   * The claim the page's own wording rests on, asserted rather than argued.
+   *
+   * On an area page the withheld sentence says the forecast is not issued for
+   * *any* beach in the area, having read it through one. That is only true
+   * because the fallback is reached exactly when no member is open coast — so
+   * where this returns a withheld member, every member is withheld.
+   */
+  test("falls back only where the forecast reaches no member at all", () => {
+    const beaches = bySlug();
+    let withheldAreas = 0;
+
+    for (const { area } of beachesByArea()) {
+      const chosen = beaches.get(surfZoneBeachOf(area))!;
+      if (surfZoneWithheldReason(chosen) === null) continue;
+
+      withheldAreas += 1;
+      for (const slug of area.beaches) {
+        expect(surfZoneWithheldReason(beaches.get(slug)!), slug).not.toBeNull();
+      }
+    }
+
+    // The probe, and a count rather than a floor: seven of the eighteen areas
+    // are wholly sheltered today. A table where none was would make the loop
+    // above assert nothing, and a table where that number moved is a real
+    // change to which area pages carry a rip current level.
+    expect(withheldAreas).toBe(7);
+  });
+
+  /** And where it does reach one, that member is one it is issued for. */
+  test("prefers a member the forecast is issued for", () => {
+    const beaches = bySlug();
+
+    for (const { area } of beachesByArea()) {
+      const issued = area.beaches.some(
+        (slug) => surfZoneWithheldReason(beaches.get(slug)!) === null,
+      );
+      if (!issued) continue;
+
+      expect(
+        surfZoneWithheldReason(beaches.get(surfZoneBeachOf(area))!),
+        area.slug,
+      ).toBeNull();
+    }
+  });
+
+  /**
+   * Two data files disagreeing, which should stop a build rather than quietly
+   * pick a beach the inventory does not have. The same guard `beachesByArea`
+   * and `areaSources` carry, for the same reason: the `areas` gate row catches
+   * it earlier and says more, and this is the backstop for somebody editing one
+   * file and running the app without the gate.
+   */
+  test("throws when an area names a beach the inventory does not have", async () => {
+    vi.resetModules();
+    vi.doMock("@/data/areas.json", () => ({
+      default: {
+        areas: [
+          { slug: "la-jolla", name: "La Jolla", beaches: ["not-a-beach"] },
+        ],
+      },
+    }));
+
+    const { areaBySlug: bySlug, surfZoneBeachOf: withBadTable } =
+      await import("./areas");
+    expect(() => withBadTable(bySlug("la-jolla")!)).toThrow(
+      /beaches.json has no such beach/,
+    );
+
+    vi.doUnmock("@/data/areas.json");
+    vi.resetModules();
+  });
+
+  /**
+   * The area the exception is actually worth something to today, named so that
+   * a membership change which quietly removes the case is visible.
+   *
+   * Tijuana Estuary holds the slough, which is sheltered water, and Border
+   * Field State Park, which is not. Read through its first member the area
+   * would withhold a bulletin that is issued for half of it.
+   */
+  test("Tijuana Estuary reads it through the member that is open coast", () => {
+    const area = areaBySlug("tijuana-estuary")!;
+
+    expect(area.beaches[0]).toBe("tijuana-slough-national-wildlife-refuge");
+    expect(surfZoneBeachOf(area)).toBe("border-field-state-park");
   });
 });

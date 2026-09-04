@@ -35,6 +35,26 @@
  * **Composing the shapes is this file's job and not the grid's**, for the
  * reason the row mapping is: three publishers' hours have to become one series
  * plus two background layers, and `WeekGrid` must not know what a tide is.
+ *
+ * **It answers for an area as well as for a beach, one row at a time.** On an
+ * area page it is handed an `AreaScope`, and a product the area's beaches do
+ * not share is not read, draws no row, and is said out loud in the notes
+ * beneath the grid instead. That is the slot this panel already uses for a
+ * product it cannot draw: a beach with no MOP line has had no wave row and a
+ * sentence under the grid since long before areas existed, so an area with no
+ * agreement on one gets the same shape and a sentence in its own words. See
+ * ADR-0048 and `areaScope.ts`.
+ *
+ * **Gating rows and not the panel is what makes an area page worth having.**
+ * Sixteen of the eighteen areas share a tide station and eleven share a
+ * forecast cell, so a panel gated whole would go missing from areas that can
+ * answer for two of its three rows. Per product, the same grid renders with
+ * whichever rows the area may draw.
+ *
+ * **Which beach an area reads through cannot matter**, and that is asserted
+ * rather than argued: a product is only read here when every beach in the area
+ * binds the same source for it, which `areas.test.ts` checks over the whole
+ * table. So the row is the area's, whichever member the request named.
  */
 
 import {
@@ -45,6 +65,7 @@ import {
   readWeekOfLowestLows,
   type TideHourlyDay,
 } from "@/lib/conditions";
+import { type AreaScope, withheldBy, withheldWords } from "./areaScope";
 import { DaylightWeek } from "./DaylightWeek";
 import { DaySpark } from "./DaySpark";
 import { tidePoints } from "./series";
@@ -120,7 +141,28 @@ function sparkDescription(
   );
 }
 
-export async function WeekPanel({ slug }: { slug: string }) {
+export async function WeekPanel({
+  slug,
+  area,
+}: {
+  slug: string;
+  /** Present on an area page, absent on a beach's. */
+  area?: AreaScope;
+}) {
+  /*
+    Which of the three rows this area may draw at all, asked before anything is
+    fetched. Null on a beach page, where nothing is withheld and the whole panel
+    behaves as it did before areas existed.
+
+    Two of the three products are the tide's: the row's figures and the shape
+    behind them come from one station through two requests, so they are withheld
+    or read together. A shape drawn under a row that is not there would be a
+    curve attributed to nobody.
+  */
+  const withheldTide = withheldBy(area, "tide");
+  const withheldSwell = withheldBy(area, "swell");
+  const withheldSky = withheldBy(area, "sky");
+
   // Concurrently, and failing apart: NOAA and CDIP share no publisher and no
   // outage, so neither may hold up or take down the other's row.
   //
@@ -129,12 +171,24 @@ export async function WeekPanel({ slug }: { slug: string }) {
   // one response. It fails apart from the figures it sits under for the same
   // reason the others do: an outage on the hourly series must cost the shape
   // and not the week.
+  //
+  // A withheld product makes no request at all. There is nothing this grid
+  // could do with one member's station, and asking would spend a reader's wait
+  // on a row the page has already decided not to draw.
   const [view, hourly, waves, sky] = await Promise.all([
-    readWeekOfLowestLows(slug),
-    readHourlyTide(slug),
-    readWaveWeek(slug),
-    readSkyWeek(slug),
+    withheldTide ? null : readWeekOfLowestLows(slug),
+    withheldTide ? null : readHourlyTide(slug),
+    withheldSwell ? null : readWaveWeek(slug),
+    withheldSky ? null : readSkyWeek(slug),
   ]);
+  /*
+    Daylight is read at every scope, and that is measured rather than assumed.
+    It is computed from a beach's own coordinates rather than bound to a source,
+    so `areaSources` has nothing to say about it -- and the spread inside the
+    widest area is 9 seconds of sunrise and 8 of sunset, against a header that
+    prints both to the nearest minute. `midpointOf` makes the same argument one
+    scale up: sunset differs by a minute across the entire county.
+  */
   const daylight = readDaylightWeek(slug);
 
   /*
@@ -170,12 +224,12 @@ export async function WeekPanel({ slug }: { slug: string }) {
     figure that is or puts a second one in the cell.
   */
   const hourlyByDate = new Map(
-    hourly.state.kind === "week"
+    hourly?.state.kind === "week"
       ? hourly.state.days.map((day) => [day.localDate, day])
       : [],
   );
   const range =
-    hourly.state.kind === "week" ? sharedRange(hourly.state.days) : null;
+    hourly?.state.kind === "week" ? sharedRange(hourly.state.days) : null;
 
   const days = daylight.days.map((day) => {
     const series = hourlyByDate.get(day.localDate);
@@ -214,7 +268,7 @@ export async function WeekPanel({ slug }: { slug: string }) {
 
   const rows: WeekRow[] = [];
 
-  if (view.state.kind === "week") {
+  if (view !== null && view.state.kind === "week") {
     const tideDays = view.state.days;
     const station = view.station;
     rows.push({
@@ -265,7 +319,7 @@ export async function WeekPanel({ slug }: { slug: string }) {
     Ragged by construction: only the days the forecast reached become cells, and
     the grid draws no pair where a row has none.
   */
-  if (waves.state.kind === "week" && waves.line !== null) {
+  if (waves !== null && waves.state.kind === "week" && waves.line !== null) {
     const line = waves.line;
     rows.push({
       ...WAVE_WEEK_ROW,
@@ -298,7 +352,7 @@ export async function WeekPanel({ slug }: { slug: string }) {
     Ragged like the wave row, and for the same reason: the product reaches about
     seven and a half days and the far column may have none.
   */
-  if (sky.state.kind === "week" && sky.cell !== null) {
+  if (sky !== null && sky.state.kind === "week" && sky.cell !== null) {
     const cell = sky.cell;
     rows.push({
       ...SKY_WEEK_ROW,
@@ -338,11 +392,30 @@ export async function WeekPanel({ slug }: { slug: string }) {
     now draws all twenty-four hours with night shaded. Half the sentence had
     also stopped being true: it ended by pointing at cards that no longer exist.
 
-    What is left in this array reports outages and nothing else. Every push
-    below is conditional, and each one names the publisher that went quiet --
-    which is the half `CLAUDE.md`'s "nothing fails silently" is about, and the
-    half this file's tests assert one state at a time.
+    What is left in this array says why a row a reader expected is not there.
+    Every push below is conditional, and each one names what is missing rather
+    than leaving a gap -- which is the half `CLAUDE.md`'s "nothing fails
+    silently" is about, and the half this file's tests assert one state at a
+    time.
+
+    **Three kinds of reason and not one**, which is why the pushes are grouped
+    by product rather than by kind. A publisher went quiet, which is a fact
+    about this quarter of an hour. A join bound nothing, which is a permanent
+    fact about the place -- `no-station`, `no-line` and `no-cell` have been in
+    this array since before areas existed, so this was never an outage log. Or
+    the area's beaches do not share the source, which is new with areas and is
+    the only one a reader has not met before.
+
+    A withheld row and an outage on the same row cannot both happen: a withheld
+    product is never read, so there is no publisher to have gone quiet. The
+    grouping is what makes that legible rather than something to check.
   */
+  const withheldNote = (
+    slot: ReturnType<typeof withheldBy>,
+    product: string,
+  ): void => {
+    if (slot !== null) notes.push(withheldWords(slot, product));
+  };
 
   /*
     The upstream reason is printed here now rather than pointed at.
@@ -355,7 +428,8 @@ export async function WeekPanel({ slug }: { slug: string }) {
     sentence -- so this one carries the detail, in the shape `DayPanel`'s
     `absenceFor` already uses for the same kind of failure.
   */
-  if (view.state.kind === "unavailable") {
+  withheldNote(withheldTide, "a tide prediction");
+  if (view !== null && view.state.kind === "unavailable") {
     notes.push(
       "We could not get this week's tide predictions from NOAA just now. " +
         `Nothing is wrong with the beach. ${view.state.detail}`,
@@ -371,7 +445,12 @@ export async function WeekPanel({ slug }: { slug: string }) {
     Only when the figures came through. When both failed the sentence above
     already says so, and saying it twice would make one outage read as two.
   */
-  if (view.state.kind === "week" && hourly.state.kind === "unavailable") {
+  if (
+    view !== null &&
+    view.state.kind === "week" &&
+    hourly !== null &&
+    hourly.state.kind === "unavailable"
+  ) {
     notes.push(
       "The hour-by-hour shape behind each day's figure is missing this time: " +
         "NOAA answered for the day's high and low tides but not for the hourly " +
@@ -379,7 +458,7 @@ export async function WeekPanel({ slug }: { slug: string }) {
     );
   }
 
-  if (view.state.kind === "no-station") {
+  if (view !== null && view.state.kind === "no-station") {
     notes.push(
       "We have no tide station for this beach, so there is nothing to predict " +
         "this week from. The tide here is not different; we simply have no " +
@@ -394,7 +473,8 @@ export async function WeekPanel({ slug }: { slug: string }) {
     read here and nowhere else, so a failure that said only "we could not get
     it" would be the silent half of a failure.
   */
-  if (waves.state.kind === "no-line") {
+  withheldNote(withheldSwell, "a swell forecast");
+  if (waves !== null && waves.state.kind === "no-line") {
     notes.push(
       "There is no wave forecast for this beach either, and for the same reason " +
         "as the reading above: every point the model publishes sits at 10 m " +
@@ -408,14 +488,15 @@ export async function WeekPanel({ slug }: { slug: string }) {
     all rather than told it elsewhere -- and a silent gap would read as a clear
     week.
   */
-  if (sky.state.kind === "no-cell") {
+  withheldNote(withheldSky, "a cloud forecast");
+  if (sky !== null && sky.state.kind === "no-cell") {
     notes.push(
       "We have no cloud forecast for this beach. The National Weather Service " +
         "publishes its forecasts for squares of the map, and this beach does not " +
         "sit in one we can read.",
     );
   }
-  if (sky.state.kind === "unavailable") {
+  if (sky !== null && sky.state.kind === "unavailable") {
     notes.push(
       `We could not get this week's cloud forecast from the National Weather Service just ` +
         `now. ${sky.state.detail}` +
@@ -426,7 +507,7 @@ export async function WeekPanel({ slug }: { slug: string }) {
     );
   }
 
-  if (waves.state.kind === "unavailable") {
+  if (waves !== null && waves.state.kind === "unavailable") {
     notes.push(
       `We could not get this week's wave forecast from CDIP just now. ${waves.state.detail}` +
         (waves.state.drift

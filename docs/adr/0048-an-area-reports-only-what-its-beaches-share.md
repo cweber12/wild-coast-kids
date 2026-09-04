@@ -39,8 +39,18 @@ reader different sentences:
 - **`shared`** — one source behind every beach. The area reports it.
 - **`absent`** — no beach has one. The bay's missing buoy: already true one
   beach at a time, and not news.
-- **`mixed`** — the beaches each have one and disagree. New with areas, and the
+- **`mixed`** — the beaches do not all read one source. New with areas, and the
   only state a reader has never seen before.
+
+`mixed` covers two shapes and counts them apart: the beaches read different
+sources, or some read one and some read none. Both mean no single figure answers
+for the area, so both are one state — but the page prints the numbers, and
+"2 different sources" is false of nine beaches sharing a buoy and a tenth
+lacking it. That is La Jolla's own wave buoy, and the default area's page said
+it until `distinct` learned to tell a source from a gap; two more
+product-instances are the same shape (La Jolla's swell, Tijuana Estuary's).
+So `areaSources` returns `distinct` for the sources and `without` for the
+beaches that have none.
 
 This is the distinction `beaches.json` already draws about a null `wave_buoy`,
 whose schema says it "carries TWO meanings and wave_buoy_null_reason always
@@ -93,16 +103,20 @@ first draft of this invented 🌊, its own titles and an `h3`, which would also
 have put a hole in the heading outline; it is called out here because the
 mistake is easy and invisible from the component that makes it.
 
-**The week and the day chart are still one beach at a time**, and the area page
-says so. `WeekPanel` and `DayPanel` mix three and four products respectively, so
-gating them is per-product surgery inside the two largest components on the page
-and is its own slice. Tide is shared by 16 areas and sky by 11, so that slice is
-where most of an area's forecast arrives.
+**The week and the day chart followed, per product.** They were left one beach at
+a time here, because `WeekPanel` and `DayPanel` mix three and four products
+respectively and gating them is surgery inside the two largest components on the
+page. ADR-0049 is that slice: a withheld product is worded in the slot its own
+panel already uses for an absence — no row and a note under the week grid, the
+tab kept with the sentence where the plot would be in the day chart. Tide is
+shared by 16 areas and sky by 11, so it is where most of an area's forecast
+arrives, as expected here.
 
-**The rip current risk is still beach-scoped**, though the plan exempts it from
-this rule — it is issued for "San Diego County Coastal Areas", a unit larger than
-any area here, so the intersection rule is a category error against it. That
-exception is real and lands with the forecast slice.
+**The rip current risk is the one exception, and ADR-0050 records it.** It is
+issued for "San Diego County Coastal Areas", a unit larger than any area here,
+so the intersection rule is a category error against it — there is no per-beach
+source to intersect. It is read through a member the forecast is issued for
+instead, and is on every area page rather than beach pages alone.
 
 **A props allowlist caught this change, which is what it is for.**
 `ConditionsSection.test.tsx` asserted the measured block is handed exactly
