@@ -27,43 +27,9 @@
  * arranged to avoid.
  */
 
-import { type AreaSources } from "@/lib/areas";
 import { readLatestAir, readLatestWaves } from "@/lib/conditions";
-import { MeasuredToday, type NotShared } from "./MeasuredToday";
-
-/**
- * What this block is about, when it is about an area rather than one beach.
- *
- * `slug` is still a beach, because every read here is keyed on one — but which
- * beach is immaterial for a product the area shares, and that is what "shared"
- * means: `areas.test.ts` asserts that where `areaSources` says shared, every
- * beach in the area binds that same source. A product it does not share is not
- * read at all, so no member's figure can leak into an area's card.
- */
-export type AreaScope = {
-  name: string;
-  beaches: number;
-  sources: AreaSources;
-};
-
-/** A slot the area cannot fill, or null when it can. */
-function withheldBy(
-  scope: AreaScope | undefined,
-  product: "waves" | "air",
-): NotShared | null {
-  if (!scope) return null;
-
-  const source = scope.sources[product];
-  if (source.kind === "shared") return null;
-
-  return {
-    agreement: source.kind,
-    areaName: scope.name,
-    beaches: scope.beaches,
-    distinct: source.kind === "mixed" ? source.distinct : 0,
-    without: source.kind === "mixed" ? source.without : 0,
-  };
-}
+import { type AreaScope, withheldBy } from "./areaScope";
+import { MeasuredToday } from "./MeasuredToday";
 
 export async function MeasuredPanel({
   slug,

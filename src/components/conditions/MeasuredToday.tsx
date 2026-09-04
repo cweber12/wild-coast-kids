@@ -45,52 +45,13 @@
  */
 
 import type { AirView, WavesView } from "@/lib/conditions";
+import type { NotShared } from "./areaScope";
 import { compassWords } from "./bearing";
 import { CARD_PROSE } from "./cardText";
 import { DISCLOSURE_TARGET } from "./disclosure";
 import { ProvenanceLine } from "./ProvenanceLine";
 import { ReadingCard } from "./ReadingCard";
 import { type Stat, StatGroup } from "./StatGroup";
-
-/**
- * Why an area cannot report a product, when its beaches do not share one.
- *
- * **Two agreements, because they owe a reader different sentences.** `absent`
- * is every beach in the area lacking the instrument, which is the bay's missing
- * buoy and was already true one beach at a time. `mixed` is the beaches not all
- * reading one source, which is new with areas and is the only state a reader has
- * never seen before.
- *
- * **`mixed` has two shapes and the sentence says which.** Either the beaches
- * read different sources, or some read one and some read none — three of the
- * sixteen mixed product-instances are the second, La Jolla's own wave buoy
- * among them. Both mean no single figure answers for the area; only the first
- * is what "different sources" describes.
- *
- * **It carries facts and not a sentence**, which is this repo's rule about who
- * owns the copy on this page. It also could not carry one: the beaches' own
- * reasons differ, and lifting any of them would print one beach's figure as if
- * it were the area's. Coronado's three name 20.9, 21.6 and 21.2 km for the buoy
- * that does not reach them.
- */
-export type NotShared = {
-  agreement: "absent" | "mixed";
-  /** The area's name, for the sentence. */
-  areaName: string;
-  /** How many beaches it holds. */
-  beaches: number;
-  /** How many distinct sources they bind. Only meaningful when `mixed`. */
-  distinct: number;
-  /**
-   * How many of them bind no source at all. Only meaningful when `mixed`.
-   *
-   * **Beside `distinct` because the sentence needs both.** Nine beaches reading
-   * one buoy and a tenth reading none is not ten beaches reading two buoys, and
-   * only the second is what "2 different sources" describes. It was the first
-   * that `/conditions/la-jolla` printed the second sentence over.
-   */
-  without: number;
-};
 
 /** True of a slot the area cannot fill, false of a reading. */
 function notShared(slot: WavesView | AirView | NotShared): slot is NotShared {
