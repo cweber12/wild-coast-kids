@@ -396,6 +396,33 @@ describe("the beach an area reads the surf zone bulletin through", () => {
   });
 
   /**
+   * Two data files disagreeing, which should stop a build rather than quietly
+   * pick a beach the inventory does not have. The same guard `beachesByArea`
+   * and `areaSources` carry, for the same reason: the `areas` gate row catches
+   * it earlier and says more, and this is the backstop for somebody editing one
+   * file and running the app without the gate.
+   */
+  test("throws when an area names a beach the inventory does not have", async () => {
+    vi.resetModules();
+    vi.doMock("@/data/areas.json", () => ({
+      default: {
+        areas: [
+          { slug: "la-jolla", name: "La Jolla", beaches: ["not-a-beach"] },
+        ],
+      },
+    }));
+
+    const { areaBySlug: bySlug, surfZoneBeachOf: withBadTable } =
+      await import("./areas");
+    expect(() => withBadTable(bySlug("la-jolla")!)).toThrow(
+      /beaches.json has no such beach/,
+    );
+
+    vi.doUnmock("@/data/areas.json");
+    vi.resetModules();
+  });
+
+  /**
    * The area the exception is actually worth something to today, named so that
    * a membership change which quietly removes the case is visible.
    *
