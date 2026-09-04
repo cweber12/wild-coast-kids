@@ -143,3 +143,30 @@ export function withheldWords(slot: NotShared, product: string): string {
     ? `The ${slot.beaches} beaches in ${slot.areaName} read ${slot.distinct} different sources for ${product}, ${tail}`
     : `Only ${slot.beaches - slot.without} of the ${slot.beaches} beaches in ${slot.areaName} have ${product}, and ${sources} — ${tail}`;
 }
+
+/**
+ * One product's answer: what was read, or why the area cannot report it.
+ *
+ * **Exclusive by construction, and typed rather than checked.** A withheld
+ * product is never read -- that is ADR-0048, and it is why an area page makes
+ * no request for a figure it has already decided not to print -- so exactly one
+ * of these two is present. Stating it in the type is what lets a component
+ * compose a chart tab out of it with a branch instead of an assertion that the
+ * read and the withholding line up.
+ *
+ * `WeekPanel` needs none of this and takes plain nulls, because its reads feed
+ * `if` guards that narrow a null on their own. The day chart's feed object
+ * literals, which do not.
+ */
+export type Answered<V> =
+  { view: V; withheld: null } | { view: null; withheld: NotShared };
+
+/** The read, or the withholding, as one awaitable. */
+export function answer<V>(
+  withheld: NotShared | null,
+  read: () => Promise<V>,
+): Promise<Answered<V>> {
+  return withheld === null
+    ? read().then((view) => ({ view, withheld: null }))
+    : Promise.resolve({ view: null, withheld });
+}

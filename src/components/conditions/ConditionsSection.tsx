@@ -17,8 +17,9 @@
  * panel reads and draws exactly what it did before areas existed. See ADR-0048
  * and `areaScope.ts`.
  *
- * The day chart is still one beach at a time and the area page says so. See
- * `docs/plans/areas-over-locations.md`.
+ * The map inside the day region is still one beach's own stretch of coast, and
+ * the area page says so where a map would be: the area map is its own slice.
+ * See `docs/plans/areas-over-locations.md`.
  */
 
 import { Suspense } from "react";
@@ -294,14 +295,7 @@ export function ConditionsSection({
         </Suspense>
       </div>
 
-      {beachSlug === null ? (
-        <p className="leading-relaxed max-w-130 text-base text-fog">
-          The day chart is still shown one beach at a time. Choose one above for
-          its hour-by-hour tide, swell, wind and air temperature.
-        </p>
-      ) : (
-        <>
-          {/*
+      {/*
         The day opens under the week. Its own suspense boundary for the same
         reason every region here has one: this is a second request to the
         National Weather Service — the words, where the week's cloud row reads
@@ -323,17 +317,21 @@ export function ConditionsSection({
         this file's tests mock `DayPanel` — so it is asserted in that panel's
         own tests instead.
       */}
-          <div className="mb-9">
-            <Suspense
-              fallback={
-                <p className="text-base text-fog">Reading the sky in words…</p>
-              }
-            >
-              <DayPanel slug={beachSlug} />
-            </Suspense>
-          </div>
-        </>
-      )}
+      <div className="mb-9">
+        <Suspense
+          fallback={
+            <p className="text-base text-fog">Reading the sky in words…</p>
+          }
+        >
+          {/*
+            The same pair again, and the last region to take it. A tab whose
+            product the area's beaches do not share keeps its place in the bar
+            and says so where the curve would be, which is the slot this chart
+            already uses for a beach with no MOP line.
+          */}
+          <DayPanel slug={reading} area={scope} />
+        </Suspense>
+      </div>
 
       {/*
         One block for everything true of every reading — the datum, what a buoy

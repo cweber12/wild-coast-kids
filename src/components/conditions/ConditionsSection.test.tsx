@@ -15,11 +15,9 @@ const DEFAULT_AREA = "la-jolla";
   declared beside it is not initialised when the factory is defined.
 */
 const SUSPEND = "suspend-the-panels";
+const dayPanel = vi.fn();
 vi.mock("@/components/conditions/DayPanel", () => ({
-  DayPanel: ({ slug }: { slug: string }) => {
-    if (slug === "suspend-the-panels") throw new Promise(() => {});
-    return <p>day for {slug}</p>;
-  },
+  DayPanel: (props: { slug: string }) => dayPanel(props),
 }));
 const weekPanel = vi.fn();
 vi.mock("@/components/conditions/WeekPanel", () => ({
@@ -59,6 +57,11 @@ beforeEach(() => {
   weekPanel.mockImplementation(({ slug }: { slug: string }) => {
     if (slug === "suspend-the-panels") throw new Promise(() => {});
     return <p>week for {slug}</p>;
+  });
+  dayPanel.mockReset();
+  dayPanel.mockImplementation(({ slug }: { slug: string }) => {
+    if (slug === "suspend-the-panels") throw new Promise(() => {});
+    return <p>day for {slug}</p>;
   });
 });
 const ripLevel = vi.fn();
@@ -518,21 +521,40 @@ test("every region on an area page reads through the same member", () => {
   const [measured] = measuredPanel.mock.calls[0] as [Record<string, unknown>];
   const [week] = weekPanel.mock.calls[0] as [Record<string, unknown>];
 
+  const [day] = dayPanel.mock.calls[0] as [Record<string, unknown>];
+
   expect(week.slug).toBe(measured.slug);
+  expect(day.slug).toBe(measured.slug);
   expect(week.area).toEqual(measured.area);
+  expect(day.area).toEqual(measured.area);
 });
 
 /**
- * The day chart is the region still to come, and the area page says so rather
- * than leaving a gap where it will be. The sentence names what a reader would
- * find there, since it is the whole of what the area cannot yet give them.
+ * The day chart takes the same pair, and the allowlist is here for the reason
+ * the other two carry one: an argument added quietly is how a region comes to
+ * answer for something nobody chose.
  */
-test("an area page says the day chart is still one beach at a time", () => {
+test("the day chart is asked for a beach and the area it stands for", () => {
   render(<ConditionsSection areaSlug="la-jolla" beachSlug={null} />);
 
-  expect(
-    screen.getByText(/day chart is still shown one beach at a time/),
-  ).toBeDefined();
+  const [props] = dayPanel.mock.calls[0] as [Record<string, unknown>];
+  expect(Object.keys(props).sort()).toEqual(["area", "slug"]);
+
+  const area = props.area as { name: string; beaches: number };
+  expect(area.name).toBe("La Jolla");
+  expect(props.slug).toBe("la-jolla-shores-beach");
+});
+
+/**
+ * All three regions answer for the area now, and the sentence that stood in for
+ * two of them is gone. Asserted as an absence as well as a presence: the
+ * placeholder is the thing a later change is most likely to leave behind.
+ */
+test("an area page carries every region, and no sentence standing in for one", () => {
+  render(<ConditionsSection areaSlug="la-jolla" beachSlug={null} />);
+
+  expect(screen.getByText(/measured for la-jolla-shores-beach/)).toBeDefined();
   expect(screen.getByText(/week for la-jolla-shores-beach/)).toBeDefined();
-  expect(screen.queryByText(/day for/)).toBeNull();
+  expect(screen.getByText(/day for la-jolla-shores-beach/)).toBeDefined();
+  expect(screen.queryByText(/one beach at a time/)).toBeNull();
 });
