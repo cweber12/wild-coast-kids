@@ -63,6 +63,19 @@ export type ShoreMapProps = {
    * `shore.ts` makes that choice.
    */
   segment: readonly Position[] | null;
+  /**
+   * A mark per beach this map is about, drawn across the coast at each.
+   *
+   * Empty on a beach map, which has one subject and draws it as a heavy run
+   * instead. `shore.ts` decides where they go; the length, the direction and
+   * the weight are decided here, because they are answers in plot units.
+   *
+   * **Marks and never targets.** The plan measured what making them tappable
+   * would cost: four of La Jolla's midpoints fall within 549 m of one another,
+   * so four marks at ADR-0004's 44px floor would need the map 2,634px wide.
+   * The list of beaches above the map is the control; these are for orientation.
+   */
+  ticks?: readonly Position[];
   /** The spoken equivalent of the whole picture. */
   description: string;
   /** What to say instead of a map when there is no box at all. */
@@ -144,10 +157,24 @@ export type ShoreMapProps = {
 const WIDTH = 100;
 const HEIGHT = 100;
 
+/**
+ * How long a beach's mark is, in plot units, so it is the same size on screen
+ * whatever ground the frame covers.
+ *
+ * Four units of a hundred, which at the map column's measured 472px is about
+ * 19px -- long enough to read as a mark across the coast at the review
+ * viewport, short enough that La Jolla's tightest pair, 1.2 units apart, reads
+ * as a cluster rather than as a single thick smudge. That crowding is accepted
+ * rather than solved, and the plan measured why: those four beaches really do
+ * sit within 549 m of one another.
+ */
+const TICK_UNITS = 4;
+
 export function ShoreMap({
   coast,
   bounds,
   segment,
+  ticks = [],
   description,
   absence,
   noCoast,
@@ -209,6 +236,58 @@ export function ShoreMap({
     A readout with its sources missing is an unattributed figure, and sources
     printed under a map with no readout name a bearing nobody can see.
   */
+  /*
+    Each mark, as a short line across the coast rather than a dot on it.
+
+    **Perpendicular to the coast where it is, not to the frame.** The direction
+    comes from the two drawn points either side of the mark, so a tick on a bay
+    shore that turns through a right angle inside one frame still crosses the
+    line rather than lying along it. It is the same reading ADR-0041 gave the
+    wash: take the direction from the walk rather than from a normal computed
+    once for the whole picture.
+
+    **A fixed length in plot units, so every mark is the same size on screen**
+    whatever ground the frame covers. An area is 1.7 km of coast at Ocean Beach
+    and 8.9 km at San Diego Bay - Central, and a mark measured in metres would
+    be five times bigger on one than the other.
+
+    A mark whose beach has no drawn coast near it -- the island in Mission Bay -
+    West, about 400 m off the traced shore -- takes the direction of the nearest
+    drawn point anyway. It lies off the line, which is where that beach is.
+  */
+  const marks = ticks.map((at) => {
+    const point = project(at.lat, at.lon);
+    if (drawn.length < 2) return { from: point, to: point };
+
+    let nearest = 0;
+    for (let index = 1; index < drawn.length; index += 1) {
+      if (
+        Math.hypot(drawn[index].x - point.x, drawn[index].y - point.y) <
+        Math.hypot(drawn[nearest].x - point.x, drawn[nearest].y - point.y)
+      ) {
+        nearest = index;
+      }
+    }
+
+    const before = drawn[Math.max(0, nearest - 1)];
+    const after = drawn[Math.min(drawn.length - 1, nearest + 1)];
+    const dx = after.x - before.x;
+    const dy = after.y - before.y;
+    const length = Math.hypot(dx, dy) || 1;
+    const half = TICK_UNITS / 2;
+
+    return {
+      from: {
+        x: point.x - (-dy / length) * half,
+        y: point.y - (dx / length) * half,
+      },
+      to: {
+        x: point.x + (-dy / length) * half,
+        y: point.y + (dx / length) * half,
+      },
+    };
+  });
+
   const hasReadout = readout !== null && readout !== undefined;
 
   return (
@@ -257,6 +336,21 @@ export function ShoreMap({
             rather than only hue: the two are the same ocean, so a reader who
             sees no colour still sees which part of the shore they chose.
           */}
+        {marks.map((mark, index) => (
+          <line
+            key={index}
+            x1={mark.from.x.toFixed(2)}
+            y1={mark.from.y.toFixed(2)}
+            x2={mark.to.x.toFixed(2)}
+            y2={mark.to.y.toFixed(2)}
+            className="stroke-purple-deep"
+            strokeWidth={2}
+            strokeLinecap="round"
+            vectorEffect="non-scaling-stroke"
+            data-tick=""
+          />
+        ))}
+
         {drawnSegment.length > 0 && (
           <path
             d={drawnSegment

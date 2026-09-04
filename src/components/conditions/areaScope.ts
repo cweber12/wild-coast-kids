@@ -50,8 +50,25 @@ import {
  * is not read at all, so no member's figure can leak into an area's answer.
  */
 export type AreaScope = {
+  /**
+   * Which area this is, for the one thing that needs to look it up again.
+   *
+   * The map is built from the area's own coast rather than from anything the
+   * scope carries pre-resolved, because a windowed coastline is a few hundred
+   * points and every panel would be handed it whether it drew a map or not.
+   */
+  slug: string;
   name: string;
-  beaches: number;
+  /**
+   * The area's member beaches, north to south.
+   *
+   * **The slugs and not just how many**, because two things need them and one
+   * of them needs which: the withheld sentences count them, and the area map
+   * draws the coast of every one and a mark at each. It was a count until the
+   * map arrived, and keeping both a count and a list would be two fields for
+   * one fact.
+   */
+  beaches: readonly string[];
   sources: AreaSources;
   /**
    * The member the surf zone bulletin is read through, which is not the member
@@ -110,8 +127,9 @@ export type NotShared = {
  */
 export function scopeFor(area: Area): AreaScope {
   return {
+    slug: area.slug,
     name: area.name,
-    beaches: area.beaches.length,
+    beaches: area.beaches,
     sources: areaSources(area),
     bulletinBeach: surfZoneBeachOf(area),
   };
@@ -136,7 +154,7 @@ export function withheldBy(
   return {
     agreement: source.kind,
     areaName: scope.name,
-    beaches: scope.beaches,
+    beaches: scope.beaches.length,
     distinct: source.kind === "mixed" ? source.distinct : 0,
     without: source.kind === "mixed" ? source.without : 0,
   };

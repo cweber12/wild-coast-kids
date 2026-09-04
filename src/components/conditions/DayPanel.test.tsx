@@ -1785,12 +1785,15 @@ test("the tab bar is the same four tabs at either scope", async () => {
 });
 
 /**
- * The map draws one beach's own stretch of coast. An area has no such run until
- * the area map lands, and drawing the first member's under the area's name is
- * the representative-beach lie ADR-0048 refuses -- so the column says what it
- * is missing rather than showing the wrong thing or nothing at all.
+ * An area page draws the area's own coast, which is the whole point of making
+ * the area the thing a reader picks: it had readings and a chooser and no
+ * picture of the place they were about.
+ *
+ * The spoken label says the count, because the picture cannot. Nothing on an
+ * area map is picked out, so a reader who cannot see it is owed the fact that
+ * this is several beaches' coast rather than one's.
  */
-test("an area page carries no map, and says what is there instead", async () => {
+test("an area page draws the whole area's coast", async () => {
   const { container } = render(
     await DayPanel({
       slug: "la-jolla-shores-beach",
@@ -1798,21 +1801,64 @@ test("an area page carries no map, and says what is there instead", async () => 
     }),
   );
 
-  expect(container.querySelector("svg[aria-label^='A map of']")).toBeNull();
-  expect(
-    screen.getByText(/The map draws one beach's own stretch of coast/),
-  ).toBeDefined();
-  expect(screen.getByText(/Choose a beach above for La Jolla's/)).toBeDefined();
+  const map = container.querySelector("svg[aria-label^='A map of']");
+  expect(map).not.toBeNull();
+  expect(map!.getAttribute("aria-label")).toBe(
+    "A map of La Jolla: the whole stretch of coast its 10 beaches sit on, " +
+      "each marked, with the open water shaded.",
+  );
+  // The placeholder it replaces is gone, and asserted gone: a sentence left
+  // beside a real map would read as the map having failed.
+  expect(screen.queryByText(/The map draws one beach's own/)).toBeNull();
 });
 
-/** And the beach page still draws it, which is what says the map was gated and not lost. */
-test("a beach page still draws its map", async () => {
+/**
+ * And nothing on it is drawn heavy, because no one beach is the subject.
+ *
+ * That is the zoom the plan describes rather than a missing feature: the beach
+ * page draws its own stretch heavy in a frame sized to it, and the two are two
+ * committed frames the route swaps between. Asserted against the beach page in
+ * the same test so it cannot pass by the marker having been renamed.
+ */
+test("an area map picks out no single beach, where a beach map does", async () => {
+  const onArea = render(
+    await DayPanel({
+      slug: "la-jolla-shores-beach",
+      area: await areaScope("la-jolla"),
+    }),
+  );
+  expect(onArea.container.querySelector("[data-segment]")).toBeNull();
+  onArea.unmount();
+
   const { container } = render(
     await DayPanel({ slug: "la-jolla-shores-beach" }),
   );
+  expect(container.querySelector("[data-segment]")).not.toBeNull();
+  expect(
+    container
+      .querySelector("svg[aria-label^='A map of']")!
+      .getAttribute("aria-label"),
+  ).toMatch(/^A map of La Jolla Shores Beach: its own stretch/);
+});
 
-  expect(container.querySelector("svg[aria-label^='A map of']")).not.toBeNull();
-  expect(screen.queryByText(/The map draws one beach's own/)).toBeNull();
+/**
+ * Every area gets a frame, which is what says this is not a feature only the
+ * area it was built against has. Measured over the twelve areas that draw one:
+ * the other six hold a single beach and show that beach's map instead.
+ */
+test("every multi-beach area has a coast to draw", async () => {
+  const { beachesByArea } = await import("@/lib/areas");
+  const { shoreViewForArea } = await import("./shore");
+
+  const drawn = beachesByArea().filter(({ area }) => area.beaches.length > 1);
+  expect(drawn).toHaveLength(12);
+
+  for (const { area } of drawn) {
+    const view = shoreViewForArea(area);
+    expect(view.bounds, area.slug).not.toBeNull();
+    expect(view.coast.length, area.slug).toBeGreaterThan(1);
+    expect(view.segment, area.slug).toBeNull();
+  }
 });
 
 /**
@@ -1919,4 +1965,103 @@ test("a beach page keeps the beach-scoped wording", async () => {
   expect(
     screen.getByText(/This forecast is not issued for this beach/),
   ).toBeDefined();
+});
+
+/**
+ * The readout arrives with the area map, and only where the area has a bearing
+ * to state.
+ *
+ * An area reports a wind bearing only where its beaches share a forecast cell
+ * and a swell bearing only where they share a model line. La Jolla shares
+ * neither, so no hour of any day has a needle — and `DayCompass` renders null
+ * in that state while `ShoreMap` would still draw its labelled box around it.
+ * That put an empty block under the coast, which reads as a fault. ADR-0051.
+ */
+test("an area with no shared cell or line carries the map and no readout", async () => {
+  const { container } = render(
+    await DayPanel({
+      slug: "la-jolla-shores-beach",
+      area: await areaScope("la-jolla"),
+    }),
+  );
+
+  expect(container.querySelector("svg[aria-label^='A map of']")).not.toBeNull();
+  expect(container.querySelector("[data-readout]")).toBeNull();
+});
+
+/** And an area that does share a cell keeps its wind, which is the promise. */
+test("an area that shares a forecast cell keeps its readout", async () => {
+  const { container } = render(
+    await DayPanel({
+      slug: "mission-bay-riviera-shores",
+      area: await areaScope("mission-bay-west"),
+    }),
+  );
+
+  const readout = container.querySelector("[data-readout]");
+  expect(readout).not.toBeNull();
+  expect(readout!.textContent).toContain("Wind");
+});
+
+/**
+ * A beach page never reaches the empty state, and this is what says the fix is
+ * about areas rather than a guard bolted onto both: every beach in the
+ * inventory binds a forecast cell, so there is always a wind arrow.
+ */
+test("a beach page always has a readout", async () => {
+  const { container } = render(
+    await DayPanel({ slug: "la-jolla-shores-beach" }),
+  );
+
+  expect(container.querySelector("[data-readout]")).not.toBeNull();
+});
+
+/**
+ * A slug the inventory does not hold draws no map, rather than inventing one.
+ *
+ * Unreachable from a URL — both routes resolve the slug before rendering — and
+ * asserted because this panel is handed a slug rather than a beach, so the
+ * question of what it does with a bad one has an answer either way. It was
+ * covered incidentally while an area page took this path; the area map moved
+ * area pages onto their own, so it is asserted deliberately now.
+ */
+test("a slug the inventory does not hold draws no map", async () => {
+  const { container } = render(await DayPanel({ slug: "not-a-beach" }));
+
+  expect(container.querySelector("svg[aria-label^='A map of']")).toBeNull();
+  // The rest of the region still renders: the map is one part of it.
+  expect(container.querySelector("[data-series-tab]")).not.toBeNull();
+});
+
+/**
+ * The marks reach the page: ten beaches in La Jolla, ten marks on its coast.
+ *
+ * This is the half that makes the picture about an area rather than about a
+ * stretch of coast that happens to be wide, and it is asserted here as well as
+ * in `shore.test.ts` because a view model nothing renders is not a map.
+ */
+test("an area map marks every beach the area holds", async () => {
+  const { container } = render(
+    await DayPanel({
+      slug: "la-jolla-shores-beach",
+      area: await areaScope("la-jolla"),
+    }),
+  );
+
+  expect(container.querySelectorAll("[data-tick]")).toHaveLength(10);
+  expect(
+    container
+      .querySelector("svg[aria-label^='A map of']")!
+      .getAttribute("aria-label"),
+  ).toContain("its 10 beaches sit on, each marked");
+});
+
+/** And a beach map marks nothing, because it draws its one subject heavy. */
+test("a beach map marks nothing and draws its own stretch instead", async () => {
+  const { container } = render(
+    await DayPanel({ slug: "la-jolla-shores-beach" }),
+  );
+
+  expect(container.querySelectorAll("[data-tick]")).toHaveLength(0);
+  expect(container.querySelector("[data-segment]")).not.toBeNull();
 });
