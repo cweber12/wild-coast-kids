@@ -99,6 +99,41 @@ test("a repeated coordinate is dropped rather than kept as a zero-length step", 
   ]);
 });
 
+/**
+ * The stronger property `withoutRepeats` does not give, and the one
+ * `shoreViewForArea`'s square frame rests on.
+ *
+ * `withoutRepeats` drops a point equal to the one before it, so it rules out
+ * *adjacent* repeats only. A coordinate appearing twice with other points
+ * between them survives it, and that is the case that matters: `windowAround`
+ * hands `seawardFrom` a slice, `seawardFrom` reads the slice's first and last
+ * points, and those two are never adjacent. Equal there means a window with no
+ * direction, and `shoreViewForArea` would have no way to square its box.
+ *
+ * So this is not a fact about tidiness. It is the premise under an error that
+ * is unreachable today: if this ever fails, that throw becomes live, and this
+ * test is where the reason is written down.
+ */
+test("no coordinate appears at two indices, which is what makes a window's ends distinct", () => {
+  const points = coastline();
+  const seen = new Map<string, number>();
+
+  for (const [index, point] of points.entries()) {
+    const key = `${point.lat},${point.lon}`;
+    const first = seen.get(key);
+    expect(
+      first,
+      `${key} is at index ${first} and again at ${index}`,
+    ).toBeUndefined();
+    seen.set(key, index);
+  }
+
+  // The probe: the map really was built, so a run finding an empty coastline
+  // would not pass this by having nothing to compare.
+  expect(seen.size).toBe(points.length);
+  expect(points.length).toBeGreaterThan(1);
+});
+
 test("the window keeps one point past each end so the coast reaches the frame", () => {
   // Clipping to exactly what falls inside would draw a coastline that stops
   // short of the edge with white on both sides of it, which reads as the land

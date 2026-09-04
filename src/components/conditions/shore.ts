@@ -30,24 +30,47 @@ import {
   windowAround,
 } from "@/lib/coastline";
 
+/**
+ * One beach an area holds, as much of it as a map needs to draw a pin.
+ *
+ * **Identity travels with the position, because the mark is now named.** It was
+ * a bare `Position` while the mark was a tick: a stroke across the coast says
+ * "a beach is here" and needs nothing else. A pin carries the beach's name and
+ * goes somewhere when it is clicked, and both of those are facts about the
+ * beach rather than about the picture -- so they come from the file that reads
+ * `beaches.json` rather than being looked up a second time by the one that
+ * draws. See ADR-0053.
+ *
+ * The slug and not a URL. Which route a beach sits on is the page's business
+ * and changed once already under ADR-0047; this module knows what a beach is,
+ * not where it is published.
+ */
+export type BeachMark = {
+  slug: string;
+  name: string;
+  at: Position;
+};
+
 /** Everything `ShoreMap` needs, and nothing it has to look up for itself. */
 export type ShoreView = {
   coast: readonly ShorePoint[];
   bounds: Bounds | null;
   /**
-   * Where each beach this map is about sits, one position per beach.
+   * Each beach this map is about, one entry per beach.
    *
    * Empty on a beach map, which has one subject and draws it as a heavy run
-   * instead. On an area map it is every member's midpoint, and it is the whole
-   * of what makes the picture about an area rather than about a stretch of
-   * coast that happens to be wide.
+   * instead. On an area map it is every member at its own midpoint, and it is
+   * the whole of what makes the picture about an area rather than about a
+   * stretch of coast that happens to be wide.
    *
-   * **Positions and not marks.** Where the tick is drawn, how long it is and
-   * which way it lies are `ShoreMap`'s, because they are answers in plot units
-   * and this file works in degrees -- the same split the rest of the module
-   * keeps: the assembler reads, the component draws.
+   * **Positions and names, never placement.** Where a pin sits on the screen,
+   * whether its label fits beside it or has to be carried out to a column, and
+   * which side of the frame that column stands on are all `ShoreMap`'s, because
+   * they are answers in plot units and this file works in degrees -- the same
+   * split the rest of the module keeps: the assembler reads, the component
+   * draws.
    */
-  ticks: readonly Position[];
+  marks: readonly BeachMark[];
   /**
    * Where this beach is, drawn heavier than anything around it.
    *
@@ -331,7 +354,7 @@ export function shoreViewFor(beach: Beach): ShoreView {
   const coast =
     run === null || bounds === null ? [] : windowAround(coastline(), bounds);
 
-  return { coast, bounds, ticks: [], segment: beachStretch(run, beach) };
+  return { coast, bounds, marks: [], segment: beachStretch(run, beach) };
 }
 
 /**
@@ -366,7 +389,10 @@ export function shoreViewFor(beach: Beach): ShoreView {
  *
  * Throws for an area naming a beach the inventory does not have, like
  * `areaSources` and for the same reason: two data files disagreeing should stop
- * a build rather than quietly draw a coast with a beach missing from it.
+ * a build rather than quietly draw a coast with a beach missing from it. It
+ * throws a second time, on the same reasoning, where the windowed coast gives
+ * no seaward direction and the frame therefore cannot be squared -- see the
+ * comment on that guard for why it is unreachable and what would make it live.
  */
 export function shoreViewForArea(area: Area): ShoreView {
   const bySlug = new Map(allBeaches().map((beach) => [beach.slug, beach]));
@@ -394,11 +420,40 @@ export function shoreViewForArea(area: Area): ShoreView {
     SHORE_WINDOW_MARGIN,
   );
   if (boxed === null)
-    return { coast: [], bounds: null, ticks: [], segment: null };
+    return { coast: [], bounds: null, marks: [], segment: null };
 
+  /*
+    The draft window always has a direction, so failing to find one stops the
+    build rather than quietly returning a frame that is not square.
+
+    It is the same call the missing-beach throw above makes, for the same
+    reason: this function has two data files under it, and a picture drawn from
+    a disagreement between them is worse than no picture. What ADR-0051 promises
+    is a *square* frame -- `boxed` is the un-squared box, so falling back to it
+    would ship the one thing that decision rules out, invisibly, on whichever
+    area happened to trip it.
+
+    Unreachable as the data stands, and the argument is short enough to check.
+    `boxed` is non-null, so at least two coastline points with different
+    coordinates lie inside it; `windowAround` therefore returns a slice of two
+    or more whose first and last sit at different indices; and no coordinate
+    appears at two indices of the committed shore, which `coastline.test.ts`
+    pins. Different coordinates give a direction, so `seawardFrom` answers.
+
+    That last step is the load-bearing one and it is the weakest: it is a
+    property of the traced file rather than of the code. `withoutRepeats` does
+    not give it -- it drops a point equal to its neighbour, and these two are
+    never neighbours -- so a regenerated shore could take it away. The test
+    fails first if that happens, which is the point of stating it there.
+  */
   const draft = windowAround(coastline(), boxed);
   const seaward = seawardFrom(draft);
-  const bounds = seaward === null ? boxed : squareToward(boxed, seaward);
+  if (seaward === null) {
+    throw new Error(
+      `The coast under ${area.slug} gives no seaward direction, so its frame cannot be squared. The traced shoreline has likely gained a repeated coordinate; see coastline.test.ts.`,
+    );
+  }
+  const bounds = squareToward(boxed, seaward);
 
   /*
     A mark per member, at the middle of the coast that member occupies.
@@ -425,23 +480,24 @@ export function shoreViewForArea(area: Area): ShoreView {
     shore. That is a true statement about an island the committed mainland ring
     does not hold, and the only mark on any area map that is not on the line.
   */
-  const ticks = area.beaches.map((slug) => {
+  const marks = area.beaches.map((slug) => {
     const beach = bySlug.get(slug)!;
     const run = coastRunFor(beach);
-    if (run === null) {
-      return {
-        lat: (beach.segment.upper.lat + beach.segment.lower.lat) / 2,
-        lon: (beach.segment.upper.lon + beach.segment.lower.lon) / 2,
-      };
-    }
-    const middle = run.stretch[Math.floor(run.stretch.length / 2)];
-    return { lat: middle.lat, lon: middle.lon };
+    const at =
+      run === null
+        ? {
+            lat: (beach.segment.upper.lat + beach.segment.lower.lat) / 2,
+            lon: (beach.segment.upper.lon + beach.segment.lower.lon) / 2,
+          }
+        : run.stretch[Math.floor(run.stretch.length / 2)];
+
+    return { slug, name: beach.name, at: { lat: at.lat, lon: at.lon } };
   });
 
   return {
     coast: windowAround(coastline(), bounds),
     bounds,
-    ticks,
+    marks,
     segment: null,
   };
 }

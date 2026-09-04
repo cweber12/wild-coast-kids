@@ -45,7 +45,22 @@
 import type { ReactNode } from "react";
 import type { Bounds, Position, ShorePoint } from "@/lib/coastline";
 import { projectionFor } from "@/lib/coastline";
+import { BeachPins } from "./BeachPins";
 import { seaWash } from "./wash";
+
+/**
+ * One beach to pin, as this component needs it: a place, a name and a
+ * destination.
+ *
+ * `shore.ts` answers with a slug because it knows what a beach is; the caller
+ * turns that into a URL because it knows where beaches are published. Neither
+ * job belongs to the thing that draws.
+ */
+export type ShoreMapMark = {
+  name: string;
+  href: string;
+  at: Position;
+};
 
 export type ShoreMapProps = {
   /** The windowed coast in walk order. Empty draws no shoreline and says so. */
@@ -64,18 +79,26 @@ export type ShoreMapProps = {
    */
   segment: readonly Position[] | null;
   /**
-   * A mark per beach this map is about, drawn across the coast at each.
+   * A pin per beach this map is about: where it is, what it is called and where
+   * it goes when a reader clicks it.
    *
    * Empty on a beach map, which has one subject and draws it as a heavy run
-   * instead. `shore.ts` decides where they go; the length, the direction and
-   * the weight are decided here, because they are answers in plot units.
+   * instead. `shore.ts` decides where they go and what they are called; this
+   * component projects them and hands them to `BeachPins`, which decides the
+   * placement — those are answers in plot units.
    *
-   * **Marks and never targets.** The plan measured what making them tappable
-   * would cost: four of La Jolla's midpoints fall within 549 m of one another,
-   * so four marks at ADR-0004's 44px floor would need the map 2,634px wide.
-   * The list of beaches above the map is the control; these are for orientation.
+   * **The href is the caller's**, because which route a beach is published on
+   * is the page's business and this component resolves nothing. It was true of
+   * the copy already and it is true of a URL for the same reason.
+   *
+   * **Named and clickable, which reverses ADR-0052's "marks, never targets".**
+   * That rule read one area's arithmetic onto all twelve: La Jolla's marks
+   * really do sit 4.5px apart, but nine of the twelve areas carry their labels
+   * beside their beaches with room to spare. See ADR-0053, which also settles
+   * why undersized pins conform — the 44px beach list above the map is the
+   * equivalent control WCAG's exception asks for.
    */
-  ticks?: readonly Position[];
+  marks?: readonly ShoreMapMark[];
   /** The spoken equivalent of the whole picture. */
   description: string;
   /** What to say instead of a map when there is no box at all. */
@@ -157,24 +180,11 @@ export type ShoreMapProps = {
 const WIDTH = 100;
 const HEIGHT = 100;
 
-/**
- * How long a beach's mark is, in plot units, so it is the same size on screen
- * whatever ground the frame covers.
- *
- * Four units of a hundred, which at the map column's measured 472px is about
- * 19px -- long enough to read as a mark across the coast at the review
- * viewport, short enough that La Jolla's tightest pair, 1.2 units apart, reads
- * as a cluster rather than as a single thick smudge. That crowding is accepted
- * rather than solved, and the plan measured why: those four beaches really do
- * sit within 549 m of one another.
- */
-const TICK_UNITS = 4;
-
 export function ShoreMap({
   coast,
   bounds,
   segment,
-  ticks = [],
+  marks = [],
   description,
   absence,
   noCoast,
@@ -237,138 +247,113 @@ export function ShoreMap({
     printed under a map with no readout name a bearing nobody can see.
   */
   /*
-    Each mark, as a short line across the coast rather than a dot on it.
+    Each pin, projected and handed on, and that is the whole of this
+    component's part in it.
 
-    **Perpendicular to the coast where it is, not to the frame.** The direction
-    comes from the two drawn points either side of the mark, so a tick on a bay
-    shore that turns through a right angle inside one frame still crosses the
-    line rather than lying along it. It is the same reading ADR-0041 gave the
-    wash: take the direction from the walk rather than from a normal computed
-    once for the whole picture.
+    **The geometry that used to live here is gone rather than restyled.** A
+    mark was a short line taking its direction from the two drawn points either
+    side of it -- perpendicular to the coast, ADR-0052 said, and it was, to a
+    two-vertex window. Measured against the shore at the scale a reader sees it,
+    over a fifteen-vertex window, four of La Jolla's ten sat at less than 45
+    degrees to the line and one at 11, which is a stroke drawn *along* the coast
+    it was meant to cross. On a 5,368-point traced shore that window is noise,
+    so the rule was answering a question about the wrong thing.
 
-    **A fixed length in plot units, so every mark is the same size on screen**
-    whatever ground the frame covers. An area is 1.7 km of coast at Ocean Beach
-    and 8.9 km at San Diego Bay - Central, and a mark measured in metres would
-    be five times bigger on one than the other.
-
-    A mark whose beach has no drawn coast near it -- the island in Mission Bay -
-    West, about 400 m off the traced shore -- takes the direction of the nearest
-    drawn point anyway. It lies off the line, which is where that beach is.
+    A pin needs no direction, which is why nothing replaces it.
   */
-  const marks = ticks.map((at) => {
-    const point = project(at.lat, at.lon);
-    if (drawn.length < 2) return { from: point, to: point };
-
-    let nearest = 0;
-    for (let index = 1; index < drawn.length; index += 1) {
-      if (
-        Math.hypot(drawn[index].x - point.x, drawn[index].y - point.y) <
-        Math.hypot(drawn[nearest].x - point.x, drawn[nearest].y - point.y)
-      ) {
-        nearest = index;
-      }
-    }
-
-    const before = drawn[Math.max(0, nearest - 1)];
-    const after = drawn[Math.min(drawn.length - 1, nearest + 1)];
-    const dx = after.x - before.x;
-    const dy = after.y - before.y;
-    const length = Math.hypot(dx, dy) || 1;
-    const half = TICK_UNITS / 2;
-
-    return {
-      from: {
-        x: point.x - (-dy / length) * half,
-        y: point.y - (dx / length) * half,
-      },
-      to: {
-        x: point.x + (-dy / length) * half,
-        y: point.y + (dx / length) * half,
-      },
-    };
-  });
+  const pins = marks.map((mark) => ({
+    name: mark.name,
+    href: mark.href,
+    at: project(mark.at.lat, mark.at.lon),
+  }));
 
   const hasReadout = readout !== null && readout !== undefined;
 
   return (
     <div>
-      <svg
-        role="img"
-        aria-label={description}
-        viewBox={`0 0 ${WIDTH} ${HEIGHT}`}
-        className="rounded-tile border-[1.5px] border-ocean block h-auto w-full bg-white/60"
-      >
-        {/*
+      {/*
+        The picture and the pins over it, in a box that is theirs alone.
+
+        The wrapper is as tight as it can be, around the frame and nothing
+        else: the pins are placed as percentages of it, so anything else inside
+        would move them. The readout and the credits stay outside for that
+        reason and not only for ADR-0038's.
+      */}
+      <div className="relative">
+        <svg
+          role="img"
+          aria-label={description}
+          viewBox={`0 0 ${WIDTH} ${HEIGHT}`}
+          className="rounded-tile border-[1.5px] border-ocean block h-auto w-full bg-white/60"
+        >
+          {/*
             One wash, no gradient and no depth. The sea is the only filled
             region on this map, so a reader can tell water from land at a glance
             without a legend -- and it is a flat tint rather than a shaded one,
             because shading implies depth and depth here would be invented.
           */}
-        {sea !== null && (
-          <path
-            d={`${sea
-              .map(
-                (at, index) =>
-                  `${index === 0 ? "M" : "L"}${at.x.toFixed(2)} ${at.y.toFixed(2)}`,
-              )
-              .join(" ")} Z`}
-            className="fill-ocean"
-            fillOpacity={0.16}
-            data-sea=""
-          />
-        )}
+          {sea !== null && (
+            <path
+              d={`${sea
+                .map(
+                  (at, index) =>
+                    `${index === 0 ? "M" : "L"}${at.x.toFixed(2)} ${at.y.toFixed(2)}`,
+                )
+                .join(" ")} Z`}
+              className="fill-ocean"
+              fillOpacity={0.16}
+              data-sea=""
+            />
+          )}
 
-        {hasCoast && (
-          <path
-            d={path}
-            fill="none"
-            className="stroke-ocean"
-            strokeWidth={1.2}
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            vectorEffect="non-scaling-stroke"
-            data-coast=""
-          />
-        )}
+          {hasCoast && (
+            <path
+              d={path}
+              fill="none"
+              className="stroke-ocean"
+              strokeWidth={1.2}
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              vectorEffect="non-scaling-stroke"
+              data-coast=""
+            />
+          )}
 
-        {/*
+          {/*
             This beach's own stretch, heavier than the coast it sits on. Weight
             rather than only hue: the two are the same ocean, so a reader who
             sees no colour still sees which part of the shore they chose.
           */}
-        {marks.map((mark, index) => (
-          <line
-            key={index}
-            x1={mark.from.x.toFixed(2)}
-            y1={mark.from.y.toFixed(2)}
-            x2={mark.to.x.toFixed(2)}
-            y2={mark.to.y.toFixed(2)}
-            className="stroke-purple-deep"
-            strokeWidth={2}
-            strokeLinecap="round"
-            vectorEffect="non-scaling-stroke"
-            data-tick=""
-          />
-        ))}
+          {drawnSegment.length > 0 && (
+            <path
+              d={drawnSegment
+                .map(
+                  (at, index) =>
+                    `${index === 0 ? "M" : "L"}${at.x.toFixed(2)} ${at.y.toFixed(2)}`,
+                )
+                .join(" ")}
+              fill="none"
+              className="stroke-purple-deep"
+              strokeWidth={3.5}
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              vectorEffect="non-scaling-stroke"
+              data-segment=""
+            />
+          )}
+        </svg>
 
-        {drawnSegment.length > 0 && (
-          <path
-            d={drawnSegment
-              .map(
-                (at, index) =>
-                  `${index === 0 ? "M" : "L"}${at.x.toFixed(2)} ${at.y.toFixed(2)}`,
-              )
-              .join(" ")}
-            fill="none"
-            className="stroke-purple-deep"
-            strokeWidth={3.5}
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            vectorEffect="non-scaling-stroke"
-            data-segment=""
-          />
-        )}
-      </svg>
+        {/*
+          The pins, over the picture rather than inside it.
+
+          Inside would put them under the SVG's own `role="img"`, which
+          declares the whole frame one graphic and hides everything within it
+          from assistive technology -- so the links a reader most needs a name
+          for would be the ones they could not reach. Outside, they are
+          ordinary anchors in the document.
+        */}
+        <BeachPins marks={pins} />
+      </div>
 
       {/*
         Under the picture rather than over it, which is ADR-0038 reversing

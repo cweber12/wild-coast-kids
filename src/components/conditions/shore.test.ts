@@ -578,12 +578,17 @@ test("every beach in an area is marked, on its own coast", () => {
   let offTheLine = 0;
 
   for (const { area, beaches } of beachesByArea()) {
-    const { ticks } = shoreViewForArea(area);
-    expect(ticks, area.slug).toHaveLength(beaches.length);
+    const { marks } = shoreViewForArea(area);
+    expect(marks, area.slug).toHaveLength(beaches.length);
 
-    for (const [index, tick] of ticks.entries()) {
+    for (const [index, mark] of marks.entries()) {
       const beach = beaches[index];
-      const metres = nearestOn(coastline(), tick)!.metres;
+      const metres = nearestOn(coastline(), mark.at)!.metres;
+
+      // The pin is named and goes somewhere, so identity travels with the
+      // position. It is the same beach the frame was built from, in order.
+      expect(mark.slug, area.slug).toBe(beach.slug);
+      expect(mark.name, beach.slug).toBe(beach.name);
 
       if (coastRunFor(beach) === null) {
         // The island. Its mark is where that beach is, which is off the line.
@@ -607,13 +612,13 @@ test("every beach in an area is marked, on its own coast", () => {
  */
 test("every mark falls inside its area's frame", () => {
   for (const { area } of beachesByArea()) {
-    const { bounds, ticks } = shoreViewForArea(area);
+    const { bounds, marks } = shoreViewForArea(area);
 
-    for (const tick of ticks) {
-      expect(tick.lat, area.slug).toBeGreaterThanOrEqual(bounds!.south);
-      expect(tick.lat, area.slug).toBeLessThanOrEqual(bounds!.north);
-      expect(tick.lon, area.slug).toBeGreaterThanOrEqual(bounds!.west);
-      expect(tick.lon, area.slug).toBeLessThanOrEqual(bounds!.east);
+    for (const { at } of marks) {
+      expect(at.lat, area.slug).toBeGreaterThanOrEqual(bounds!.south);
+      expect(at.lat, area.slug).toBeLessThanOrEqual(bounds!.north);
+      expect(at.lon, area.slug).toBeGreaterThanOrEqual(bounds!.west);
+      expect(at.lon, area.slug).toBeLessThanOrEqual(bounds!.east);
     }
   }
 });
@@ -621,6 +626,6 @@ test("every mark falls inside its area's frame", () => {
 /** A beach map has one subject and draws it heavy, so it marks nothing. */
 test("a beach map carries no marks", () => {
   for (const beach of allBeaches()) {
-    expect(shoreViewFor(beach).ticks, beach.slug).toEqual([]);
+    expect(shoreViewFor(beach).marks, beach.slug).toEqual([]);
   }
 });

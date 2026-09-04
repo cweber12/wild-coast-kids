@@ -300,106 +300,63 @@ test("the map's drawing space holds the picture and nothing else", () => {
 });
 
 /* =========================================================================
- * Marks, one per beach an area holds
+ * Pins, one per beach an area holds
  * ========================================================================= */
 
-/** Where a mark's two ends are, in plot units. */
-function markEnds(index = 0) {
-  const marks = [...document.querySelectorAll("[data-tick]")];
-  const line = marks[index];
-  return {
-    count: marks.length,
-    from: {
-      x: Number(line.getAttribute("x1")),
-      y: Number(line.getAttribute("y1")),
-    },
-    to: {
-      x: Number(line.getAttribute("x2")),
-      y: Number(line.getAttribute("y2")),
-    },
-  };
-}
+/** Two marks far enough apart in y that both labels sit beside their beaches. */
+const APART = [
+  { name: "North Beach", href: "/conditions/here/north", at: COAST[0] },
+  { name: "South Beach", href: "/conditions/here/south", at: COAST[3] },
+];
 
-/** A beach map has one subject and draws it heavy, so it carries no marks. */
-test("no ticks given draws no marks, which is every beach map", () => {
-  render(<ShoreMap {...PROPS} />);
+/** A beach map has one subject and draws it heavy, so it carries no pins. */
+test("no marks given draws no pins, which is every beach map", () => {
+  const { container } = render(<ShoreMap {...PROPS} />);
 
-  expect(document.querySelectorAll("[data-tick]")).toHaveLength(0);
+  expect(container.querySelectorAll("[data-pin]")).toHaveLength(0);
   // And the heavy run it draws instead is still there, so this is not just an
   // empty picture passing both ways.
-  expect(document.querySelector("[data-segment]")).not.toBeNull();
+  expect(container.querySelector("[data-segment]")).not.toBeNull();
 });
 
-test("a mark is drawn for every position given", () => {
-  render(<ShoreMap {...PROPS} segment={null} ticks={COAST.slice(0, 3)} />);
+test("a pin is drawn for every beach given, named and pointing somewhere", () => {
+  render(<ShoreMap {...PROPS} segment={null} marks={APART} />);
 
-  expect(document.querySelectorAll("[data-tick]")).toHaveLength(3);
+  for (const beach of APART) {
+    const link = screen.getByRole("link", { name: beach.name });
+    expect(link.getAttribute("href")).toBe(beach.href);
+  }
+  expect(document.querySelectorAll("[data-pin]")).toHaveLength(APART.length);
 });
 
 /**
- * A mark crosses the coast rather than lying along it, which is the whole of
- * what makes it read as a mark.
+ * The ticks are gone rather than restyled, which is the half of ADR-0053 a
+ * test can hold. Their direction came from a two-vertex window on a
+ * 5,368-point shore, and measured against the coast at the scale a reader sees
+ * it four of La Jolla's ten sat at under 45 degrees to the line.
+ */
+test("nothing on the map is a tick any more", () => {
+  const { container } = render(
+    <ShoreMap {...PROPS} segment={null} marks={APART} />,
+  );
+
+  expect(container.querySelectorAll("[data-tick]")).toHaveLength(0);
+});
+
+/**
+ * The pins are siblings of the picture, not children of it.
  *
- * Asserted as a dot product against the local coast direction rather than
- * against a fixed axis: the shore turns through more than a right angle inside
- * one frame on the bays, so a mark that were perpendicular to the *frame* would
- * lie flat along the line at half the beaches in Mission Bay.
+ * The frame carries `role="img"` with one label for the whole drawing, which
+ * makes everything inside it opaque to assistive technology. A link in there
+ * would be a link no screen reader could reach — so the one reader who most
+ * needs a beach to be named would be the one who could not get to it.
  */
-test("a mark crosses the coast, not along it", () => {
-  render(<ShoreMap {...PROPS} segment={null} ticks={[COAST[1]]} />);
-
-  const project = projectionFor(BOUNDS, { width: 100, height: 100 });
-  const before = project(COAST[0].lat, COAST[0].lon);
-  const after = project(COAST[2].lat, COAST[2].lon);
-  const { from, to } = markEnds();
-
-  const coastDir = { x: after.x - before.x, y: after.y - before.y };
-  const markDir = { x: to.x - from.x, y: to.y - from.y };
-  const dot =
-    (coastDir.x * markDir.x + coastDir.y * markDir.y) /
-    (Math.hypot(coastDir.x, coastDir.y) * Math.hypot(markDir.x, markDir.y));
-
-  // Perpendicular to within a rounding error of the two-decimal coordinates.
-  expect(Math.abs(dot)).toBeLessThan(0.01);
-});
-
-/**
- * Every mark is the same size on screen whatever ground the frame covers. An
- * area is 1.7 km of coast at Ocean Beach and 8.9 km at San Diego Bay – Central,
- * and a mark measured in metres would be five times bigger on one than on the
- * other.
- */
-test("a mark is a fixed length in plot units, not in metres", () => {
-  const wide = render(
-    <ShoreMap {...PROPS} segment={null} ticks={[COAST[1]]} />,
-  );
-  const inWide = markEnds();
-  const wideLength = Math.hypot(
-    inWide.to.x - inWide.from.x,
-    inWide.to.y - inWide.from.y,
-  );
-  wide.unmount();
-
-  // The same coast in a box covering a tenth of the ground.
-  render(
-    <ShoreMap
-      {...PROPS}
-      segment={null}
-      ticks={[COAST[1]]}
-      bounds={{
-        south: 32.8555,
-        north: 32.8645,
-        west: -117.2645,
-        east: -117.2555,
-      }}
-    />,
-  );
-  const inTight = markEnds();
-  const tightLength = Math.hypot(
-    inTight.to.x - inTight.from.x,
-    inTight.to.y - inTight.from.y,
+test("the pins are outside the frame's own graphic, so they stay reachable", () => {
+  const { container } = render(
+    <ShoreMap {...PROPS} segment={null} marks={APART} />,
   );
 
-  expect(wideLength).toBeCloseTo(tightLength, 1);
-  expect(wideLength).toBeCloseTo(4, 1);
+  const svg = container.querySelector("svg[role='img']")!;
+  expect(svg.querySelectorAll("[data-pin]")).toHaveLength(0);
+  expect(container.querySelectorAll("[data-pin]")).toHaveLength(APART.length);
 });
