@@ -1805,7 +1805,8 @@ test("an area page draws the whole area's coast", async () => {
   expect(map).not.toBeNull();
   expect(map!.getAttribute("aria-label")).toBe(
     "A map of La Jolla: the whole stretch of coast its 10 beaches sit on, " +
-      "each marked, with the open water shaded.",
+      "with the open water shaded. Each beach is pinned on it, and the pins " +
+      "follow as links.",
   );
   // The placeholder it replaces is gone, and asserted gone: a sentence left
   // beside a real map would read as the map having failed.
@@ -2034,13 +2035,16 @@ test("a slug the inventory does not hold draws no map", async () => {
 });
 
 /**
- * The marks reach the page: ten beaches in La Jolla, ten marks on its coast.
+ * The pins reach the page: ten beaches in La Jolla, ten named links on its map.
  *
  * This is the half that makes the picture about an area rather than about a
  * stretch of coast that happens to be wide, and it is asserted here as well as
  * in `shore.test.ts` because a view model nothing renders is not a map.
+ *
+ * The href is this component's contribution -- `shore.ts` answers with a slug
+ * and knows nothing about routes -- so it is checked here rather than there.
  */
-test("an area map marks every beach the area holds", async () => {
+test("an area map pins every beach the area holds, each linked", async () => {
   const { container } = render(
     await DayPanel({
       slug: "la-jolla-shores-beach",
@@ -2048,20 +2052,28 @@ test("an area map marks every beach the area holds", async () => {
     }),
   );
 
-  expect(container.querySelectorAll("[data-tick]")).toHaveLength(10);
+  const pins = [...container.querySelectorAll("[data-pin]")];
+  expect(pins).toHaveLength(10);
+  expect(pins.map((pin) => pin.getAttribute("href"))).toContain(
+    "/conditions/la-jolla/la-jolla-cove",
+  );
+  // Every pin names its beach, so none is an anonymous glyph.
+  for (const pin of pins)
+    expect(pin.textContent!.trim().length).toBeGreaterThan(0);
+
   expect(
     container
       .querySelector("svg[aria-label^='A map of']")!
       .getAttribute("aria-label"),
-  ).toContain("its 10 beaches sit on, each marked");
+  ).toContain("its 10 beaches sit on");
 });
 
-/** And a beach map marks nothing, because it draws its one subject heavy. */
-test("a beach map marks nothing and draws its own stretch instead", async () => {
+/** And a beach map pins nothing, because it draws its one subject heavy. */
+test("a beach map pins nothing and draws its own stretch instead", async () => {
   const { container } = render(
     await DayPanel({ slug: "la-jolla-shores-beach" }),
   );
 
-  expect(container.querySelectorAll("[data-tick]")).toHaveLength(0);
+  expect(container.querySelectorAll("[data-pin]")).toHaveLength(0);
   expect(container.querySelector("[data-segment]")).not.toBeNull();
 });

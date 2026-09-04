@@ -1,6 +1,7 @@
 # 0052 — A beach is marked on its area's map
 
-Date: 2026-09-04. Status: accepted. **Amends ADR-0033**, which says the map
+Date: 2026-09-04. Status: superseded by ADR-0053, 2026-09-04. **Amends
+ADR-0033**, which says the map
 plots nothing but the place. Completes ADR-0051, which gave an area a frame and
 deliberately shipped it without marks. Nothing about a beach's own map changes.
 

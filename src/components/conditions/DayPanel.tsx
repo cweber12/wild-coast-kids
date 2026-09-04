@@ -417,14 +417,20 @@ function mapDescription(beachName: string): string {
  * stretch, since no one beach is the subject -- so a reader who cannot see it
  * is owed the fact that this is several beaches' coast rather than one's.
  *
- * It does not name them. The list of beaches is a heading and a set of links
- * further up the page, which is where a reader goes to choose one; repeating
- * ten names inside the map's label would make the label the list.
+ * It does not name them, and now it does not have to. The pins themselves are
+ * links, sitting outside the frame's own graphic precisely so that a reader
+ * using assistive technology reaches them -- so the names arrive immediately
+ * after this sentence, in the order the beaches run down the coast. Listing
+ * them here as well would say everything twice.
+ *
+ * **It says they are coming, though**, because a graphic followed by ten
+ * unheralded links is a reader wondering what they belong to. ADR-0053.
  */
 function areaMapDescription(areaName: string, beaches: number): string {
   return (
     `A map of ${areaName}: the whole stretch of coast its ${beaches} beaches ` +
-    `sit on, each marked, with the open water shaded.`
+    `sit on, with the open water shaded. Each beach is pinned on it, and the ` +
+    `pins follow as links.`
   );
 }
 
@@ -817,6 +823,27 @@ export async function DayPanel({
         : shoreViewFor(beach);
 
   /*
+    The pins' destinations, resolved here because this is the layer that knows
+    where a beach is published.
+
+    `shore.ts` answers with a slug: it reads `beaches.json` and knows what a
+    beach is. `ShoreMap` draws and resolves nothing, which is the rule that has
+    kept every word on that picture the caller's. The route in between is this
+    component's, and it is the one part of the three that ADR-0047 has already
+    changed once.
+
+    Empty on a beach page, whose map has one subject and no pins at all.
+  */
+  const pins =
+    shore === null || areaOnMap === null
+      ? []
+      : shore.marks.map((mark) => ({
+          name: mark.name,
+          href: `/conditions/${areaOnMap.slug}/${mark.slug}`,
+          at: mark.at,
+        }));
+
+  /*
     Seven days of needles, built beside the seven days of series rather than
     inside them.
 
@@ -1059,6 +1086,7 @@ export async function DayPanel({
               <>
                 <ShoreMap
                   {...shore}
+                  marks={pins}
                   description={
                     area === undefined
                       ? mapDescription(beach!.name)

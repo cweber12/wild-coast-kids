@@ -30,24 +30,47 @@ import {
   windowAround,
 } from "@/lib/coastline";
 
+/**
+ * One beach an area holds, as much of it as a map needs to draw a pin.
+ *
+ * **Identity travels with the position, because the mark is now named.** It was
+ * a bare `Position` while the mark was a tick: a stroke across the coast says
+ * "a beach is here" and needs nothing else. A pin carries the beach's name and
+ * goes somewhere when it is clicked, and both of those are facts about the
+ * beach rather than about the picture -- so they come from the file that reads
+ * `beaches.json` rather than being looked up a second time by the one that
+ * draws. See ADR-0053.
+ *
+ * The slug and not a URL. Which route a beach sits on is the page's business
+ * and changed once already under ADR-0047; this module knows what a beach is,
+ * not where it is published.
+ */
+export type BeachMark = {
+  slug: string;
+  name: string;
+  at: Position;
+};
+
 /** Everything `ShoreMap` needs, and nothing it has to look up for itself. */
 export type ShoreView = {
   coast: readonly ShorePoint[];
   bounds: Bounds | null;
   /**
-   * Where each beach this map is about sits, one position per beach.
+   * Each beach this map is about, one entry per beach.
    *
    * Empty on a beach map, which has one subject and draws it as a heavy run
-   * instead. On an area map it is every member's midpoint, and it is the whole
-   * of what makes the picture about an area rather than about a stretch of
-   * coast that happens to be wide.
+   * instead. On an area map it is every member at its own midpoint, and it is
+   * the whole of what makes the picture about an area rather than about a
+   * stretch of coast that happens to be wide.
    *
-   * **Positions and not marks.** Where the tick is drawn, how long it is and
-   * which way it lies are `ShoreMap`'s, because they are answers in plot units
-   * and this file works in degrees -- the same split the rest of the module
-   * keeps: the assembler reads, the component draws.
+   * **Positions and names, never placement.** Where a pin sits on the screen,
+   * whether its label fits beside it or has to be carried out to a column, and
+   * which side of the frame that column stands on are all `ShoreMap`'s, because
+   * they are answers in plot units and this file works in degrees -- the same
+   * split the rest of the module keeps: the assembler reads, the component
+   * draws.
    */
-  ticks: readonly Position[];
+  marks: readonly BeachMark[];
   /**
    * Where this beach is, drawn heavier than anything around it.
    *
@@ -331,7 +354,7 @@ export function shoreViewFor(beach: Beach): ShoreView {
   const coast =
     run === null || bounds === null ? [] : windowAround(coastline(), bounds);
 
-  return { coast, bounds, ticks: [], segment: beachStretch(run, beach) };
+  return { coast, bounds, marks: [], segment: beachStretch(run, beach) };
 }
 
 /**
@@ -397,7 +420,7 @@ export function shoreViewForArea(area: Area): ShoreView {
     SHORE_WINDOW_MARGIN,
   );
   if (boxed === null)
-    return { coast: [], bounds: null, ticks: [], segment: null };
+    return { coast: [], bounds: null, marks: [], segment: null };
 
   /*
     The draft window always has a direction, so failing to find one stops the
@@ -457,23 +480,24 @@ export function shoreViewForArea(area: Area): ShoreView {
     shore. That is a true statement about an island the committed mainland ring
     does not hold, and the only mark on any area map that is not on the line.
   */
-  const ticks = area.beaches.map((slug) => {
+  const marks = area.beaches.map((slug) => {
     const beach = bySlug.get(slug)!;
     const run = coastRunFor(beach);
-    if (run === null) {
-      return {
-        lat: (beach.segment.upper.lat + beach.segment.lower.lat) / 2,
-        lon: (beach.segment.upper.lon + beach.segment.lower.lon) / 2,
-      };
-    }
-    const middle = run.stretch[Math.floor(run.stretch.length / 2)];
-    return { lat: middle.lat, lon: middle.lon };
+    const at =
+      run === null
+        ? {
+            lat: (beach.segment.upper.lat + beach.segment.lower.lat) / 2,
+            lon: (beach.segment.upper.lon + beach.segment.lower.lon) / 2,
+          }
+        : run.stretch[Math.floor(run.stretch.length / 2)];
+
+    return { slug, name: beach.name, at: { lat: at.lat, lon: at.lon } };
   });
 
   return {
     coast: windowAround(coastline(), bounds),
     bounds,
-    ticks,
+    marks,
     segment: null,
   };
 }
