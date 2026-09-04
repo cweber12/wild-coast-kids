@@ -1,6 +1,7 @@
 import { describe, expect, test, vi } from "vitest";
 import {
   areaBySlug,
+  areaSources,
   areaOfBeach,
   DEFAULT_AREA_SLUG,
   beachesByArea,
@@ -177,5 +178,92 @@ describe("looking one area up", () => {
 
     vi.doUnmock("@/data/areas.json");
     vi.resetModules();
+  });
+});
+
+describe("what an area's beaches agree on", () => {
+  const of = (slug: string) => areaSources(areaBySlug(slug)!);
+
+  /**
+   * An area of one agrees with itself about everything it has. That is
+   * ADR-0046's whole argument for permitting a single-member area, and it is
+   * what makes the degenerate case need no branch in the code.
+   */
+  test("an area of one shares every source it binds", () => {
+    const sources = of("mission-beach");
+
+    for (const product of ["tide", "waves", "swell", "sky", "air"] as const) {
+      expect(sources[product].kind, product).toBe("shared");
+    }
+  });
+
+  /**
+   * The distinction the three states exist for. La Jolla's ten beaches all have
+   * a forecast cell and bind four different ones — that is `mixed`, and it is
+   * new with areas. Mission Bay – West's eight have no MOP line at all — that is
+   * `absent`, and it was already true one beach at a time.
+   */
+  test("disagreeing is not the same as lacking", () => {
+    expect(of("la-jolla").sky).toEqual({ kind: "mixed", distinct: 4 });
+    expect(of("mission-bay-west").swell).toEqual({ kind: "absent" });
+  });
+
+  test("a shared product names the one source behind it", () => {
+    expect(of("la-jolla").air).toEqual({
+      kind: "shared",
+      source: "LJAC1",
+    });
+  });
+
+  /**
+   * Measured across the whole table rather than sampled, because these counts
+   * are what decide how much of an area page renders at all. If a later edit to
+   * `areas.json` moves one, that is a real change to what readers see and it
+   * should be a decision rather than a surprise.
+   */
+  test("the eighteen areas agree exactly this often", () => {
+    const tally = { tide: 0, waves: 0, swell: 0, sky: 0, air: 0 };
+    const absent = { ...tally };
+
+    for (const { area } of beachesByArea()) {
+      const sources = areaSources(area);
+      for (const product of Object.keys(tally) as (keyof typeof tally)[]) {
+        if (sources[product].kind === "shared") tally[product] += 1;
+        if (sources[product].kind === "absent") absent[product] += 1;
+      }
+    }
+
+    expect(tally).toEqual({ tide: 16, waves: 3, swell: 6, sky: 11, air: 18 });
+    expect(absent).toEqual({ tide: 0, waves: 13, swell: 7, sky: 0, air: 0 });
+  });
+
+  /**
+   * The claim that makes "shared" usable: where an area shares a product, any
+   * of its beaches resolves to the same source, so the page may read the
+   * product through any member without choosing a representative. Asserted
+   * over every area and every product rather than argued.
+   */
+  test("a shared source is the one every beach in the area binds", () => {
+    const bySlug = new Map(allBeaches().map((beach) => [beach.slug, beach]));
+    const field = {
+      tide: "tide_station",
+      waves: "wave_buoy",
+      swell: "mop_line",
+      sky: "grid_cell",
+      air: "air_station",
+    } as const;
+
+    for (const { area, beaches } of beachesByArea()) {
+      const sources = areaSources(area);
+      for (const product of Object.keys(field) as (keyof typeof field)[]) {
+        const resolved = sources[product];
+        if (resolved.kind !== "shared") continue;
+        for (const beach of beaches) {
+          expect(bySlug.get(beach.slug)![field[product]], beach.slug).toBe(
+            resolved.source,
+          );
+        }
+      }
+    }
   });
 });

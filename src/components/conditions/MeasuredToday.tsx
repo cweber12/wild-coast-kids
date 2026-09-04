@@ -52,10 +52,45 @@ import { ProvenanceLine } from "./ProvenanceLine";
 import { ReadingCard } from "./ReadingCard";
 import { type Stat, StatGroup } from "./StatGroup";
 
-/** The two reads this block renders, as `MeasuredPanel` hands them over. */
+/**
+ * Why an area cannot report a product, when its beaches do not share one.
+ *
+ * **Two agreements, because they owe a reader different sentences.** `absent`
+ * is every beach in the area lacking the instrument, which is the bay's missing
+ * buoy and was already true one beach at a time. `mixed` is the beaches having
+ * one each and disagreeing, which is new with areas and is the only state a
+ * reader has never seen before.
+ *
+ * **It carries facts and not a sentence**, which is this repo's rule about who
+ * owns the copy on this page. It also could not carry one: the beaches' own
+ * reasons differ, and lifting any of them would print one beach's figure as if
+ * it were the area's. Coronado's three name 20.9, 21.6 and 21.2 km for the buoy
+ * that does not reach them.
+ */
+export type NotShared = {
+  agreement: "absent" | "mixed";
+  /** The area's name, for the sentence. */
+  areaName: string;
+  /** How many beaches it holds. */
+  beaches: number;
+  /** How many distinct sources they bind. Only meaningful when `mixed`. */
+  distinct: number;
+};
+
+/** True of a slot the area cannot fill, false of a reading. */
+function notShared(slot: WavesView | AirView | NotShared): slot is NotShared {
+  return "agreement" in slot;
+}
+
+/**
+ * The two slots this block renders, as `MeasuredPanel` hands them over.
+ *
+ * Either a read or the reason there is none, per slot, so there is no state
+ * where a card has neither and no state where it has both.
+ */
 export type MeasuredReadings = {
-  waves: WavesView;
-  air: AirView;
+  waves: WavesView | NotShared;
+  air: AirView | NotShared;
 };
 
 export type MeasuredTodayProps = {
@@ -461,6 +496,58 @@ function AirCard({ beachName, airStation, air }: AirView) {
  * The block
  * ========================================================================= */
 
+/**
+ * A card for a product the area's beaches do not share.
+ *
+ * Same shape as a card with a reading in it — `ReadingCard`, the glyph, the
+ * dark surface — because it is the same kind of thing: this block's answer
+ * about one instrument. What it does not have is a figure, which is exactly
+ * what a `no-buoy` card already looks like at a bay.
+ *
+ * **It takes the same glyph, title, heading id and rank as the card it stands
+ * in for**, passed by the caller rather than chosen here. The glyph especially:
+ * ADR-0015 makes it a closed vocabulary, so a withheld waves card showing
+ * anything but 🏄 would be a second word for one thing. A first draft of this
+ * invented 🌊, its own titles and an `h3`, which would have put a hole in the
+ * heading outline as well.
+ *
+ * **It names the count rather than the reason.** An area cannot borrow its
+ * beaches' sentences — they differ, and one of them would print a distance as
+ * if it were the area's — so it states what is true of the area and sends the
+ * reader to a beach for the rest. That sentence is here rather than in
+ * `lib/areas.ts` because the copy on this page belongs to the page.
+ */
+function NotSharedCard({
+  emoji,
+  title,
+  headingId,
+  product,
+  slot,
+}: {
+  emoji: string;
+  title: string;
+  headingId: string;
+  /** What the reader came for, in their words: "a wave reading". */
+  product: string;
+  slot: NotShared;
+}) {
+  return (
+    <ReadingCard
+      emoji={emoji}
+      headingLevel="h2"
+      headingId={headingId}
+      title={title}
+      context={slot.areaName}
+    >
+      <p className={CARD_PROSE}>
+        {slot.agreement === "absent"
+          ? `No beach in ${slot.areaName} has ${product}. Each says why on its own page.`
+          : `The ${slot.beaches} beaches in ${slot.areaName} read ${slot.distinct} different sources for ${product}, so there is no one figure for the whole area. Choose a beach for it.`}
+      </p>
+    </ReadingCard>
+  );
+}
+
 export function MeasuredToday({ readings }: MeasuredTodayProps) {
   /*
     Two across from `sm`, which is where the three-card band above the page
@@ -470,8 +557,28 @@ export function MeasuredToday({ readings }: MeasuredTodayProps) {
   */
   return (
     <div className="grid items-stretch gap-4 sm:grid-cols-2">
-      <SeaCard {...readings.waves} />
-      <AirCard {...readings.air} />
+      {notShared(readings.waves) ? (
+        <NotSharedCard
+          emoji="🏄"
+          title="Waves and water"
+          headingId="waves-today-heading"
+          product="a wave reading"
+          slot={readings.waves}
+        />
+      ) : (
+        <SeaCard {...readings.waves} />
+      )}
+      {notShared(readings.air) ? (
+        <NotSharedCard
+          emoji="💨"
+          title="Air"
+          headingId="wind-today-heading"
+          product="an air reading"
+          slot={readings.air}
+        />
+      ) : (
+        <AirCard {...readings.air} />
+      )}
     </div>
   );
 }
