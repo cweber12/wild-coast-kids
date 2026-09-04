@@ -45,7 +45,7 @@
  */
 
 import type { AirView, WavesView } from "@/lib/conditions";
-import type { NotShared } from "./areaScope";
+import { type NotShared, withheldWords } from "./areaScope";
 import { compassWords } from "./bearing";
 import { CARD_PROSE } from "./cardText";
 import { DISCLOSURE_TARGET } from "./disclosure";
@@ -493,38 +493,6 @@ function AirCard({ beachName, airStation, air }: AirView) {
  * reader to a beach for the rest. That sentence is here rather than in
  * `lib/areas.ts` because the copy on this page belongs to the page.
  */
-/**
- * What the card says instead of a figure, in one sentence.
- *
- * **Three sentences and not two, because `mixed` has two shapes.** The plain
- * one is beaches reading different sources. The other is some reading a source
- * and some reading none, and saying "read 2 different sources" of nine beaches
- * sharing a buoy and one lacking it is false — which is what this card printed
- * on `/conditions/la-jolla`, the default area, until the count learned to tell
- * a gap from a source.
- *
- * **It counts the beaches that have the product rather than the ones that do
- * not**, which is what keeps one sentence covering both counts without a
- * plural to agree: "Only 9 of the 10 beaches" needs no branch where "and 1 has
- * none" would need one, and a reader learns the same thing from it.
- */
-function notSharedWords(slot: NotShared, product: string): string {
-  if (slot.agreement === "absent") {
-    return `No beach in ${slot.areaName} has ${product}. Each says why on its own page.`;
-  }
-
-  const sources =
-    slot.distinct === 1
-      ? "they share one source"
-      : `they read ${slot.distinct} different sources`;
-
-  const tail = `so there is no one figure for the whole area. Choose a beach for it.`;
-
-  return slot.without === 0
-    ? `The ${slot.beaches} beaches in ${slot.areaName} read ${slot.distinct} different sources for ${product}, ${tail}`
-    : `Only ${slot.beaches - slot.without} of the ${slot.beaches} beaches in ${slot.areaName} have ${product}, and ${sources} — ${tail}`;
-}
-
 function NotSharedCard({
   emoji,
   title,
@@ -547,7 +515,7 @@ function NotSharedCard({
       title={title}
       context={slot.areaName}
     >
-      <p className={CARD_PROSE}>{notSharedWords(slot, product)}</p>
+      <p className={CARD_PROSE}>{withheldWords(slot, product)}</p>
     </ReadingCard>
   );
 }

@@ -14,12 +14,19 @@
  * to be the same in all three or an area reports a tide in one region and
  * withholds it in the next.
  *
- * **Facts and counts, never a sentence.** The copy on this page belongs to the
- * page, and each of the three panels words a withheld product in the slot it
- * already uses for an absence -- a card, a note under the grid, a chart tab. It
- * also could not carry a sentence: the beaches' own reasons differ, and lifting
- * any one of them would print a figure about one beach as though it were the
- * area's. See ADR-0048.
+ * **The sentence is here and not in `lib/areas.ts`.** ADR-0048 has the resolver
+ * return facts and counts and leaves the copy to the page, and this is the
+ * page: `mopLine.ts` and `gridCell.ts` beside it own wording for the same
+ * reason. What the resolver could not do is borrow a beach's own reason -- the
+ * members' reasons differ, and lifting any one of them would print a figure
+ * about one beach as though it were the area's. Coronado's three name 20.9,
+ * 21.6 and 21.2 km for the buoy that does not reach them.
+ *
+ * **One sentence for three positions**, because they are three positions and
+ * not three facts. It stands in a card in the measured block, in a note under
+ * the week grid and in a chart tab in the day region, and a reader moving down
+ * the page meets the same silence three times. Only the product's noun
+ * changes.
  *
  * Nothing here fetches anything, and nothing here is a component.
  */
@@ -99,4 +106,40 @@ export function withheldBy(
     distinct: source.kind === "mixed" ? source.distinct : 0,
     without: source.kind === "mixed" ? source.without : 0,
   };
+}
+
+/**
+ * What a panel says instead of a figure, in one sentence.
+ *
+ * `product` is what the reader came for, in their words: "a wave reading", "a
+ * swell forecast". It is the only thing that varies between the three
+ * positions this sentence stands in.
+ *
+ * **Three sentences and not two, because `mixed` has two shapes.** The plain
+ * one is beaches reading different sources. The other is some reading a source
+ * and some reading none, and saying "read 2 different sources" of nine beaches
+ * sharing a buoy and one lacking it is false — which is what the measured block
+ * printed on `/conditions/la-jolla`, the default area, until the count learned
+ * to tell a gap from a source.
+ *
+ * **It counts the beaches that have the product rather than the ones that do
+ * not**, which is what keeps one sentence covering both counts without a
+ * plural to agree: "Only 9 of the 10 beaches" needs no branch where "and 1 has
+ * none" would need one, and a reader learns the same thing from it.
+ */
+export function withheldWords(slot: NotShared, product: string): string {
+  if (slot.agreement === "absent") {
+    return `No beach in ${slot.areaName} has ${product}. Each says why on its own page.`;
+  }
+
+  const sources =
+    slot.distinct === 1
+      ? "they share one source"
+      : `they read ${slot.distinct} different sources`;
+
+  const tail = `so there is no one figure for the whole area. Choose a beach for it.`;
+
+  return slot.without === 0
+    ? `The ${slot.beaches} beaches in ${slot.areaName} read ${slot.distinct} different sources for ${product}, ${tail}`
+    : `Only ${slot.beaches - slot.without} of the ${slot.beaches} beaches in ${slot.areaName} have ${product}, and ${sources} — ${tail}`;
 }
