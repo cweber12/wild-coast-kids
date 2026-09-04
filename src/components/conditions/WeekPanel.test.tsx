@@ -1244,3 +1244,169 @@ test("a beach with no tide station is attributed to nothing rather than to a bla
 
   expect(screen.queryByText(/NOAA Tides & Currents/)).toBeNull();
 });
+
+/* =========================================================================
+ * The week, answering for an area
+ * ========================================================================= */
+
+/**
+ * The scope a page hands this panel, built from `areas.json` rather than
+ * invented. `areaSources` is not mocked here — the point of these tests is what
+ * this panel does with what the real table says, and a fixture would let the
+ * two drift apart in exactly the way ADR-0048's counts already drifted once.
+ */
+async function areaScope(slug: string) {
+  const { areaBySlug, areaSources } = await import("@/lib/areas");
+  const area = areaBySlug(slug)!;
+  return {
+    name: area.name,
+    beaches: area.beaches.length,
+    sources: areaSources(area),
+  };
+}
+
+/**
+ * A row the area's beaches share is drawn, and it is not qualified.
+ *
+ * La Jolla's ten beaches all bind `9410230`, so the tide is the area's and the
+ * row says what it says on a beach page. Sixteen of the eighteen areas are like
+ * this, which is why gating the panel whole would have been the wrong shape.
+ */
+test("an area draws the row its beaches share", async () => {
+  readWeekOfLowestLows.mockResolvedValue({
+    ...BINDING,
+    state: {
+      kind: "week",
+      days: [tideDay(0, "6:41 PM", 0.9), tideDay(1, "7:10 AM", -0.42)],
+    },
+  });
+
+  const { container } = render(
+    await WeekPanel({
+      slug: "la-jolla-shores-beach",
+      area: await areaScope("la-jolla"),
+    }),
+  );
+
+  expect(countOf(cellLabels(container), "Low tide")).toBe(2);
+  // Two of La Jolla's three rows are withheld and say so, so "is there a
+  // withheld note on the page" would pass here whatever the tide did. What
+  // must be true is that none of them is about the tide.
+  expect(screen.queryByText(/tide prediction/)).toBeNull();
+  expect(readWeekOfLowestLows).toHaveBeenCalledWith("la-jolla-shores-beach");
+});
+
+/**
+ * And a row they do not share is not drawn, is not read, and is said out loud.
+ *
+ * La Jolla's ten bind four forecast cells. The note under the grid is the slot
+ * this panel already uses for a row it cannot draw — a beach with no MOP line
+ * has had no wave row and a sentence there since long before areas existed.
+ */
+test("an area withholds the row its beaches disagree on, and says so", async () => {
+  readWeekOfLowestLows.mockResolvedValue({
+    ...BINDING,
+    state: {
+      kind: "week",
+      days: [tideDay(0, "6:41 PM", 0.9), tideDay(1, "7:10 AM", -0.42)],
+    },
+  });
+
+  const { container } = render(
+    await WeekPanel({
+      slug: "la-jolla-shores-beach",
+      area: await areaScope("la-jolla"),
+    }),
+  );
+
+  // No cloud row.
+  expect(countOf(cellLabels(container), "Cloud")).toBe(0);
+  // And the reader is told why, in the area's own terms.
+  expect(
+    screen.getByText(
+      /The 10 beaches in La Jolla read 4 different sources for a cloud forecast/,
+    ),
+  ).toBeDefined();
+  // Nothing was asked for. There is nothing this grid could do with one
+  // member's cell, and the wait would be spent on a row it will not draw.
+  expect(readSkyWeek).not.toHaveBeenCalled();
+});
+
+/**
+ * The tide's two reads are one product and go together.
+ *
+ * The row's figures and the hourly shape behind them come from one station
+ * through two requests. A shape drawn under a row that is not there would be a
+ * curve attributed to nobody, so a withheld tide costs both.
+ */
+test("a withheld tide takes its hourly shape with it", async () => {
+  const { container } = render(
+    await WeekPanel({
+      slug: "tijuana-slough-national-wildlife-refuge",
+      area: await areaScope("tijuana-estuary"),
+    }),
+  );
+
+  expect(readWeekOfLowestLows).not.toHaveBeenCalled();
+  expect(readHourlyTide).not.toHaveBeenCalled();
+  expect(countOf(cellLabels(container), "Low tide")).toBe(0);
+  expect(container.querySelector('svg[aria-label^="Tide through"]')).toBeNull();
+  expect(
+    screen.getByText(
+      /The 2 beaches in Tijuana Estuary read 2 different sources for a tide prediction/,
+    ),
+  ).toBeDefined();
+});
+
+/**
+ * The other silence, and it must not be worded as disagreement. Mission Bay –
+ * West's eight beaches have no MOP line between them, which is a bay having no
+ * swell rather than eight beaches failing to agree about one.
+ */
+test("an area with no source anywhere says nobody has it", async () => {
+  readWeekOfLowestLows.mockResolvedValue({
+    ...BINDING,
+    state: {
+      kind: "week",
+      days: [tideDay(0, "6:41 PM", 0.9), tideDay(1, "7:10 AM", -0.42)],
+    },
+  });
+
+  const { container } = render(
+    await WeekPanel({
+      slug: "mission-bay-bahia-point",
+      area: await areaScope("mission-bay-west"),
+    }),
+  );
+
+  expect(countOf(cellLabels(container), "Swell")).toBe(0);
+  expect(
+    screen.getByText(
+      /No beach in Mission Bay – West has a swell forecast\. Each says why on its own page\./,
+    ),
+  ).toBeDefined();
+  expect(screen.queryByText(/different sources for a swell/)).toBeNull();
+  expect(readWaveWeek).not.toHaveBeenCalled();
+});
+
+/**
+ * The beach page is unchanged, and this is what says so structurally rather
+ * than by re-asserting every row: with no scope there is nothing to withhold,
+ * so all four reads are made exactly as they were before areas existed.
+ */
+test("with no area scope every product is still read", async () => {
+  readWeekOfLowestLows.mockResolvedValue({
+    ...BINDING,
+    state: {
+      kind: "week",
+      days: [tideDay(0, "6:41 PM", 0.9), tideDay(1, "7:10 AM", -0.42)],
+    },
+  });
+
+  render(await WeekPanel({ slug: "la-jolla-shores-beach" }));
+
+  expect(readWeekOfLowestLows).toHaveBeenCalledWith("la-jolla-shores-beach");
+  expect(readHourlyTide).toHaveBeenCalledWith("la-jolla-shores-beach");
+  expect(readWaveWeek).toHaveBeenCalledWith("la-jolla-shores-beach");
+  expect(readSkyWeek).toHaveBeenCalledWith("la-jolla-shores-beach");
+});

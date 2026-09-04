@@ -21,11 +21,9 @@ vi.mock("@/components/conditions/DayPanel", () => ({
     return <p>day for {slug}</p>;
   },
 }));
+const weekPanel = vi.fn();
 vi.mock("@/components/conditions/WeekPanel", () => ({
-  WeekPanel: ({ slug }: { slug: string }) => {
-    if (slug === "suspend-the-panels") throw new Promise(() => {});
-    return <p>week for {slug}</p>;
-  },
+  WeekPanel: (props: { slug: string }) => weekPanel(props),
 }));
 /*
   The measured block moved up here from the day panel, and its reads came with
@@ -56,6 +54,11 @@ beforeEach(() => {
   measuredPanel.mockImplementation(({ slug }: { slug: string }) => {
     if (slug === "suspend-the-panels") throw new Promise(() => {});
     return <p>measured for {slug}</p>;
+  });
+  weekPanel.mockReset();
+  weekPanel.mockImplementation(({ slug }: { slug: string }) => {
+    if (slug === "suspend-the-panels") throw new Promise(() => {});
+    return <p>week for {slug}</p>;
   });
 });
 const ripLevel = vi.fn();
@@ -469,4 +472,67 @@ test("an area of several keeps its list while showing one beach", () => {
     screen.getAllByRole("link", { name: /La Jolla|WindanSea|Bird Rock/ })
       .length,
   ).toBeGreaterThan(1);
+});
+
+/**
+ * The week is handed the same pair the measured block is, and the allowlist is
+ * here for the reason that one is: what a panel is given decides what it can
+ * answer for, and an argument added quietly is how a region comes to answer for
+ * something nobody chose.
+ *
+ * What it must never grow is a *chosen* member. "Read through any beach" is
+ * only honest because a product is read only where every beach in the area
+ * binds the same source, which `areas.test.ts` asserts over the whole table; a
+ * representative passed deliberately would be the thing ADR-0048 rejects.
+ */
+test("the week is asked for a beach and the area it stands for", () => {
+  render(<ConditionsSection areaSlug="la-jolla" beachSlug={null} />);
+
+  const [props] = weekPanel.mock.calls[0] as [Record<string, unknown>];
+  expect(Object.keys(props).sort()).toEqual(["area", "slug"]);
+
+  const area = props.area as { name: string; beaches: number };
+  expect(area.name).toBe("La Jolla");
+  expect(area.beaches).toBe(10);
+  expect(props.slug).toBe("la-jolla-shores-beach");
+});
+
+/** And on a beach page there is no scope at all, so nothing is withheld. */
+test("on a beach page the week answers for that beach alone", () => {
+  render(<ConditionsSection areaSlug="la-jolla" beachSlug="windansea-beach" />);
+
+  const [props] = weekPanel.mock.calls[0] as [Record<string, unknown>];
+  expect(props.slug).toBe("windansea-beach");
+  expect(props.area).toBeUndefined();
+});
+
+/**
+ * The week and the measured block read through the same member, which is what
+ * stops one region answering for a different beach than the one beside it.
+ * Asserted rather than assumed, because the two call sites composed the pair
+ * separately until they were lifted into one.
+ */
+test("every region on an area page reads through the same member", () => {
+  render(<ConditionsSection areaSlug="la-jolla" beachSlug={null} />);
+
+  const [measured] = measuredPanel.mock.calls[0] as [Record<string, unknown>];
+  const [week] = weekPanel.mock.calls[0] as [Record<string, unknown>];
+
+  expect(week.slug).toBe(measured.slug);
+  expect(week.area).toEqual(measured.area);
+});
+
+/**
+ * The day chart is the region still to come, and the area page says so rather
+ * than leaving a gap where it will be. The sentence names what a reader would
+ * find there, since it is the whole of what the area cannot yet give them.
+ */
+test("an area page says the day chart is still one beach at a time", () => {
+  render(<ConditionsSection areaSlug="la-jolla" beachSlug={null} />);
+
+  expect(
+    screen.getByText(/day chart is still shown one beach at a time/),
+  ).toBeDefined();
+  expect(screen.getByText(/week for la-jolla-shores-beach/)).toBeDefined();
+  expect(screen.queryByText(/day for/)).toBeNull();
 });

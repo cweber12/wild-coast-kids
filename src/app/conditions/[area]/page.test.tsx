@@ -46,16 +46,18 @@ test("renders the area named in the route", async () => {
 });
 
 /**
- * The area reports what is measured now, and sends the reader to a beach for
- * what is forecast. Air is shared by all eighteen areas, so every area page has
- * something measured to say; the week and the day chart are still one beach at
- * a time.
+ * The area reports what is measured now and what its beaches agree on for the
+ * week, and sends the reader to a beach for the hour-by-hour chart. Air is
+ * shared by all eighteen areas and a tide station by sixteen, so every area
+ * page has something to say in both regions.
  */
-test("an area reports what is measured and defers the forecast", async () => {
+test("an area reports the week and defers the day chart", async () => {
   render(await AreaConditions(params("la-jolla")));
 
-  expect(screen.getByText(/still shown one beach at a time/)).toBeDefined();
-  expect(screen.queryByText(/week for/)).toBeNull();
+  expect(screen.getByText(/week for la-jolla-shores-beach/)).toBeDefined();
+  expect(
+    screen.getByText(/day chart is still shown one beach at a time/),
+  ).toBeDefined();
   expect(screen.queryByText(/day for/)).toBeNull();
 });
 

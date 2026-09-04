@@ -8,12 +8,16 @@
  * **`beachSlug` is what says which scope.** Null is the area's own page and a
  * slug is one beach inside it. The header, the chooser and the beach list are
  * the same either way; what changes is whether the readings below them answer
- * for a beach or, once PR 3 lands, for everything the area's beaches share.
+ * for a beach or for everything the area's beaches share.
  *
- * Until then the area page carries its header and its list and says plainly
- * that the readings are one level down, which is true rather than a placeholder:
- * an area reports only what all its beaches share, and working out what that is
- * for eighteen areas is its own slice. See
+ * **Every panel is handed the same pair**, composed once here: the beach a read
+ * is keyed on, and the area scope that says which products may be reported.
+ * `undefined` for the scope is the beach page, and it is what makes that path
+ * unchanged rather than merely equivalent -- with nothing to withhold, each
+ * panel reads and draws exactly what it did before areas existed. See ADR-0048
+ * and `areaScope.ts`.
+ *
+ * The day chart is still one beach at a time and the area page says so. See
  * `docs/plans/areas-over-locations.md`.
  */
 
@@ -51,6 +55,32 @@ export function ConditionsSection({
       `ConditionsSection was given ${areaSlug}, which names no area in areas.json.`,
     );
   }
+
+  /*
+    The two things every panel below is handed, composed once because two of
+    them now take both and a third is coming.
+
+    `reading` is the beach a read is keyed on -- every function in
+    `lib/conditions.ts` takes a slug -- and on an area page it is the first
+    member. Which member cannot matter: a product is read only where every beach
+    in the area binds the same source for it, which is what `areaSources` calls
+    shared and what `areas.test.ts` asserts over the whole table. A product they
+    do not share is not read at all, so no one beach's figure can arrive
+    labelled as the area's.
+
+    `scope` is undefined on a beach page, and that is what keeps the beach-scoped
+    path exactly as it was: with no scope nothing is withheld, so every panel
+    reads and draws what it always did.
+  */
+  const reading = beachSlug ?? group.beaches[0].slug;
+  const scope =
+    beachSlug === null
+      ? {
+          name: group.area.name,
+          beaches: group.beaches.length,
+          sources: areaSources(group.area),
+        }
+      : undefined;
 
   return (
     <section className="px-gutter-sm py-section-sm md:px-gutter md:py-section">
@@ -233,18 +263,7 @@ export function ConditionsSection({
             Air is shared by all eighteen areas and a buoy by three, so this
             block is where an area page has something measured to say at all.
           */}
-          <MeasuredPanel
-            slug={beachSlug ?? group.beaches[0].slug}
-            area={
-              beachSlug === null
-                ? {
-                    name: group.area.name,
-                    beaches: group.beaches.length,
-                    sources: areaSources(group.area),
-                  }
-                : undefined
-            }
-          />
+          <MeasuredPanel slug={reading} area={scope} />
         </Suspense>
       </div>
 
@@ -258,25 +277,30 @@ export function ConditionsSection({
         quiet independently and none may hold up another; a shared choice does
         not change that.
       */}
+      <div className="mb-9">
+        <Suspense
+          fallback={
+            <p className="text-base text-fog">Reading the week from NOAA…</p>
+          }
+        >
+          {/*
+            The same scope the measured block above takes, and for the same
+            reason: a row is drawn only where every beach in the area binds one
+            source for it, and a row that is not drawn says so in the notes
+            under the grid. Sixteen areas share a tide station and eleven a
+            forecast cell, so this is where most of an area's forecast arrives.
+          */}
+          <WeekPanel slug={reading} area={scope} />
+        </Suspense>
+      </div>
+
       {beachSlug === null ? (
         <p className="leading-relaxed max-w-130 text-base text-fog">
-          The week ahead and the day chart are still shown one beach at a time.
-          Choose one above for its tide, swell and sky.
+          The day chart is still shown one beach at a time. Choose one above for
+          its hour-by-hour tide, swell, wind and air temperature.
         </p>
       ) : (
         <>
-          <div className="mb-9">
-            <Suspense
-              fallback={
-                <p className="text-base text-fog">
-                  Reading the week from NOAA…
-                </p>
-              }
-            >
-              <WeekPanel slug={beachSlug} />
-            </Suspense>
-          </div>
-
           {/*
         The day opens under the week. Its own suspense boundary for the same
         reason every region here has one: this is a second request to the
