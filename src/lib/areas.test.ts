@@ -267,3 +267,59 @@ describe("what an area's beaches agree on", () => {
     }
   });
 });
+
+/**
+ * `mixed` counts sources, and a beach binding nothing is not one of them.
+ *
+ * `areaSources` builds its set out of the raw bindings, `null` included, so a
+ * product nine beaches share and a tenth lacks reads as two sources. It is not:
+ * it is one source and one gap, and the page prints the number. La Jolla is the
+ * default area, and `/conditions/la-jolla` says "The 10 beaches in La Jolla read
+ * 2 different sources for a wave reading" over nine beaches reading buoy 46254
+ * and `childrens-pool` reading none.
+ *
+ * The state is right either way -- nine agreeing and one lacking still means no
+ * one figure answers for the area -- so nothing failed. Only the count is wrong.
+ *
+ * Derived over the whole table rather than asserted against three copied
+ * numbers, because the three are a property of `beaches.json` today and the
+ * invariant is a property of the resolver. `MeasuredToday.test.tsx` has the
+ * other kind: a hand-written `distinct: 2` for La Jolla, which is why the card
+ * that prints the wrong figure has a passing test over it.
+ */
+describe("a mixed product's count", () => {
+  const FIELD = {
+    tide: "tide_station",
+    waves: "wave_buoy",
+    swell: "mop_line",
+    sky: "grid_cell",
+    air: "air_station",
+  } as const;
+
+  test("never counts a missing binding among the sources", () => {
+    const bySlug = new Map(allBeaches().map((beach) => [beach.slug, beach]));
+    let withAGap = 0;
+
+    for (const { area, beaches } of beachesByArea()) {
+      const sources = areaSources(area);
+      for (const product of Object.keys(FIELD) as (keyof typeof FIELD)[]) {
+        const resolved = sources[product];
+        if (resolved.kind !== "mixed") continue;
+
+        const bound = beaches.map(
+          (beach) => bySlug.get(beach.slug)![FIELD[product]],
+        );
+        const real = bound.filter((id) => id !== null);
+        if (real.length < bound.length) withAGap += 1;
+
+        expect(resolved.distinct, `${area.slug} ${product}`).toBe(
+          new Set(real).size,
+        );
+      }
+    }
+
+    // The probe. Without it this loop passes on a table where no mixed product
+    // has a gap in it, which is a table this assertion says nothing about.
+    expect(withAGap).toBeGreaterThan(0);
+  });
+});
