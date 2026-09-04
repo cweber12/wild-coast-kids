@@ -57,9 +57,15 @@ import { type Stat, StatGroup } from "./StatGroup";
  *
  * **Two agreements, because they owe a reader different sentences.** `absent`
  * is every beach in the area lacking the instrument, which is the bay's missing
- * buoy and was already true one beach at a time. `mixed` is the beaches having
- * one each and disagreeing, which is new with areas and is the only state a
- * reader has never seen before.
+ * buoy and was already true one beach at a time. `mixed` is the beaches not all
+ * reading one source, which is new with areas and is the only state a reader has
+ * never seen before.
+ *
+ * **`mixed` has two shapes and the sentence says which.** Either the beaches
+ * read different sources, or some read one and some read none — three of the
+ * sixteen mixed product-instances are the second, La Jolla's own wave buoy
+ * among them. Both mean no single figure answers for the area; only the first
+ * is what "different sources" describes.
  *
  * **It carries facts and not a sentence**, which is this repo's rule about who
  * owns the copy on this page. It also could not carry one: the beaches' own
@@ -75,6 +81,15 @@ export type NotShared = {
   beaches: number;
   /** How many distinct sources they bind. Only meaningful when `mixed`. */
   distinct: number;
+  /**
+   * How many of them bind no source at all. Only meaningful when `mixed`.
+   *
+   * **Beside `distinct` because the sentence needs both.** Nine beaches reading
+   * one buoy and a tenth reading none is not ten beaches reading two buoys, and
+   * only the second is what "2 different sources" describes. It was the first
+   * that `/conditions/la-jolla` printed the second sentence over.
+   */
+  without: number;
 };
 
 /** True of a slot the area cannot fill, false of a reading. */
@@ -517,6 +532,38 @@ function AirCard({ beachName, airStation, air }: AirView) {
  * reader to a beach for the rest. That sentence is here rather than in
  * `lib/areas.ts` because the copy on this page belongs to the page.
  */
+/**
+ * What the card says instead of a figure, in one sentence.
+ *
+ * **Three sentences and not two, because `mixed` has two shapes.** The plain
+ * one is beaches reading different sources. The other is some reading a source
+ * and some reading none, and saying "read 2 different sources" of nine beaches
+ * sharing a buoy and one lacking it is false — which is what this card printed
+ * on `/conditions/la-jolla`, the default area, until the count learned to tell
+ * a gap from a source.
+ *
+ * **It counts the beaches that have the product rather than the ones that do
+ * not**, which is what keeps one sentence covering both counts without a
+ * plural to agree: "Only 9 of the 10 beaches" needs no branch where "and 1 has
+ * none" would need one, and a reader learns the same thing from it.
+ */
+function notSharedWords(slot: NotShared, product: string): string {
+  if (slot.agreement === "absent") {
+    return `No beach in ${slot.areaName} has ${product}. Each says why on its own page.`;
+  }
+
+  const sources =
+    slot.distinct === 1
+      ? "they share one source"
+      : `they read ${slot.distinct} different sources`;
+
+  const tail = `so there is no one figure for the whole area. Choose a beach for it.`;
+
+  return slot.without === 0
+    ? `The ${slot.beaches} beaches in ${slot.areaName} read ${slot.distinct} different sources for ${product}, ${tail}`
+    : `Only ${slot.beaches - slot.without} of the ${slot.beaches} beaches in ${slot.areaName} have ${product}, and ${sources} — ${tail}`;
+}
+
 function NotSharedCard({
   emoji,
   title,
@@ -539,11 +586,7 @@ function NotSharedCard({
       title={title}
       context={slot.areaName}
     >
-      <p className={CARD_PROSE}>
-        {slot.agreement === "absent"
-          ? `No beach in ${slot.areaName} has ${product}. Each says why on its own page.`
-          : `The ${slot.beaches} beaches in ${slot.areaName} read ${slot.distinct} different sources for ${product}, so there is no one figure for the whole area. Choose a beach for it.`}
-      </p>
+      <p className={CARD_PROSE}>{notSharedWords(slot, product)}</p>
     </ReadingCard>
   );
 }

@@ -39,8 +39,18 @@ reader different sentences:
 - **`shared`** — one source behind every beach. The area reports it.
 - **`absent`** — no beach has one. The bay's missing buoy: already true one
   beach at a time, and not news.
-- **`mixed`** — the beaches each have one and disagree. New with areas, and the
+- **`mixed`** — the beaches do not all read one source. New with areas, and the
   only state a reader has never seen before.
+
+`mixed` covers two shapes and counts them apart: the beaches read different
+sources, or some read one and some read none. Both mean no single figure answers
+for the area, so both are one state — but the page prints the numbers, and
+"2 different sources" is false of nine beaches sharing a buoy and a tenth
+lacking it. That is La Jolla's own wave buoy, and the default area's page said
+it until `distinct` learned to tell a source from a gap; two more
+product-instances are the same shape (La Jolla's swell, Tijuana Estuary's).
+So `areaSources` returns `distinct` for the sources and `without` for the
+beaches that have none.
 
 This is the distinction `beaches.json` already draws about a null `wave_buoy`,
 whose schema says it "carries TWO meanings and wave_buoy_null_reason always

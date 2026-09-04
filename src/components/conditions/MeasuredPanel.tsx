@@ -61,6 +61,7 @@ function withheldBy(
     areaName: scope.name,
     beaches: scope.beaches,
     distinct: source.kind === "mixed" ? source.distinct : 0,
+    without: source.kind === "mixed" ? source.without : 0,
   };
 }
 

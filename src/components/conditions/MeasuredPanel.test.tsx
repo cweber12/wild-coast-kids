@@ -107,3 +107,49 @@ test("a failure to resolve the beach is not swallowed into a rendered nothing", 
     /no beach in the inventory/,
   );
 });
+
+/**
+ * The withheld card's sentence, against what `areaSources` really returns.
+ *
+ * Every other assertion about that card hands `MeasuredToday` a hand-written
+ * `NotShared`, so it can only ever check that the component renders the numbers
+ * it was given. That is how `/conditions/la-jolla` came to say "The 10 beaches
+ * in La Jolla read 2 different sources for a wave reading" with a passing test
+ * over it: nine read buoy 46254 and `childrens-pool` reads none, and the
+ * fixture said 2 because a `null` had been counted as a source.
+ *
+ * So this one builds the scope the way the page does -- from `areaSources` over
+ * committed data -- and reads the sentence off the rendered card. Both operands
+ * are not the same source: the left is the component's output and the right is
+ * what La Jolla's ten beaches actually bind.
+ */
+test("a withheld card states what the area's beaches really bind", async () => {
+  const { areaBySlug, areaSources } = await import("@/lib/areas");
+  const area = areaBySlug("la-jolla")!;
+
+  // The probe. If La Jolla ever shares a buoy, this test is asserting nothing
+  // and should be pointed at whichever area still has the gap.
+  expect(areaSources(area).waves.kind).toBe("mixed");
+
+  render(
+    await MeasuredPanel({
+      slug: "la-jolla-shores-beach",
+      area: {
+        name: area.name,
+        beaches: area.beaches.length,
+        sources: areaSources(area),
+      },
+    }),
+  );
+
+  expect(
+    screen.getByText(
+      /Only 9 of the 10 beaches in La Jolla have a wave reading, and they share one source/,
+    ),
+  ).toBeDefined();
+  expect(screen.queryByText(/different sources/)).toBeNull();
+
+  // And the withheld product was not read, which is the other half of the
+  // contract: there is nothing an area could do with one beach's buoy.
+  expect(readLatestWaves).not.toHaveBeenCalled();
+});

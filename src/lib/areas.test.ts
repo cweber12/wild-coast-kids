@@ -202,10 +202,25 @@ describe("what an area's beaches agree on", () => {
    * a forecast cell and bind four different ones — that is `mixed`, and it is
    * new with areas. Mission Bay – West's eight have no MOP line at all — that is
    * `absent`, and it was already true one beach at a time.
+   *
+   * And the case between them, which is `mixed` too: nine of La Jolla's ten
+   * read buoy 46254 and `childrens-pool` reads none. No single figure answers
+   * for the area either way, so the state is the same — but it is one source
+   * and one gap, and `without` is what keeps the page from calling that two
+   * sources.
    */
   test("disagreeing is not the same as lacking", () => {
-    expect(of("la-jolla").sky).toEqual({ kind: "mixed", distinct: 4 });
+    expect(of("la-jolla").sky).toEqual({
+      kind: "mixed",
+      distinct: 4,
+      without: 0,
+    });
     expect(of("mission-bay-west").swell).toEqual({ kind: "absent" });
+    expect(of("la-jolla").waves).toEqual({
+      kind: "mixed",
+      distinct: 1,
+      without: 1,
+    });
   });
 
   test("a shared product names the one source behind it", () => {
