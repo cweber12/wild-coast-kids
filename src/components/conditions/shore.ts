@@ -16,7 +16,8 @@
  * for and always was.
  */
 
-import type { Beach } from "@/lib/beaches";
+import { allBeaches, type Beach } from "@/lib/beaches";
+import type { Area } from "@/lib/areas";
 import type { Bounds, Position, ShorePoint } from "@/lib/coastline";
 import {
   boundsAround,
@@ -317,4 +318,72 @@ export function shoreViewFor(beach: Beach): ShoreView {
     run === null || bounds === null ? [] : windowAround(coastline(), bounds);
 
   return { coast, bounds, segment: beachStretch(run, beach) };
+}
+
+/**
+ * The map an area is drawn on: its whole coast, in one square frame.
+ *
+ * The area counterpart of `shoreViewFor`, and deliberately the same shape --
+ * `ShoreMap` is handed a window, a box and nothing it has to look up, whichever
+ * scope it is drawing.
+ *
+ * **The frame is square, which reverses the plan that asked for the bbox's own
+ * aspect.** That plan rejected a square because it "would spend two thirds to
+ * four fifths of the width on slack"; measured at the map column's real width
+ * of 472px, taking each area's own aspect makes Imperial Beach 1,908px tall and
+ * Coronado a 199px letterbox -- a ten-fold swing, and seven of the twelve areas
+ * over a thousand pixels in a 639px window. What it buys is the tightest pair
+ * of marks going from 5.5px to 11.4px, on an axis the plan had already conceded
+ * reads as a cluster either way. The slack is not empty either: ADR-0041's wash
+ * closes on the frame, so it is drawn as sea. See ADR-0051.
+ *
+ * **No stretch drawn heavy, because no one beach is the subject.** `segment` is
+ * null here where a beach map carries its own run. That is the zoom the plan
+ * describes, and it needs no mechanism: `/conditions/<area>` gets this frame
+ * and `/conditions/<area>/<beach>` gets `shoreViewFor`'s, swapped by the route.
+ *
+ * **The seaward direction is read off the coastline's own walk**, not off the
+ * members' runs concatenated. Members are ordered north to south, so joining
+ * their runs end to end makes a walk that doubles back -- and `seawardFrom`
+ * takes a run's two ends, so it would answer about a chord across the doubling
+ * rather than about the coast. Windowing the county line to the draft box gives
+ * the walk in the order `coastline()` holds it, which is the order that
+ * property is true in.
+ *
+ * Throws for an area naming a beach the inventory does not have, like
+ * `areaSources` and for the same reason: two data files disagreeing should stop
+ * a build rather than quietly draw a coast with a beach missing from it.
+ */
+export function shoreViewForArea(area: Area): ShoreView {
+  const bySlug = new Map(allBeaches().map((beach) => [beach.slug, beach]));
+
+  const runs = area.beaches.flatMap((slug) => {
+    const beach = bySlug.get(slug);
+    if (!beach) {
+      throw new Error(
+        `areas.json puts ${slug} in ${area.slug}, but beaches.json has no such beach.`,
+      );
+    }
+    const run = coastRunFor(beach);
+    return run === null ? [] : [run];
+  });
+
+  /*
+    Built from the members' own runs rather than from their sand, which is the
+    rule `shoreViewFor` states one scope down: what the box is built from should
+    be what the box shows. A member the traced coast does not reach contributes
+    nothing here and is still marked -- `mission-bay-vacation-isle` is the one,
+    and its mark lands inside the frame its neighbours build.
+  */
+  const boxed = boundsAround(
+    runs.flatMap((run) => run.points),
+    SHORE_WINDOW_MARGIN,
+  );
+  if (boxed === null) return { coast: [], bounds: null, segment: null };
+
+  const draft = windowAround(coastline(), boxed);
+  const seaward = seawardFrom(draft);
+  const bounds = seaward === null ? boxed : squareToward(boxed, seaward);
+
+  return { coast: windowAround(coastline(), bounds), bounds, segment: null };
 }

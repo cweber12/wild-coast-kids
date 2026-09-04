@@ -397,6 +397,32 @@ to make cheap.
 > will go. The readout goes with it rather than standing alone, because
 > `ShoreMap` owns the coupling ADR-0038 settled.
 
+> **Addendum, 2026-09-04. §6's frame decision is reversed: the area map is
+> square.**
+>
+> §6 says "The area frame is not square", rejecting `squareToward` because it
+> "would spend two thirds to four fifths of the width on slack". Measured at the
+> map column's real width — 472px at the review viewport — each area's own bbox
+> aspect makes Imperial Beach **1,908px tall** and Coronado a **199px
+> letterbox**, with seven of the twelve multi-beach areas over a thousand pixels
+> in a 639px window. What it buys is the tightest pair of marks going from 5.5px
+> to 11.4px, on the axis §6 had already conceded reads as a cluster either way.
+> The slack is drawn as sea by ADR-0041, and on Coronado the square frame is
+> what shows the whole peninsula rather than a strip of it. **ADR-0051** records
+> it.
+>
+> §6's own figures no longer reproduce: it gives Del Mar as 9,411 m by 1,773 m,
+> and the traced coast runs give 4,191 by 2,798. It predates ADR-0039, so it was
+> measuring a different geometry — the direction of its argument survived, the
+> numbers did not.
+>
+> **The zoom §6 describes needed no mechanism.** `/conditions/<area>` gets the
+> area frame and `/conditions/<area>/<beach>` gets the beach's, with that
+> beach's run heavy. Two committed frames, swapped by the route.
+>
+> §6's other half — a tick per member, amending ADR-0033 — is unchanged and is
+> the next slice.
+
 ## Test seams
 
 Agreed before starting, and chosen from what exists rather than invented.

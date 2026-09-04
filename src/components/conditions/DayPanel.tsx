@@ -93,6 +93,7 @@ import {
   type WaveWeekView,
 } from "@/lib/conditions";
 import { beachBySlug } from "@/lib/beaches";
+import { areaBySlug } from "@/lib/areas";
 import {
   localMidnightOf,
   addLocalDays,
@@ -142,7 +143,7 @@ import {
 import type { ProvenanceFacts } from "./ProvenanceLine";
 import { ShoreMap } from "./ShoreMap";
 import { SurfZone } from "./SurfZone";
-import { shoreViewFor } from "./shore";
+import { shoreViewFor, shoreViewForArea } from "./shore";
 import { SkyWording } from "./SkyWording";
 import { gridPoints, swellPoints, tidePoints } from "./series";
 import {
@@ -405,6 +406,25 @@ function mapDescription(beachName: string): string {
   return (
     `A map of ${beachName}: its own stretch of coast drawn heavier than the ` +
     `shore either side of it, and the open water shaded.`
+  );
+}
+
+/**
+ * The same, for an area.
+ *
+ * **It says the count, because the picture cannot.** An area map draws the
+ * whole area's coast and nothing on it is picked out -- there is no heavier
+ * stretch, since no one beach is the subject -- so a reader who cannot see it
+ * is owed the fact that this is several beaches' coast rather than one's.
+ *
+ * It does not name them. The list of beaches is a heading and a set of links
+ * further up the page, which is where a reader goes to choose one; repeating
+ * ten names inside the map's label would make the label the list.
+ */
+function areaMapDescription(areaName: string, beaches: number): string {
+  return (
+    `A map of ${areaName}: the whole stretch of coast its ${beaches} beaches ` +
+    `sit on, with the open water shaded.`
   );
 }
 
@@ -768,32 +788,33 @@ export async function DayPanel({
     go quiet and does not belong behind a Suspense boundary.
   */
   /*
-    **No map on an area page, and a sentence in its place.**
+    **One map at either scope, and which coast it draws is the whole
+    difference.** An area page draws the area's whole coast in a square frame
+    with nothing picked out; a beach page draws that beach's own stretch heavy,
+    in a frame sized to it. That is the zoom the plan describes, and it needs no
+    mechanism beyond the route: the two views are two committed frames and the
+    URL says which.
 
-    The map draws one beach's own stretch of coast, heavier than the shore
-    either side of it. There is no such run for an area -- the area map, with a
-    tick per member and a frame taking the bbox's own aspect, is its own slice
-    and its own decision, because ADR-0033 says the map draws a place and not an
-    inventory and a mark per beach amends that. Drawing the first member's coast
-    here in the meantime is exactly the representative-beach lie ADR-0048
-    refuses: it would put one beach's shoreline under the area's name.
-
-    The readout goes with it, and that is the part worth stating. ADR-0034's
-    surviving clause has the readout rendered on every beach including the ones
-    with no coast, so a bearing dial without a shoreline is a shape this page
-    already permits -- but `ShoreMap` owns the coupling ADR-0038 settled, one
-    `hasReadout` gating the block and its sources together, and hoisting it out
-    would be a second change to a contract that decision has just finished
-    drawing. It arrives with the area map, over the area's own coast, which is
-    the frame that makes a wind bearing mean anything.
+    The area map is what stopped the area page having one at all. Drawing the
+    first member's coastline under the area's name would have been the
+    representative-beach lie ADR-0048 refuses, one layer down from a reading --
+    so until there was a frame built from every member, the column carried a
+    sentence saying so.
 
     A beach the inventory does not hold is not this component's error to invent
     a map for: the route already answered that question before rendering, and
     `beachBySlug` returning null here would mean the page is showing a beach it
-    does not have.
+    does not have. The same is true of the area, which `ConditionsSection`
+    resolved before it built the scope.
   */
   const beach = area ? null : beachBySlug(slug);
-  const shore = beach === null ? null : shoreViewFor(beach);
+  const areaOnMap = area ? areaBySlug(area.slug) : null;
+  const shore =
+    areaOnMap !== null
+      ? shoreViewForArea(areaOnMap)
+      : beach === null
+        ? null
+        : shoreViewFor(beach);
 
   /*
     Seven days of needles, built beside the seven days of series rather than
@@ -993,6 +1014,18 @@ export async function DayPanel({
   });
 
   /*
+    Whether the readout has anything to say at all.
+
+    An area reports a wind bearing only where its beaches share a forecast cell
+    and a swell bearing only where they share a model line, so an area that
+    shares neither has no needle on any hour of any day. `DayCompass` renders
+    null in that state and `ShoreMap` would still draw the box around it.
+  */
+  const hasNeedles = compassDays.some((day) =>
+    day.hours.some((hour) => hour.needles.length > 0),
+  );
+
+  /*
     Which hour it is now, as an index into any of the seven days.
 
     Computed here rather than in the client, because the page carries
@@ -1022,22 +1055,39 @@ export async function DayPanel({
         <ChosenDay
           days={days}
           map={
-            area ? (
-              <p className="leading-relaxed text-base text-fog">
-                The map draws one beach&apos;s own stretch of coast, with the
-                day&apos;s wind and swell laid under it. Choose a beach above
-                for {area.name}&apos;s.
-              </p>
-            ) : shore === null ? null : (
+            shore === null ? null : (
               <>
                 <ShoreMap
                   {...shore}
-                  description={mapDescription(beach!.name)}
+                  description={
+                    area === undefined
+                      ? mapDescription(beach!.name)
+                      : areaMapDescription(area.name, area.beaches.length)
+                  }
                   absence="We cannot place this beach on a map: the coordinates we hold for it are all one point."
                   noCoast="The coastline this site traces does not reach this beach."
                   coastCredit={`Shore traced from CDFW's ecoregion boundary, which follows this county's own coastline linework — close to the sand, but no tide level is published for it, so the edge is drawn where the land is mapped rather than where the water is today.`}
-                  readout={<DayCompass days={compassDays} />}
-                  readoutSources={<DayCompassSources days={compassDays} />}
+                  /*
+                    The readout arrives with the area map, which is what
+                    ADR-0049 said it would -- and only where the area has a
+                    bearing to state. `DayCompass` renders null when no hour has
+                    a needle, and passing it anyway put an empty labelled box
+                    under La Jolla's coast, where the forecast cell and the
+                    model line are both withheld and there is nothing to point.
+
+                    A beach page never reaches that: every beach in the
+                    inventory binds a forecast cell, so there is always a wind
+                    arrow. It is new with areas, so the emptiness is decided
+                    here rather than inside the readout -- `ShoreMap` gates the
+                    block and its sources on one `hasReadout`, and this is the
+                    caller answering that question honestly.
+                  */
+                  readout={
+                    hasNeedles ? <DayCompass days={compassDays} /> : null
+                  }
+                  readoutSources={
+                    hasNeedles ? <DayCompassSources days={compassDays} /> : null
+                  }
                 />
                 {/*
                 The sighting layer from #121, reserved *on* the map rather than

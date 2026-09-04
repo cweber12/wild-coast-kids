@@ -50,6 +50,14 @@ import {
  * is not read at all, so no member's figure can leak into an area's answer.
  */
 export type AreaScope = {
+  /**
+   * Which area this is, for the one thing that needs to look it up again.
+   *
+   * The map is built from the area's own coast rather than from anything the
+   * scope carries pre-resolved, because a windowed coastline is a few hundred
+   * points and every panel would be handed it whether it drew a map or not.
+   */
+  slug: string;
   name: string;
   /**
    * The area's member beaches, north to south.
@@ -119,6 +127,7 @@ export type NotShared = {
  */
 export function scopeFor(area: Area): AreaScope {
   return {
+    slug: area.slug,
     name: area.name,
     beaches: area.beaches,
     sources: areaSources(area),
