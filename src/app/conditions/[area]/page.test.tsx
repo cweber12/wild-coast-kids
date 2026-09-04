@@ -121,3 +121,38 @@ test("prerenders nothing at build", () => {
 test("revalidates on the same window as the other conditions routes", () => {
   expect(revalidate).toBe(900);
 });
+
+/**
+ * Six of the eighteen areas hold one beach, and for those the area is the beach
+ * page. ADR-0046 permits a single-member area on the grounds that "a lone
+ * member shares everything with itself"; this is where that stops being an
+ * argument and becomes what a reader sees.
+ */
+test("an area holding one beach shows it rather than offering it", async () => {
+  render(await AreaConditions(params("sunset-cliffs")));
+
+  expect(screen.getByText("week for sunset-cliffs-park")).toBeDefined();
+  expect(screen.getByText("day for sunset-cliffs-park")).toBeDefined();
+  // No list, and no heading over a list of one.
+  expect(screen.queryByRole("heading", { name: /Beaches in/ })).toBeNull();
+});
+
+/**
+ * The old per-beach URL of a one-beach area goes straight to the area, not
+ * through the nested form on the way. Both routes ask
+ * `canonicalConditionsPath`, which is what makes one hop the only hop.
+ */
+test("an old beach URL redirects once, not through the nested form", async () => {
+  await expect(AreaConditions(params("sunset-cliffs-park"))).rejects.toThrow(
+    "NEXT_REDIRECT:/conditions/sunset-cliffs",
+  );
+  expect(permanentRedirect).toHaveBeenCalledTimes(1);
+  expect(permanentRedirect).toHaveBeenCalledWith("/conditions/sunset-cliffs");
+});
+
+/** A beach in an area of several still gets the nested URL. */
+test("a beach with siblings still redirects to the nested URL", async () => {
+  await expect(AreaConditions(params("la-jolla-cove"))).rejects.toThrow(
+    "NEXT_REDIRECT:/conditions/la-jolla/la-jolla-cove",
+  );
+});

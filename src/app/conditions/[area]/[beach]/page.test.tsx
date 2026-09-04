@@ -97,3 +97,14 @@ test("prerenders nothing at build", () => {
 test("revalidates on the same window as the other conditions routes", () => {
   expect(revalidate).toBe(900);
 });
+
+/**
+ * One page, one address. An area of one serves its beach at the area's URL, so
+ * this level does not exist for it — redirected rather than 404ed, because the
+ * beach is real and this is the URL the beach list linked to until it moved up.
+ */
+test("the nested URL of a one-beach area moves up to the area", async () => {
+  await expect(
+    BeachConditions(params("sunset-cliffs", "sunset-cliffs-park")),
+  ).rejects.toThrow("NEXT_REDIRECT:/conditions/sunset-cliffs");
+});

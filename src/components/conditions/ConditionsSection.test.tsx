@@ -413,3 +413,33 @@ test("it refuses an area that is not in the table", () => {
     render(<ConditionsSection areaSlug="atlantis" beachSlug={null} />),
   ).toThrow(/names no area in areas.json/);
 });
+
+/**
+ * The list is a choice, so it is drawn only where there is one. Six of the
+ * eighteen areas hold a single beach, and a heading over a list of one entry
+ * reads as though the rest had failed to load.
+ */
+test("an area of one beach carries no beach list", () => {
+  render(
+    <ConditionsSection
+      areaSlug="sunset-cliffs"
+      beachSlug="sunset-cliffs-park"
+    />,
+  );
+
+  expect(screen.queryByRole("heading", { name: /Beaches in/ })).toBeNull();
+  expect(screen.getByText("week for sunset-cliffs-park")).toBeDefined();
+});
+
+/** And an area of several still carries it, on the beach page as on its own. */
+test("an area of several keeps its list while showing one beach", () => {
+  render(<ConditionsSection areaSlug="la-jolla" beachSlug="la-jolla-cove" />);
+
+  expect(
+    screen.getByRole("heading", { name: "Beaches in La Jolla" }),
+  ).toBeDefined();
+  expect(
+    screen.getAllByRole("link", { name: /La Jolla|WindanSea|Bird Rock/ })
+      .length,
+  ).toBeGreaterThan(1);
+});

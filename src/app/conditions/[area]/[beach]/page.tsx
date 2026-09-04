@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { notFound, permanentRedirect } from "next/navigation";
 import { ConditionsSection } from "@/components/conditions/ConditionsSection";
-import { areaBySlug, areaOfBeach } from "@/lib/areas";
+import { areaBySlug, areaOfBeach, soleBeachOf } from "@/lib/areas";
 import { beachBySlug } from "@/lib/beaches";
 
 /**
@@ -35,6 +35,16 @@ function resolvePair(areaSlug: string, beachSlug: string) {
   if (holding.slug !== areaSlug) {
     if (!areaBySlug(areaSlug)) return null;
     permanentRedirect(`/conditions/${holding.slug}/${beach.slug}`);
+  }
+
+  /*
+    An area of one serves its beach at the area's own URL, so this level does
+    not exist for it -- one page, one address. Redirected rather than 404ed:
+    the beach is real and the reader asked for it, and the nested form is the
+    one this route itself linked to until the sole beach moved up.
+  */
+  if (soleBeachOf(holding) !== null) {
+    permanentRedirect(`/conditions/${holding.slug}`);
   }
 
   return { area: holding, beach };

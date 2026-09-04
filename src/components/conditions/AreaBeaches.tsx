@@ -20,6 +20,11 @@ import { TOUCH_TARGET } from "../ui/touchTarget";
  * **Ordered north to south**, which is `areas.json`'s own order and the order
  * the whole inventory is in, so the list reads down the coast.
  *
+ * **Never rendered for an area of one.** `ConditionsSection` does not mount it
+ * there, so the heading is always plural: an area holding a single beach shows
+ * that beach rather than offering it, and a list with one entry under a heading
+ * reads as though the rest had failed to load.
+ *
  * The current beach is marked with `aria-current` rather than removed from the
  * list: a list that drops its own entry changes length as you move through it,
  * and the reader loses the place they are comparing from.
@@ -39,7 +44,7 @@ export function AreaBeaches({
   return (
     <section aria-labelledby="area-beaches-heading">
       <h2 id="area-beaches-heading" className={TOOL_REGION_HEADING}>
-        {beaches.length === 1 ? "The beach" : "Beaches"} in {areaName}
+        Beaches in {areaName}
       </h2>
 
       <ul className="flex flex-wrap gap-x-6 gap-y-1">

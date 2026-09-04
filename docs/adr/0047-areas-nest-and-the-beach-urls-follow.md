@@ -54,6 +54,27 @@ a map because the map cannot do it — four of La Jolla's ten beaches fall withi
 under ADR-0004 would need the map **2,634px wide**. The marks orient; the list
 selects.
 
+> **Amended 2026-09-04. An area holding one beach shows it, and has no list.**
+> Six of the eighteen hold one, and this decision drew the list for all of them
+> — a heading over a single entry, which reads as though the rest had failed to
+> load. It is redundant twice over: the chooser above it already names the
+> place, and the only link it offers is the page the reader is on.
+>
+> So an area of one is served **at the area's URL**, rendering its beach, and
+> `/conditions/<area>/<beach>` redirects up to it. One page, one address. That
+> is ADR-0046's own justification for permitting a single-member area at all —
+> "a lone member shares everything with itself and its area is the beach page" —
+> stopping being an argument and becoming what a reader sees.
+>
+> **The canonical path is decided in one place**, `canonicalConditionsPath` in
+> `areas.ts`, and both routes ask it rather than composing a URL themselves.
+> Without that an old `/conditions/sunset-cliffs-park` link would redirect to
+> the nested form and the nested form would redirect to the area — two hops for
+> a reader and two for a crawler, where the rule already knew the answer.
+>
+> Nothing else changes: an area of several keeps its list, on its own page and
+> on each of its beaches' pages alike.
+
 **The selected day moves to `app/conditions/layout.tsx`.** A layout is the only
 thing App Router keeps mounted across a navigation between sibling pages, and
 moving from an area to one of its beaches is now an ordinary thing to do.

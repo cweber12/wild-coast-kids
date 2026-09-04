@@ -78,6 +78,37 @@ export function defaultArea(): Area {
   return area;
 }
 
+/**
+ * The one beach an area holds, or null when it holds several.
+ *
+ * Six of the eighteen hold one, and for those the area *is* the beach —
+ * ADR-0046 already says so, in the words it permits a single-member area with:
+ * "a lone member shares everything with itself and its area is the beach page".
+ * This is that sentence made callable.
+ */
+export function soleBeachOf(area: Area): string | null {
+  return area.beaches.length === 1 ? area.beaches[0] : null;
+}
+
+/**
+ * The one URL a beach is served at, or null when the slug names no beach.
+ *
+ * **Two shapes, and the rule lives here so nothing redirects twice.** A beach in
+ * an area of several is at `/conditions/<area>/<beach>`; the sole beach of its
+ * area is at `/conditions/<area>`, because a page offering a choice of one is
+ * not a choice. Both routes ask this rather than deciding for themselves, which
+ * is what stops an old `/conditions/<beach>` link from bouncing through the
+ * nested URL on its way to the area.
+ */
+export function canonicalConditionsPath(beachSlug: string): string | null {
+  const area = areaOfBeach(beachSlug);
+  if (!area) return null;
+
+  return soleBeachOf(area) === null
+    ? `/conditions/${area.slug}/${beachSlug}`
+    : `/conditions/${area.slug}`;
+}
+
 /** One area's beaches, resolved, for a chooser or a heading. */
 export interface AreaGroup {
   area: Area;
