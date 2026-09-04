@@ -1805,7 +1805,7 @@ test("an area page draws the whole area's coast", async () => {
   expect(map).not.toBeNull();
   expect(map!.getAttribute("aria-label")).toBe(
     "A map of La Jolla: the whole stretch of coast its 10 beaches sit on, " +
-      "with the open water shaded.",
+      "each marked, with the open water shaded.",
   );
   // The placeholder it replaces is gone, and asserted gone: a sentence left
   // beside a real map would read as the map having failed.
@@ -2031,4 +2031,37 @@ test("a slug the inventory does not hold draws no map", async () => {
   expect(container.querySelector("svg[aria-label^='A map of']")).toBeNull();
   // The rest of the region still renders: the map is one part of it.
   expect(container.querySelector("[data-series-tab]")).not.toBeNull();
+});
+
+/**
+ * The marks reach the page: ten beaches in La Jolla, ten marks on its coast.
+ *
+ * This is the half that makes the picture about an area rather than about a
+ * stretch of coast that happens to be wide, and it is asserted here as well as
+ * in `shore.test.ts` because a view model nothing renders is not a map.
+ */
+test("an area map marks every beach the area holds", async () => {
+  const { container } = render(
+    await DayPanel({
+      slug: "la-jolla-shores-beach",
+      area: await areaScope("la-jolla"),
+    }),
+  );
+
+  expect(container.querySelectorAll("[data-tick]")).toHaveLength(10);
+  expect(
+    container
+      .querySelector("svg[aria-label^='A map of']")!
+      .getAttribute("aria-label"),
+  ).toContain("its 10 beaches sit on, each marked");
+});
+
+/** And a beach map marks nothing, because it draws its one subject heavy. */
+test("a beach map marks nothing and draws its own stretch instead", async () => {
+  const { container } = render(
+    await DayPanel({ slug: "la-jolla-shores-beach" }),
+  );
+
+  expect(container.querySelectorAll("[data-tick]")).toHaveLength(0);
+  expect(container.querySelector("[data-segment]")).not.toBeNull();
 });

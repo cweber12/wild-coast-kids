@@ -563,3 +563,64 @@ test("an area with no traced coast anywhere in it has no frame", () => {
   // the state it names rather than about a slug that happens to be quiet.
   expect(coastRunFor(beachBySlug("mission-bay-vacation-isle")!)).toBeNull();
 });
+
+/**
+ * One mark per beach, and every one on the coast that beach occupies.
+ *
+ * **The middle of its drawn run, never the middle of its two ends.** Those ends
+ * are corners of a bounding extent and the line between them cuts inside every
+ * curve of the shore: measured over the 50 beaches the traced coast reaches,
+ * the ends-midpoint lands up to 1,562 m off the line and 17 of the 50 are over
+ * 100 m off. It is `beachStretch`'s rule one scope down, and it failed the same
+ * way — `la-jolla-community-beach`'s mark floated in open land.
+ */
+test("every beach in an area is marked, on its own coast", () => {
+  let offTheLine = 0;
+
+  for (const { area, beaches } of beachesByArea()) {
+    const { ticks } = shoreViewForArea(area);
+    expect(ticks, area.slug).toHaveLength(beaches.length);
+
+    for (const [index, tick] of ticks.entries()) {
+      const beach = beaches[index];
+      const metres = nearestOn(coastline(), tick)!.metres;
+
+      if (coastRunFor(beach) === null) {
+        // The island. Its mark is where that beach is, which is off the line.
+        offTheLine += 1;
+        expect(metres, beach.slug).toBeGreaterThan(100);
+        continue;
+      }
+      // On the line, because it is a point of it.
+      expect(metres, `${area.slug}/${beach.slug}`).toBeLessThan(1);
+    }
+  }
+
+  // The probe: exactly one beach in the inventory is off the traced coast, so a
+  // run finding none would mean the branch above stopped being exercised.
+  expect(offTheLine).toBe(1);
+});
+
+/**
+ * And every mark is inside the frame its neighbours build — including the
+ * island's, which contributes nothing to that frame.
+ */
+test("every mark falls inside its area's frame", () => {
+  for (const { area } of beachesByArea()) {
+    const { bounds, ticks } = shoreViewForArea(area);
+
+    for (const tick of ticks) {
+      expect(tick.lat, area.slug).toBeGreaterThanOrEqual(bounds!.south);
+      expect(tick.lat, area.slug).toBeLessThanOrEqual(bounds!.north);
+      expect(tick.lon, area.slug).toBeGreaterThanOrEqual(bounds!.west);
+      expect(tick.lon, area.slug).toBeLessThanOrEqual(bounds!.east);
+    }
+  }
+});
+
+/** A beach map has one subject and draws it heavy, so it marks nothing. */
+test("a beach map carries no marks", () => {
+  for (const beach of allBeaches()) {
+    expect(shoreViewFor(beach).ticks, beach.slug).toEqual([]);
+  }
+});

@@ -420,8 +420,12 @@ to make cheap.
 > area frame and `/conditions/<area>/<beach>` gets the beach's, with that
 > beach's run heavy. Two committed frames, swapped by the route.
 >
-> §6's other half — a tick per member, amending ADR-0033 — is unchanged and is
-> the next slice.
+> §6's other half — a tick per member, amending ADR-0033 — landed as
+> **ADR-0052**, with one correction: the mark goes at the middle of the beach's
+> _drawn run_, not at the middle of its two ends. §6 says "midpoint" without
+> saying of what, and the ends-midpoint lands up to 1,562 m off the traced coast
+> — `la-jolla-community-beach`'s mark floated in open land until it was looked
+> at. 17 of the 50 beaches with a run are over 100 m off by that reading.
 
 ## Test seams
 

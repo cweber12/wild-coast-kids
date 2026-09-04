@@ -424,7 +424,7 @@ function mapDescription(beachName: string): string {
 function areaMapDescription(areaName: string, beaches: number): string {
   return (
     `A map of ${areaName}: the whole stretch of coast its ${beaches} beaches ` +
-    `sit on, with the open water shaded.`
+    `sit on, each marked, with the open water shaded.`
   );
 }
 

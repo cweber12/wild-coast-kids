@@ -35,6 +35,20 @@ export type ShoreView = {
   coast: readonly ShorePoint[];
   bounds: Bounds | null;
   /**
+   * Where each beach this map is about sits, one position per beach.
+   *
+   * Empty on a beach map, which has one subject and draws it as a heavy run
+   * instead. On an area map it is every member's midpoint, and it is the whole
+   * of what makes the picture about an area rather than about a stretch of
+   * coast that happens to be wide.
+   *
+   * **Positions and not marks.** Where the tick is drawn, how long it is and
+   * which way it lies are `ShoreMap`'s, because they are answers in plot units
+   * and this file works in degrees -- the same split the rest of the module
+   * keeps: the assembler reads, the component draws.
+   */
+  ticks: readonly Position[];
+  /**
    * Where this beach is, drawn heavier than anything around it.
    *
    * The run of `coast` it occupies where there is a coast, and its own two ends
@@ -317,7 +331,7 @@ export function shoreViewFor(beach: Beach): ShoreView {
   const coast =
     run === null || bounds === null ? [] : windowAround(coastline(), bounds);
 
-  return { coast, bounds, segment: beachStretch(run, beach) };
+  return { coast, bounds, ticks: [], segment: beachStretch(run, beach) };
 }
 
 /**
@@ -379,11 +393,55 @@ export function shoreViewForArea(area: Area): ShoreView {
     runs.flatMap((run) => run.points),
     SHORE_WINDOW_MARGIN,
   );
-  if (boxed === null) return { coast: [], bounds: null, segment: null };
+  if (boxed === null)
+    return { coast: [], bounds: null, ticks: [], segment: null };
 
   const draft = windowAround(coastline(), boxed);
   const seaward = seawardFrom(draft);
   const bounds = seaward === null ? boxed : squareToward(boxed, seaward);
 
-  return { coast: windowAround(coastline(), bounds), bounds, segment: null };
+  /*
+    A mark per member, at the middle of the coast that member occupies.
+
+    **The middle of its drawn run, never the middle of its two ends**, which is
+    `beachStretch`'s rule one scope down and fails the same way when broken: the
+    two ends are corners of a bounding extent, and the straight line between
+    them cuts inside every curve of the shore. Measured over the 50 beaches the
+    traced coast reaches, the ends-midpoint lands up to **1,562 m** off the line
+    -- `la-jolla-community-beach`, whose mark floated in open land on the first
+    draft of this picture -- and 17 of the 50 are over 100 m off. The run's own
+    middle is on the line for all 50, because it is a point of it.
+
+    Midpoints and not extents, which is the plan's measurement rather than a
+    preference: drawn proportionally, `la-jolla-community-beach` spans 5,082 m
+    and contains eight of the other nine, so nesting redraws rather than stacks
+    and the small beaches would be underneath rather than small.
+
+    **Every member, including the one with no run.** The frame is built from the
+    runs, so `mission-bay-vacation-isle` contributes nothing to it -- but it is a
+    beach in the area and a reader choosing between them is owed where it is. It
+    falls back to its own two ends, which for that beach are one point, and its
+    mark lands inside the frame its neighbours build, about 400 m off the traced
+    shore. That is a true statement about an island the committed mainland ring
+    does not hold, and the only mark on any area map that is not on the line.
+  */
+  const ticks = area.beaches.map((slug) => {
+    const beach = bySlug.get(slug)!;
+    const run = coastRunFor(beach);
+    if (run === null) {
+      return {
+        lat: (beach.segment.upper.lat + beach.segment.lower.lat) / 2,
+        lon: (beach.segment.upper.lon + beach.segment.lower.lon) / 2,
+      };
+    }
+    const middle = run.stretch[Math.floor(run.stretch.length / 2)];
+    return { lat: middle.lat, lon: middle.lon };
+  });
+
+  return {
+    coast: windowAround(coastline(), bounds),
+    bounds,
+    ticks,
+    segment: null,
+  };
 }
