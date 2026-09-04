@@ -157,25 +157,40 @@ export function withheldBy(
  * to tell a gap from a source.
  *
  * **It counts the beaches that have the product rather than the ones that do
- * not**, which is what keeps one sentence covering both counts without a
- * plural to agree: "Only 9 of the 10 beaches" needs no branch where "and 1 has
- * none" would need one, and a reader learns the same thing from it.
+ * not**, which is what keeps the gap sentence covering both counts without a
+ * second plural to agree: "Only 9 of the 10 beaches" needs no branch where
+ * "and 1 has none" would need one, and a reader learns the same thing from it.
+ *
+ * **One beach having the product is still its own sentence.** Tijuana Estuary
+ * is that case today -- Border Field State Park binds a model line and the
+ * slough binds none -- and the general form said "Only 1 of the 2 beaches ...
+ * have a swell forecast, and they share one source", which is the wrong verb
+ * over a clause that says nothing. One beach trivially reads one source, so the
+ * clause goes and the verb agrees. Found on the rendered page rather than in a
+ * fixture, which is why the area pages are worth looking at rather than only
+ * asserting.
  */
 export function withheldWords(slot: NotShared, product: string): string {
   if (slot.agreement === "absent") {
     return `No beach in ${slot.areaName} has ${product}. Each says why on its own page.`;
   }
 
+  const tail = `so there is no one figure for the whole area. Choose a beach for it.`;
+
+  if (slot.without === 0) {
+    return `The ${slot.beaches} beaches in ${slot.areaName} read ${slot.distinct} different sources for ${product}, ${tail}`;
+  }
+
+  const having = slot.beaches - slot.without;
+  if (having === 1) {
+    return `Only 1 of the ${slot.beaches} beaches in ${slot.areaName} has ${product}, ${tail}`;
+  }
+
   const sources =
     slot.distinct === 1
       ? "they share one source"
       : `they read ${slot.distinct} different sources`;
-
-  const tail = `so there is no one figure for the whole area. Choose a beach for it.`;
-
-  return slot.without === 0
-    ? `The ${slot.beaches} beaches in ${slot.areaName} read ${slot.distinct} different sources for ${product}, ${tail}`
-    : `Only ${slot.beaches - slot.without} of the ${slot.beaches} beaches in ${slot.areaName} have ${product}, and ${sources} — ${tail}`;
+  return `Only ${having} of the ${slot.beaches} beaches in ${slot.areaName} have ${product}, and ${sources} — ${tail}`;
 }
 
 /**

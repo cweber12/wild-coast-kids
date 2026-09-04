@@ -114,3 +114,53 @@ test("a gap and a disagreement are both counted", () => {
       "so there is no one figure for the whole area. Choose a beach for it.",
   );
 });
+
+/**
+ * One beach having the product, which the general form got wrong: "Only 1 of
+ * the 2 beaches ... have a swell forecast, and they share one source" is the
+ * wrong verb over a clause that says nothing, since one beach trivially reads
+ * one source.
+ *
+ * Tijuana Estuary is the case, and it is the only one in the table today —
+ * asserted as a count so that a membership change which removes it shows up as
+ * a test that has stopped covering anything.
+ */
+test("one beach having the product takes the singular, and drops the clause", () => {
+  const words = withheldWords(
+    withheldBy(scopeOf("tijuana-estuary"), "swell")!,
+    "a swell forecast",
+  );
+
+  expect(words).toBe(
+    "Only 1 of the 2 beaches in Tijuana Estuary has a swell forecast, " +
+      "so there is no one figure for the whole area. Choose a beach for it.",
+  );
+  expect(words).not.toContain("have a swell");
+  expect(words).not.toContain("share one source");
+});
+
+/** Every sentence the table actually produces, read for a verb that disagrees. */
+test("no area's sentence puts a plural verb on a count of one", async () => {
+  const { beachesByArea } = await import("@/lib/areas");
+  let singular = 0;
+
+  for (const { area } of beachesByArea()) {
+    if (area.beaches.length < 2) continue;
+    const scope = scopeFor(area);
+
+    for (const product of ["tide", "waves", "swell", "sky", "air"] as const) {
+      const slot = withheldBy(scope, product);
+      if (slot === null) continue;
+
+      const words = withheldWords(slot, `a ${product} reading`);
+      if (/^Only 1 of the/.test(words)) singular += 1;
+      expect(words, `${area.slug} ${product}`).not.toMatch(
+        /^Only 1 of the .* have /,
+      );
+    }
+  }
+
+  // The probe: Tijuana Estuary's swell is the one instance in the table today,
+  // so a run finding none is a run asserting nothing.
+  expect(singular).toBe(1);
+});
