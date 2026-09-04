@@ -496,10 +496,48 @@ export default defineConfig({
         // guard is gone rather than covered: `seaWash` asks whether the run has
         // a direction at all and returns null when it has not, which is a state
         // a test can put it in. So `ShoreMap.tsx` leaves the table too.
-        statements: 89.38,
-        branches: 89.09,
-        functions: 94.23,
-        lines: 89.04,
+        // RAISED 2026-09-04, all four, catching up three merged PRs rather
+        // than one. Areas replaced regions (#236), the measured block learned
+        // to answer for an area (#237) and the week, the day chart and the rip
+        // current risk followed (#238); none of the three moved this floor, so
+        // it had drifted about three quarters of a point below what the repo
+        // achieves:
+        //
+        //   statements 3426/3801  89.38 -> 90.13
+        //   branches   2223/2482  89.09 -> 89.56
+        //   functions   788/830   94.23 -> 94.93
+        //   lines      3089/3436  89.04 -> 89.89
+        //
+        // **Branches grew by more at the top than at the bottom** -- and unlike
+        // #200's note above, part of that is a deleted arm rather than new
+        // tests. `areaSources` resolved a product by reading the size of a Set
+        // built over the raw bindings and asking `only === null || only ===
+        // undefined`; the bindings are never `undefined`, so that arm was
+        // uncovered. The rewrite that stopped counting a missing binding as a
+        // source removed it.
+        //
+        // All four are the figures the reporter prints, and each was checked
+        // against the run that produced it rather than read off the table:
+        // `statements: 90.14` fails with "Coverage for statements (90.13%) does
+        // not meet global threshold (90.14%)", so 90.13 is the edge and not
+        // merely a number that passes.
+        //
+        // Three files this work touched are named rather than absorbed, and
+        // every uncovered statement in them is a guard or a publisher's outage
+        // that no test in this suite provokes: `areas.ts` at 96.15% statements,
+        // whose one uncovered line is `areaSources` throwing for an area naming
+        // a beach `beaches.json` does not have; `WeekPanel.tsx` at 98.38%, the
+        // empty-week branch of `sharedRange` and a tide row with no station;
+        // and `DayPanel.tsx` at 98.29%, still the CDIP outage sentence the #192
+        // note named. The identical guard in `surfZoneBeachOf` is covered, so
+        // this work adds no uncovered statement of its own.
+        //
+        // Nothing new is excluded. The same 0% entry-plumbing files named above
+        // still drag all four down in plain sight.
+        statements: 90.13,
+        branches: 89.56,
+        functions: 94.93,
+        lines: 89.9,
       },
     },
   },
