@@ -51,7 +51,16 @@ import {
  */
 export type AreaScope = {
   name: string;
-  beaches: number;
+  /**
+   * The area's member beaches, north to south.
+   *
+   * **The slugs and not just how many**, because two things need them and one
+   * of them needs which: the withheld sentences count them, and the area map
+   * draws the coast of every one and a mark at each. It was a count until the
+   * map arrived, and keeping both a count and a list would be two fields for
+   * one fact.
+   */
+  beaches: readonly string[];
   sources: AreaSources;
   /**
    * The member the surf zone bulletin is read through, which is not the member
@@ -111,7 +120,7 @@ export type NotShared = {
 export function scopeFor(area: Area): AreaScope {
   return {
     name: area.name,
-    beaches: area.beaches.length,
+    beaches: area.beaches,
     sources: areaSources(area),
     bulletinBeach: surfZoneBeachOf(area),
   };
@@ -136,7 +145,7 @@ export function withheldBy(
   return {
     agreement: source.kind,
     areaName: scope.name,
-    beaches: scope.beaches,
+    beaches: scope.beaches.length,
     distinct: source.kind === "mixed" ? source.distinct : 0,
     without: source.kind === "mixed" ? source.without : 0,
   };

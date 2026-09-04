@@ -189,10 +189,11 @@ test("on an area page the measured block is given the area and a member", () => 
   render(<ConditionsSection areaSlug="la-jolla" beachSlug={null} />);
 
   const [props] = measuredPanel.mock.calls[0] as [Record<string, unknown>];
-  const area = props.area as { name: string; beaches: number };
+  const area = props.area as { name: string; beaches: readonly string[] };
 
   expect(area.name).toBe("La Jolla");
-  expect(area.beaches).toBe(10);
+  expect(area.beaches).toHaveLength(10);
+  expect(area.beaches[0]).toBe("la-jolla-shores-beach");
   expect(props.slug).toBe("la-jolla-shores-beach");
 });
 
@@ -494,9 +495,9 @@ test("the week is asked for a beach and the area it stands for", () => {
   const [props] = weekPanel.mock.calls[0] as [Record<string, unknown>];
   expect(Object.keys(props).sort()).toEqual(["area", "slug"]);
 
-  const area = props.area as { name: string; beaches: number };
+  const area = props.area as { name: string; beaches: readonly string[] };
   expect(area.name).toBe("La Jolla");
-  expect(area.beaches).toBe(10);
+  expect(area.beaches).toHaveLength(10);
   expect(props.slug).toBe("la-jolla-shores-beach");
 });
 
@@ -566,8 +567,9 @@ test("the day chart is asked for a beach and the area it stands for", () => {
   const [props] = dayPanel.mock.calls[0] as [Record<string, unknown>];
   expect(Object.keys(props).sort()).toEqual(["area", "slug"]);
 
-  const area = props.area as { name: string; beaches: number };
+  const area = props.area as { name: string; beaches: readonly string[] };
   expect(area.name).toBe("La Jolla");
+  expect(area.beaches).toHaveLength(10);
   expect(props.slug).toBe("la-jolla-shores-beach");
 });
 
