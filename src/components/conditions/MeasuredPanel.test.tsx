@@ -16,6 +16,7 @@ const WAVES = {
     periodS: 5,
     directionDegT: 278,
     waterTempF: 69.98,
+    observedAtMs: Date.UTC(2026, 7, 17, 18, 13),
   },
 };
 
@@ -28,6 +29,7 @@ const AIR = {
     windMph: 8.05,
     gustMph: null,
     windDirDegT: 320,
+    observedAtMs: Date.UTC(2026, 7, 17, 17, 48),
   },
 };
 

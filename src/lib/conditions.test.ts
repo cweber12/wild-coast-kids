@@ -411,6 +411,36 @@ test("a wave reading carries the buoy, its distance and the water temperature", 
   });
 });
 
+test("a wave reading carries the row's own time, not the time it was read", async () => {
+  // Forty-seven minutes behind `nowMs`, which is the whole point of the
+  // assertion: MAX_WAVE_AGE_MINUTES is 180, so a buoy this stale is admitted
+  // and used to print under a label saying "Measured now". A view model that
+  // reported the read's clock rather than the row's would pass every other
+  // test in this file and lie on the page. See ADR-0054.
+  const takenAtMs = NOON_PACIFIC_20260817 - 47 * 60_000;
+  fetchLatestWave.mockResolvedValue({
+    kind: "ok",
+    observation: {
+      atMs: takenAtMs,
+      heightFt: 2.62,
+      periodS: 5,
+      directionDegT: 278,
+      waterTempF: 69.98,
+    },
+    ageMinutes: 47,
+    url: "https://example.invalid",
+  });
+
+  const view = await readLatestWaves(
+    "la-jolla-shores-beach",
+    NOON_PACIFIC_20260817,
+  );
+
+  if (view.state.kind !== "reading") throw new Error("expected a reading");
+  expect(view.state.observedAtMs).toBe(takenAtMs);
+  expect(view.state.observedAtMs).not.toBe(NOON_PACIFIC_20260817);
+});
+
 test("a bay beach is never asked about, because there is nothing to ask", async () => {
   const view = await readLatestWaves(BAY_BEACH, NOON_PACIFIC_20260817);
 
@@ -499,6 +529,9 @@ const ndbcAirOk = (overrides = {}) => ({
   windMph: 8.05,
   gustMph: null,
   windDirDegT: 320,
+  // Already the older of the station's two rows when it reaches this layer:
+  // fetchLatestNdbcAir takes that minimum, because only it can see the rows.
+  observedAtMs: Date.UTC(2026, 7, 18, 4, 40),
   url: "https://example.invalid",
   ...overrides,
 });
@@ -535,6 +568,26 @@ test("temperature and wind come from the pier, and nothing else does", async () 
     expect(view.air.airTempF).toBeCloseTo(71.42, 2);
     expect(view.air.windMph).toBeCloseTo(8.05, 2);
   }
+});
+
+test("both networks put an observation time in the view, from their own shapes", async () => {
+  // One field for two feeds that carry the instant differently. NDBC ages
+  // temperature and wind apart and hands over a minimum already taken; the
+  // weather service answers with one observation and one atMs. A view model
+  // that read only one of those would leave half the inventory with a card that
+  // could not say when it read. ADR-0054.
+  fetchLatestNdbcAir.mockResolvedValue(ndbcAirOk());
+  const ndbc = await readLatestAir(BEACH, NOON_PACIFIC_20260817);
+
+  if (ndbc.air.kind !== "reading") throw new Error("expected a reading");
+  expect(ndbc.air.observedAtMs).toBe(Date.UTC(2026, 7, 18, 4, 40));
+
+  fetchLatestObservation.mockResolvedValue(nwsObservationOk());
+  // The bay: no buoy, and an air station on the weather service's network.
+  const nws = await readLatestAir(BAY_BEACH, NOON_PACIFIC_20260817);
+
+  if (nws.air.kind !== "reading") throw new Error("expected a reading");
+  expect(nws.air.observedAtMs).toBe(KNKX_OBSERVATION.atMs);
 });
 
 test("the airport is not asked at all any more", async () => {

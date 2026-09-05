@@ -460,6 +460,20 @@ export type AirReadingResult =
       windMph: number | null;
       gustMph: number | null;
       windDirDegT: number | null;
+      /**
+       * The oldest row that contributed a value, epoch milliseconds UTC.
+       *
+       * **Oldest and not newest**, because the caller prints one time over both
+       * figures. The newest would let a fresh wind vouch for a temperature an
+       * hour behind it, which on this feed is the ordinary case rather than the
+       * edge one: probed 2026-09-04, LJAC1 published wind at 21:00 and
+       * temperature at 20:48, its `ATMP` column blank on the four newest rows.
+       *
+       * Only rows whose value survived `fresh` count. A temperature aged out of
+       * the window is not on the card, so the time it was taken is not a bound
+       * on anything the reader can see. See ADR-0054.
+       */
+      observedAtMs: number;
       url: string;
     }
   | { kind: "unavailable"; reason: string; drift: boolean; url: string };
@@ -550,10 +564,28 @@ export async function fetchLatestNdbcAir(
     );
   }
 
+  /*
+    The rows still standing on the card, and the oldest of them.
+
+    A field nulled by `fresh` is not on the card, so its row bounds nothing a
+    reader can see -- which is why this reads `airTempF`/`windMph` rather than
+    `observation.airTemp`/`observation.wind`. Gust and direction add no third
+    candidate: they came off the wind's own row.
+
+    Never empty. The branch above returns `unavailable` when both fields are
+    null, so at least one instant reaches this line, and the non-null assertion
+    is that guarantee rather than an assumption about the feed.
+  */
+  const contributing = [
+    airTempF === null ? null : observation.airTemp!.atMs,
+    windMph === null ? null : observation.wind!.atMs,
+  ].filter((atMs): atMs is number => atMs !== null);
+
   return {
     kind: "ok",
     airTempF,
     windMph,
+    observedAtMs: Math.min(...contributing),
     // Gust and direction ride on the wind's own freshness: they came off that
     // row, and without a current speed they describe nothing.
     gustMph: fresh(

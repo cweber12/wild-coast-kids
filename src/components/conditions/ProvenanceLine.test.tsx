@@ -139,3 +139,34 @@ test("on a card it keeps the colour measured against that card", () => {
     "text-white/55",
   );
 });
+
+/**
+ * The fifth fact, and the one the caller words rather than this component.
+ *
+ * A source read off one row states its time and a source read off several
+ * states a bound, and which of those is true depends on how the read was
+ * composed -- something this component cannot see. So it renders the string it
+ * is handed, in one position, and does not decide what the claim is. ADR-0054.
+ */
+test("an observation time is rendered as the caller worded it", () => {
+  render(
+    <ProvenanceLine
+      source={SOURCE}
+      network="NDBC"
+      observed="nothing older than 1:48 PM"
+    />,
+  );
+
+  const line = screen.getByText(/NDBC/).textContent ?? "";
+  expect(line).toContain("nothing older than 1:48 PM");
+  // The claim survives verbatim. A component that reworded this could turn a
+  // bound into a point, which is the one thing the wording is protecting.
+  expect(line).not.toContain("Measured now");
+});
+
+test("no time is shown when the caller has none to give", () => {
+  render(<ProvenanceLine source={SOURCE} network="NDBC" />);
+
+  const line = screen.getByText(/NDBC/).textContent ?? "";
+  expect(line).toBe(`${SOURCE} · NDBC`);
+});

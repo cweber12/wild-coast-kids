@@ -45,6 +45,7 @@
  */
 
 import type { AirView, WavesView } from "@/lib/conditions";
+import { localTimeOf } from "@/lib/pacific-time";
 import { type NotShared, withheldWords } from "./areaScope";
 import { compassWords } from "./bearing";
 import { CARD_PROSE } from "./cardText";
@@ -123,12 +124,14 @@ function heightWords(feet: number): string {
  * modelled heights are instead, unconditionally. It can no longer be wrong
  * about whether a forecast arrived, because it no longer asks.
  *
- * **`Measured now` stays on the provenance line, against a different second
- * thing.** ADR-0016 put that label there to separate the buoy from the MOP
- * block below it. The block has gone one region up and become a curve, so the
- * label now separates this figure from the chart rather than from a sibling
- * group — which is the same distinction, drawn between the same two kinds of
- * claim, at the distance the page now puts them.
+ * **`Measured` stays on the provenance line, and lost the word `now`.**
+ * ADR-0016 put that label there to separate the buoy from the MOP block below
+ * it. The block has gone one region up and become a curve, so the label now
+ * separates this figure from the chart rather than from a sibling group — the
+ * same distinction, between the same two kinds of claim, at the distance the
+ * page now puts them. What `now` was asserting is asserted properly by the time
+ * beside it: `MAX_WAVE_AGE_MINUTES` is 180, so this label stood over readings
+ * up to three hours old and said they were current. See ADR-0054.
  */
 function SeaCard({ beachName, buoy, state }: WavesView) {
   const distanceM = buoy?.distanceM ?? null;
@@ -234,10 +237,23 @@ function SeaCard({ beachName, buoy, state }: WavesView) {
 
       {buoy !== null && (
         <ProvenanceLine
-          label="Measured now"
+          label="Measured"
           source={`Buoy ${buoy.name}`}
           network="NDBC"
           distanceKm={distantKm}
+          /*
+            The row's own time, stated rather than bounded: every figure on this
+            card came off one line of `realtime2`, so there is nothing here for
+            a bound to be a bound over. The air card next door says it the other
+            way for the opposite reason. See ADR-0054.
+
+            `null` outside a reading, where there is no row and so no time. The
+            line still renders: which buoy was asked is a fact about a beach and
+            stays true when the buoy is quiet.
+          */
+          observed={
+            state.kind === "reading" ? localTimeOf(state.observedAtMs) : null
+          }
         />
       )}
     </ReadingCard>
@@ -436,6 +452,19 @@ function AirCard({ beachName, airStation, air }: AirView) {
           distanceKm={
             airStation.distanceM !== null
               ? roundedKm(airStation.distanceM)
+              : null
+          }
+          /*
+            A bound, not a time, and the wave card next door states its time
+            instead. The difference is the feed: an NDBC station ages
+            temperature and wind independently, so these two figures can be an
+            hour apart, and this card cannot see which network answered.
+            "Nothing older than" is true of either; "measured at" is false of
+            the wind whenever the temperature is the older row. See ADR-0054.
+          */
+          observed={
+            air.kind === "reading"
+              ? `nothing older than ${localTimeOf(air.observedAtMs)}`
               : null
           }
         />

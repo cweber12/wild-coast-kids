@@ -9,13 +9,24 @@ const FAR_BUOY = { name: "Point Loma South", distanceM: 34_159 };
 /** Scripps Pier: the one station the air card names, and the only one it reads. */
 const PIER = { name: "Scripps Pier", distanceM: 1_381 };
 
+/** 2026-08-17, 11:13 AM Pacific: a time, not a round hour, so a formatter that dropped the minutes would show. */
+const WAVE_TAKEN_AT_MS = Date.UTC(2026, 7, 17, 18, 13);
+
 const WAVE_READING = {
   kind: "reading",
   heightFt: 2.62,
   periodS: 5,
   directionDegT: 278,
   waterTempF: 69.98,
+  observedAtMs: WAVE_TAKEN_AT_MS,
 } as const;
+
+/**
+ * 2026-08-17, 10:48 AM Pacific: 25 minutes behind the buoy's row, the way the
+ * two feeds actually run. Different from `WAVE_TAKEN_AT_MS` so a card printing
+ * its neighbour's time would be visible rather than coincidentally right.
+ */
+const AIR_TAKEN_AT_MS = Date.UTC(2026, 7, 17, 17, 48);
 
 const AIR_READING = {
   kind: "reading",
@@ -23,6 +34,7 @@ const AIR_READING = {
   windMph: 8.05,
   gustMph: null,
   windDirDegT: 320,
+  observedAtMs: AIR_TAKEN_AT_MS,
 } as const;
 
 /**
@@ -183,6 +195,43 @@ test("every wave height band has its own words", () => {
     expect(screen.getByText(`${words}.`)).toBeDefined();
     unmount();
   }
+});
+
+test("the buoy's line states when it read, and no longer claims it was now", () => {
+  render(<MeasuredToday readings={readings()} />);
+
+  const line = screen.getByText(/NDBC/).textContent ?? "";
+  // Pacific, because the reading is: the buoy is off San Diego and the row is
+  // 18:13 UTC. A line printing 6:13 PM would be the test runner's clock.
+  expect(line).toContain("11:13 AM");
+  // ADR-0054. MAX_WAVE_AGE_MINUTES is 180, so this label stood over readings
+  // up to three hours old and asserted the one thing it could not know.
+  expect(line).toContain("Measured");
+  expect(line).not.toContain("Measured now");
+});
+
+test("a quiet buoy is still credited, with no time to state", () => {
+  render(
+    <MeasuredToday
+      readings={readings({
+        waves: {
+          state: {
+            kind: "unavailable",
+            detail: "NDBC timed out.",
+            drift: false,
+          },
+        },
+      })}
+    />,
+  );
+
+  // By the buoy's name rather than by /NDBC/: the disclosure this state opens
+  // quotes the feed's own message, which names NDBC too.
+  const line = screen.getByText(new RegExp(NEAR_BUOY.name)).textContent ?? "";
+  // Which buoy was asked is a fact about the beach and survives the outage.
+  // The time is not: there is no row, so the line must not invent one.
+  expect(line).toContain(NEAR_BUOY.name);
+  expect(line).not.toMatch(/\d{1,2}:\d{2}\s?(AM|PM)/);
 });
 
 test("a nearby buoy is credited without a distance", () => {
@@ -427,6 +476,42 @@ test("the air station is named, with its distance", () => {
   const air = screen.getByText(/Scripps Pier/).textContent ?? "";
   expect(air).toContain("Temperature and wind");
   expect(air).toContain("about 1.4 km from this beach");
+});
+
+test("the air line states a bound where the wave line states a time", () => {
+  render(<MeasuredToday readings={readings()} />);
+
+  const air = screen.getByText(/Scripps Pier/).textContent ?? "";
+  // "Nothing older than" and not "measured at". An NDBC station ages
+  // temperature and wind on their own rows, so these two figures can be an hour
+  // apart, and this card cannot see which network answered. ADR-0054.
+  expect(air).toContain("nothing older than 10:48 AM");
+
+  // The two cards read two feeds and must not print one instant between them.
+  // The wave row here is 25 minutes newer, which is the shape the feeds
+  // actually have.
+  const sea = screen.getByText(/NDBC/).textContent ?? "";
+  expect(sea).toContain("11:13 AM");
+  expect(sea).not.toContain("10:48 AM");
+});
+
+test("a station that could not be reached is credited with no time", () => {
+  render(
+    <MeasuredToday
+      readings={readings({
+        air: {
+          air: {
+            kind: "unavailable",
+            detail: "The station did not answer.",
+            drift: false,
+          },
+        },
+      })}
+    />,
+  );
+
+  const air = screen.getByText(/Scripps Pier/).textContent ?? "";
+  expect(air).not.toMatch(/\d{1,2}:\d{2}\s?(AM|PM)/);
 });
 
 test("a gust is shown when the station published one", () => {

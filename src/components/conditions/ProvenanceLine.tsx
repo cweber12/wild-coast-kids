@@ -1,5 +1,6 @@
 /**
- * Which instrument answered, who publishes it, and how far away it stands.
+ * Which instrument answered, who publishes it, how far away it stands and when
+ * it read.
  *
  * **This is the half of the old attribution paragraph that stayed.** The other
  * half — what the figure means — went to `ConditionsNotes`, because it was the
@@ -60,6 +61,20 @@ type ProvenanceLineProps = {
    * the unit and the reference point -- belongs to this component.
    */
   distanceKm?: string | null;
+  /**
+   * When the reading was taken, already worded by the caller.
+   *
+   * **The wording is the caller's because the claim is.** A source read off one
+   * row states its time — `2:26 PM` — and a source read off several states a
+   * bound — `nothing older than 1:48 PM`. Which of those is true depends on how
+   * the read was composed, which this component cannot see. It renders the
+   * fifth fact and does not decide what the fact is. See ADR-0054.
+   *
+   * Last of the interpunct segments, one placement for every caller, for the
+   * reason the distance wording moved in here: four wordings of one fact across
+   * three components is what this component exists to prevent.
+   */
+  observed?: string | null;
   /** Why this source and not a nearer one, when there is something to say. */
   note?: string | null;
   /** What these figures are, when a card carries more than one source. */
@@ -101,6 +116,7 @@ export function ProvenanceLine({
   source,
   network = null,
   distanceKm = null,
+  observed = null,
   note = null,
   label = null,
   surface = "card",
@@ -113,6 +129,7 @@ export function ProvenanceLine({
       {source}
       {network !== null ? ` · ${network}` : ""}
       {distanceKm !== null ? ` · about ${distanceKm} km from this beach` : ""}
+      {observed !== null ? ` · ${observed}` : ""}
       {note !== null ? ` — ${note}` : ""}
     </p>
   );
