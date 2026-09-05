@@ -120,7 +120,7 @@ export function ConditionsSection({
         title`, not `--text-title`. See the token's own note -- six other pages
         take the larger one and none of them opens on a figure.
       */}
-      <div className="mb-7 md:flex md:items-end md:justify-between md:gap-10">
+      <div className="mb-7 md:flex md:items-end md:justify-between md:gap-6 lg:gap-8">
         <div>
           <h1 className="text-tool-title leading-display mb-3 font-black italic">
             Check <span className="text-ocean">conditions</span> first.
@@ -166,6 +166,72 @@ export function ConditionsSection({
           bulletin going quiet must not hold up the chooser, which needs no
           network at all.
         */}
+        {/*
+          WHAT IS TRUE NOW, IN THE ROW THAT SAYS WHICH PLACE IT IS TRUE OF.
+
+          The buoy and the shore station are the only instruments this site
+          reports, and they answer for one instant: now. Everything below this
+          row is a prediction or a model, scoped to a day a reader chooses.
+
+          **It sits OUTSIDE `SelectedDayProvider`**, and that is structural
+          rather than a convention: frozen to the present is this band's whole
+          contract, and with no day in scope here a later change cannot quietly
+          make these figures follow Thursday. The provider is in
+          `app/conditions/layout.tsx`, one level out, and the band is not inside
+          it at any width.
+
+          It sat under the beach list as a full-width block and cost the page a
+          row of its own: 77px of band plus a 36px margin, above a week grid
+          whose top edge then fell 51px below a 639px fold. Here it costs
+          nothing. The row is `md:items-end` and was already about 100px tall,
+          set by the chooser's column, and the band is shorter than that — so
+          it fills space the header row was already reserving and the week
+          moves up by the whole of what the block used to occupy.
+
+          `flex-1` rather than a width: it is the only element in this row that
+          can take whatever is left. The title's column is capped at
+          `max-w-130` and the chooser's is a fixed 288px, so the band gets
+          1440 − 520 − 288 − two gaps at the review viewport, and less on a
+          narrower screen without either neighbour having to give anything up.
+
+          **In the row only from `lg`.** At `md` the usable width is 672px and
+          the title plus the gap plus the chooser already spends 848px, so the
+          title is compressed there before this arrives; a third column would
+          leave it a few dozen pixels. Below `lg` the band stacks under the
+          header, which is where it stood before this move and is still the
+          first thing under it.
+
+          Its own Suspense boundary, like every region on this page: five
+          agencies go quiet independently and a slow buoy must not hold up the
+          chooser, which needs no network at all.
+        */}
+        <div className="mt-6 lg:mt-0 lg:flex-1">
+          <Suspense
+            fallback={
+              <p className="text-base text-fog">
+                Reading the buoy and the air station…
+              </p>
+            }
+          >
+            {/*
+              On an area page this reads through the area's first beach, and
+              which beach that is cannot matter: a product is only read here
+              when every beach in the area binds the same source for it, which
+              is what `areaSources` calls shared and what `areas.test.ts`
+              asserts over the whole table. A product they do not share is not
+              read at all, so no one beach's figure can arrive labelled as the
+              area's.
+
+              Air is shared by all eighteen areas and a buoy by three, so on
+              fifteen area pages this band is one segment: what the air station
+              read, and nothing about the sea. That is not a hole -- the
+              sentence saying why lives beside the modelled heights the week and
+              the chart draw (ADR-0055).
+            */}
+            <MeasuredPanel slug={reading} area={scope} />
+          </Suspense>
+        </div>
+
         <div className="mt-6 md:mt-0 md:w-72">
           <AreaSelector areas={areas} current={areaSlug} />
           {/*
@@ -216,69 +282,6 @@ export function ConditionsSection({
           />
         </div>
       )}
-
-      {/*
-        WHAT IS TRUE NOW, BEFORE ANYTHING THAT IS TRUE OF A DAY.
-
-        The buoy and the shore station are the only instruments this site
-        reports, and they answer for one instant: now. Everything below this
-        point is a prediction or a model, and everything below this point is
-        scoped to a day a reader chooses.
-
-        That is why the block sits here and, more to the point, why it sits
-        OUTSIDE `SelectedDayProvider`. Frozen to the present is the whole
-        contract of this region, and putting it outside the provider is what
-        makes that structural rather than a convention: there is no day in
-        scope here to accidentally read. A later change cannot quietly make
-        these figures follow Thursday, because there is nothing to follow.
-
-        It used to live inside the day panel, under the chart, rendered on
-        today alone -- with a sentence on the other six days explaining that
-        nothing had been measured about a day that had not happened. That
-        sentence is gone with the move. It existed because the block sat in a
-        position where its absence would have read as an outage; no measured
-        block lives down there now, so there is no gap left to explain, and
-        this band says which instant it means.
-
-        A band of three cards stood in this spot once -- today's lowest tide,
-        the buoy, the air station -- and was removed as redundant against the
-        week grid and the day chart, which print the tide and the swell
-        themselves. Two of them survived as a pair of dark cards, and those are
-        one line now (ADR-0056): a measured wave height exists on 18 of 69
-        routes, so a two-card layout was built for the minority case, and on the
-        rest the wave card held a paragraph about an absence rather than a
-        figure. What is left is the half of that band that was never duplicated:
-        nothing else on this page is measured.
-
-        Its own Suspense boundary, like every region on this page. Five
-        agencies go quiet independently and a slow buoy must not hold up the
-        week.
-      */}
-      <div className="mb-9">
-        <Suspense
-          fallback={
-            <p className="text-base text-fog">
-              Reading the buoy and the air station…
-            </p>
-          }
-        >
-          {/*
-            On an area page this reads through the area's first beach, and which
-            beach that is cannot matter: a product is only read here when every
-            beach in the area binds the same source for it, which is what
-            `areaSources` calls shared and what `areas.test.ts` asserts over the
-            whole table. A product they do not share is not read at all, so no
-            one beach's figure can arrive labelled as the area's.
-
-            Air is shared by all eighteen areas and a buoy by three, so on
-            fifteen area pages this band is one segment: what the air station
-            read, and nothing about the sea. That is not a hole -- the sentence
-            saying why lives beside the modelled heights the week and the chart
-            draw (ADR-0055).
-          */}
-          <MeasuredPanel slug={reading} area={scope} />
-        </Suspense>
-      </div>
 
       {/*
         The week and the day are one instrument at two zoom levels, and from
