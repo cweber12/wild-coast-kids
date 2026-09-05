@@ -9,12 +9,16 @@ const FAR_BUOY = { name: "Point Loma South", distanceM: 34_159 };
 /** Scripps Pier: the one station the air card names, and the only one it reads. */
 const PIER = { name: "Scripps Pier", distanceM: 1_381 };
 
+/** 2026-08-17, 11:13 AM Pacific: a time, not a round hour, so a formatter that dropped the minutes would show. */
+const WAVE_TAKEN_AT_MS = Date.UTC(2026, 7, 17, 18, 13);
+
 const WAVE_READING = {
   kind: "reading",
   heightFt: 2.62,
   periodS: 5,
   directionDegT: 278,
   waterTempF: 69.98,
+  observedAtMs: WAVE_TAKEN_AT_MS,
 } as const;
 
 const AIR_READING = {
@@ -183,6 +187,43 @@ test("every wave height band has its own words", () => {
     expect(screen.getByText(`${words}.`)).toBeDefined();
     unmount();
   }
+});
+
+test("the buoy's line states when it read, and no longer claims it was now", () => {
+  render(<MeasuredToday readings={readings()} />);
+
+  const line = screen.getByText(/NDBC/).textContent ?? "";
+  // Pacific, because the reading is: the buoy is off San Diego and the row is
+  // 18:13 UTC. A line printing 6:13 PM would be the test runner's clock.
+  expect(line).toContain("11:13 AM");
+  // ADR-0054. MAX_WAVE_AGE_MINUTES is 180, so this label stood over readings
+  // up to three hours old and asserted the one thing it could not know.
+  expect(line).toContain("Measured");
+  expect(line).not.toContain("Measured now");
+});
+
+test("a quiet buoy is still credited, with no time to state", () => {
+  render(
+    <MeasuredToday
+      readings={readings({
+        waves: {
+          state: {
+            kind: "unavailable",
+            detail: "NDBC timed out.",
+            drift: false,
+          },
+        },
+      })}
+    />,
+  );
+
+  // By the buoy's name rather than by /NDBC/: the disclosure this state opens
+  // quotes the feed's own message, which names NDBC too.
+  const line = screen.getByText(new RegExp(NEAR_BUOY.name)).textContent ?? "";
+  // Which buoy was asked is a fact about the beach and survives the outage.
+  // The time is not: there is no row, so the line must not invent one.
+  expect(line).toContain(NEAR_BUOY.name);
+  expect(line).not.toMatch(/\d{1,2}:\d{2}\s?(AM|PM)/);
 });
 
 test("a nearby buoy is credited without a distance", () => {

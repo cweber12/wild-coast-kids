@@ -411,6 +411,36 @@ test("a wave reading carries the buoy, its distance and the water temperature", 
   });
 });
 
+test("a wave reading carries the row's own time, not the time it was read", async () => {
+  // Forty-seven minutes behind `nowMs`, which is the whole point of the
+  // assertion: MAX_WAVE_AGE_MINUTES is 180, so a buoy this stale is admitted
+  // and used to print under a label saying "Measured now". A view model that
+  // reported the read's clock rather than the row's would pass every other
+  // test in this file and lie on the page. See ADR-0054.
+  const takenAtMs = NOON_PACIFIC_20260817 - 47 * 60_000;
+  fetchLatestWave.mockResolvedValue({
+    kind: "ok",
+    observation: {
+      atMs: takenAtMs,
+      heightFt: 2.62,
+      periodS: 5,
+      directionDegT: 278,
+      waterTempF: 69.98,
+    },
+    ageMinutes: 47,
+    url: "https://example.invalid",
+  });
+
+  const view = await readLatestWaves(
+    "la-jolla-shores-beach",
+    NOON_PACIFIC_20260817,
+  );
+
+  if (view.state.kind !== "reading") throw new Error("expected a reading");
+  expect(view.state.observedAtMs).toBe(takenAtMs);
+  expect(view.state.observedAtMs).not.toBe(NOON_PACIFIC_20260817);
+});
+
 test("a bay beach is never asked about, because there is nothing to ask", async () => {
   const view = await readLatestWaves(BAY_BEACH, NOON_PACIFIC_20260817);
 

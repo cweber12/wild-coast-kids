@@ -16,6 +16,7 @@ const WAVES = {
     periodS: 5,
     directionDegT: 278,
     waterTempF: 69.98,
+    observedAtMs: Date.UTC(2026, 7, 17, 18, 13),
   },
 };
 

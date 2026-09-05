@@ -656,6 +656,19 @@ export type WavesState =
       periodS: number | null;
       directionDegT: number | null;
       waterTempF: number | null;
+      /**
+       * When the buoy took this reading, epoch milliseconds UTC.
+       *
+       * **One row, so this is exact rather than a bound.** Height, period,
+       * direction and water temperature all come off the same line of
+       * `realtime2`; the air half of this block is up to two rows and says so
+       * differently. See ADR-0054.
+       *
+       * Raw rather than worded, unlike `WaveReading.timeLabel` next door. Two
+       * labels cannot be compared, and the measured band composes one bound
+       * across both sources by taking the older of them.
+       */
+      observedAtMs: number;
     }
   | {
       kind: "no-buoy";
@@ -744,6 +757,12 @@ export async function readLatestWaves(
       periodS: result.observation.periodS,
       directionDegT: result.observation.directionDegT,
       waterTempF: result.observation.waterTempF,
+      // The row's own time, which `fetchLatestWave` has already held against
+      // MAX_WAVE_AGE_MINUTES. Carried rather than recomputed: the limit that
+      // let this row through and the time the page prints must be the same
+      // instant, or the page can say a reading is older than the check that
+      // admitted it.
+      observedAtMs: result.observation.atMs,
     },
   };
 }
