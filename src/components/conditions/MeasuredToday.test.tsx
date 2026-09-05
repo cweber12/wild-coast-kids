@@ -282,16 +282,13 @@ test("a bay beach is told this is expected, not a fault", () => {
 });
 
 /**
- * The disclosure ADR-0019 was accepted on, which that decision says goes with
- * it if it is "ever removed or weakened". Ten beaches now carry a wave figure
- * that was never measured anywhere, and this is the only place a reader meets
- * that fact before the number.
+ * A beach ADR-0019 admits: no buoy, and a MOP line answering in its place.
  *
- * It got stronger in the move rather than weaker. On the card the sentence
- * pointed at a forecast block eighty pixels below it and had a second form for
- * when CDIP had not answered; there is no block below it now, so it names the
- * chart and the week where those modelled heights actually are, and it says so
- * whatever CDIP is doing.
+ * What this card owes such a reader is the absence — that nothing here was
+ * measured. What ADR-0019 additionally requires, that the heights they *can*
+ * see are modelled, is asserted where those heights are drawn: `WeekPanel`'s
+ * and `DayPanel`'s own tests, on the attribution `mopNote` builds. See
+ * ADR-0055.
  */
 const NO_BUOY_MODELLED = {
   kind: "no-buoy",
@@ -306,25 +303,29 @@ const MODELLED_BEACH = {
   state: NO_BUOY_MODELLED,
 };
 
-test("a beach no buoy reaches is told its wave heights are modelled", () => {
+test("a beach no buoy reaches is told nothing here was measured", () => {
   render(<MeasuredToday readings={readings({ waves: MODELLED_BEACH })} />);
 
-  expect(screen.getByText(/nothing here is measured/)).toBeDefined();
   const sentence =
     screen.getByText(/nothing here is measured/).textContent ?? "";
-  expect(sentence).toContain("comes from a model of the swell");
-  expect(sentence).toContain("not from an instrument in the water");
+  expect(sentence).toContain("No wave buoy reaches this stretch of coast");
 });
 
-test("the disclosure points at where the modelled heights actually are", () => {
-  // It used to say "the wave heights below", which was true when a forecast
-  // block sat beneath it on the card. Below this sentence now is the air card.
+/**
+ * ADR-0055. The half of this sentence saying every wave height on the page is
+ * modelled now hangs off the attribution of each modelled height, in all three
+ * places one is drawn -- the week grid's wave row, the day chart's swell tab
+ * and the shore map's readout. Leaving a copy here would be one claim in two
+ * shapes, and it pointed at panels ("the chart above and in the week above
+ * that") that this card is about to stop sitting above at all.
+ */
+test("the card no longer says what stands in for the missing measurement", () => {
   render(<MeasuredToday readings={readings({ waves: MODELLED_BEACH })} />);
 
   const sentence =
     screen.getByText(/nothing here is measured/).textContent ?? "";
-  expect(sentence).toContain("on the chart above and in the week above that");
-  expect(sentence).not.toContain("below");
+  expect(sentence).not.toContain("comes from a model of the swell");
+  expect(sentence).not.toContain("the chart above");
 });
 
 test("it does not tell an open-coast beach that swell does not reach it", () => {

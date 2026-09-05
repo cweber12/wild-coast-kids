@@ -126,6 +126,7 @@ import {
   MOP_MODEL_NOTE,
   MOP_NETWORK,
   mopLineDistanceKm,
+  mopNote,
   mopLineSource,
   swellFigure,
   swellStepNote,
@@ -513,6 +514,45 @@ export async function DayPanel({
           note: tideStationNote(station.distanceM, station.water),
         };
 
+  /*
+    The beach itself, on a beach page, and null on an area's.
+
+    Hoisted to its first caller: the swell attribution below asks whether a buoy
+    reaches this beach, and the shore map further down asks for its coastline.
+    Two lookups of one slug is the drift `mopLine.ts` and `ProvenanceLine` both
+    exist to stop, one layer down.
+
+    A beach the inventory does not hold is not this component's error to invent
+    an answer for: the route resolved that before rendering, and `beachBySlug`
+    returning null here would mean the page is showing a beach it does not have.
+    The same is true of the area, which `ConditionsSection` resolved before it
+    built the scope.
+  */
+  const beach = area ? null : beachBySlug(slug);
+
+  /*
+    The second of the two places a modelled height is drawn, and so the second
+    place ADR-0019's disclosure has to reach (ADR-0055).
+
+    **On the provenance note and not in `absence`.** That slot is what to say
+    instead of a plot when `points` is empty, and at these ten beaches the plot
+    is not empty: MOP answers, the curve draws, and a sentence there would never
+    render. A drawn curve is the whole risk being disclosed.
+
+    Semicolon-joined onto `MOP_MODEL_NOTE` rather than replacing it, the way the
+    cloud row composes `GRID_MODEL_NOTE` with its cell caveat. The two clauses
+    say different things: one that this figure is a model, the other that there
+    is no measured figure anywhere on the page to weigh it against.
+
+    Beach scope only, and read off the join rather than off `waves.view`: which
+    beach has a buoy is inventory, so a quiet NDBC cannot take this sentence
+    down. `beach` is already null on an area page, where the swell row's own
+    withheld wording answers and naming one member's buoy as the area's is what
+    ADR-0048 forbids.
+  */
+  const unmeasuredWaves =
+    beach !== null && beach.wave_buoy === null && beach.mop_line !== null;
+
   const swellProvenance: ProvenanceFacts | null =
     waves.view === null || waves.view.line === null
       ? null
@@ -521,7 +561,7 @@ export async function DayPanel({
           source: mopLineSource(waves.view.line.id),
           network: MOP_NETWORK,
           distanceKm: mopLineDistanceKm(waves.view.line.distanceM),
-          note: MOP_MODEL_NOTE,
+          note: mopNote(MOP_MODEL_NOTE, unmeasuredWaves),
         };
 
   /*
@@ -807,13 +847,8 @@ export async function DayPanel({
     so until there was a frame built from every member, the column carried a
     sentence saying so.
 
-    A beach the inventory does not hold is not this component's error to invent
-    a map for: the route already answered that question before rendering, and
-    `beachBySlug` returning null here would mean the page is showing a beach it
-    does not have. The same is true of the area, which `ConditionsSection`
-    resolved before it built the scope.
+    `beach` is resolved further up, where the swell attribution first needs it.
   */
-  const beach = area ? null : beachBySlug(slug);
   const areaOnMap = area ? areaBySlug(area.slug) : null;
   const shore =
     areaOnMap !== null
@@ -970,7 +1005,17 @@ export async function DayPanel({
               source: mopLineSource(line.id),
               network: MOP_NETWORK,
               distanceKm: mopLineDistanceKm(line.distanceM),
-              note: swellStepNote({ timeLabel: localTimeOf(step.atMs) }),
+              /*
+                The third drawing of a modelled height, and the one that made
+                ADR-0055 a rule rather than a list of two. This row is a CDIP
+                estimate with a provenance line of its own, so leaving the
+                clause off it would put an unqualified modelled height on the
+                page at exactly the ten beaches ADR-0019 admits.
+              */
+              note: mopNote(
+                swellStepNote({ timeLabel: localTimeOf(step.atMs) }),
+                unmeasuredWaves,
+              ),
             },
           };
           rows.set(step, row);

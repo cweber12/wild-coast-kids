@@ -254,6 +254,38 @@ describe("what an area's beaches agree on", () => {
   });
 
   /**
+   * ADR-0019's disclosure is scoped to a beach page, and this is what makes
+   * that scoping total rather than merely true today.
+   *
+   * The week grid and the day chart say "no buoy reaches this beach, so nothing
+   * on this page measures its waves" only where `area` is absent — because at
+   * area scope the claim would be about one member printed as the area's. That
+   * leaves a beach undisclosed if an area could ever draw a shared swell row
+   * with no buoy anywhere behind it.
+   *
+   * Two areas satisfy the antecedent today, Sunset Cliffs and Silver Strand,
+   * and both hold one beach — so `soleBeachOf` serves them at their own URL
+   * with no scope, and the note fires. What must not appear is a *multi-beach*
+   * area in that state, which no wording currently exists for.
+   *
+   * This is the half no gate could assert for ADR-0019 itself. It can assert
+   * this half. See ADR-0055.
+   */
+  test("no multi-beach area draws a shared swell row with no buoy behind it", () => {
+    const bySlug = new Map(allBeaches().map((beach) => [beach.slug, beach]));
+
+    for (const { area, beaches } of beachesByArea()) {
+      if (beaches.length === 1) continue;
+      if (areaSources(area).swell.kind !== "shared") continue;
+
+      const withABuoy = beaches.filter(
+        (beach) => bySlug.get(beach.slug)!.wave_buoy !== null,
+      );
+      expect(withABuoy.length, area.name).toBeGreaterThan(0);
+    }
+  });
+
+  /**
    * The claim that makes "shared" usable: where an area shares a product, any
    * of its beaches resolves to the same source, so the page may read the
    * product through any member without choosing a representative. Asserted

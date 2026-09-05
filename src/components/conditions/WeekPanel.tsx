@@ -65,6 +65,7 @@ import {
   readWeekOfLowestLows,
   type TideHourlyDay,
 } from "@/lib/conditions";
+import { beachBySlug } from "@/lib/beaches";
 import { type AreaScope, withheldBy, withheldWords } from "./areaScope";
 import { DaylightWeek } from "./DaylightWeek";
 import { DaySpark } from "./DaySpark";
@@ -74,6 +75,7 @@ import {
   MOP_NETWORK,
   mopLineDistanceKm,
   mopLineSource,
+  mopNote,
 } from "./mopLine";
 import {
   GRID_MODEL_NOTE,
@@ -162,6 +164,27 @@ export async function WeekPanel({
   const withheldTide = withheldBy(area, "tide");
   const withheldSwell = withheldBy(area, "swell");
   const withheldSky = withheldBy(area, "sky");
+
+  /*
+    Whether this row's heights are the only wave figures the page has -- the
+    disclosure ADR-0019 was accepted on, at the first of the three places a
+    modelled height is drawn (ADR-0055).
+
+    It reads the inventory rather than the fetch: `wave_buoy` and `mop_line` are
+    joins, known without a request, so a quiet CDIP cannot take the clause down
+    with the row it qualifies. Same reason `modelAnswersInstead` is a fact from
+    the join rather than an inference from whether a forecast arrived.
+
+    Beach scope only. On an area page "no buoy reaches this beach" would be a
+    claim about one member printed as the area's, and the swell row's own
+    withheld wording answers instead. `areas.test.ts` asserts that no
+    multi-beach area can draw a shared swell row with no buoy anywhere behind
+    it, so this scoping leaves no beach undisclosed rather than merely none
+    today.
+  */
+  const beach = area === undefined ? beachBySlug(slug) : null;
+  const unmeasuredWaves =
+    beach != null && beach.wave_buoy === null && beach.mop_line !== null;
 
   // Concurrently, and failing apart: NOAA and CDIP share no publisher and no
   // outage, so neither may hold up or take down the other's row.
@@ -336,7 +359,7 @@ export async function WeekPanel({
         source: mopLineSource(line.id),
         network: MOP_NETWORK,
         distanceKm: mopLineDistanceKm(line.distanceM),
-        note: MOP_MODEL_NOTE,
+        note: mopNote(MOP_MODEL_NOTE, unmeasuredWaves),
       },
     });
   }
@@ -475,10 +498,16 @@ export async function WeekPanel({
   */
   withheldNote(withheldSwell, "a swell forecast");
   if (waves !== null && waves.state.kind === "no-line") {
+    /*
+      This said "for the same reason as the reading above", pointing at the wave
+      card. A second wave note now lands in this array above it, and the card is
+      scheduled for deletion regardless, so it states the reason rather than
+      pointing at where the reason used to be.
+    */
     notes.push(
-      "There is no wave forecast for this beach either, and for the same reason " +
-        "as the reading above: every point the model publishes sits at 10 m " +
-        "depth out on the open coast.",
+      "There is no wave forecast for this beach either: every point the model " +
+        "publishes sits at 10 m depth out on the open coast, which is also why " +
+        "no buoy reaches it.",
     );
   }
   /*
