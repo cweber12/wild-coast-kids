@@ -111,15 +111,17 @@ test("the band contributes no heading to the page outline", () => {
  * paints 1.03:1 -- the bug #175 fixed in three places -- so a band that carried
  * the card's classes onto cream would reintroduce it invisibly.
  */
-test("no card-surface colour survives onto the page's own ground", () => {
+test("the band's colours are the ones measured against its own surface", () => {
   const { container } = render(<MeasuredBand readings={readings()} />);
 
   const markup = container.innerHTML;
-  expect(markup).not.toContain("text-white/55");
-  expect(markup).not.toContain("text-white/75");
-  expect(markup).not.toContain("bg-dark");
-  // `PAGE_MUTED`, which cardText.ts records at 5.56:1 on cream.
-  expect(markup).toContain("text-fog");
+  // The pairings cardText.ts measured against --color-dark: 10.02:1 and 5.96:1.
+  expect(markup).toContain("bg-dark");
+  expect(markup).toContain("text-white/75");
+  expect(markup).toContain("text-white/55");
+  // And not `text-fog`, which is chosen against cream and is the wrong half of
+  // the same file: each of these is measured against one surface only.
+  expect(markup).not.toContain("text-fog");
 });
 
 /* =========================================================================

@@ -30,12 +30,19 @@
  * and 💨 came across from the cards they anchored; a third glyph for the time
  * would be a new word in a vocabulary that is closed.
  *
- * **Cream, not `bg-dark`, and the colours were re-measured for it.** The cards'
- * `CARD_PROSE` and `CARD_MUTED` are white at 75% and 55%, measured against
- * `--color-dark` and against nothing else — white at 55% on this page's cream
- * paints **1.03:1**, which is the bug #175 fixed in three places. The band uses
- * `PAGE_MUTED`, which `cardText.ts` records at 5.56:1 on cream and which the
- * week grid and the day chart already print their own provenance lines in.
+ * **`bg-dark`, which the cards had and the first draft of this band gave up.**
+ * On cream the band read as one more paragraph in a column of them: the whole
+ * page is `--color-cream`, and a bordered box on it is a weaker signal than a
+ * surface. What the dark surface buys is the distinction the brief's second
+ * principle asks for, legible before a word is read — a dark block of stated
+ * figures against a light drawn curve — and it is the same argument
+ * `MeasuredToday` made for not moving off it.
+ *
+ * The colours come back with it, and they are the measured pairings rather than
+ * a guess: `CARD_PROSE` is white/75 at **10.02:1** on `--color-dark` and
+ * `CARD_MUTED` is white/55 at **5.96:1**, both recorded in `cardText.ts`. What
+ * must not follow them onto any lighter ground is the point of that file: white
+ * at 55% on cream paints **1.03:1**, the bug #175 fixed in three places.
  *
  * **One region with an `aria-label`, and no visible heading.** The two card
  * `<h2>`s leave the outline with the cards, which becomes `h1` → region `h2` →
@@ -45,7 +52,7 @@
  * and this repo does not use `sr-only` anywhere.
  */
 
-import { PAGE_MUTED } from "./cardText";
+import { CARD_MUTED, CARD_PROSE } from "./cardText";
 import { bandView, type MeasuredReadings } from "./bandText";
 import { NowClock } from "./NowClock";
 import { localTimeOf } from "@/lib/pacific-time";
@@ -68,7 +75,7 @@ export function MeasuredBand({ readings }: { readings: MeasuredReadings }) {
     */
     <section
       aria-label={`Measured now · ${labelFor(readings)}`}
-      className="rounded-card border-2 border-lavender px-5 py-3"
+      className="rounded-card bg-dark px-5 py-3"
     >
       {/*
         `flex-wrap` with a gap rather than a grid: the segments are two runs of
@@ -87,11 +94,11 @@ export function MeasuredBand({ readings }: { readings: MeasuredReadings }) {
             <span aria-hidden="true" className="text-base leading-none">
               {segment.emoji}
             </span>
-            <span className="text-base font-extrabold text-dark">
+            <span className="text-base font-extrabold text-white">
               {segment.text}
             </span>
             {segment.gloss !== null && (
-              <span className={`leading-relaxed text-base ${PAGE_MUTED}`}>
+              <span className={`leading-relaxed text-base ${CARD_PROSE}`}>
                 {segment.gloss}
               </span>
             )}
@@ -124,7 +131,7 @@ export function MeasuredBand({ readings }: { readings: MeasuredReadings }) {
         nothing to any figure in it, which is what keeps two networks from
         standing behind one claim (ADR-0010, ADR-0054).
       */}
-      <p className={`text-2xs leading-relaxed mt-2 ${PAGE_MUTED}`}>
+      <p className={`text-2xs leading-relaxed mt-2 ${CARD_MUTED}`}>
         {/*
           The separator belongs to the clock, which is the half that can
           disappear: it renders nothing on the server and for a reader with no
