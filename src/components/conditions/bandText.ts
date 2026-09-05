@@ -37,7 +37,7 @@
  * tests. What they say is not this slice's business to reopen.
  */
 
-import type { AirView, WavesView } from "@/lib/conditions";
+import type { AirView, SkyNowView, WavesView } from "@/lib/conditions";
 import type { NotShared } from "./areaScope";
 import { compassWords } from "./bearing";
 
@@ -55,6 +55,16 @@ function notShared(slot: WavesView | AirView | NotShared): slot is NotShared {
 export type MeasuredReadings = {
   waves: WavesView | NotShared;
   air: AirView | NotShared;
+  /**
+   * What the sky is forecast to be doing this hour, for the air segment's mark.
+   *
+   * **Optional, and absent is a real state rather than a gap.** A beach with no
+   * forecast cell, a quiet National Weather Service and an hour the cell did
+   * not reach all arrive here as a view with null fields or not at all, and the
+   * segment falls back to 💨 — which is what it showed before ADR-0057 and is
+   * still a true mark for a card about air.
+   */
+  sky?: SkyNowView;
 };
 
 /**
@@ -259,6 +269,54 @@ function airFigures(air: Extract<AirView["air"], { kind: "reading" }>): string {
 }
 
 /**
+ * The mark on the air segment: what it is like out there, at a glance.
+ *
+ * **This is the one thing on the band that was not measured**, and ADR-0057 is
+ * the decision to take it anyway. There is no measured sky at any of these
+ * beaches — ADR-0020 records that the only stations publishing cloud in this
+ * county are airports — so the choice was a forecast mark or the fixed 💨 puff,
+ * which told a reader nothing about the day. The figures beside it are still
+ * instruments, and `attributionFor` names the sky as a forecast so the mark
+ * cannot be read as one of them.
+ *
+ * **A phenomenon outranks the cloud**, because it is what a parent plans
+ * around: a 40% sky with fog in it is a foggy morning, not a bright one. Only
+ * the families the National Weather Service actually publishes for this
+ * corridor are matched, and anything unrecognised falls through to the cloud
+ * ladder rather than picking a wrong picture confidently.
+ *
+ * **Night is not a dark version of day.** A sun over a clear night is worse
+ * than no mark, so the ladder splits: the moon takes the clear half and the
+ * cloud glyphs are shared, since a cloud looks like a cloud at either hour.
+ *
+ * **The vocabulary grows and stays closed**, which is the whole of ADR-0015's
+ * rule. These seven are the roster; a glyph outside it is not available to a
+ * later caller, and the fallback is the band's own 💨 rather than an eighth.
+ */
+export function skyGlyph(sky: SkyNowView | undefined): string | null {
+  if (sky === undefined) return null;
+
+  const phenomenon = sky.weather;
+  if (phenomenon !== null) {
+    if (phenomenon.includes("thunderstorm")) return "⛈️";
+    if (phenomenon.includes("rain") || phenomenon.includes("drizzle"))
+      return "🌧️";
+    if (phenomenon.includes("fog") || phenomenon.includes("haze")) return "🌫️";
+  }
+
+  const percent = sky.percent;
+  if (percent === null) return null;
+
+  // The National Weather Service's own sky-cover bands, which is why these are
+  // not round numbers of this repo's choosing: clear/mostly clear ends at 25,
+  // partly cloudy at 55, mostly cloudy at 87.
+  if (percent < 25) return sky.daylight ? "☀️" : "🌙";
+  if (percent < 55) return sky.daylight ? "🌤️" : "🌙";
+  if (percent < 87) return "⛅";
+  return "☁️";
+}
+
+/**
  * The air segment, which is always present.
  *
  * All 51 beaches bind a station and all 18 areas share one, so an absence here
@@ -272,24 +330,28 @@ function airFigures(air: Extract<AirView["air"], { kind: "reading" }>): string {
  * error string does not come across, being a diagnostic for us rather than
  * prose for a parent.
  */
-function airSegment(slot: AirView | NotShared): BandSegment {
+function airSegment(
+  slot: AirView | NotShared,
+  sky: SkyNowView | undefined,
+): BandSegment {
+  const emoji = skyGlyph(sky) ?? "💨";
   if (notShared(slot)) {
     // Unreachable from the routes -- air is shared by all eighteen areas, which
     // `areas.test.ts` asserts. Worded rather than thrown: a band that crashed
     // on a state the type permits would be worse than one that says less.
-    return { emoji: "💨", text: "No air reading for this area.", gloss: null };
+    return { emoji, text: "No air reading for this area.", gloss: null };
   }
 
   const { airStation, air } = slot;
   const station = airStation?.name ?? "The air station";
 
   if (air.kind === "reading") {
-    return { emoji: "💨", text: airFigures(air), gloss: plainWords(air) };
+    return { emoji, text: airFigures(air), gloss: plainWords(air) };
   }
 
   if (air.kind === "unavailable") {
     return {
-      emoji: "💨",
+      emoji,
       text: air.drift
         ? `${station} answered in a shape this site could not read — a bug here, not at the station.`
         : `${station} is not answering just now.`,
@@ -297,11 +359,7 @@ function airSegment(slot: AirView | NotShared): BandSegment {
     };
   }
 
-  return {
-    emoji: "💨",
-    text: "No air station near enough to read.",
-    gloss: null,
-  };
+  return { emoji, text: "No air station near enough to read.", gloss: null };
 }
 
 /* =========================================================================
@@ -321,6 +379,12 @@ function airSegment(slot: AirView | NotShared): BandSegment {
  * Two thresholds survive from the cards because each has its reason recorded
  * where it is made: a buoy is named without a distance under 10 km, and an air
  * station always carries one, to a decimal below 10 km.
+ *
+ * **The sky is here and is not an instrument**, which is the whole reason it is
+ * worded differently: "sky forecast for this cell" rather than a station and a
+ * distance. A cell is a 2.5 km square with the beach somewhere inside it, so a
+ * distance would be a figure about nothing — the omission `WeekPanel`'s cloud
+ * row already makes for the same reason.
  */
 function attributionFor(readings: MeasuredReadings): string | null {
   const parts: string[] = [];
@@ -344,6 +408,17 @@ function attributionFor(readings: MeasuredReadings): string | null {
     const distanceM = air.airStation.distanceM;
     const away = distanceM === null ? "" : `, ${roundedKm(distanceM)} km away`;
     parts.push(`air from ${air.airStation.name}${away}`);
+  }
+
+  /*
+    The sky is named separately and named as a forecast, because it is the one
+    mark on this band that no instrument produced (ADR-0057). Only when a glyph
+    was actually drawn from it: a cell that answered nothing leaves the segment
+    on 💨, and crediting a forecast that did not arrive would be worse than
+    crediting nothing.
+  */
+  if (skyGlyph(readings.sky) !== null) {
+    parts.push("sky forecast for this cell");
   }
 
   if (parts.length === 0) return null;
@@ -381,8 +456,8 @@ export function bandView(readings: MeasuredReadings): BandView {
   return {
     segments:
       waves === null
-        ? [airSegment(readings.air)]
-        : [waves, airSegment(readings.air)],
+        ? [airSegment(readings.air, readings.sky)]
+        : [waves, airSegment(readings.air, readings.sky)],
     observedAtMs: observedAtMsFor(readings),
     attribution: attributionFor(readings),
   };

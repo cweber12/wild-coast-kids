@@ -173,6 +173,10 @@ export function ConditionsSection({
           reports, and they answer for one instant: now. Everything below this
           row is a prediction or a model, scoped to a day a reader chooses.
 
+          One thing in the band is a forecast too, and it is a mark rather than
+          a figure: the glyph on the air segment is the sky forecast for this
+          hour, credited as one on the band's own attribution (ADR-0057).
+
           **It sits OUTSIDE `SelectedDayProvider`**, and that is structural
           rather than a convention: frozen to the present is this band's whole
           contract, and with no day in scope here a later change cannot quietly

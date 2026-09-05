@@ -88,6 +88,7 @@ const {
   readSkyWeek,
   readGridpointWeek,
   readSkyWording,
+  readSkyNow,
 } = await import("./conditions");
 
 /**
@@ -2315,4 +2316,100 @@ test("a bulletin issued in the future is not stale", async () => {
   expect(view.state.kind).toBe("forecast");
   if (view.state.kind !== "forecast") return;
   expect(view.state.staleAfterHours).toBeNull();
+});
+
+/* =========================================================================
+ * readSkyNow: the mark on the measured band
+ * ========================================================================= */
+
+/**
+ * The one forecast the measured band touches. It is a mark rather than a
+ * figure, and ADR-0057 records why there is no measured sky to use instead:
+ * the only stations in this county publishing cloud are airports.
+ */
+/** The top of the hour containing NOON_PACIFIC_20260817, which is exactly it. */
+const THIS_HOUR = NOON_PACIFIC_20260817;
+
+test("the mark reads the hour it is in, not the day it is in", async () => {
+  // SkyWeekDay.phenomenon is "any daylight hour of this day", which is right
+  // for a week grid and wrong for a mark that says now: it would print the
+  // morning's fog at three in the afternoon.
+  gridOk([
+    { atMs: THIS_HOUR - 3_600_000, percent: 95 },
+    { atMs: THIS_HOUR, percent: 12 },
+    { atMs: THIS_HOUR + 3_600_000, percent: 90 },
+  ]);
+
+  const sky = await readSkyNow(BEACH, NOON_PACIFIC_20260817);
+
+  expect(sky.percent).toBe(12);
+});
+
+test("a phenomenon is read off the same hour", async () => {
+  gridOk(
+    [{ atMs: THIS_HOUR, percent: 40 }],
+    [
+      { atMs: THIS_HOUR - 7_200_000, weather: "fog", coverage: "patchy" },
+      { atMs: THIS_HOUR, weather: "rain_showers", coverage: "chance" },
+    ],
+  );
+
+  const sky = await readSkyNow(BEACH, NOON_PACIFIC_20260817);
+
+  expect(sky.weather).toBe("rain_showers");
+  expect(sky.coverage).toBe("chance");
+});
+
+test("most hours have no phenomenon, which is ordinary rather than missing", async () => {
+  gridOk([{ atMs: THIS_HOUR, percent: 40 }]);
+
+  const sky = await readSkyNow(BEACH, NOON_PACIFIC_20260817);
+
+  expect(sky.weather).toBeNull();
+  expect(sky.coverage).toBeNull();
+});
+
+/** A sun over a clear night is worse than no mark, so the mark has to know. */
+test("daylight is computed from the beach rather than fetched", async () => {
+  gridOk([{ atMs: THIS_HOUR, percent: 5 }]);
+
+  // Noon Pacific in August: up.
+  expect((await readSkyNow(BEACH, NOON_PACIFIC_20260817)).daylight).toBe(true);
+  // Half past midnight: down. Same read, same feed, opposite answer.
+  expect((await readSkyNow(BEACH, JUST_AFTER_MIDNIGHT_20260817)).daylight).toBe(
+    false,
+  );
+});
+
+test("an hour the cell did not reach leaves the mark empty rather than guessing", async () => {
+  gridOk([{ atMs: THIS_HOUR + 7_200_000, percent: 40 }]);
+
+  const sky = await readSkyNow(BEACH, NOON_PACIFIC_20260817);
+
+  // Not the nearest hour, and not interpolated: the band falls back to its own
+  // glyph, which is honest, where a borrowed hour would be a picture of a
+  // different time.
+  expect(sky.percent).toBeNull();
+  expect(sky.daylight).toBe(true);
+});
+
+test("a quiet forecast is an empty mark, not an error", async () => {
+  fetchGridForecast.mockResolvedValue({
+    kind: "unavailable",
+    reason: "504 from the National Weather Service",
+    drift: false,
+    url: "https://example.invalid",
+  });
+
+  const sky = await readSkyNow(BEACH, NOON_PACIFIC_20260817);
+
+  expect(sky.percent).toBeNull();
+  expect(sky.weather).toBeNull();
+});
+
+test("a beach with no cell is never asked, because there is nothing to ask", async () => {
+  const sky = await readSkyNow(UNBOUND_BEACH, NOON_PACIFIC_20260817);
+
+  expect(sky.percent).toBeNull();
+  expect(fetchGridForecast).not.toHaveBeenCalled();
 });

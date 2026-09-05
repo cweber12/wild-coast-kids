@@ -6,11 +6,16 @@
  * where it can be tested without a network -- composing the readings is
  * `lib/conditions.ts` and the wording is `bandText.ts`.
  *
- * **Two reads, from two networks, made concurrently.** The buoy is NDBC's and
+ * **Three reads, from three networks, made concurrently.** The buoy is NDBC's,
  * the shore station may be on either NDBC's or the National Weather Service's,
- * and they share no outage. Neither read throws: each returns its own
- * `no-station` / `no-buoy` / `unavailable` state, so a quiet agency costs its
- * own card and cannot take the other down.
+ * and the sky mark is the service's gridpoint forecast. They share no outage.
+ * None of the three throws: each returns its own `no-station` / `no-buoy` /
+ * `unavailable` state or a view with null fields, so a quiet agency costs its
+ * own segment and cannot take the others down.
+ *
+ * The third is a mark rather than a figure and is the one forecast this block
+ * touches — see ADR-0057, and `readSkyNow` for why there is no measured sky to
+ * use instead.
  *
  * **Three page-level Suspense boundaries became this one, and the trade is
  * worth stating.** The two readings used to paint independently in the band at
@@ -27,7 +32,7 @@
  * arranged to avoid.
  */
 
-import { readLatestAir, readLatestWaves } from "@/lib/conditions";
+import { readLatestAir, readLatestWaves, readSkyNow } from "@/lib/conditions";
 import { type AreaScope, withheldBy } from "./areaScope";
 import { MeasuredBand } from "./MeasuredBand";
 
@@ -48,9 +53,21 @@ export async function MeasuredPanel({
     spend a reader's wait on a figure this page has already decided not to
     print.
   */
-  const [waves, air] = await Promise.all([
+  /*
+    Three reads now, and the third costs no upstream request: `readSkyNow` asks
+    `fetchGridForecast` for a URL the week grid and the day chart already ask
+    for, so the Data Cache serves it and the three share one response and one
+    outage. Same argument `RipLevel` makes for the bulletin beside the chooser.
+
+    It is not gated on an area's agreement the way the other two are. The sky is
+    a mark rather than a figure, it is read for whichever beach the band is
+    keyed on, and it is credited as a forecast for that cell rather than as
+    something the area measured -- so there is no member's reading to leak.
+  */
+  const [waves, air, sky] = await Promise.all([
     withheldWaves ? null : readLatestWaves(slug),
     withheldAir ? null : readLatestAir(slug),
+    readSkyNow(slug),
   ]);
 
   /*
@@ -70,6 +87,7 @@ export async function MeasuredPanel({
       readings={{
         waves: withheldWaves ?? labelled(waves!),
         air: withheldAir ?? labelled(air!),
+        sky,
       }}
     />
   );

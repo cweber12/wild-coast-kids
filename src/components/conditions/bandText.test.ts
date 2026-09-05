@@ -3,6 +3,7 @@ import {
   bandView,
   heightWords,
   plainWords,
+  skyGlyph,
   warmthWord,
   windWords,
   type MeasuredReadings,
@@ -490,4 +491,101 @@ test("a beach with no station near enough says so", () => {
   expect(segments[segments.length - 1].text).toBe(
     "No air station near enough to read.",
   );
+});
+
+/* =========================================================================
+ * The sky mark
+ * ========================================================================= */
+
+const sky = (over: Partial<Parameters<typeof skyGlyph>[0] & object> = {}) => ({
+  percent: 10,
+  weather: null,
+  coverage: null,
+  daylight: true,
+  ...over,
+});
+
+/**
+ * The National Weather Service's own sky-cover bands, which is why these are
+ * not round numbers of this repo's choosing. Both ends of the ladder asserted,
+ * not just the middle -- a clear sky and an overcast one are the two a reader
+ * checks at a glance.
+ */
+test("the cloud ladder follows the published bands", () => {
+  expect(skyGlyph(sky({ percent: 0 }))).toBe("☀️");
+  expect(skyGlyph(sky({ percent: 24 }))).toBe("☀️");
+  expect(skyGlyph(sky({ percent: 25 }))).toBe("🌤️");
+  expect(skyGlyph(sky({ percent: 54 }))).toBe("🌤️");
+  expect(skyGlyph(sky({ percent: 55 }))).toBe("⛅");
+  expect(skyGlyph(sky({ percent: 86 }))).toBe("⛅");
+  expect(skyGlyph(sky({ percent: 87 }))).toBe("☁️");
+  expect(skyGlyph(sky({ percent: 100 }))).toBe("☁️");
+});
+
+/** A sun over a clear night is worse than no mark at all. */
+test("night takes the moon and shares the clouds", () => {
+  expect(skyGlyph(sky({ percent: 0, daylight: false }))).toBe("🌙");
+  expect(skyGlyph(sky({ percent: 40, daylight: false }))).toBe("🌙");
+  // A cloud looks like a cloud at either hour.
+  expect(skyGlyph(sky({ percent: 90, daylight: false }))).toBe("☁️");
+});
+
+/**
+ * A 40% sky with fog in it is a foggy morning, not a bright one -- and the
+ * phenomenon is what a parent plans around, which is the same argument
+ * `SkyWeekDay.phenomenon` makes for carrying it beside the percentages.
+ */
+test("a phenomenon outranks the cloud beneath it", () => {
+  expect(skyGlyph(sky({ percent: 5, weather: "fog" }))).toBe("🌫️");
+  expect(skyGlyph(sky({ percent: 5, weather: "rain_showers" }))).toBe("🌧️");
+  expect(skyGlyph(sky({ percent: 5, weather: "drizzle" }))).toBe("🌧️");
+  expect(skyGlyph(sky({ percent: 5, weather: "thunderstorms" }))).toBe("⛈️");
+});
+
+/**
+ * Anything unrecognised falls through to the cloud rather than picking a wrong
+ * picture confidently. The published vocabulary is longer than the four
+ * families matched here and will grow again.
+ */
+test("an unrecognised phenomenon falls through rather than guessing", () => {
+  expect(skyGlyph(sky({ percent: 5, weather: "blowing_dust" }))).toBe("☀️");
+  expect(skyGlyph(sky({ percent: 95, weather: "smoke" }))).toBe("☁️");
+});
+
+/**
+ * Three states arrive as no mark: a beach with no forecast cell, a quiet feed
+ * and an hour the cell did not reach. The band falls back to 💨, which is what
+ * it showed before ADR-0057 and is still true of a segment about air.
+ */
+test("no forecast means no mark, and the band keeps its own glyph", () => {
+  expect(skyGlyph(undefined)).toBeNull();
+  expect(skyGlyph(sky({ percent: null }))).toBeNull();
+
+  const { segments } = bandView(readings());
+  expect(segments[segments.length - 1].emoji).toBe("💨");
+});
+
+test("a forecast mark replaces the puff on the air segment", () => {
+  const { segments } = bandView({ ...readings(), sky: sky({ percent: 90 }) });
+
+  expect(segments[segments.length - 1].emoji).toBe("☁️");
+  // And the wave segment keeps its own: ADR-0015's vocabulary, one glyph per
+  // product, and the sea is not the sky.
+  expect(segments[0].emoji).toBe("🏄");
+});
+
+/**
+ * The mark is the one thing on this band no instrument produced, so it is
+ * credited -- and credited as a forecast for a cell rather than as a station
+ * with a distance, because a cell is a 2.5 km square with the beach somewhere
+ * inside it. ADR-0057.
+ */
+test("a drawn sky mark is credited as a forecast", () => {
+  const withSky = bandView({ ...readings(), sky: sky({ percent: 90 }) });
+  expect(withSky.attribution).toContain("sky forecast for this cell");
+
+  // And a cell that answered nothing is not credited: crediting a forecast
+  // that did not arrive is worse than crediting nothing.
+  const without = bandView({ ...readings(), sky: sky({ percent: null }) });
+  expect(without.attribution).not.toContain("sky forecast");
 });

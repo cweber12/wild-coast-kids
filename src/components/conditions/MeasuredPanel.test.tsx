@@ -3,7 +3,20 @@ import { render, screen } from "@testing-library/react";
 
 const readLatestWaves = vi.fn();
 const readLatestAir = vi.fn();
-vi.mock("@/lib/conditions", () => ({ readLatestWaves, readLatestAir }));
+const readSkyNow = vi.fn();
+vi.mock("@/lib/conditions", () => ({
+  readLatestWaves,
+  readLatestAir,
+  readSkyNow,
+}));
+
+/**
+ * A clear afternoon, so the air segment's mark is 🌤️ rather than the 💨 it
+ * falls back to. The mark is the one thing this block reads that no instrument
+ * produced -- see ADR-0057 -- and every assertion about a figure below is
+ * indifferent to it.
+ */
+const SKY = { percent: 30, weather: null, coverage: null, daylight: true };
 
 const { MeasuredPanel } = await import("./MeasuredPanel");
 
@@ -34,6 +47,8 @@ const AIR = {
 };
 
 beforeEach(() => {
+  readSkyNow.mockReset();
+  readSkyNow.mockResolvedValue(SKY);
   readLatestWaves.mockReset();
   readLatestAir.mockReset();
   readLatestWaves.mockResolvedValue(WAVES);
@@ -152,5 +167,55 @@ test("a withheld product is not read at all", async () => {
   // spend a reader's wait on a figure the page has already decided not to print.
   expect(readLatestWaves).not.toHaveBeenCalled();
   // Air is shared by all eighteen areas, so the band still speaks.
+  expect(screen.getByText(/71°F/)).toBeDefined();
+});
+
+/**
+ * The third read is a mark, not a figure, and it costs no upstream request:
+ * `fetchGridForecast` is a next.revalidate fetch for a URL the week grid and
+ * the day chart already ask for, so the Data Cache serves all three. ADR-0057.
+ */
+test("the sky is read for the mark, unconditionally", async () => {
+  render(await MeasuredPanel({ slug: "la-jolla-shores-beach" }));
+
+  expect(readSkyNow).toHaveBeenCalledWith("la-jolla-shores-beach");
+  expect(screen.getByText(/sky forecast for this cell/)).toBeDefined();
+});
+
+/**
+ * And it is not gated the way a figure is. Fifteen of the eighteen areas
+ * withhold waves; none withholds air, and the mark is credited as a forecast
+ * for a cell rather than as something the area measured, so there is no
+ * member's reading to leak.
+ */
+test("a withheld area still gets its mark", async () => {
+  const { areaBySlug } = await import("@/lib/areas");
+  const { scopeFor } = await import("./areaScope");
+
+  render(
+    await MeasuredPanel({
+      slug: "la-jolla-shores-beach",
+      area: scopeFor(areaBySlug("la-jolla")!),
+    }),
+  );
+
+  expect(readSkyNow).toHaveBeenCalled();
+});
+
+test("a quiet forecast leaves the segment on its own glyph", async () => {
+  // Three states arrive here: no cell, a quiet service, and an hour the cell
+  // did not reach. All of them fall back rather than failing, and none is
+  // credited -- crediting a forecast that did not arrive is worse than
+  // crediting nothing.
+  readSkyNow.mockResolvedValue({
+    percent: null,
+    weather: null,
+    coverage: null,
+    daylight: true,
+  });
+
+  render(await MeasuredPanel({ slug: "la-jolla-shores-beach" }));
+
+  expect(screen.queryByText(/sky forecast/)).toBeNull();
   expect(screen.getByText(/71°F/)).toBeDefined();
 });

@@ -1,10 +1,16 @@
 /**
  * What the instruments say, in one line, above everything the page predicts.
  *
- * **This is the whole of what the page measures.** Everything else on
- * `/conditions` is a prediction or a model — NOAA's harmonic tide, CDIP's
- * swell, the National Weather Service's grid cell. The buoy and the shore
- * station are the only instruments this site reports at all.
+ * **Every figure here was measured, and exactly one thing was not.** The buoy
+ * and the shore station are the only instruments this site reports at all;
+ * everything else on `/conditions` is a prediction or a model — NOAA's harmonic
+ * tide, CDIP's swell, the National Weather Service's grid cell.
+ *
+ * The exception is the air segment's **mark**, which is the forecast sky for
+ * this hour (ADR-0057). It is a glyph and never a figure, and that line is what
+ * makes it safe: a cloud percentage printed beside `73°F · 7 mph` would put a
+ * modelled number inside a block claiming to be measured, which is the blur
+ * ADR-0009 exists to prevent. The attribution names it as a forecast.
  *
  * **It was two dark cards until ADR-0056**, roughly 180px of a 639px viewport,
  * sitting between a headline and the two regions a reader came for. What
