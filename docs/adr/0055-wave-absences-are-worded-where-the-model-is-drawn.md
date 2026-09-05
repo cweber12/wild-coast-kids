@@ -28,21 +28,33 @@ children into the water is not weighing model against instrument", and it
 records the model and the buoy disagreeing 2.0 ft against 0.8 ft at La Jolla
 Shores on 2026-08-26. That reader is looking at a **modelled height**. The
 modelled heights are drawn in two places, and neither of them is the measured
-block: the day chart's swell tab, and the week grid's wave row.
+block: the week grid's wave row, the day chart's swell tab, and the shore map's
+readout.
 
 So the disclosure has been sitting one region away from the figure it is about.
 
 ## Decision
 
-**A sentence explaining a missing wave measurement is worded where the model
-standing in for it is drawn.** Two homes, because there are two drawings:
+**A sentence explaining a missing wave measurement is worded on the attribution
+of the modelled height that replaces it, everywhere one is drawn.** Three
+places, and the rule rather than the list is what is being decided — a fourth
+drawing would take it too.
 
-- **The week grid**, as a note under it. That array already carries every "why
-  is this row not what you expected" sentence, conditional, one per cause.
-- **The day chart's swell tab**, on the provenance line, as its note. That line
-  already carries `MOP_MODEL_NOTE` — "a model of the swell at 10 m depth, not a
-  measurement" — which is the same claim about the same figure, one clause
-  short of this one.
+- **The week grid's wave row**, on its provenance line.
+- **The day chart's swell tab**, on its provenance line.
+- **The shore map's readout**, on the swell row's provenance line.
+
+All three already carry `MOP_MODEL_NOTE` — "a model of the swell at 10 m depth,
+not a measurement" — which is the same claim about the same figure, one clause
+short of this one. The clause is appended to it, semicolon-joined, the way the
+cloud row composes `GRID_MODEL_NOTE` with its cell caveat.
+
+**On the attribution and not in the week's notes array**, which was the first
+answer and is the wrong one. That array says why a row a reader expected is
+_not there_; this says what a row that _is_ there is made of. Putting it in the
+notes would also have left the claim in two shapes — a free sentence in one
+region, a provenance clause in the other two — for one fact, which is the drift
+`mopLine.ts` exists to prevent.
 
 **Not in the `absence` slot**, and this is the part most likely to be got
 wrong. `HourSeries.absence` is "what to say instead of a plot when `points` is
@@ -81,6 +93,15 @@ already records that `modelAnswersInstead` is "carried as a fact from the join
 rather than inferred from whether a forecast happened to arrive, because CDIP
 having a bad day must not make the card claim swell does not reach an open
 coast."
+
+**The third drawing was found while building the second, and the decision is
+what changed rather than the code.** This ADR first named two homes and put the
+week's in the notes array. The shore map's readout composes its own MOP
+attribution through `swellStepNote`, so it draws a modelled swell height with a
+provenance line of its own — and would have been the one place on the page
+where a modelled height stood unqualified, which is precisely the state
+ADR-0019 forbids. Naming the rule rather than the list is the repair: any
+attribution built from `MOP_MODEL_NOTE` carries the clause.
 
 **One existing sentence pointed at the card and is repaired.** The week's
 `no-line` note reads "for the same reason as the reading above", which is the
