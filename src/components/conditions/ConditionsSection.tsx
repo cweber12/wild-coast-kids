@@ -243,8 +243,12 @@ export function ConditionsSection({
         A band of three cards stood in this spot once -- today's lowest tide,
         the buoy, the air station -- and was removed as redundant against the
         week grid and the day chart, which print the tide and the swell
-        themselves. The two readings here are the half of that band that was
-        never duplicated: nothing else on this page is measured.
+        themselves. Two of them survived as a pair of dark cards, and those are
+        one line now (ADR-0056): a measured wave height exists on 18 of 69
+        routes, so a two-card layout was built for the minority case, and on the
+        rest the wave card held a paragraph about an absence rather than a
+        figure. What is left is the half of that band that was never duplicated:
+        nothing else on this page is measured.
 
         Its own Suspense boundary, like every region on this page. Five
         agencies go quiet independently and a slow buoy must not hold up the
@@ -266,8 +270,11 @@ export function ConditionsSection({
             whole table. A product they do not share is not read at all, so no
             one beach's figure can arrive labelled as the area's.
 
-            Air is shared by all eighteen areas and a buoy by three, so this
-            block is where an area page has something measured to say at all.
+            Air is shared by all eighteen areas and a buoy by three, so on
+            fifteen area pages this band is one segment: what the air station
+            read, and nothing about the sea. That is not a hole -- the sentence
+            saying why lives beside the modelled heights the week and the chart
+            draw (ADR-0055).
           */}
           <MeasuredPanel slug={reading} area={scope} />
         </Suspense>

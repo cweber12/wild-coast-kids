@@ -234,18 +234,19 @@ const MEASURED = {
 };
 
 /**
- * The rank followed the block back up, and this is what says so.
+ * The two card `<h2>`s left the outline with the cards (ADR-0056), and this is
+ * what says the outline is still whole rather than merely shorter.
  *
- * `ReadingCard` requires `headingLevel` rather than defaulting it, precisely so
- * that a component moving a card has to answer the question. #176 moved these
+ * `ReadingCard` required `headingLevel` rather than defaulting it, precisely so
+ * that a component moving a card had to answer the question -- #176 moved these
  * two into the day region and left `h2` behind, making them siblings-in-outline
- * of the heading that contained them. The move back to page level makes `h2`
- * right again -- they are siblings of the three region headings under the
- * `<h1>`, and `h3` here would skip a level with nothing in between.
+ * of the heading that contained them. The band answers the same question by
+ * carrying no heading at all: what is left under the `<h1>` is the three region
+ * `<h2>`s, and the day's `<h3>`s under those, with no card level between.
  */
-test("the measured cards rank as page regions, beside the week and the day", async () => {
-  const { MeasuredToday } = await import("./MeasuredToday");
-  measuredPanel.mockImplementation(() => <MeasuredToday readings={MEASURED} />);
+test("the band adds no heading, and skips no level under the h1", async () => {
+  const { MeasuredBand } = await import("./MeasuredBand");
+  measuredPanel.mockImplementation(() => <MeasuredBand readings={MEASURED} />);
 
   render(
     <ConditionsSection
@@ -257,26 +258,25 @@ test("the measured cards rank as page regions, beside the week and the day", asy
   const ranks = screen
     .getAllByRole("heading", { level: 2 })
     .map((heading) => heading.textContent);
-  expect(ranks).toContain("Waves and water");
-  expect(ranks).toContain("Air");
+  expect(ranks).not.toContain("Waves and water");
+  expect(ranks).not.toContain("Air");
 
-  // And nothing dropped to a rank that would skip a level under the <h1>.
-  expect(
-    screen
-      .queryAllByRole("heading", { level: 3 })
-      .map((heading) => heading.textContent),
-  ).not.toContain("Waves and water");
+  // The regions the band sits above are still there and still rank as regions,
+  // so the outline lost a level rather than gaining a hole.
+  expect(ranks.length).toBeGreaterThan(0);
 });
 
 /**
- * The rank moved and the name did not. The accessible name is composed on the
- * `<section>` from the title and the beach -- `ReadingCard` records why it is an
- * `aria-label` rather than a hidden span -- so it is reachable from the tag and
- * must survive a change to it.
+ * A landmark named only "Measured now" loses its context for somebody
+ * navigating by region rather than reading the page top to bottom -- which is
+ * the argument `ReadingCard` made for keeping the beach in its own accessible
+ * name, and the band inherits it. `aria-label` rather than a hidden heading,
+ * because the accessible-name algorithm joins adjacent inline text nodes with
+ * no separator and this repo uses `sr-only` nowhere.
  */
-test("a card is still called what it was called, at its new rank", async () => {
-  const { MeasuredToday } = await import("./MeasuredToday");
-  measuredPanel.mockImplementation(() => <MeasuredToday readings={MEASURED} />);
+test("the band is one landmark, named for the place it measures", async () => {
+  const { MeasuredBand } = await import("./MeasuredBand");
+  measuredPanel.mockImplementation(() => <MeasuredBand readings={MEASURED} />);
 
   render(
     <ConditionsSection
@@ -287,12 +287,12 @@ test("a card is still called what it was called, at its new rank", async () => {
 
   expect(
     screen.getByRole("region", {
-      name: "Waves and water · La Jolla Shores Beach",
+      name: "Measured now · La Jolla Shores Beach",
     }),
   ).toBeDefined();
-  expect(screen.getByRole("heading", { name: "Waves and water" }).id).toBe(
-    "waves-today-heading",
-  );
+  // One region where there were two: the block is one panel now, which is what
+  // ADR-0010 permits for two provenances.
+  expect(screen.queryByRole("region", { name: /^Waves and water/ })).toBeNull();
 });
 
 test("every caveat the data files carry reaches this page", () => {

@@ -4,7 +4,7 @@
  * The same thin shape `WeekPanel` and `DayPanel` keep. Everything with a
  * judgement in it sits on one side or the other,
  * where it can be tested without a network -- composing the readings is
- * `lib/conditions.ts` and the wording is `MeasuredToday`.
+ * `lib/conditions.ts` and the wording is `bandText.ts`.
  *
  * **Two reads, from two networks, made concurrently.** The buoy is NDBC's and
  * the shore station may be on either NDBC's or the National Weather Service's,
@@ -29,7 +29,7 @@
 
 import { readLatestAir, readLatestWaves } from "@/lib/conditions";
 import { type AreaScope, withheldBy } from "./areaScope";
-import { MeasuredToday } from "./MeasuredToday";
+import { MeasuredBand } from "./MeasuredBand";
 
 export async function MeasuredPanel({
   slug,
@@ -66,7 +66,7 @@ export async function MeasuredPanel({
     area ? { ...view, beachName: area.name } : view;
 
   return (
-    <MeasuredToday
+    <MeasuredBand
       readings={{
         waves: withheldWaves ?? labelled(waves!),
         air: withheldAir ?? labelled(air!),

@@ -52,13 +52,15 @@ test("renders both readings, not one", async () => {
   // read would still render and still resolve.
   render(await MeasuredPanel({ slug: "la-jolla-shores-beach" }));
 
-  expect(screen.getByText("2.6 ft")).toBeDefined();
-  expect(screen.getByText("71°F")).toBeDefined();
+  // Both segments, from two networks. The air figures now set in one run with
+  // the wind, so this matches the segment rather than a lone figure.
+  expect(screen.getByText(/2\.6 ft/)).toBeDefined();
+  expect(screen.getByText(/71°F/)).toBeDefined();
 });
 
 test("it is today's block, so the absence sentence never appears here", async () => {
-  // `MeasuredPanel` is only ever mounted on today. The other six days get
-  // `MeasuredToday` with no readings, from `DayPanel`, without a request.
+  // This band is only ever mounted on today, outside SelectedDayProvider, so
+  // there is no day in scope to apologise for.
   render(await MeasuredPanel({ slug: "la-jolla-shores-beach" }));
 
   expect(screen.queryByText(/Nothing has been measured/)).toBeNull();
@@ -78,8 +80,12 @@ test("a quiet buoy costs its own card and not the air beside it", async () => {
 
   render(await MeasuredPanel({ slug: "la-jolla-shores-beach" }));
 
-  expect(screen.getByText(/could not get a wave reading/)).toBeDefined();
-  expect(screen.getByText("71°F")).toBeDefined();
+  // The wave segment goes rather than turning into a sentence -- the band
+  // reports what was measured, and the explanation for a missing wave figure
+  // now hangs off the modelled height standing in for it (ADR-0055).
+  expect(screen.queryByText(/2\.6 ft/)).toBeNull();
+  // The air is untouched, which is the property this test is really about.
+  expect(screen.getByText(/71°F/)).toBeDefined();
 });
 
 test("a quiet air station costs its own card and not the buoy beside it", async () => {
@@ -94,8 +100,13 @@ test("a quiet air station costs its own card and not the buoy beside it", async 
 
   render(await MeasuredPanel({ slug: "la-jolla-shores-beach" }));
 
-  expect(screen.getByText("No temperature just now")).toBeDefined();
-  expect(screen.getByText("2.6 ft")).toBeDefined();
+  // Air is the one source that speaks without a figure: all 51 beaches bind a
+  // station, so an absence is an outage rather than a fact about the place, and
+  // CLAUDE.md refuses to let it fail silently. It names the station.
+  expect(
+    screen.getByText(/Scripps Pier is not answering just now/),
+  ).toBeDefined();
+  expect(screen.getByText(/2\.6 ft/)).toBeDefined();
 });
 
 test("a failure to resolve the beach is not swallowed into a rendered nothing", async () => {
@@ -111,21 +122,17 @@ test("a failure to resolve the beach is not swallowed into a rendered nothing", 
 });
 
 /**
- * The withheld card's sentence, against what `areaSources` really returns.
+ * A withheld product is not read, which is the half of ADR-0048 this seam owns.
  *
- * Every other assertion about that card hands `MeasuredToday` a hand-written
- * `NotShared`, so it can only ever check that the component renders the numbers
- * it was given. That is how `/conditions/la-jolla` came to say "The 10 beaches
- * in La Jolla read 2 different sources for a wave reading" with a passing test
- * over it: nine read buoy 46254 and `childrens-pool` reads none, and the
- * fixture said 2 because a `null` had been counted as a source.
- *
- * So this one builds the scope the way the page does -- from `areaSources` over
- * committed data -- and reads the sentence off the rendered card. Both operands
- * are not the same source: the left is the component's output and the right is
- * what La Jolla's ten beaches actually bind.
+ * What it no longer does is render a sentence about it. The band reports what
+ * was measured, so a withheld wave product contributes no segment (ADR-0056) --
+ * and the sentence `withheldWords` builds is asserted against real
+ * `areaSources` data in `areaScope.test.ts`, which is where the counting bug it
+ * guarded actually lived: nine of La Jolla's ten beaches read buoy 46254 and
+ * one reads none, which is one source and a gap rather than "2 different
+ * sources".
  */
-test("a withheld card states what the area's beaches really bind", async () => {
+test("a withheld product is not read at all", async () => {
   const { areaBySlug, areaSources } = await import("@/lib/areas");
   const { scopeFor } = await import("./areaScope");
   const area = areaBySlug("la-jolla")!;
@@ -141,14 +148,9 @@ test("a withheld card states what the area's beaches really bind", async () => {
     }),
   );
 
-  expect(
-    screen.getByText(
-      /Only 9 of the 10 beaches in La Jolla have a wave reading, and they share one source/,
-    ),
-  ).toBeDefined();
-  expect(screen.queryByText(/different sources/)).toBeNull();
-
-  // And the withheld product was not read, which is the other half of the
-  // contract: there is nothing an area could do with one beach's buoy.
+  // There is nothing an area could do with one beach's buoy, and asking would
+  // spend a reader's wait on a figure the page has already decided not to print.
   expect(readLatestWaves).not.toHaveBeenCalled();
+  // Air is shared by all eighteen areas, so the band still speaks.
+  expect(screen.getByText(/71°F/)).toBeDefined();
 });
