@@ -783,6 +783,21 @@ export type AirState =
       windMph: number | null;
       gustMph: number | null;
       windDirDegT: number | null;
+      /**
+       * The oldest row that contributed a figure, epoch milliseconds UTC.
+       *
+       * **A bound, where the wave read's is exact**, and the difference is the
+       * feed rather than a choice about wording. An NDBC station ages
+       * temperature and wind independently, on purpose, so this half of the
+       * block is two rows as often as one. An NWS station answers with a single
+       * observation and this is that instant.
+       *
+       * The card cannot tell those apart and must not try: `StationBinding`
+       * carries no network, deliberately (ADR-0010). So it words this as a
+       * bound in both cases — conservative on the NWS path, correct on the NDBC
+       * one, and never false on either. See ADR-0054.
+       */
+      observedAtMs: number;
     }
   | { kind: "no-station"; reason: string }
   | { kind: "unavailable"; detail: string; drift: boolean };
@@ -888,6 +903,10 @@ async function readAirHalf(
       windMph: result.windMph,
       gustMph: result.gustMph,
       windDirDegT: result.windDirDegT,
+      // Already the oldest of the rows still standing: this feed publishes
+      // temperature and wind on their own cadences and `fetchLatestNdbcAir`
+      // ages them apart.
+      observedAtMs: result.observedAtMs,
     };
   }
 
@@ -902,6 +921,10 @@ async function readAirHalf(
     windMph: observation.windMph,
     gustMph: observation.gustMph,
     windDirDegT: observation.windDirDegT,
+    // One observation, so one instant, and no minimum to take. The card still
+    // words it as a bound: it cannot see which network answered, and a bound
+    // over a set of one is true.
+    observedAtMs: observation.atMs,
   };
 }
 

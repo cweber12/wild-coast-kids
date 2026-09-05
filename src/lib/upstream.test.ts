@@ -532,6 +532,49 @@ describe("fetchLatestNdbcAir", () => {
     expect(result.airTempF).toBeNull();
   });
 
+  test("the observation time is the older of the two rows, not the newer", async () => {
+    // What the card prints one time over both figures from. The newer row would
+    // let a fresh wind vouch for a temperature 45 minutes behind it, which on
+    // this feed is the ordinary case: probed 2026-09-04, LJAC1 published wind
+    // at 21:00 and temperature at 20:48. ADR-0054.
+    const text = [
+      HEADER,
+      row("2026 08 19 02 30", { wdir: "320", wspd: "3.6", gst: "4.6" }),
+      row("2026 08 19 01 45", { atmp: "23.4" }),
+      "",
+    ].join("\n");
+    fetchMock.mockResolvedValue(textResponse(text));
+
+    const result = await fetchLatestNdbcAir("LJAC1", AT_PIER);
+
+    expect(result.kind).toBe("ok");
+    if (result.kind !== "ok") return;
+    expect(result.observedAtMs).toBe(Date.UTC(2026, 7, 19, 1, 45));
+    expect(result.observedAtMs).not.toBe(Date.UTC(2026, 7, 19, 2, 30));
+  });
+
+  test("a row aged out of the reading does not bound it", async () => {
+    // The temperature is four hours stale, so it is not on the card -- and a
+    // time bounding a figure the reader cannot see would report the whole
+    // reading as four hours old when the only figure shown is current. The
+    // minimum is taken over the rows that survived `fresh`, not over the rows
+    // the parser found.
+    const text = [
+      HEADER,
+      row("2026 08 19 02 30", { wdir: "320", wspd: "3.6", gst: "4.6" }),
+      row("2026 08 18 22 00", { atmp: "23.4" }),
+      "",
+    ].join("\n");
+    fetchMock.mockResolvedValue(textResponse(text));
+
+    const result = await fetchLatestNdbcAir("LJAC1", AT_PIER);
+
+    expect(result.kind).toBe("ok");
+    if (result.kind !== "ok") return;
+    expect(result.airTempF).toBeNull();
+    expect(result.observedAtMs).toBe(Date.UTC(2026, 7, 19, 2, 30));
+  });
+
   test("keeps a temperature exactly at the limit", async () => {
     // A boundary that decides whether a reading shows at all, so it is asserted
     // rather than left to the comparison operator.

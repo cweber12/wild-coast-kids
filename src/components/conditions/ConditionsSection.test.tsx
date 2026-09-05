@@ -228,6 +228,7 @@ const MEASURED = {
       windMph: 8.05,
       gustMph: null,
       windDirDegT: 320,
+      observedAtMs: Date.UTC(2026, 7, 17, 17, 48),
     },
   },
 };

@@ -21,12 +21,20 @@ const WAVE_READING = {
   observedAtMs: WAVE_TAKEN_AT_MS,
 } as const;
 
+/**
+ * 2026-08-17, 10:48 AM Pacific: 25 minutes behind the buoy's row, the way the
+ * two feeds actually run. Different from `WAVE_TAKEN_AT_MS` so a card printing
+ * its neighbour's time would be visible rather than coincidentally right.
+ */
+const AIR_TAKEN_AT_MS = Date.UTC(2026, 7, 17, 17, 48);
+
 const AIR_READING = {
   kind: "reading",
   airTempF: 71.42,
   windMph: 8.05,
   gustMph: null,
   windDirDegT: 320,
+  observedAtMs: AIR_TAKEN_AT_MS,
 } as const;
 
 /**
@@ -468,6 +476,42 @@ test("the air station is named, with its distance", () => {
   const air = screen.getByText(/Scripps Pier/).textContent ?? "";
   expect(air).toContain("Temperature and wind");
   expect(air).toContain("about 1.4 km from this beach");
+});
+
+test("the air line states a bound where the wave line states a time", () => {
+  render(<MeasuredToday readings={readings()} />);
+
+  const air = screen.getByText(/Scripps Pier/).textContent ?? "";
+  // "Nothing older than" and not "measured at". An NDBC station ages
+  // temperature and wind on their own rows, so these two figures can be an hour
+  // apart, and this card cannot see which network answered. ADR-0054.
+  expect(air).toContain("nothing older than 10:48 AM");
+
+  // The two cards read two feeds and must not print one instant between them.
+  // The wave row here is 25 minutes newer, which is the shape the feeds
+  // actually have.
+  const sea = screen.getByText(/NDBC/).textContent ?? "";
+  expect(sea).toContain("11:13 AM");
+  expect(sea).not.toContain("10:48 AM");
+});
+
+test("a station that could not be reached is credited with no time", () => {
+  render(
+    <MeasuredToday
+      readings={readings({
+        air: {
+          air: {
+            kind: "unavailable",
+            detail: "The station did not answer.",
+            drift: false,
+          },
+        },
+      })}
+    />,
+  );
+
+  const air = screen.getByText(/Scripps Pier/).textContent ?? "";
+  expect(air).not.toMatch(/\d{1,2}:\d{2}\s?(AM|PM)/);
 });
 
 test("a gust is shown when the station published one", () => {

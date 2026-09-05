@@ -454,6 +454,19 @@ function AirCard({ beachName, airStation, air }: AirView) {
               ? roundedKm(airStation.distanceM)
               : null
           }
+          /*
+            A bound, not a time, and the wave card next door states its time
+            instead. The difference is the feed: an NDBC station ages
+            temperature and wind independently, so these two figures can be an
+            hour apart, and this card cannot see which network answered.
+            "Nothing older than" is true of either; "measured at" is false of
+            the wind whenever the temperature is the older row. See ADR-0054.
+          */
+          observed={
+            air.kind === "reading"
+              ? `nothing older than ${localTimeOf(air.observedAtMs)}`
+              : null
+          }
         />
       )}
 
