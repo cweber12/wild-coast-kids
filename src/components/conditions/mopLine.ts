@@ -1,8 +1,12 @@
 /**
  * How a MOP line is named, credited and measured for a reader.
  *
- * Four facts, in one place, because two components are about to state them: the
- * week grid's wave row and the wave card's forecast block. `ProvenanceLine`'s
+ * Five facts, in one place, because three components state them: the week
+ * grid's wave row, the day chart's swell tab and the shore map's readout. It
+ * was two when this was written, and one of them was the wave card's forecast
+ * block -- that block went one region up and became a curve, the readout
+ * arrived with ADR-0034, and the fifth fact arrived with ADR-0055 because every
+ * drawing of a modelled height needs it. `ProvenanceLine`'s
  * own docstring records what happens otherwise — on `fiesta-island`, where two
  * bindings resolved to one station, the page printed "San Diego Airport · 4.7 km
  * from this beach" and "San Diego Airport · 4.7 km away" eighty pixels apart.
@@ -34,6 +38,51 @@ export const MOP_NETWORK = "CDIP, Scripps Institution of Oceanography";
  */
 export const MOP_MODEL_NOTE =
   "a model of the swell at 10 m depth, not a measurement";
+
+/**
+ * The clause for a beach where the model is not standing beside a measurement,
+ * but standing in for one that does not exist.
+ *
+ * **`MOP_MODEL_NOTE` is not enough on its own at these ten beaches, and the
+ * difference is what ADR-0019 was accepted on.** That clause tells a reader
+ * this figure is modelled. It does not tell them there is no measured figure
+ * anywhere on the page to weigh it against — which at the other fifteen beaches
+ * there is, sitting in the measured block. ADR-0019 admits a beach whose only
+ * wave source is a model *on condition* the page says so, and warns that if the
+ * disclosure "is ever removed or weakened, this decision goes with it".
+ *
+ * **Three callers, one sentence, which is the whole reason this file exists.**
+ * The week grid's wave row, the day chart's swell tab and the shore map's
+ * readout all draw modelled heights, so a reader meets this claim three times
+ * and must meet the same words (ADR-0055). It is not exported: `mopNote` below
+ * is the only way to reach it, so a fourth drawing cannot compose its own
+ * variant -- which is the drift `ProvenanceLine`'s docstring records.
+ *
+ * Not for a bay. Where there is no buoy *and* no line nothing is drawn, and
+ * telling a lagoon's reader that its wave heights are modelled would name a
+ * figure the page does not show.
+ */
+const MOP_UNMEASURED_NOTE =
+  "no buoy reaches this beach, so nothing on this page measures its waves";
+
+/**
+ * A MOP attribution's note, with the unmeasured clause where it applies.
+ *
+ * **Every attribution built from `MOP_MODEL_NOTE` goes through here**, which is
+ * the rule ADR-0055 decides rather than the list of places it currently
+ * applies. Three drawings of a modelled height exist today — the week grid's
+ * wave row, the day chart's swell tab and the shore map's readout — and the
+ * third was nearly missed, which is the argument for a helper over three
+ * conditionals.
+ *
+ * Semicolon-joined rather than replacing the base, and `gridCellCaveat` is
+ * composed onto `GRID_MODEL_NOTE` the same way. The two clauses are not
+ * alternatives: one says this figure is a model, the other says there is no
+ * measured figure anywhere on the page to weigh it against.
+ */
+export function mopNote(base: string, unmeasured: boolean): string {
+  return unmeasured ? `${base}; ${MOP_UNMEASURED_NOTE}` : base;
+}
 
 /**
  * What the page calls a line.

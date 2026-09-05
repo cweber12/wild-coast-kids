@@ -519,6 +519,53 @@ test("a read that names no day today selects no hour, rather than midnight", asy
   );
 });
 
+/**
+ * ADR-0019's condition at the second of the two places a modelled height is
+ * drawn (ADR-0055), and the one where getting the slot wrong is invisible.
+ *
+ * NOT in `absence`: at these ten beaches MOP answers and the curve draws, so a
+ * sentence in that slot would never render — and a drawn curve a reader trusts
+ * as a measurement is the entire risk. It goes on the attribution, beside
+ * `MOP_MODEL_NOTE`, which the plot renders whether or not there are points.
+ */
+test("a beach whose only wave source is a model says so on the swell attribution", async () => {
+  const { container } = render(await DayPanel({ slug: "sunset-cliffs-park" }));
+
+  fireEvent.click(container.querySelector('[data-series-tab="swell"]')!);
+
+  // EVERY MOP attribution on the page, not one of them. The rule ADR-0055
+  // decides is that any attribution built from MOP_MODEL_NOTE carries the
+  // clause -- this region draws two, the chart's swell tab and the shore map's
+  // readout, and the second was nearly missed.
+  const lines = screen.getAllByText(/MOP line D0481/);
+  expect(lines.length).toBeGreaterThan(1);
+  for (const line of lines) {
+    // Both clauses, because they say different things: this figure is a model,
+    // and there is no measured figure anywhere on the page to weigh it against.
+    expect(line.textContent).toContain("not a measurement");
+    expect(line.textContent).toContain(
+      "no buoy reaches this beach, so nothing on this page measures its waves",
+    );
+  }
+});
+
+test("a beach with a buoy carries the model clause alone", async () => {
+  // La Jolla Shores has a buoy, so a measured height stands in the block above
+  // and the second clause would be false rather than merely redundant.
+  const { container } = render(
+    await DayPanel({ slug: "la-jolla-shores-beach" }),
+  );
+
+  fireEvent.click(container.querySelector('[data-series-tab="swell"]')!);
+
+  const lines = screen.getAllByText(/MOP line D0481/);
+  expect(lines.length).toBeGreaterThan(1);
+  for (const line of lines) {
+    expect(line.textContent).toContain("not a measurement");
+    expect(line.textContent).not.toContain("no buoy reaches this beach");
+  }
+});
+
 test("a beach with no MOP line says that, not that the feed failed", async () => {
   // Two absences that look alike and are not: 26 of 51 beaches have no line at
   // all, which is permanent, where an outage is this quarter of an hour.

@@ -114,15 +114,18 @@ function heightWords(feet: number): string {
  * under each reading. What stays here is what differs per beach: which buoy, and
  * how far away it is when that is far enough to matter.
  *
- * **The `no-buoy` disclosure is a condition of ADR-0019 and it got stronger
- * here rather than weaker.** That decision admits ten beaches whose only wave
- * source is a model, and it says in its own text that if the disclosure "is
- * ever removed or weakened, this decision goes with it". On the card this
- * sentence pointed at the forecast block beneath it and had a second form for
- * when CDIP had not answered. There is no block beneath it now — the model is
- * the chart above and the week above that — so the sentence names where the
- * modelled heights are instead, unconditionally. It can no longer be wrong
- * about whether a forecast arrived, because it no longer asks.
+ * **The `no-buoy` card states an absence, and no longer states what fills
+ * it.** ADR-0019 admits ten beaches whose only wave source is a model on
+ * condition the page says the height is modelled, and warns that if the
+ * disclosure "is ever removed or weakened, this decision goes with it". That
+ * half of the sentence has moved to the attribution of each modelled height,
+ * in all three places one is drawn — the week grid's wave row, the day chart's
+ * swell tab and the shore map's readout. See ADR-0055 and `mopNote`.
+ *
+ * It is stronger there, not weaker: a reader with no measured figure on this
+ * card has no reason to stop at it, and the figure they are at risk of
+ * misreading is a curve one region down. What is left here is this card's own
+ * answer to what was measured, which is nothing, and why.
  *
  * **`Measured` stays on the provenance line, and lost the word `now`.**
  * ADR-0016 put that label there to separate the buoy from the MOP block below
@@ -189,18 +192,23 @@ function SeaCard({ beachName, buoy, state }: WavesView) {
             that reader "every wave buoy sits out on the open coast" would state
             the reason their beach is fine as the reason it is not.
 
-            The second sentence is the disclosure ADR-0019 was accepted on. It
-            leads rather than sitting in the attribution below, because the card
-            has no measured figure at all here and a reader who stops at the
-            plain-words line must still learn that nothing on it was measured.
+            **It says what is absent and no longer what stands in.** A second
+            sentence here carried ADR-0019's disclosure -- that every wave
+            height on the page for this beach is modelled -- and it now hangs
+            off the attribution of each modelled height itself, in all three
+            places one is drawn (ADR-0055). That is where the reader it protects
+            is: looking at a curve, not at a card with no figure on it.
+
+            What is left is this card's own answer to "what was measured here",
+            which is nothing, and why. The disclosure is not weakened by the
+            move; it went from one region above the modelled heights to beside
+            them, three times over.
           */}
           <p className={`leading-relaxed mb-4 text-base ${CARD_PROSE}`}>
             {state.modelAnswersInstead ? (
               <>
                 No wave buoy reaches this stretch of coast, so nothing here is
-                measured. Every wave height this page shows for this beach — on
-                the chart above and in the week above that — comes from a model
-                of the swell, not from an instrument in the water.
+                measured.
               </>
             ) : (
               <>

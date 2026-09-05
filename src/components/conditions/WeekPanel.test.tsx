@@ -615,6 +615,89 @@ test("a beach with no MOP line says so, and keeps the rest of the grid", async (
   expect(daylightWindows()).toHaveLength(2);
 });
 
+/**
+ * ADR-0019's condition, at the first of the two places a modelled height is
+ * drawn (ADR-0055). Ten beaches are admitted to the inventory on the strength
+ * of this sentence, and that decision says in its own text that if the
+ * disclosure "is ever removed or weakened, this decision goes with it".
+ *
+ * `sunset-cliffs-park` is one of the ten: no buoy, a MOP line, and — since it
+ * is the only beach in its area — served at the area's own URL with no scope,
+ * which is the path this note is reachable on.
+ */
+test("a beach whose only wave source is a model says every height here is modelled", async () => {
+  readWeekOfLowestLows.mockResolvedValue({
+    ...BINDING,
+    state: { kind: "week", days: [tideDay(0, "6:41 PM", 0.9)] },
+  });
+  readWaveWeek.mockResolvedValue({
+    beachName: "Sunset Cliffs Park",
+    line: { id: "D0045", distanceM: 310 },
+    state: { kind: "week", days: [] },
+  });
+
+  render(await WeekPanel({ slug: "sunset-cliffs-park" }));
+
+  // On the row's own attribution, beside the clause saying the figure is a
+  // model -- not in the notes array, which says why a row a reader expected is
+  // *not* there. This row is there; what is disclosed is what it is made of.
+  const line = screen.getByText(/MOP line/).textContent ?? "";
+  expect(line).toContain("not a measurement");
+  expect(line).toContain(
+    "no buoy reaches this beach, so nothing on this page measures its waves",
+  );
+});
+
+/**
+ * The other half of the same rule. A beach with a buoy has a measured height in
+ * the block above to weigh the model against, so the sentence would be false
+ * there -- and it is the falseness that matters, not the redundancy.
+ */
+test("a beach with a buoy is not told its wave heights are unmeasured", async () => {
+  readWeekOfLowestLows.mockResolvedValue({
+    ...BINDING,
+    state: { kind: "week", days: [tideDay(0, "6:41 PM", 0.9)] },
+  });
+  readWaveWeek.mockResolvedValue({
+    beachName: "La Jolla Shores Beach",
+    line: { id: "D0498", distanceM: 240 },
+    state: { kind: "week", days: [] },
+  });
+
+  render(await WeekPanel({ slug: "la-jolla-shores-beach" }));
+
+  const line = screen.getByText(/MOP line/).textContent ?? "";
+  expect(line).toContain("not a measurement");
+  expect(line).not.toContain("no buoy reaches this beach");
+});
+
+/**
+ * A bay has no buoy and no line, so nothing is drawn for the sentence to be
+ * about. Telling a lagoon's reader that its wave heights are modelled would
+ * name a figure the page does not show.
+ */
+test("a bay is told there is no forecast, not that its heights are modelled", async () => {
+  readWeekOfLowestLows.mockResolvedValue({
+    ...BINDING,
+    state: { kind: "week", days: [tideDay(0, "6:41 PM", 0.9)] },
+  });
+  readWaveWeek.mockResolvedValue({
+    beachName: "Children's Pool",
+    line: null,
+    state: { kind: "no-line", reason: "inside a bay" },
+  });
+
+  render(await WeekPanel({ slug: "childrens-pool" }));
+
+  expect(screen.queryByText(/no buoy reaches this beach/)).toBeNull();
+  expect(
+    screen.getByText(/no wave forecast for this beach either/i),
+  ).toBeDefined();
+  // The pointer at the wave card is gone: this note now states the reason
+  // rather than saying "for the same reason as the reading above".
+  expect(screen.queryByText(/the reading above/)).toBeNull();
+});
+
 test("a CDIP outage costs the wave row and nothing else", async () => {
   readWeekOfLowestLows.mockResolvedValue({
     ...BINDING,
