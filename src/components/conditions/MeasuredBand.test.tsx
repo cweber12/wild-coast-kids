@@ -316,3 +316,16 @@ test("an attribution with no bound before it opens on no separator", () => {
 
   expect(metaLineOf(markup).startsWith("Air from Scripps Pier")).toBe(true);
 });
+
+/**
+ * When the reading was taken and which instrument took it are two questions,
+ * and running them together is what made this block read as a grey wall. They
+ * cost the same height at 568px, where the run wraps to two lines either way.
+ */
+test("the clocks and the instruments are on separate lines", () => {
+  const { container } = render(<MeasuredBand readings={readings()} />);
+
+  const attribution = container.querySelector("p:last-of-type span.block");
+  expect(attribution?.textContent).toContain("Waves from Buoy");
+  expect(attribution?.textContent).not.toContain("nothing older than");
+});

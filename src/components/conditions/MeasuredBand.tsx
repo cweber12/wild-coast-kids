@@ -115,15 +115,17 @@ export function MeasuredBand({ readings }: { readings: MeasuredReadings }) {
       {/*
         The two clocks and the two instruments, in the subordinate register.
 
-        One run rather than two lines. Measured at 1536x639, the three parts set
-        in about 580px of the 1440 available, so forcing the attribution onto
-        its own line cost the band 15px and bought nothing; below `md` they wrap
-        on their own.
+        **Two lines because they are two questions**, and running them together
+        was what made this block read as a grey wall. When the reading was taken
+        is one thing; which instruments took it is another, and a reader wants
+        one or the other rather than both at once. They cost the same height
+        either way at 568px, where the run wraps to two lines regardless -- so
+        the break is free and the grouping is not.
 
-        **Every separator belongs to the part that can be absent**, which is all
-        three of them: the clock vanishes without JavaScript, the bound vanishes
-        when nothing was measured, and the attribution vanishes when no
-        instrument answered. A separator written on the fixed side of a pair
+        **Every separator belongs to the part that can be absent.** The clock
+        vanishes without JavaScript and the bound vanishes when nothing was
+        measured, so the clock carries its own join; the attribution is on its
+        own line and needs none. A separator written on the fixed side of a pair
         where neither side is fixed is the bug this line already shipped once.
 
         The reader does the subtraction, and both halves are always true while
@@ -144,16 +146,11 @@ export function MeasuredBand({ readings }: { readings: MeasuredReadings }) {
           JavaScript. Written on the bound's side instead, it left every such
           render opening on a stray interpunct.
         */}
-        <NowClock trailing={observedAtMs !== null || attribution !== null} />
+        <NowClock trailing={observedAtMs !== null} />
         {observedAtMs !== null && (
           <span>nothing older than {localTimeOf(observedAtMs)}</span>
         )}
-        {attribution !== null && (
-          <span>
-            {observedAtMs !== null ? " · " : ""}
-            {attribution}
-          </span>
-        )}
+        {attribution !== null && <span className="block">{attribution}</span>}
       </p>
     </section>
   );
