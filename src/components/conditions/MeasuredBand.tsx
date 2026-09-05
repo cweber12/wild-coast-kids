@@ -102,6 +102,17 @@ export function MeasuredBand({ readings }: { readings: MeasuredReadings }) {
       {/*
         The two clocks and the two instruments, in the subordinate register.
 
+        One run rather than two lines. Measured at 1536x639, the three parts set
+        in about 580px of the 1440 available, so forcing the attribution onto
+        its own line cost the band 15px and bought nothing; below `md` they wrap
+        on their own.
+
+        **Every separator belongs to the part that can be absent**, which is all
+        three of them: the clock vanishes without JavaScript, the bound vanishes
+        when nothing was measured, and the attribution vanishes when no
+        instrument answered. A separator written on the fixed side of a pair
+        where neither side is fixed is the bug this line already shipped once.
+
         The reader does the subtraction, and both halves are always true while
         they do it: `NowClock` is a client value that cannot be stale, and the
         observation time is a fact about the past that caching cannot corrupt.
@@ -120,11 +131,16 @@ export function MeasuredBand({ readings }: { readings: MeasuredReadings }) {
           JavaScript. Written on the bound's side instead, it left every such
           render opening on a stray interpunct.
         */}
-        <NowClock trailing={observedAtMs !== null} />
+        <NowClock trailing={observedAtMs !== null || attribution !== null} />
         {observedAtMs !== null && (
           <span>nothing older than {localTimeOf(observedAtMs)}</span>
         )}
-        {attribution !== null && <span className="block">{attribution}</span>}
+        {attribution !== null && (
+          <span>
+            {observedAtMs !== null ? " · " : ""}
+            {attribution}
+          </span>
+        )}
       </p>
     </section>
   );

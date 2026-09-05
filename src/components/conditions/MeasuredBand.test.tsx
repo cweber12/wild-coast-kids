@@ -191,7 +191,7 @@ test("both instruments are named beneath their figures", () => {
 
   expect(
     screen.getByText(
-      "Waves from Buoy Scripps Nearshore (NDBC) · air from Scripps Pier, 1.4 km away",
+      /Waves from Buoy Scripps Nearshore \(NDBC\) · air from Scripps Pier, 1\.4 km away/,
     ),
   ).toBeDefined();
 });
@@ -274,7 +274,43 @@ test("the glyphs are hidden from the accessibility tree", () => {
 test("the server render opens on no stray separator", () => {
   const markup = renderToStaticMarkup(<MeasuredBand readings={readings()} />);
 
-  expect(markup).not.toContain(">·");
-  expect(markup).not.toContain("> · ");
-  expect(markup).toContain(">nothing older than ");
+  // The property is about the line, not about any span: the clock is absent
+  // here, so whatever comes first must not lead with a join. Asserted on the
+  // text of the whole meta paragraph, which is where a reader sees it.
+  expect(metaLineOf(markup).startsWith("nothing older than ")).toBe(true);
+});
+
+/** The subordinate line's text, with tags and comment markers taken out. */
+function metaLineOf(markup: string): string {
+  const meta = markup.slice(markup.lastIndexOf("<p class="));
+  return meta
+    .replace(/<!--.*?-->/g, "")
+    .replace(/<[^>]+>/g, "")
+    .trim();
+}
+
+/**
+ * All three parts of the meta line are optional, so every separator belongs to
+ * the part that can be absent. This is the state where only the attribution
+ * survives: the station is named, it did not answer, and nothing was measured
+ * for a bound to be about.
+ */
+test("an attribution with no bound before it opens on no separator", () => {
+  const markup = renderToStaticMarkup(
+    <MeasuredBand
+      readings={readings({
+        waves: {
+          buoy: null,
+          state: {
+            kind: "no-buoy",
+            reason: "inside a bay",
+            modelAnswersInstead: false,
+          },
+        },
+        air: { air: { kind: "unavailable", detail: "504", drift: false } },
+      })}
+    />,
+  );
+
+  expect(metaLineOf(markup).startsWith("Air from Scripps Pier")).toBe(true);
 });
