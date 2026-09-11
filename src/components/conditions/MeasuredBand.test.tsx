@@ -49,6 +49,26 @@ function readings(
   } as MeasuredReadings;
 }
 
+/**
+ * The band as fifteen of the eighteen areas render it: air alone.
+ *
+ * `wavesSegment` returns null unless the sea actually answered, so a buoy-less
+ * area drops to one segment. That is the majority shape, not an edge case --
+ * ADR-0056 counted it at 18 of 69 routes carrying a measured wave height.
+ */
+function airOnly(): MeasuredReadings {
+  return readings({
+    waves: {
+      buoy: null,
+      state: {
+        kind: "no-buoy",
+        reason: "inside a bay",
+        modelAnswersInstead: false,
+      },
+    },
+  });
+}
+
 /* =========================================================================
  * One band where there were two cards
  * ========================================================================= */
@@ -106,22 +126,78 @@ test("the band contributes no heading to the page outline", () => {
  * ========================================================================= */
 
 /**
- * `CARD_PROSE` and `CARD_MUTED` are white at 75% and 55%, measured against
- * `--color-dark` and against nothing else. White at 55% on this page's cream
- * paints 1.03:1 -- the bug #175 fixed in three places -- so a band that carried
- * the card's classes onto cream would reintroduce it invisibly.
+ * The same rule as before, now that the surface underneath has changed.
+ *
+ * This test used to assert the opposite: `bg-dark` present and `text-fog`
+ * absent. The band sits on the page's own cream since ADR-0059, so the
+ * pairings swap, and the half that must not follow it is the one that was
+ * correct before. `CARD_PROSE` and `CARD_MUTED` are white at 75% and 55%
+ * measured against `--color-dark` and nothing else; white at 55% on cream
+ * paints **1.03:1**, the bug #175 fixed in three places. Carrying them across
+ * would reintroduce it invisibly, which is why the assertion is kept rather
+ * than simply deleted with the ground.
+ *
+ * `text-fog` on `--color-cream` is not a new pair and is owed no fresh
+ * measurement: the standing notice on this same page already uses it.
  */
 test("the band's colours are the ones measured against its own surface", () => {
   const { container } = render(<MeasuredBand readings={readings()} />);
 
   const markup = container.innerHTML;
-  // The pairings cardText.ts measured against --color-dark: 10.02:1 and 5.96:1.
-  expect(markup).toContain("bg-dark");
-  expect(markup).toContain("text-white/75");
-  expect(markup).toContain("text-white/55");
-  // And not `text-fog`, which is chosen against cream and is the wrong half of
-  // the same file: each of these is measured against one surface only.
-  expect(markup).not.toContain("text-fog");
+  expect(markup).not.toContain("bg-dark");
+  expect(markup).not.toContain("text-white/75");
+  expect(markup).not.toContain("text-white/55");
+  expect(markup).toContain("text-fog");
+});
+
+/**
+ * What the dark surface was doing, done without a surface.
+ *
+ * A slab says "these figures are one block" by being one. On the page's own
+ * ground two runs of figures on a shared baseline read as a single sentence
+ * instead — which is the shape ADR-0010 forbids, since it would put two
+ * agencies behind one claim. The label over each segment and the rule between
+ * them are what carry that now, so both are asserted rather than left to look
+ * like styling.
+ */
+test("each source is named, and a rule stands between them", () => {
+  render(<MeasuredBand readings={readings()} />);
+
+  expect(screen.getByText("Sea")).toBeDefined();
+  expect(screen.getByText("Air")).toBeDefined();
+});
+
+/**
+ * The rule is between the segments and never around them.
+ *
+ * A border on the first segment would be a box redrawn one edge at a time,
+ * which is the thing removing the ground was for.
+ */
+test("the first source carries no rule before it", () => {
+  const { container } = render(<MeasuredBand readings={readings()} />);
+
+  const runs = [...container.querySelectorAll("p")].filter((node) =>
+    /Sea|Air/.test(node.textContent ?? ""),
+  );
+  expect(runs.length).toBe(2);
+  expect(runs[0].className).not.toContain("border-l");
+  expect(runs[1].className).toContain("border-l");
+});
+
+/**
+ * The label comes off the segment, not off its position.
+ *
+ * `bandView` documents the order -- waves first when measured, then air -- so
+ * an index would be right today and would mislabel the sea as the air the first
+ * time a third source lands or the order changes. Asserted through the shape
+ * that actually varies: on an area with no shared buoy there is one segment,
+ * and it must still say Air rather than taking slot zero's name.
+ */
+test("a lone air segment is still named for the air", () => {
+  render(<MeasuredBand readings={airOnly()} />);
+
+  expect(screen.getByText("Air")).toBeDefined();
+  expect(screen.queryByText("Sea")).toBeNull();
 });
 
 /* =========================================================================
