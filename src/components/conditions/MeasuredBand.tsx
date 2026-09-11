@@ -114,8 +114,16 @@ export function MeasuredBand({ readings }: { readings: MeasuredReadings }) {
                 sharing a baseline read as one sentence. The rule separates
                 without enclosing, which is the whole point of taking the ground
                 off. Only between, never around: the first segment carries none.
+
+                **From `lg` only, because a rule is a fact about a row.** This
+                container wraps, and where it does the second segment starts a
+                line of its own -- with the rule still drawn, which paints a
+                stray vertical tick down its left edge and reads as an indent
+                rather than as a separator. Found at 375px on a beach page,
+                where both segments are present and neither fits beside the
+                other. Below `lg` the labels do the separating on their own.
               */
-              index > 0 ? "border-l border-lavender pl-5" : ""
+              index > 0 ? "lg:border-l lg:border-lavender lg:pl-5" : ""
             }`}
           >
             {/*

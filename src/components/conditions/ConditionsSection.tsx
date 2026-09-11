@@ -94,201 +94,176 @@ export function ConditionsSection({
   return (
     <section className="px-gutter-sm py-section-sm md:px-gutter md:py-section">
       {/*
-        THE PAGE INTRODUCES ITSELF IN ONE LINE, BECAUSE THE READER ARRIVED ON
-        PURPOSE.
+        THE BAR: WHERE, AND WHAT IS TRUE THERE NOW.
 
-        The chooser sits beside the title rather than under it, and it decides
-        what every figure on the page means: it was the fourth element down,
-        under a paragraph, with a 13px label. Bottom-aligned so the two columns
-        finish on the same line; stacked below `md`, where there is no width to
-        share.
+        One row across the top holding everything that answers *which place* and
+        *this instant*, closed by a rule. Everything below it is a prediction or
+        a model scoped to a day the reader chooses, so the rule is a real
+        boundary and not a decoration.
 
-        An eyebrow reading "Surf · Tide · Wind · Visibility" and a paragraph
-        saying the site is real-time surf, tide, wind and visibility for San
-        Diego's coast stood above this. Both described the page to somebody who
-        had just clicked "Conditions" to reach it, and together with a 56px
-        headline they meant the first measurement on a page about measurements
-        was off a 639px window entirely.
+        It was a three-column header: a 36px headline over a liability sentence,
+        the readings in a middle column, and the chooser stacked over the rip
+        level in a 288px one -- about 100px tall, with a 160px list of beach
+        links beneath it and the week starting at 459px. The wordmark
+        (ADR-0058), the two controls (ADR-0060) and the ungrounded readings
+        (ADR-0059) each gave back enough height to put all of it on one line.
 
-        The lead paragraph is not lost, it is where it was always doing the
-        work: the `metadata` export in ../../app/conditions/page.tsx carries it
-        verbatim as the description, which is the place a sentence introducing
-        this page to somebody who has *not* arrived at it is actually read.
-        `ConditionsTeaser` on the landing page carries the other copy of it, for
-        the reader who has not clicked yet.
+        **`flex-wrap`, not a grid.** The row's items are of unequal and
+        unpredictable width -- an area name is "Del Mar" or "Mission Bay -
+        West", a wind bearing is "from the west" or "from the
+        north-north-west" -- so a column that fitted one area would leave a gap
+        at the next. Wrapping puts each on its own line at a phone width, which
+        is where 375px cannot hold two of them.
 
-        **The `<h1>` is a wordmark now, not a headline.** It read "Check
-        conditions first." at 36px across a line of its own, above a liability
-        sentence and a list of links -- telling a reader who had just clicked
-        "Conditions" in the nav what they had chosen. One word in the label
-        register says the same thing and returns the line. It is smaller than
-        the region headings beneath it on purpose; `TOOL_WORDMARK` carries the
-        argument, and ADR-0058 the decision.
+        **`items-center`, not `items-end`.** The old row bottom-aligned two
+        columns of stacked content so they finished on the same line. These are
+        single-line items of differing height, and a shared centre is what makes
+        them read as one bar rather than as things resting on a shelf.
       */}
-      <div className="mb-7 md:flex md:items-end md:justify-between md:gap-6 lg:gap-8">
-        <div>
-          <h1 className={`${TOOL_WORDMARK} mb-3`}>Conditions</h1>
+      <div className="mb-8 border-b border-lavender pb-5">
+        <div className="flex flex-wrap items-center gap-x-8 gap-y-4">
+          {/*
+            **The `<h1>` is a wordmark, not a headline.** It read "Check
+            conditions first." at 36px across a line of its own -- telling a
+            reader who had just clicked "Conditions" in the nav what they had
+            chosen. One word in the label register says it and returns the line.
+            It is smaller than the region headings beneath it on purpose;
+            `TOOL_WORDMARK` carries the argument and ADR-0058 the decision.
+
+            The lead paragraph that stood here is not lost: the `metadata`
+            export in ../../app/conditions/page.tsx carries it verbatim as the
+            description, which is where a sentence introducing this page to
+            somebody who has *not* arrived is actually read, and
+            `ConditionsTeaser` carries the other copy for the reader who has not
+            clicked yet.
+          */}
+          <h1 className={TOOL_WORDMARK}>Conditions</h1>
 
           {/*
-            The standing notice ADR-0009 turns on: that decision rejects an
-            embed partly because "the host page is asserting something it does
-            not control", and this sentence is the assertion. It said less than
-            this and sat fourth of four at the bottom of a 2171px page until
-            2026-08-25.
+            WHICH PLACE, AT BOTH GRAINS.
 
-            It moved from the chooser's column to the title's when the lead
-            paragraph came out, and the move is what keeps the row balanced: the
-            row is `md:items-end`, so with nothing under the title this column
-            was a lone heading bottom-aligned against a two-element one. The
-            notice is now the thing the title sits above, which is also the
-            reading order ADR-0009 wants -- the qualification arrives with the
-            page's name rather than as a footnote to the control.
+            The area decides what every figure on the page means; the beach
+            narrows it. They sit together because they are one question asked
+            twice, and they sit first because nothing to their right means
+            anything until they are answered.
 
-            One sentence rather than two, and both claims kept: instrument
-            readings are not a safety assessment, and the authority on the day
-            is someone else. Those two halves are what the ADR names, and
-            `ConditionsSection.test.tsx` asserts each of them separately so a
-            later tightening cannot quietly drop the liability half.
+            The beach control is not drawn where the area holds one beach, which
+            six of the eighteen do: a choice between one thing is not a choice.
+            Those areas show their beach directly -- `[area]/page.tsx` passes it
+            as `beachSlug`. See ADR-0060.
           */}
-          <p className="leading-relaxed max-w-130 text-base text-fog">
-            Instrument readings, not a safety assessment — lifeguards and the
-            signs posted at the beach are the authority on the day.
-          </p>
-        </div>
-
-        {/*
-          The chooser's column, and the rip level under it.
-
-          Reading order: choose the beach, then the one relayed judgement about
-          it. And it is nearly free here -- the row is `md:items-end`, so this
-          column is bottom-aligned against a taller one and the space above the
-          chooser was already empty. The same measurement put the standing
-          notice in this column once.
-
-          Its own Suspense boundary, because it is a sixth publisher and the
-          bulletin going quiet must not hold up the chooser, which needs no
-          network at all.
-        */}
-        {/*
-          WHAT IS TRUE NOW, IN THE ROW THAT SAYS WHICH PLACE IT IS TRUE OF.
-
-          The buoy and the shore station are the only instruments this site
-          reports, and they answer for one instant: now. Everything below this
-          row is a prediction or a model, scoped to a day a reader chooses.
-
-          One thing in the band is a forecast too, and it is a mark rather than
-          a figure: the glyph on the air segment is the sky forecast for this
-          hour, credited as one on the band's own attribution (ADR-0057).
-
-          **It sits OUTSIDE `SelectedDayProvider`**, and that is structural
-          rather than a convention: frozen to the present is this band's whole
-          contract, and with no day in scope here a later change cannot quietly
-          make these figures follow Thursday. The provider is in
-          `app/conditions/layout.tsx`, one level out, and the band is not inside
-          it at any width.
-
-          It sat under the beach list as a full-width block and cost the page a
-          row of its own: 77px of band plus a 36px margin, above a week grid
-          whose top edge then fell 51px below a 639px fold. Here it costs
-          nothing. The row is `md:items-end` and was already about 100px tall,
-          set by the chooser's column, and the band is shorter than that — so
-          it fills space the header row was already reserving and the week
-          moves up by the whole of what the block used to occupy.
-
-          `flex-1` rather than a width: it is the only element in this row that
-          can take whatever is left. The title's column is capped at
-          `max-w-130` and the chooser's is a fixed 288px, so the band gets
-          1440 − 520 − 288 − two gaps at the review viewport, and less on a
-          narrower screen without either neighbour having to give anything up.
-
-          **In the row only from `lg`.** At `md` the usable width is 672px and
-          the title plus the gap plus the chooser already spends 848px, so the
-          title is compressed there before this arrives; a third column would
-          leave it a few dozen pixels. Below `lg` the band stacks under the
-          header, which is where it stood before this move and is still the
-          first thing under it.
-
-          Its own Suspense boundary, like every region on this page: five
-          agencies go quiet independently and a slow buoy must not hold up the
-          chooser, which needs no network at all.
-        */}
-        <div className="mt-6 lg:mt-0 lg:flex-1">
-          <Suspense
-            fallback={
-              <p className="text-base text-fog">
-                Reading the buoy and the air station…
-              </p>
-            }
-          >
-            {/*
-              On an area page this reads through the area's first beach, and
-              which beach that is cannot matter: a product is only read here
-              when every beach in the area binds the same source for it, which
-              is what `areaSources` calls shared and what `areas.test.ts`
-              asserts over the whole table. A product they do not share is not
-              read at all, so no one beach's figure can arrive labelled as the
-              area's.
-
-              Air is shared by all eighteen areas and a buoy by three, so on
-              fifteen area pages this band is one segment: what the air station
-              read, and nothing about the sea. That is not a hole -- the
-              sentence saying why lives beside the modelled heights the week and
-              the chart draw (ADR-0055).
-            */}
-            <MeasuredPanel slug={reading} area={scope} />
-          </Suspense>
-        </div>
-
-        <div className="mt-6 md:mt-0 md:w-72">
           <AreaSelector areas={areas} current={areaSlug} />
+          {group.beaches.length > 1 && (
+            <BeachSelector
+              areaSlug={group.area.slug}
+              areaName={group.area.name}
+              beaches={group.beaches.map((beach) => ({
+                slug: beach.slug,
+                name: beach.name,
+              }))}
+              current={beachSlug}
+            />
+          )}
 
           {/*
-            WHICH PLACE INSIDE IT, WHERE A LIST OF LINKS USED TO STAND.
+            WHAT THE INSTRUMENTS READ, RIGHT NOW.
 
-            `AreaBeaches` drew that list -- a region heading and up to ten
-            wrapped links between the header and the week, about 160px of page.
-            A `<select>` of ten beaches and a wrapped row of ten links are the
-            same control twice, and only one of them is reachable without
-            scrolling. See ADR-0060.
+            The buoy and the shore station are the only instruments this site
+            reports and they answer for one instant. One thing in the block is a
+            forecast and it is a mark rather than a figure: the glyph on the air
+            segment is the sky forecast for this hour, credited as one on the
+            block's own attribution (ADR-0057).
 
-            **Not drawn at all where the area holds one beach**, which six of
-            the eighteen do, and for the reason the list was not: a choice
-            between one thing is not a choice. Those areas show their beach
-            directly instead -- `[area]/page.tsx` passes it as `beachSlug` --
-            so the reader who picked Sunset Cliffs gets Sunset Cliffs Park's
-            readings rather than a control offering only them.
+            **It sits OUTSIDE `SelectedDayProvider`**, which is structural
+            rather than a convention: frozen to the present is this block's
+            whole contract, and with no day in scope here a later change cannot
+            quietly make these figures follow Thursday. The provider is in
+            `app/conditions/layout.tsx`, one level out.
+
+            `lg:ml-auto` rather than a width: it is the only item in this row
+            that can take whatever is left, so it ends the row where there is
+            room and wraps under it where there is not.
+
+            Its own Suspense boundary, like every region on this page: five
+            agencies go quiet independently and a slow buoy must not hold up the
+            chooser, which needs no network at all.
+
+            On an area page this reads through the area's first beach, and which
+            beach cannot matter: a product is only read here when every beach in
+            the area binds the same source for it. Air is shared by all eighteen
+            areas and a buoy by three, so on fifteen area pages this is one
+            segment -- what the air station read, and nothing about the sea.
+            That is not a hole; the sentence saying why lives beside the
+            modelled heights the week and the chart draw (ADR-0055).
           */}
-          {group.beaches.length > 1 && (
-            <div className="mt-4">
-              <BeachSelector
-                areaSlug={group.area.slug}
-                areaName={group.area.name}
-                beaches={group.beaches.map((beach) => ({
-                  slug: beach.slug,
-                  name: beach.name,
-                }))}
-                current={beachSlug}
-              />
-            </div>
-          )}
+          <div className="lg:ml-auto">
+            <Suspense
+              fallback={
+                <p className="text-base text-fog">
+                  Reading the buoy and the air station…
+                </p>
+              }
+            >
+              <MeasuredPanel slug={reading} area={scope} />
+            </Suspense>
+          </div>
+
           {/*
             The one relayed judgement on this page, and the one product an area
             reports without its beaches agreeing about a source. It is on the
             area page as well as the beach page for that reason: withholding it
-            from an area would be applying a rule about point measurements to
+            from an area would apply a rule about point measurements to
             something that is not one, and it is the single line here that
             answers whether to put children in the water.
+
+            Last in the row, behind a rule: it is the only item that is neither
+            a control nor a measurement, and the rule says so without giving it
+            a box.
+
+            **The rule is `lg` and up, because it is a fact about a row.** This
+            row wraps, and a stacked item carrying a left border paints a stray
+            vertical tick beside itself that reads as an indent. Seen at 375px,
+            where every item in the bar is on its own line.
+
+            Its own Suspense boundary, because it is a sixth publisher and the
+            bulletin going quiet must not hold up the chooser.
           */}
-          <Suspense
-            fallback={
-              <p className="mt-4 text-base text-fog">
-                Reading the rip current risk…
-              </p>
-            }
-          >
-            <RipLevel slug={bulletin} />
-          </Suspense>
+          <div className="lg:border-l lg:border-lavender lg:pl-6">
+            <Suspense
+              fallback={
+                <p className="text-base text-fog">
+                  Reading the rip current risk…
+                </p>
+              }
+            >
+              <RipLevel slug={bulletin} />
+            </Suspense>
+          </div>
         </div>
+
+        {/*
+          The standing notice ADR-0009 turns on: that decision rejects an embed
+          partly because "the host page is asserting something it does not
+          control", and this sentence is the assertion.
+
+          **Under the bar rather than in it, and at body size.** The prototype
+          this layout came from put it in the row at `--text-2xs`, which would
+          have made the one sentence the site asserts on its own behalf the
+          smallest type in the system. It qualifies everything the bar states,
+          so it sits beneath the whole of it -- and it is prose, where the row
+          above is controls and figures.
+
+          One sentence rather than two, and both claims kept: instrument
+          readings are not a safety assessment, and the authority on the day is
+          someone else. `ConditionsSection.test.tsx` asserts each half
+          separately so a later tightening cannot quietly drop the liability
+          one, and asserts the size so a later compression cannot quietly shrink
+          it.
+        */}
+        <p className="leading-relaxed mt-4 max-w-130 text-base text-fog">
+          Instrument readings, not a safety assessment — lifeguards and the
+          signs posted at the beach are the authority on the day.
+        </p>
       </div>
 
       {/*

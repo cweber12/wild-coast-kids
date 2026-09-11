@@ -181,7 +181,10 @@ test("the first source carries no rule before it", () => {
   );
   expect(runs.length).toBe(2);
   expect(runs[0].className).not.toContain("border-l");
-  expect(runs[1].className).toContain("border-l");
+  // And the rule is a fact about a row: below `lg` the segments stack, where a
+  // left border paints a stray tick rather than a separator.
+  expect(runs[1].className).not.toMatch(/(^|s)border-l/);
+  expect(runs[1].className).toContain("lg:border-l");
 });
 
 /**

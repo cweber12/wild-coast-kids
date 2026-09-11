@@ -347,6 +347,66 @@ test("every caveat the data files carry reaches this page", () => {
  * deliberately does not change the outline, so an `<h1>` that quietly became an
  * `<h2>` would be this change going further than it claimed to.
  */
+/**
+ * The bar is one row, and its contents are its contents.
+ *
+ * Asserted structurally rather than by class: what makes this a toolbar is that
+ * the wordmark and both controls share a parent, and what makes it a *bar* is
+ * that the liability sentence does not. The prototype this came from put the
+ * notice inside the row and it read as a fifth control.
+ *
+ * Reading order matters and is asserted with it: the controls decide what every
+ * figure to their right means, so a row that put the readings first would state
+ * a number before saying what place it describes.
+ */
+test("scope sits on one row, and the notice sits beneath it", () => {
+  const { container } = render(
+    <ConditionsSection
+      areaSlug={DEFAULT_AREA}
+      beachSlug={DEFAULT_BEACH_SLUG}
+    />,
+  );
+
+  const wordmark = screen.getByRole("heading", { level: 1 });
+  const row = wordmark.parentElement;
+  expect(row).not.toBeNull();
+
+  // Both controls are in the row with it, not stacked in a column beside it.
+  expect(row!.contains(screen.getByLabelText("Choose an area"))).toBe(true);
+  expect(row!.contains(screen.getByLabelText("Choose a beach"))).toBe(true);
+
+  // The notice is not in the row, and follows it.
+  const notice = screen.getByText(/Instrument readings, not a safety/);
+  expect(row!.contains(notice)).toBe(false);
+  expect(
+    row!.compareDocumentPosition(notice) & Node.DOCUMENT_POSITION_FOLLOWING,
+  ).toBeTruthy();
+
+  // The wordmark comes before the control that scopes everything after it.
+  expect(
+    wordmark.compareDocumentPosition(screen.getByLabelText("Choose an area")) &
+      Node.DOCUMENT_POSITION_FOLLOWING,
+  ).toBeTruthy();
+});
+
+/**
+ * An area of one beach still gets a bar, with one control in it.
+ *
+ * The beach control is the only item in the row that can be absent, so this is
+ * the shape six of the eighteen areas actually render. Worth its own case
+ * because a row built around two controls can break in ways a row with one does
+ * not show.
+ */
+test("an area of one beach keeps its bar with a single control", () => {
+  render(<ConditionsSection areaSlug="sunset-cliffs" beachSlug={null} />);
+
+  const wordmark = screen.getByRole("heading", { level: 1 });
+  const row = wordmark.parentElement;
+
+  expect(row!.contains(screen.getByLabelText("Choose an area"))).toBe(true);
+  expect(screen.queryByLabelText("Choose a beach")).toBeNull();
+});
+
 test("the page titles itself with a wordmark, not a headline", () => {
   render(
     <ConditionsSection
@@ -438,8 +498,13 @@ test("the self-description is gone and the standing notice is not", () => {
  * neither prominent nor a note about how to read a number. It moved rather than
  * being duplicated, which is what this asserts end to end: the section renders
  * `ConditionsNotes` for real, so a regression there fails here.
+ *
+ * The test said "above the readings" until 2026-09-11 and never asserted it.
+ * The notice sits under the bar now rather than beside the title, so the name
+ * was describing an order that had moved; once-ness is what it actually checks
+ * and is what it now claims.
  */
-test("the safety framing is stated once, above the readings", () => {
+test("the safety framing is stated once, wherever it sits", () => {
   render(
     <ConditionsSection
       areaSlug={DEFAULT_AREA}
