@@ -79,3 +79,37 @@ confirms the rank is visible, which is already how ADR-0014 is verified.
 standing notice with the title, and the prototype did. ADR-0009 makes that
 sentence the assertion this site owns, so it stays at `--text-base`. Shrinking
 it is not something a layout change gets to do as a side effect.
+
+> **Amended 2026-09-11, before merge.** The decision holds — the title is a
+> wordmark and not a headline — and two things about how it is set have
+> changed, both from seeing it rendered.
+>
+> **It has its own size token and its own row.** `--text-2xs` outright put the
+> page's name at exactly the size of the `AREA` and `BEACH` labels beside it,
+> so the thing naming the tool read as a third control label. It is
+> `--text-tool-wordmark`, `clamp(15px, 1.2vw, 18px)`, on the row above the
+> controls. Unmistakably larger than those labels; nowhere near the 36px
+> headline it replaced.
+>
+> **This does not reopen the rank question.** The wordmark is uppercase and
+> tracked in an accent colour; the region headings are `font-black italic` at a
+> size token. They are different registers rather than two points on one scale,
+> which is what lets 18px sit under a 22px "The week ahead" without reading as
+> an inversion — a _display_ title at 18px under a 22px region heading would
+> read as exactly that, and is still what this ADR refuses. The reasoning in
+> **Decision** above is unchanged; only the size the label register is set at
+> here.
+>
+> **`--text-tool-title` stays retired**, and `--text-tool-wordmark` takes its
+> `REQUIRED` row in `scripts/built-css.mjs` for the same reason: it has exactly
+> one reader, and losing the token would drop the nameplate to an inherited
+> 16px — close enough to right that nothing would look broken, which is the
+> failure the gate exists for.
+>
+> **One thing this broke, worth recording because no test saw it.**
+> `MeasuredBand` borrowed `TOOL_WORDMARK` for its `SEA` and `AIR` labels, so
+> resizing the nameplate silently took those from 10px to 18px. They are stat
+> labels answering to ADR-0014's label register, not to the nameplate, and they
+> now say so in their own markup. It was visible only on the rendered page:
+> jsdom applies no stylesheets (ADR-0001), and a class-reference contract
+> asserting `TOOL_WORDMARK` would have passed throughout.

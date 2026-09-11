@@ -80,6 +80,13 @@
      (ADR-0058), so the token had exactly no readers left and went with it --
      this is the whole of the register that remains, and it is the largest type
      on that page. See `TOOL_REGION_HEADING`. */
+  /* The tool's nameplate, above its controls. Larger than the control labels
+     beside it -- which is what --text-2xs made it, and what made it read as a
+     third label rather than as the thing naming them -- and smaller than the
+     region headings below, which it does not compete with because it is not in
+     their register at all: uppercase and tracked where they are black italic.
+     See ADR-0058. */
+  --text-tool-wordmark: clamp(15px, 1.2vw, 18px);
   --text-tool-region: clamp(17px, 1.6vw, 22px);
 
   --leading-display: 1;

@@ -94,64 +94,74 @@ export function ConditionsSection({
   return (
     <section className="px-gutter-sm py-section-sm md:px-gutter md:py-section">
       {/*
-        THE BAR: WHERE, AND WHAT IS TRUE THERE NOW.
+        THE BAR: WHAT THIS IS, WHERE, AND WHAT IS TRUE THERE NOW.
 
-        One row across the top holding everything that answers *which place* and
-        *this instant*, closed by a rule. Everything below it is a prediction or
-        a model scoped to a day the reader chooses, so the rule is a real
+        Three rows, closed by a rule. Everything below the rule is a prediction
+        or a model scoped to a day the reader chooses, so the rule is a real
         boundary and not a decoration.
 
-        It was a three-column header: a 36px headline over a liability sentence,
-        the readings in a middle column, and the chooser stacked over the rip
-        level in a 288px one -- about 100px tall, with a 160px list of beach
-        links beneath it and the week starting at 459px. The wordmark
+        It was a three-column header: a 36px headline over a liability
+        sentence, the readings in a middle column, and the chooser stacked over
+        the rip level in a 288px one -- about 100px tall, with a 160px list of
+        beach links beneath it and the week starting at 459px. The wordmark
         (ADR-0058), the two controls (ADR-0060) and the ungrounded readings
-        (ADR-0059) each gave back enough height to put all of it on one line.
+        (ADR-0059) each gave back enough height to put all of it in the bar.
 
-        **`flex-wrap`, not a grid.** The row's items are of unequal and
-        unpredictable width -- an area name is "Del Mar" or "Mission Bay -
-        West", a wind bearing is "from the west" or "from the
-        north-north-west" -- so a column that fitted one area would leave a gap
-        at the next. Wrapping puts each on its own line at a phone width, which
-        is where 375px cannot hold two of them.
+        **Three rows rather than one wrapping row, and that is a correctness
+        fix rather than a preference.** All five items were in a single
+        `flex-wrap` container, so which row an item landed on was decided by
+        how wide its content happened to be. On a beach page the readings are
+        two segments and wrapped onto their own line; on an area page with no
+        shared buoy they are one segment, fitted beside the controls, and rose
+        into the selector row -- while the rip level, which had not moved,
+        dropped to a line of its own. The bar reshaped itself according to
+        whether a buoy existed, which is fifteen of the eighteen areas. Rows
+        that mean something cannot be an accident of measurement, so each is
+        its own container now.
 
-        **`items-center`, not `items-end`.** The old row bottom-aligned two
-        columns of stacked content so they finished on the same line. These are
-        single-line items of differing height, and a shared centre is what makes
-        them read as one bar rather than as things resting on a shelf.
+        **What each row is for.** The name of the tool; the controls that say
+        which place; and what is true at that place this instant. A reader
+        going top to bottom learns what they are looking at, chooses where, and
+        then reads. Nothing in row three means anything until row two is
+        answered, which is why it is underneath rather than beside.
       */}
       <div className="mb-8 border-b border-lavender pb-5">
-        <div className="flex flex-wrap items-center gap-x-8 gap-y-4">
-          {/*
-            **The `<h1>` is a wordmark, not a headline.** It read "Check
-            conditions first." at 36px across a line of its own -- telling a
-            reader who had just clicked "Conditions" in the nav what they had
-            chosen. One word in the label register says it and returns the line.
-            It is smaller than the region headings beneath it on purpose;
-            `TOOL_WORDMARK` carries the argument and ADR-0058 the decision.
+        {/*
+          **The `<h1>` is a wordmark, not a headline.** It read "Check
+          conditions first." at 36px across a line of its own -- telling a
+          reader who had just clicked "Conditions" in the nav what they had
+          chosen. One word says it and returns the line.
 
-            The lead paragraph that stood here is not lost: the `metadata`
-            export in ../../app/conditions/page.tsx carries it verbatim as the
-            description, which is where a sentence introducing this page to
-            somebody who has *not* arrived is actually read, and
-            `ConditionsTeaser` carries the other copy for the reader who has not
-            clicked yet.
-          */}
-          <h1 className={TOOL_WORDMARK}>Conditions</h1>
+          It is on its own row above the controls rather than inline with them,
+          and at `--text-tool-wordmark` rather than the `--text-2xs` it started
+          at: level with the `AREA` and `BEACH` labels, in their size and their
+          register, the thing naming the tool read as a third control label.
+          `TOOL_WORDMARK` carries the argument and ADR-0058 the decision.
 
-          {/*
-            WHICH PLACE, AT BOTH GRAINS.
+          The lead paragraph that stood here is not lost: the `metadata` export
+          in ../../app/conditions/page.tsx carries it verbatim as the
+          description, which is where a sentence introducing this page to
+          somebody who has *not* arrived is actually read, and
+          `ConditionsTeaser` carries the other copy for the reader who has not
+          clicked yet.
+        */}
+        <h1 className={TOOL_WORDMARK}>Conditions</h1>
 
-            The area decides what every figure on the page means; the beach
-            narrows it. They sit together because they are one question asked
-            twice, and they sit first because nothing to their right means
-            anything until they are answered.
+        {/*
+          WHICH PLACE, AT BOTH GRAINS.
 
-            The beach control is not drawn where the area holds one beach, which
-            six of the eighteen do: a choice between one thing is not a choice.
-            Those areas show their beach directly -- `[area]/page.tsx` passes it
-            as `beachSlug`. See ADR-0060.
-          */}
+          The area decides what every figure on the page means; the beach
+          narrows it. They share a row because they are one question asked
+          twice, and the row is above the readings because nothing below it
+          means anything until they are answered.
+
+          The beach control is not drawn where the area holds one beach, which
+          six of the eighteen do: a choice between one thing is not a choice.
+          Those areas show their beach directly -- `[area]/page.tsx` passes it
+          as `beachSlug`. See ADR-0060. The row survives its absence, because
+          the row is a row and not whatever fits.
+        */}
+        <div className="mt-3 flex flex-wrap items-center gap-x-6 gap-y-3">
           <AreaSelector areas={areas} current={areaSlug} />
           {group.beaches.length > 1 && (
             <BeachSelector
@@ -164,49 +174,57 @@ export function ConditionsSection({
               current={beachSlug}
             />
           )}
+        </div>
 
+        {/*
+          WHAT IS TRUE AT THAT PLACE, NOW.
+
+          The instruments and the one relayed judgement, on one row of their
+          own. Left-aligned and vertically centred: they are read as a run, and
+          a run that starts in a different place depending on how much of it
+          there is has to be found before it can be read.
+
+          **This row exists whatever is in it**, which is the whole point of it
+          being a row. On fifteen of the eighteen areas the readings are one
+          segment rather than two, because a buoy is shared by three; that
+          changes how much is on this line and must not change which line it
+          is.
+
+          The buoy and the shore station are the only instruments this site
+          reports and they answer for one instant. One thing here is a forecast
+          and it is a mark rather than a figure: the glyph on the air segment is
+          the sky forecast for this hour, credited as one on the readings' own
+          attribution (ADR-0057).
+
+          **It sits OUTSIDE `SelectedDayProvider`**, which is structural rather
+          than a convention: frozen to the present is this block's whole
+          contract, and with no day in scope here a later change cannot quietly
+          make these figures follow Thursday. The provider is in
+          `app/conditions/layout.tsx`, one level out.
+
+          Two Suspense boundaries and not one, because five agencies go quiet
+          independently: a slow buoy must not hold up the bulletin, and neither
+          may hold up the controls above, which need no network at all.
+        */}
+        <div className="mt-4 flex flex-wrap items-center gap-x-8 gap-y-3">
           {/*
-            WHAT THE INSTRUMENTS READ, RIGHT NOW.
-
-            The buoy and the shore station are the only instruments this site
-            reports and they answer for one instant. One thing in the block is a
-            forecast and it is a mark rather than a figure: the glyph on the air
-            segment is the sky forecast for this hour, credited as one on the
-            block's own attribution (ADR-0057).
-
-            **It sits OUTSIDE `SelectedDayProvider`**, which is structural
-            rather than a convention: frozen to the present is this block's
-            whole contract, and with no day in scope here a later change cannot
-            quietly make these figures follow Thursday. The provider is in
-            `app/conditions/layout.tsx`, one level out.
-
-            `lg:ml-auto` rather than a width: it is the only item in this row
-            that can take whatever is left, so it ends the row where there is
-            room and wraps under it where there is not.
-
-            Its own Suspense boundary, like every region on this page: five
-            agencies go quiet independently and a slow buoy must not hold up the
-            chooser, which needs no network at all.
-
-            On an area page this reads through the area's first beach, and which
-            beach cannot matter: a product is only read here when every beach in
-            the area binds the same source for it. Air is shared by all eighteen
-            areas and a buoy by three, so on fifteen area pages this is one
-            segment -- what the air station read, and nothing about the sea.
-            That is not a hole; the sentence saying why lives beside the
-            modelled heights the week and the chart draw (ADR-0055).
+            On an area page this reads through the area's first beach, and
+            which beach cannot matter: a product is only read here when every
+            beach in the area binds the same source for it. Air is shared by
+            all eighteen areas and a buoy by three, so on fifteen area pages
+            this is one segment -- what the air station read, and nothing about
+            the sea. That is not a hole; the sentence saying why lives beside
+            the modelled heights the week and the chart draw (ADR-0055).
           */}
-          <div className="lg:ml-auto">
-            <Suspense
-              fallback={
-                <p className="text-base text-fog">
-                  Reading the buoy and the air station…
-                </p>
-              }
-            >
-              <MeasuredPanel slug={reading} area={scope} />
-            </Suspense>
-          </div>
+          <Suspense
+            fallback={
+              <p className="text-base text-fog">
+                Reading the buoy and the air station…
+              </p>
+            }
+          >
+            <MeasuredPanel slug={reading} area={scope} />
+          </Suspense>
 
           {/*
             The one relayed judgement on this page, and the one product an area
@@ -216,17 +234,10 @@ export function ConditionsSection({
             something that is not one, and it is the single line here that
             answers whether to put children in the water.
 
-            Last in the row, behind a rule: it is the only item that is neither
-            a control nor a measurement, and the rule says so without giving it
-            a box.
-
-            **The rule is `lg` and up, because it is a fact about a row.** This
+            Behind a rule from `lg`, because a rule is a fact about a row. This
             row wraps, and a stacked item carrying a left border paints a stray
             vertical tick beside itself that reads as an indent. Seen at 375px,
             where every item in the bar is on its own line.
-
-            Its own Suspense boundary, because it is a sixth publisher and the
-            bulletin going quiet must not hold up the chooser.
           */}
           <div className="lg:border-l lg:border-lavender lg:pl-6">
             <Suspense
@@ -247,18 +258,18 @@ export function ConditionsSection({
           control", and this sentence is the assertion.
 
           **Under the bar rather than in it, and at body size.** The prototype
-          this layout came from put it in the row at `--text-2xs`, which would
+          this layout came from put it in a row at `--text-2xs`, which would
           have made the one sentence the site asserts on its own behalf the
           smallest type in the system. It qualifies everything the bar states,
-          so it sits beneath the whole of it -- and it is prose, where the row
-          above is controls and figures.
+          so it sits beneath the whole of it -- and it is prose, where the rows
+          above are controls and figures.
 
           One sentence rather than two, and both claims kept: instrument
           readings are not a safety assessment, and the authority on the day is
           someone else. `ConditionsSection.test.tsx` asserts each half
           separately so a later tightening cannot quietly drop the liability
-          one, and asserts the size so a later compression cannot quietly shrink
-          it.
+          one, and asserts the size so a later compression cannot quietly
+          shrink it.
         */}
         <p className="leading-relaxed mt-4 max-w-130 text-base text-fog">
           Instrument readings, not a safety assessment — lifeguards and the

@@ -348,18 +348,33 @@ test("every caveat the data files carry reaches this page", () => {
  * `<h2>` would be this change going further than it claimed to.
  */
 /**
- * The bar is one row, and its contents are its contents.
+ * The bar's rows are rows, and they are the same rows whatever is in them.
  *
- * Asserted structurally rather than by class: what makes this a toolbar is that
- * the wordmark and both controls share a parent, and what makes it a *bar* is
- * that the liability sentence does not. The prototype this came from put the
- * notice inside the row and it read as a fifth control.
+ * This is a regression test with a specific bug behind it. Every item lived in
+ * one `flex-wrap` container, so which line an item landed on was decided by how
+ * wide its content happened to be. On a beach page the readings are two
+ * segments and wrapped onto their own line; on an area page with no shared buoy
+ * they are one segment, fitted beside the controls, and rose into the selector
+ * row -- while the rip level, which had not moved, dropped to a line of its
+ * own. The bar reshaped itself according to whether a buoy existed, which is
+ * the case on fifteen of the eighteen areas.
  *
- * Reading order matters and is asserted with it: the controls decide what every
- * figure to their right means, so a row that put the readings first would state
- * a number before saying what place it describes.
+ * So the property is structural: the readings and the judgement share a
+ * container, the controls share a different one, and neither contains the
+ * other. jsdom applies no stylesheets (ADR-0001), so this cannot assert where
+ * anything paints — but containment is exactly what was wrong, and containment
+ * is assertable.
  */
-test("scope sits on one row, and the notice sits beneath it", () => {
+function bar(container: HTMLElement) {
+  const wordmark = screen.getByRole("heading", { level: 1 });
+  const controls = screen
+    .getByLabelText("Choose an area")
+    .closest("div")!.parentElement!;
+  const readings = screen.getByText(/^measured for/).parentElement!;
+  return { container, wordmark, controls, readings };
+}
+
+test("the readings and the judgement share a row, and the controls do not", () => {
   const { container } = render(
     <ConditionsSection
       areaSlug={DEFAULT_AREA}
@@ -367,44 +382,80 @@ test("scope sits on one row, and the notice sits beneath it", () => {
     />,
   );
 
-  const wordmark = screen.getByRole("heading", { level: 1 });
-  const row = wordmark.parentElement;
-  expect(row).not.toBeNull();
+  const { controls, readings } = bar(container);
 
-  // Both controls are in the row with it, not stacked in a column beside it.
-  expect(row!.contains(screen.getByLabelText("Choose an area"))).toBe(true);
-  expect(row!.contains(screen.getByLabelText("Choose a beach"))).toBe(true);
+  // The judgement is on the readings' row, not the controls'.
+  const judgement = screen.getByText(/^rip for/);
+  expect(readings.contains(judgement)).toBe(true);
+  expect(controls.contains(judgement)).toBe(false);
 
-  // The notice is not in the row, and follows it.
-  const notice = screen.getByText(/Instrument readings, not a safety/);
-  expect(row!.contains(notice)).toBe(false);
-  expect(
-    row!.compareDocumentPosition(notice) & Node.DOCUMENT_POSITION_FOLLOWING,
-  ).toBeTruthy();
-
-  // The wordmark comes before the control that scopes everything after it.
-  expect(
-    wordmark.compareDocumentPosition(screen.getByLabelText("Choose an area")) &
-      Node.DOCUMENT_POSITION_FOLLOWING,
-  ).toBeTruthy();
+  // And the controls are not on the readings' row.
+  expect(readings.contains(screen.getByLabelText("Choose an area"))).toBe(
+    false,
+  );
+  expect(controls.contains(screen.getByLabelText("Choose an area"))).toBe(true);
 });
 
 /**
- * An area of one beach still gets a bar, with one control in it.
- *
- * The beach control is the only item in the row that can be absent, so this is
- * the shape six of the eighteen areas actually render. Worth its own case
- * because a row built around two controls can break in ways a row with one does
- * not show.
+ * The same shape with one reading instead of two, which is the case the bug
+ * actually appeared in: fifteen of the eighteen areas share no buoy, so the
+ * readings are air alone and used to fit beside the controls.
  */
-test("an area of one beach keeps its bar with a single control", () => {
-  render(<ConditionsSection areaSlug="sunset-cliffs" beachSlug={null} />);
+test("a reading with no sea beside it stays on its own row", () => {
+  const { container } = render(
+    <ConditionsSection areaSlug={DEFAULT_AREA} beachSlug={null} />,
+  );
 
-  const wordmark = screen.getByRole("heading", { level: 1 });
-  const row = wordmark.parentElement;
+  const { controls, readings } = bar(container);
 
-  expect(row!.contains(screen.getByLabelText("Choose an area"))).toBe(true);
+  expect(readings.contains(screen.getByText(/^rip for/))).toBe(true);
+  expect(readings.contains(screen.getByLabelText("Choose an area"))).toBe(
+    false,
+  );
+  expect(controls.contains(screen.getByText(/^measured for/))).toBe(false);
+});
+
+/**
+ * And the rows are in reading order: what this is, then where, then what is
+ * true there. A row that stated a figure before saying which place it described
+ * would be stating it of nothing.
+ */
+test("the bar reads name, then place, then readings", () => {
+  const { container } = render(
+    <ConditionsSection
+      areaSlug={DEFAULT_AREA}
+      beachSlug={DEFAULT_BEACH_SLUG}
+    />,
+  );
+
+  const { wordmark, controls, readings } = bar(container);
+  const FOLLOWING = Node.DOCUMENT_POSITION_FOLLOWING;
+
+  expect(wordmark.compareDocumentPosition(controls) & FOLLOWING).toBeTruthy();
+  expect(controls.compareDocumentPosition(readings) & FOLLOWING).toBeTruthy();
+
+  // The notice closes the bar, outside all three rows.
+  const notice = screen.getByText(/Instrument readings, not a safety/);
+  expect(readings.contains(notice)).toBe(false);
+  expect(readings.compareDocumentPosition(notice) & FOLLOWING).toBeTruthy();
+});
+
+/**
+ * An area of one beach still gets all three rows, with one control in the
+ * middle one. The beach control is the only item in the bar that can be absent,
+ * so this is the shape six of the eighteen areas render, and a row built around
+ * two controls can break in ways a row with one does not show.
+ */
+test("an area of one beach keeps its rows with a single control", () => {
+  const { container } = render(
+    <ConditionsSection areaSlug="sunset-cliffs" beachSlug={null} />,
+  );
+
+  const { controls, readings } = bar(container);
+
+  expect(controls.contains(screen.getByLabelText("Choose an area"))).toBe(true);
   expect(screen.queryByLabelText("Choose a beach")).toBeNull();
+  expect(readings.contains(screen.getByText(/^rip for/))).toBe(true);
 });
 
 test("the page titles itself with a wordmark, not a headline", () => {

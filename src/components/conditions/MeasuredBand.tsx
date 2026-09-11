@@ -74,7 +74,6 @@
  */
 
 import { bandView, type MeasuredReadings } from "./bandText";
-import { TOOL_WORDMARK } from "../ui/headingRank";
 import { NowClock } from "./NowClock";
 import { localTimeOf } from "@/lib/pacific-time";
 
@@ -132,7 +131,20 @@ export function MeasuredBand({ readings }: { readings: MeasuredReadings }) {
               ground the label is what does it instead. It comes off the segment
               rather than off its index; see `BandSegment.label`.
             */}
-            <span className={TOOL_WORDMARK}>{segment.label}</span>
+            {/*
+              The label register, written out rather than borrowed from
+              `TOOL_WORDMARK`. It did borrow it, and that was wrong in a way
+              only the rendered page showed: the wordmark is the page's
+              nameplate, and when it moved onto a row of its own it grew to
+              `--text-tool-wordmark` -- silently taking these two source labels
+              from 10px to 18px with it. They are stat labels, the same rank as
+              the provenance line beneath them and as `AREA` and `BEACH` in the
+              bar, and they answer to ADR-0014's label register rather than to
+              the nameplate.
+            */}
+            <span className="text-2xs font-extrabold tracking-widest text-ocean uppercase">
+              {segment.label}
+            </span>
             <span aria-hidden="true" className="text-base leading-none">
               {segment.emoji}
             </span>

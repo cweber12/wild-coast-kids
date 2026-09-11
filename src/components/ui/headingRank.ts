@@ -89,15 +89,26 @@ export const TOOL_REGION_HEADING =
  * `<h1>` is still an `<h1>` and no level is skipped — so a reader navigating by
  * heading lands exactly where they did before.
  *
- * **The label register, not a smaller display size.** There is no size between
- * `--text-tool-region` (22px) and the retired `--text-tool-title` (36px) that
- * is not either equal to the regions — the rank collapse ADR-0014 exists to
- * escape — or back to the headline this change shrank. A fifth size token
- * invented to dodge that would be worse than admitting the title is a wordmark.
+ * **The label register's shape, at its own size.** It was `--text-2xs`
+ * outright, which put the page's name at exactly the size of the `AREA` and
+ * `BEACH` labels sitting beside it — so the thing naming the tool read as a
+ * third control label. `--text-tool-wordmark` clamps 15→18px: unmistakably
+ * larger than those labels, and nowhere near the 36px headline it replaced.
+ *
+ * **It does not compete with the region headings and cannot.** Those are
+ * `font-black italic` at a size token; this is uppercase and tracked in an
+ * accent colour. They are different registers, not two points on one scale, so
+ * "which is bigger" is not a question a reader asks of them — which is what
+ * lets this sit at 18px under a 22px "The week ahead" without reading as a
+ * rank inversion. A *display* title at 18px under a 22px region heading would
+ * read as exactly that, which is why this is not one.
+ *
+ * `tracking-wide` rather than `tracking-widest`: the widest step is set for
+ * 10px labels and at 18px it spaces the word into separate letters.
  *
  * Unlike the two constants above this carries its own colour, because the
  * label register is defined as an accent one and `text-ocean` is what every
  * other label on this page already uses. See ADR-0058.
  */
 export const TOOL_WORDMARK =
-  "text-2xs font-extrabold tracking-widest text-ocean uppercase";
+  "text-tool-wordmark font-extrabold tracking-wide text-ocean uppercase";
