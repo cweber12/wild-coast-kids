@@ -40,18 +40,22 @@ test("renders the beach named in the route", async () => {
 });
 
 /**
- * The beach page still carries its area's header and beach list, so moving
- * between two beaches in one area does not mean going back up a level.
+ * The beach page still carries both of its area's controls, so moving between
+ * two beaches in one area does not mean going back up a level.
+ *
+ * The beach half was a list of links until 2026-09-11 (ADR-0060). The control
+ * has to do one thing the list did not: open on the beach being shown, so it
+ * says where the reader is rather than only where they could go.
  */
-test("a beach keeps its area's chooser and list", async () => {
+test("a beach keeps both of its area's choosers", async () => {
   render(await BeachConditions(params("la-jolla", "windansea-beach")));
 
   expect(
     (screen.getByLabelText("Choose an area") as HTMLSelectElement).value,
   ).toBe("la-jolla");
   expect(
-    screen.getByRole("heading", { name: /Beaches in La Jolla/ }),
-  ).toBeDefined();
+    (screen.getByLabelText("Choose a beach") as HTMLSelectElement).value,
+  ).toBe("windansea-beach");
 });
 
 /**

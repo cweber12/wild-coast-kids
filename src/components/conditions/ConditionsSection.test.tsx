@@ -510,33 +510,34 @@ test("it refuses an area that is not in the table", () => {
 });
 
 /**
- * The list is a choice, so it is drawn only where there is one. Six of the
- * eighteen areas hold a single beach, and a heading over a list of one entry
- * reads as though the rest had failed to load.
+ * Six of the eighteen areas hold one beach, and those get no control at all: a
+ * choice between one thing is not a choice. It was a list of links with a
+ * heading over it until 2026-09-11, and the rule it was not drawn under is the
+ * rule the control is not drawn under. See ADR-0060.
  */
-test("an area of one beach carries no beach list", () => {
+test("an area of one beach offers no beach control", () => {
+  render(<ConditionsSection areaSlug="sunset-cliffs" beachSlug={null} />);
+
+  expect(screen.queryByLabelText("Choose a beach")).toBeNull();
+});
+
+/**
+ * And an area of several keeps it on the beach page too, opened on the beach
+ * being shown. That is what stops moving between two beaches in one area from
+ * meaning a trip back up a level — the reason the list sat above the readings
+ * on both pages rather than only on the area's.
+ */
+test("an area of several keeps its control, opened on the beach shown", () => {
   render(
     <ConditionsSection
-      areaSlug="sunset-cliffs"
-      beachSlug="sunset-cliffs-park"
+      areaSlug={DEFAULT_AREA}
+      beachSlug={DEFAULT_BEACH_SLUG}
     />,
   );
 
-  expect(screen.queryByRole("heading", { name: /Beaches in/ })).toBeNull();
-  expect(screen.getByText("week for sunset-cliffs-park")).toBeDefined();
-});
-
-/** And an area of several still carries it, on the beach page as on its own. */
-test("an area of several keeps its list while showing one beach", () => {
-  render(<ConditionsSection areaSlug="la-jolla" beachSlug="la-jolla-cove" />);
-
-  expect(
-    screen.getByRole("heading", { name: "Beaches in La Jolla" }),
-  ).toBeDefined();
-  expect(
-    screen.getAllByRole("link", { name: /La Jolla|WindanSea|Bird Rock/ })
-      .length,
-  ).toBeGreaterThan(1);
+  const control = screen.getByLabelText("Choose a beach") as HTMLSelectElement;
+  expect(control.value).toBe(DEFAULT_BEACH_SLUG);
+  expect(control.options[0].textContent).toBe("All of La Jolla");
 });
 
 /**

@@ -41,8 +41,9 @@ test("renders the area named in the route", async () => {
 
   expect(screen.getByRole("main")).toBeDefined();
   expect(
-    screen.getByRole("heading", { name: /Beaches in La Jolla/ }),
-  ).toBeDefined();
+    (screen.getByLabelText("Choose a beach") as HTMLSelectElement).options[0]
+      .textContent,
+  ).toBe("All of La Jolla");
 });
 
 /**
@@ -84,8 +85,9 @@ test("a slug that is both an area and a beach resolves as the area", async () =>
   render(await AreaConditions(params("ocean-beach")));
 
   expect(
-    screen.getByRole("heading", { name: /Beaches in Ocean Beach/ }),
-  ).toBeDefined();
+    (screen.getByLabelText("Choose a beach") as HTMLSelectElement).options[0]
+      .textContent,
+  ).toBe("All of Ocean Beach");
   expect(permanentRedirect).not.toHaveBeenCalled();
 });
 
@@ -135,8 +137,8 @@ test("an area holding one beach shows it rather than offering it", async () => {
 
   expect(screen.getByText("week for sunset-cliffs-park")).toBeDefined();
   expect(screen.getByText("day for sunset-cliffs-park")).toBeDefined();
-  // No list, and no heading over a list of one.
-  expect(screen.queryByRole("heading", { name: /Beaches in/ })).toBeNull();
+  // No control, because a choice between one thing is not a choice.
+  expect(screen.queryByLabelText("Choose a beach")).toBeNull();
 });
 
 /**

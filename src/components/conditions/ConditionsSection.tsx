@@ -27,8 +27,8 @@ import { areaBySlug, beachesByArea } from "@/lib/areas";
 import { scopeFor } from "./areaScope";
 import { inventoryCaveats, inventoryReach } from "@/lib/beaches";
 import { TOOL_WORDMARK } from "../ui/headingRank";
-import { AreaBeaches } from "./AreaBeaches";
 import { AreaSelector } from "./AreaSelector";
+import { BeachSelector } from "./BeachSelector";
 import { ConditionsNotes } from "./ConditionsNotes";
 import { DayPanel } from "./DayPanel";
 import { MeasuredPanel } from "./MeasuredPanel";
@@ -241,6 +241,36 @@ export function ConditionsSection({
 
         <div className="mt-6 md:mt-0 md:w-72">
           <AreaSelector areas={areas} current={areaSlug} />
+
+          {/*
+            WHICH PLACE INSIDE IT, WHERE A LIST OF LINKS USED TO STAND.
+
+            `AreaBeaches` drew that list -- a region heading and up to ten
+            wrapped links between the header and the week, about 160px of page.
+            A `<select>` of ten beaches and a wrapped row of ten links are the
+            same control twice, and only one of them is reachable without
+            scrolling. See ADR-0060.
+
+            **Not drawn at all where the area holds one beach**, which six of
+            the eighteen do, and for the reason the list was not: a choice
+            between one thing is not a choice. Those areas show their beach
+            directly instead -- `[area]/page.tsx` passes it as `beachSlug` --
+            so the reader who picked Sunset Cliffs gets Sunset Cliffs Park's
+            readings rather than a control offering only them.
+          */}
+          {group.beaches.length > 1 && (
+            <div className="mt-4">
+              <BeachSelector
+                areaSlug={group.area.slug}
+                areaName={group.area.name}
+                beaches={group.beaches.map((beach) => ({
+                  slug: beach.slug,
+                  name: beach.name,
+                }))}
+                current={beachSlug}
+              />
+            </div>
+          )}
           {/*
             The one relayed judgement on this page, and the one product an area
             reports without its beaches agreeing about a source. It is on the
@@ -260,35 +290,6 @@ export function ConditionsSection({
           </Suspense>
         </div>
       </div>
-
-      {/*
-        WHICH PLACES THIS AREA HOLDS, BEFORE ANY READING ABOUT ONE OF THEM.
-
-        The chooser above picks an area; this is how a reader reaches one beach
-        inside it. It sits above the readings on both pages rather than only on
-        the area's, so moving between beaches does not mean scrolling past a
-        page of figures to find the list you moved with.
-
-        **Not drawn at all where the area holds one beach**, which six of the
-        eighteen do. A list of one is a choice that is not a choice, and a
-        heading over it reads as though something were missing. Those areas show
-        their beach directly instead -- `[area]/page.tsx` passes it as
-        `beachSlug` -- so the reader who picked Sunset Cliffs gets Sunset Cliffs
-        Park's readings rather than a link to them.
-      */}
-      {group.beaches.length > 1 && (
-        <div className="mb-9">
-          <AreaBeaches
-            areaSlug={group.area.slug}
-            areaName={group.area.name}
-            beaches={group.beaches.map((beach) => ({
-              slug: beach.slug,
-              name: beach.name,
-            }))}
-            current={beachSlug}
-          />
-        </div>
-      )}
 
       {/*
         The week and the day are one instrument at two zoom levels, and from

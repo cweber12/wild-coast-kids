@@ -50,17 +50,25 @@ test("the conditions page exposes its landmark and heading", () => {
 /**
  * It opened on a beach until 2026-09-02 and asserted the week rendered for it.
  * The door is an area's now, and an area carries no readings yet — so what says
- * the page opened on something real is the list of that area's beaches, which
- * is the thing a reader clicks next.
+ * the page opened on something real is that the area's own beaches are on
+ * offer, which is the thing a reader reaches for next.
+ *
+ * That was a list of links until 2026-09-11 and is the beach control now
+ * (ADR-0060). The claim is unchanged — this area, its beaches, reachable from
+ * here — so the assertion moved to the control rather than being dropped.
  */
 test("it opens on the named default area", () => {
   render(<Conditions />);
 
   expect(screen.queryByText(/conditions tool coming soon/i)).toBeNull();
-  expect(
-    screen.getByRole("heading", { name: /Beaches in La Jolla/ }),
-  ).toBeDefined();
-  expect(screen.getByRole("link", { name: "WindanSea Beach" })).toBeDefined();
+
+  const beaches = screen.getByLabelText("Choose a beach") as HTMLSelectElement;
+  expect(beaches).toBeDefined();
+  // The area itself, then its own beaches — not some other area's.
+  expect([...beaches.options].map((option) => option.textContent)).toContain(
+    "WindanSea Beach",
+  );
+  expect(beaches.options[0].textContent).toBe("All of La Jolla");
 });
 
 test("a reader can choose another area from here", () => {
