@@ -1,5 +1,6 @@
 import { beforeEach, expect, test, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
+import { TOOL_WORDMARK } from "../ui/headingRank";
 
 /** The area holding `DEFAULT_BEACH_SLUG`, so the header and the list agree with it. */
 const DEFAULT_AREA = "la-jolla";
@@ -327,6 +328,175 @@ test("every caveat the data files carry reaches this page", () => {
  * `docs/plans/conditions-tool.md` names the second: lifeguards and posted signs
  * on the day are the authority.
  */
+/**
+ * The page title, after ADR-0058.
+ *
+ * Two claims, because they can fail apart. The **text** is one word: a headline
+ * saying "Check conditions first." was addressed to a reader who has not
+ * arrived, and the only ways here are a nav item reading "Conditions" and the
+ * landing page's teaser. The **register** is the label one, which is what makes
+ * it smaller than the region headings beneath it rather than merely shorter.
+ *
+ * Asserted by class reference and not by painted size, because jsdom applies no
+ * stylesheets (ADR-0001) -- the same contract `TOOL_REGION_HEADING` is held to
+ * in `WeekGrid.test.tsx`. What stops the referenced rule silently compiling to
+ * nothing is the `stylesheet` gate, and what confirms the rank is visible is a
+ * human.
+ *
+ * The level is asserted too: this decision changes how the title is painted and
+ * deliberately does not change the outline, so an `<h1>` that quietly became an
+ * `<h2>` would be this change going further than it claimed to.
+ */
+/**
+ * The bar's rows are rows, and they are the same rows whatever is in them.
+ *
+ * This is a regression test with a specific bug behind it. Every item lived in
+ * one `flex-wrap` container, so which line an item landed on was decided by how
+ * wide its content happened to be. On a beach page the readings are two
+ * segments and wrapped onto their own line; on an area page with no shared buoy
+ * they are one segment, fitted beside the controls, and rose into the selector
+ * row -- while the rip level, which had not moved, dropped to a line of its
+ * own. The bar reshaped itself according to whether a buoy existed, which is
+ * the case on fifteen of the eighteen areas.
+ *
+ * So the property is structural: the readings and the judgement share a
+ * container, the controls share a different one, and neither contains the
+ * other. jsdom applies no stylesheets (ADR-0001), so this cannot assert where
+ * anything paints — but containment is exactly what was wrong, and containment
+ * is assertable.
+ */
+function bar(container: HTMLElement) {
+  const wordmark = screen.getByRole("heading", { level: 1 });
+  const controls = screen
+    .getByLabelText("Choose an area")
+    .closest("div")!.parentElement!;
+  const readings = screen.getByText(/^measured for/).parentElement!;
+  return { container, wordmark, controls, readings };
+}
+
+test("the readings and the judgement share a row, and the controls do not", () => {
+  const { container } = render(
+    <ConditionsSection
+      areaSlug={DEFAULT_AREA}
+      beachSlug={DEFAULT_BEACH_SLUG}
+    />,
+  );
+
+  const { controls, readings } = bar(container);
+
+  // The judgement is on the readings' row, not the controls'.
+  const judgement = screen.getByText(/^rip for/);
+  expect(readings.contains(judgement)).toBe(true);
+  expect(controls.contains(judgement)).toBe(false);
+
+  // And the controls are not on the readings' row.
+  expect(readings.contains(screen.getByLabelText("Choose an area"))).toBe(
+    false,
+  );
+  expect(controls.contains(screen.getByLabelText("Choose an area"))).toBe(true);
+});
+
+/**
+ * The same shape with one reading instead of two, which is the case the bug
+ * actually appeared in: fifteen of the eighteen areas share no buoy, so the
+ * readings are air alone and used to fit beside the controls.
+ */
+test("a reading with no sea beside it stays on its own row", () => {
+  const { container } = render(
+    <ConditionsSection areaSlug={DEFAULT_AREA} beachSlug={null} />,
+  );
+
+  const { controls, readings } = bar(container);
+
+  expect(readings.contains(screen.getByText(/^rip for/))).toBe(true);
+  expect(readings.contains(screen.getByLabelText("Choose an area"))).toBe(
+    false,
+  );
+  expect(controls.contains(screen.getByText(/^measured for/))).toBe(false);
+});
+
+/**
+ * And the rows are in reading order: what this is, then where, then what is
+ * true there. A row that stated a figure before saying which place it described
+ * would be stating it of nothing.
+ */
+test("the bar reads name, then place, then readings", () => {
+  const { container } = render(
+    <ConditionsSection
+      areaSlug={DEFAULT_AREA}
+      beachSlug={DEFAULT_BEACH_SLUG}
+    />,
+  );
+
+  const { wordmark, controls, readings } = bar(container);
+  const FOLLOWING = Node.DOCUMENT_POSITION_FOLLOWING;
+
+  expect(wordmark.compareDocumentPosition(controls) & FOLLOWING).toBeTruthy();
+  expect(controls.compareDocumentPosition(readings) & FOLLOWING).toBeTruthy();
+
+  // The notice closes the bar, outside all three rows.
+  const notice = screen.getByText(/Instrument readings, not a safety/);
+  expect(readings.contains(notice)).toBe(false);
+  expect(readings.compareDocumentPosition(notice) & FOLLOWING).toBeTruthy();
+});
+
+/**
+ * An area of one beach still gets all three rows, with one control in the
+ * middle one. The beach control is the only item in the bar that can be absent,
+ * so this is the shape six of the eighteen areas render, and a row built around
+ * two controls can break in ways a row with one does not show.
+ */
+test("an area of one beach keeps its rows with a single control", () => {
+  const { container } = render(
+    <ConditionsSection areaSlug="sunset-cliffs" beachSlug={null} />,
+  );
+
+  const { controls, readings } = bar(container);
+
+  expect(controls.contains(screen.getByLabelText("Choose an area"))).toBe(true);
+  expect(screen.queryByLabelText("Choose a beach")).toBeNull();
+  expect(readings.contains(screen.getByText(/^rip for/))).toBe(true);
+});
+
+test("the page titles itself with a wordmark, not a headline", () => {
+  render(
+    <ConditionsSection
+      areaSlug={DEFAULT_AREA}
+      beachSlug={DEFAULT_BEACH_SLUG}
+    />,
+  );
+
+  const title = screen.getByRole("heading", { level: 1 });
+  expect(title.textContent).toBe("Conditions");
+  expect(title.className).toContain(TOOL_WORDMARK);
+
+  // The sentence it replaced is gone rather than moved somewhere quieter.
+  expect(screen.queryByText(/Check conditions first/)).toBeNull();
+});
+
+/**
+ * And it does not take the liability sentence down with it.
+ *
+ * The prototype this layout came from rendered the notice at `--text-2xs`
+ * alongside the shrunken title, which would have made the one sentence the site
+ * asserts on its own behalf the smallest type in the system. ADR-0009 is what
+ * that sentence discharges; ADR-0058 records that it keeps `--text-base`.
+ */
+test("the standing notice keeps body size when the title loses it", () => {
+  render(
+    <ConditionsSection
+      areaSlug={DEFAULT_AREA}
+      beachSlug={DEFAULT_BEACH_SLUG}
+    />,
+  );
+
+  const notice = screen.getByText(
+    /Instrument readings, not a safety assessment/,
+  );
+  expect(notice.className).toContain("text-base");
+  expect(notice.className).not.toContain("text-2xs");
+});
+
 test("the page says these are instruments and not a safety assessment", () => {
   render(
     <ConditionsSection
@@ -379,8 +549,13 @@ test("the self-description is gone and the standing notice is not", () => {
  * neither prominent nor a note about how to read a number. It moved rather than
  * being duplicated, which is what this asserts end to end: the section renders
  * `ConditionsNotes` for real, so a regression there fails here.
+ *
+ * The test said "above the readings" until 2026-09-11 and never asserted it.
+ * The notice sits under the bar now rather than beside the title, so the name
+ * was describing an order that had moved; once-ness is what it actually checks
+ * and is what it now claims.
  */
-test("the safety framing is stated once, above the readings", () => {
+test("the safety framing is stated once, wherever it sits", () => {
   render(
     <ConditionsSection
       areaSlug={DEFAULT_AREA}
@@ -451,33 +626,34 @@ test("it refuses an area that is not in the table", () => {
 });
 
 /**
- * The list is a choice, so it is drawn only where there is one. Six of the
- * eighteen areas hold a single beach, and a heading over a list of one entry
- * reads as though the rest had failed to load.
+ * Six of the eighteen areas hold one beach, and those get no control at all: a
+ * choice between one thing is not a choice. It was a list of links with a
+ * heading over it until 2026-09-11, and the rule it was not drawn under is the
+ * rule the control is not drawn under. See ADR-0060.
  */
-test("an area of one beach carries no beach list", () => {
+test("an area of one beach offers no beach control", () => {
+  render(<ConditionsSection areaSlug="sunset-cliffs" beachSlug={null} />);
+
+  expect(screen.queryByLabelText("Choose a beach")).toBeNull();
+});
+
+/**
+ * And an area of several keeps it on the beach page too, opened on the beach
+ * being shown. That is what stops moving between two beaches in one area from
+ * meaning a trip back up a level — the reason the list sat above the readings
+ * on both pages rather than only on the area's.
+ */
+test("an area of several keeps its control, opened on the beach shown", () => {
   render(
     <ConditionsSection
-      areaSlug="sunset-cliffs"
-      beachSlug="sunset-cliffs-park"
+      areaSlug={DEFAULT_AREA}
+      beachSlug={DEFAULT_BEACH_SLUG}
     />,
   );
 
-  expect(screen.queryByRole("heading", { name: /Beaches in/ })).toBeNull();
-  expect(screen.getByText("week for sunset-cliffs-park")).toBeDefined();
-});
-
-/** And an area of several still carries it, on the beach page as on its own. */
-test("an area of several keeps its list while showing one beach", () => {
-  render(<ConditionsSection areaSlug="la-jolla" beachSlug="la-jolla-cove" />);
-
-  expect(
-    screen.getByRole("heading", { name: "Beaches in La Jolla" }),
-  ).toBeDefined();
-  expect(
-    screen.getAllByRole("link", { name: /La Jolla|WindanSea|Bird Rock/ })
-      .length,
-  ).toBeGreaterThan(1);
+  const control = screen.getByLabelText("Choose a beach") as HTMLSelectElement;
+  expect(control.value).toBe(DEFAULT_BEACH_SLUG);
+  expect(control.options[0].textContent).toBe("All of La Jolla");
 });
 
 /**

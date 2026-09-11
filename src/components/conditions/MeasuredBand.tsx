@@ -36,19 +36,34 @@
  * and 💨 came across from the cards they anchored; a third glyph for the time
  * would be a new word in a vocabulary that is closed.
  *
- * **`bg-dark`, which the cards had and the first draft of this band gave up.**
- * On cream the band read as one more paragraph in a column of them: the whole
- * page is `--color-cream`, and a bordered box on it is a weaker signal than a
- * surface. What the dark surface buys is the distinction the brief's second
- * principle asks for, legible before a word is read — a dark block of stated
- * figures against a light drawn curve — and it is the same argument
- * `MeasuredToday` made for not moving off it.
+ * **No ground, since 2026-09-11. See ADR-0059.**
  *
- * The colours come back with it, and they are the measured pairings rather than
- * a guess: `CARD_PROSE` is white/75 at **10.02:1** on `--color-dark` and
- * `CARD_MUTED` is white/55 at **5.96:1**, both recorded in `cardText.ts`. What
- * must not follow them onto any lighter ground is the point of that file: white
- * at 55% on cream paints **1.03:1**, the bug #175 fixed in three places.
+ * It had `bg-dark` on the argument that on cream the band read as one more
+ * paragraph in a column of them, and that a surface is a stronger signal than a
+ * bordered box. That was true of the band *as a paragraph-shaped block in a
+ * column of paragraphs*, which is what it was. It is becoming part of the
+ * page's toolbar instead — a row it shares with the controls — and a dark slab
+ * on that row reads as an element pasted into the chrome rather than as part of
+ * it.
+ *
+ * What replaced the surface is what the surface was doing — saying that these
+ * two runs of figures are two sources and not one sentence. A micro-label over
+ * each and a rule between them say it without a ground, which is the ordinary
+ * shape of an instrument readout.
+ *
+ * **The colours had to move with it, and that is the trap this file's own test
+ * was written to catch.** `CARD_PROSE` and `CARD_MUTED` are white at 75% and
+ * 55%, measured against `--color-dark` and nothing else: white at 55% on cream
+ * paints **1.03:1**, which is the bug #175 fixed in three places. So they are
+ * gone from here rather than carried over. The figures set no colour at all —
+ * `body` is `text-dark` on `bg-cream` — and the two subordinate registers are
+ * `text-fog`, the pairing the standing notice on this same page already uses.
+ * **No new text-on-surface pair, so nothing here is owed a measurement the page
+ * has not already taken.**
+ *
+ * The two registers were opacity on the dark ground because size was spent
+ * there; here they are size — `--text-base` for the plain-words line and
+ * `--text-2xs` for provenance — with one colour between them.
  *
  * **One region with an `aria-label`, and no visible heading.** The two card
  * `<h2>`s leave the outline with the cards, which becomes `h1` → region `h2` →
@@ -58,7 +73,6 @@
  * and this repo does not use `sr-only` anywhere.
  */
 
-import { CARD_MUTED, CARD_PROSE } from "./cardText";
 import { bandView, type MeasuredReadings } from "./bandText";
 import { NowClock } from "./NowClock";
 import { localTimeOf } from "@/lib/pacific-time";
@@ -79,10 +93,7 @@ export function MeasuredBand({ readings }: { readings: MeasuredReadings }) {
       narrow card. Across the page there is about 1440px at the review viewport,
       where the segments set on one line. See ADR-0056.
     */
-    <section
-      aria-label={`Measured now · ${labelFor(readings)}`}
-      className="rounded-card bg-dark px-5 py-3"
-    >
+    <section aria-label={`Measured now · ${labelFor(readings)}`}>
       {/*
         `flex-wrap` with a gap rather than a grid: the segments are two runs of
         text of unequal and unpredictable width -- a wind bearing is "from the
@@ -92,19 +103,59 @@ export function MeasuredBand({ readings }: { readings: MeasuredReadings }) {
         both.
       */}
       <div className="flex flex-wrap items-baseline gap-x-6 gap-y-1">
-        {segments.map((segment) => (
+        {segments.map((segment, index) => (
           <p
-            key={segment.emoji}
-            className="flex flex-wrap items-baseline gap-x-2"
+            key={segment.label}
+            className={`flex flex-wrap items-baseline gap-x-2 ${
+              /*
+                A rule rather than a box. With the slab gone the two segments
+                had nothing between them but a gap, and two runs of figures
+                sharing a baseline read as one sentence. The rule separates
+                without enclosing, which is the whole point of taking the ground
+                off. Only between, never around: the first segment carries none.
+
+                **From `lg` only, because a rule is a fact about a row.** This
+                container wraps, and where it does the second segment starts a
+                line of its own -- with the rule still drawn, which paints a
+                stray vertical tick down its left edge and reads as an indent
+                rather than as a separator. Found at 375px on a beach page,
+                where both segments are present and neither fits beside the
+                other. Below `lg` the labels do the separating on their own.
+              */
+              index > 0 ? "lg:border-l lg:border-lavender lg:pl-5" : ""
+            }`}
           >
+            {/*
+              Which instrument answered. The slab used to say this by being a
+              block -- a dark card is visibly one thing -- and on the page's own
+              ground the label is what does it instead. It comes off the segment
+              rather than off its index; see `BandSegment.label`.
+            */}
+            {/*
+              The label register, written out rather than borrowed from
+              `TOOL_WORDMARK`. It did borrow it, and that was wrong in a way
+              only the rendered page showed: the wordmark is the page's
+              nameplate, and when it moved onto a row of its own it grew to
+              `--text-tool-wordmark` -- silently taking these two source labels
+              from 10px to 18px with it. They are stat labels, the same rank as
+              the provenance line beneath them and as `AREA` and `BEACH` in the
+              bar, and they answer to ADR-0014's label register rather than to
+              the nameplate.
+            */}
+            <span className="text-2xs font-extrabold tracking-widest text-ocean uppercase">
+              {segment.label}
+            </span>
             <span aria-hidden="true" className="text-base leading-none">
               {segment.emoji}
             </span>
-            <span className="text-base font-extrabold text-white">
-              {segment.text}
-            </span>
+            {/*
+              No colour of its own: `body` is `text-dark` on `bg-cream`, so the
+              figures inherit the pairing every other figure on this page uses
+              and this block is owed no contrast measurement of its own.
+            */}
+            <span className="text-base font-extrabold">{segment.text}</span>
             {segment.gloss !== null && (
-              <span className={`leading-relaxed text-base ${CARD_PROSE}`}>
+              <span className="leading-relaxed text-base text-fog">
                 {segment.gloss}
               </span>
             )}
@@ -139,7 +190,7 @@ export function MeasuredBand({ readings }: { readings: MeasuredReadings }) {
         nothing to any figure in it, which is what keeps two networks from
         standing behind one claim (ADR-0010, ADR-0054).
       */}
-      <p className={`text-2xs leading-relaxed mt-2 ${CARD_MUTED}`}>
+      <p className="text-2xs leading-relaxed mt-2 text-fog">
         {/*
           The separator belongs to the clock, which is the half that can
           disappear: it renders nothing on the server and for a reader with no

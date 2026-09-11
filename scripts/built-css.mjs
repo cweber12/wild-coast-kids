@@ -99,8 +99,8 @@ export const REQUIRED = [
     why: "the same, at the width where the gutter is 48px. Written in src/ only as md:scroll-pl-gutter, so this is the bare form for the reason min-h-footer above is — the built selector escapes the variant into the class name. The trailing boundary is what keeps it off scroll-pl-gutter-sm's rule",
   },
   {
-    utility: "text-tool-title",
-    why: "the /conditions <h1> takes its size from the --text-tool-title token through it. The tool register exists because six other pages take --text-title and none of them opens on a figure, so nothing outside that page would notice the token going: the class name stays in the markup either way and jsdom applies no stylesheets, which leaves a 56px headline silently becoming an inherited 16px one",
+    utility: "text-tool-wordmark",
+    why: "the /conditions <h1> takes its size from the --text-tool-wordmark token through it, and it is the only reader that token has. Losing it drops the nameplate to an inherited 16px, which is close enough to right that nothing would look broken -- the class name stays in the markup and jsdom applies no stylesheets, so neither the class contract in headingRank's tests nor any render would notice",
   },
   {
     utility: "text-tool-region",

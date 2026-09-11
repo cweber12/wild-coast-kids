@@ -66,11 +66,13 @@ test("two sources are two segments, each with its own figures and words", () => 
 
   expect(segments).toHaveLength(2);
   expect(segments[0]).toEqual({
+    label: "Sea",
     emoji: "🏄",
     text: "2.6 ft · 70°F water",
     gloss: "about waist high.",
   });
   expect(segments[1]).toEqual({
+    label: "Air",
     emoji: "💨",
     text: "71°F · 8 mph from the north-west",
     gloss: "Mild, with a gentle breeze.",

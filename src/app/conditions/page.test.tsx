@@ -39,24 +39,36 @@ test("the conditions page exposes its landmark and heading", () => {
 
   expect(screen.getByRole("main")).toBeDefined();
 
+  // Matched case-insensitively because the `<h1>` is a wordmark now and its
+  // text is the single capitalised word (ADR-0058). The assertion that matters
+  // here is that a level-one heading exists at all and names the page; which
+  // register it is painted in is `ConditionsSection`'s to assert.
   const heading = screen.getByRole("heading", { level: 1 });
-  expect(heading.textContent).toContain("conditions");
+  expect(heading.textContent).toMatch(/conditions/i);
 });
 
 /**
  * It opened on a beach until 2026-09-02 and asserted the week rendered for it.
  * The door is an area's now, and an area carries no readings yet — so what says
- * the page opened on something real is the list of that area's beaches, which
- * is the thing a reader clicks next.
+ * the page opened on something real is that the area's own beaches are on
+ * offer, which is the thing a reader reaches for next.
+ *
+ * That was a list of links until 2026-09-11 and is the beach control now
+ * (ADR-0060). The claim is unchanged — this area, its beaches, reachable from
+ * here — so the assertion moved to the control rather than being dropped.
  */
 test("it opens on the named default area", () => {
   render(<Conditions />);
 
   expect(screen.queryByText(/conditions tool coming soon/i)).toBeNull();
-  expect(
-    screen.getByRole("heading", { name: /Beaches in La Jolla/ }),
-  ).toBeDefined();
-  expect(screen.getByRole("link", { name: "WindanSea Beach" })).toBeDefined();
+
+  const beaches = screen.getByLabelText("Choose a beach") as HTMLSelectElement;
+  expect(beaches).toBeDefined();
+  // The area itself, then its own beaches — not some other area's.
+  expect([...beaches.options].map((option) => option.textContent)).toContain(
+    "WindanSea Beach",
+  );
+  expect(beaches.options[0].textContent).toBe("All of La Jolla");
 });
 
 test("a reader can choose another area from here", () => {

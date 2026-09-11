@@ -76,6 +76,16 @@ export type MeasuredReadings = {
  * plain words.
  */
 export type BandSegment = {
+  /**
+   * Which instrument answered, as the micro-label printed over the figures.
+   *
+   * It belongs to the segment rather than being inferred from position in
+   * `segments`. The order is documented -- waves first when measured, then air
+   * -- so an index would work today and would silently mislabel the sea as the
+   * air the first time a third source is added or the order changes. See
+   * ADR-0059.
+   */
+  label: string;
   /** ADR-0015's closed vocabulary. Never a new glyph — see `MeasuredBand`. */
   emoji: string;
   /** What this source says: `3.0 ft · 72°F water`, or why it says nothing. */
@@ -145,6 +155,7 @@ function wavesSegment(slot: WavesView | NotShared): BandSegment | null {
   ].filter((part): part is string => part !== null);
 
   return {
+    label: "Sea",
     emoji: "🏄",
     text: figures.join(" · "),
     gloss: `${heightWords(heightFt)}.`,
@@ -339,18 +350,29 @@ function airSegment(
     // Unreachable from the routes -- air is shared by all eighteen areas, which
     // `areas.test.ts` asserts. Worded rather than thrown: a band that crashed
     // on a state the type permits would be worse than one that says less.
-    return { emoji, text: "No air reading for this area.", gloss: null };
+    return {
+      label: "Air",
+      emoji,
+      text: "No air reading for this area.",
+      gloss: null,
+    };
   }
 
   const { airStation, air } = slot;
   const station = airStation?.name ?? "The air station";
 
   if (air.kind === "reading") {
-    return { emoji, text: airFigures(air), gloss: plainWords(air) };
+    return {
+      label: "Air",
+      emoji,
+      text: airFigures(air),
+      gloss: plainWords(air),
+    };
   }
 
   if (air.kind === "unavailable") {
     return {
+      label: "Air",
       emoji,
       text: air.drift
         ? `${station} answered in a shape this site could not read — a bug here, not at the station.`
@@ -359,7 +381,12 @@ function airSegment(
     };
   }
 
-  return { emoji, text: "No air station near enough to read.", gloss: null };
+  return {
+    label: "Air",
+    emoji,
+    text: "No air station near enough to read.",
+    gloss: null,
+  };
 }
 
 /* =========================================================================

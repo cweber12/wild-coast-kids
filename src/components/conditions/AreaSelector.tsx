@@ -38,15 +38,30 @@ export function AreaSelector({
 }) {
   const router = useRouter();
 
+  /*
+    THE VISIBLE LABEL IS SHORT AND THE ACCESSIBLE NAME IS NOT.
+
+    Both belong to the bar's width budget. At `--text-2xs` with
+    `tracking-widest`, "CHOOSE AN AREA" and "CHOOSE A BEACH" run about 95px
+    each; "AREA" and "BEACH" run about 40px. The row carries a wordmark, two
+    controls, the readings and the judgement, and at the review viewport the
+    long pair puts it past 1440px and wraps it into two rows -- which is the one
+    thing a one-row bar cannot afford.
+
+    So the visible label shortens and `aria-label` keeps the sentence. It is not
+    a label/name mismatch: WCAG 2.5.3 asks that the accessible name contain the
+    visible text, and "Choose an area" contains "Area". Speech still says the
+    sentence; sight still sees a label obviously belonging to the control.
+  */
   return (
     // No margin of its own: it sits in the page header's flex row, and the row
     // owns the spacing. Carrying one here would be counted twice.
-    <div className="md:shrink-0">
+    <div className="flex w-full items-center gap-2 md:w-auto md:shrink-0">
       <label
-        className="text-2xs mb-2 block font-extrabold tracking-widest text-ocean uppercase"
+        className="text-2xs font-extrabold tracking-widest text-ocean uppercase"
         htmlFor="area"
       >
-        Choose an area
+        Area
       </label>
       {/*
         `TOUCH_TARGET` rather than a bare py-3: it is the site's 44px floor
@@ -56,7 +71,8 @@ export function AreaSelector({
       <select
         id="area"
         name="area"
-        className={`rounded-pill ${TOUCH_TARGET} block w-full border-2 border-lavender bg-white px-5 py-3 text-base font-bold md:w-72`}
+        aria-label="Choose an area"
+        className={`rounded-pill ${TOUCH_TARGET} w-full border-2 border-lavender bg-white px-4 py-2 text-base font-bold md:w-auto`}
         defaultValue={current}
         onChange={(event) => router.push(`/conditions/${event.target.value}`)}
       >

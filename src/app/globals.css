@@ -72,14 +72,21 @@
   --text-quote: clamp(20px, 2.8vw, 34px);
   /* The tool register. `/conditions` is a page somebody reads a number off
      rather than a document they arrive at, and the display sizes above are
-     scaled for arrival: the same `<h1>` that opens /art at 56px pushes the
-     first measurement off a 639px window here. Its own token rather than a
-     smaller `--text-title`, because six other pages take that one and none of
-     them has this problem. */
-  --text-tool-title: clamp(24px, 3vw, 36px);
-  /* The same register one rank down, for the region headings under that title.
-     `--text-quote` is the rank they had, and at 34px beside a 36px title it
-     stops being a second rank at all. See `TOOL_REGION_HEADING`. */
+     scaled for arrival: the same `<h1>` that opens /art at 56px pushed the
+     first measurement off a 639px window here.
+
+     It had a `--text-tool-title` at clamp(24px, 3vw, 36px) above this, for
+     that page's own `<h1>`. The title is a wordmark in the label register now
+     (ADR-0058), so the token had exactly no readers left and went with it --
+     this is the whole of the register that remains, and it is the largest type
+     on that page. See `TOOL_REGION_HEADING`. */
+  /* The tool's nameplate, above its controls. Larger than the control labels
+     beside it -- which is what --text-2xs made it, and what made it read as a
+     third label rather than as the thing naming them -- and smaller than the
+     region headings below, which it does not compete with because it is not in
+     their register at all: uppercase and tracked where they are black italic.
+     See ADR-0058. */
+  --text-tool-wordmark: clamp(15px, 1.2vw, 18px);
   --text-tool-region: clamp(17px, 1.6vw, 22px);
 
   --leading-display: 1;
