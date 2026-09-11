@@ -1,7 +1,8 @@
 # Scope and the measured readings, in one bar across the top
 
 Issue: [#246](https://github.com/cweber12/wild-coast-kids/issues/246).
-Started 2026-09-11.
+
+> Planned 2026-09-11. In flight.
 
 ## The problem, from the reader's side
 
