@@ -139,6 +139,20 @@ teaser is not part of it and sits at the root of `src/components/` as
 the tool (ADR-0018).
 _Avoid_: weather, forecast, surf report
 
+**Measured band**:
+The one line at the top of `/conditions` carrying what the instruments actually
+read: the buoy's wave height and water temperature, the shore station's air
+temperature and wind, each with its own glyph and its own plain-words line. It
+states what time it is and bounds how old the readings are, and names both
+instruments beneath. Everything else on the page is a prediction or a model, so
+this is the whole of what the site measures. It was two dark cards until
+ADR-0056; a wave slot with no reading contributes nothing to it, because the
+sentence explaining the absence belongs beside the modelled height that stands
+in for it (ADR-0055).
+_Avoid_: badge (that is the small pill on a program card), readout (that is the
+block on the shore map), strip (that is a band that loops), conditions bar,
+measured cards
+
 **Area**:
 A named stretch of this county's coast holding one or more beaches — Del Mar,
 La Jolla, Mission Bay – West. It is what a reader chooses on `/conditions`, and

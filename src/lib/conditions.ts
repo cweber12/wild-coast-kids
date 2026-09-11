@@ -1792,6 +1792,94 @@ function wordingOn(periods: readonly ForecastPeriod[]): ForecastPeriod | null {
 }
 
 /**
+ * What the sky is doing at this hour, for the mark on the measured band.
+ *
+ * **A forecast, and the only forecast the measured band touches.** Every figure
+ * on that band came off an instrument; this did not. There is no measured sky
+ * at any of these beaches and ADR-0020 records why — the only stations in this
+ * county publishing cloud are airports, at a median of 7.9 km, and
+ * `docs/reference/sensor-representativeness.md` §7 holds that ceiling does not
+ * transfer off an aerodrome at any distance. So the choice is a forecast mark
+ * or no mark, and ADR-0057 takes the forecast and names it.
+ *
+ * **It costs no upstream request.** `fetchGridForecast` is a `next.revalidate`
+ * fetch for a URL the week grid and the day chart already ask for, so the Data
+ * Cache serves this and the three share one response and one outage. The same
+ * argument `RipLevel` makes for reading the bulletin beside the chooser.
+ *
+ * **The hour, not the day.** `SkyWeekDay.phenomenon` is "any daylight hour of
+ * this day", which is the right answer for a week grid and the wrong one for a
+ * mark that says *now*: it would print fog at three in the afternoon because
+ * there was fog at seven in the morning.
+ *
+ * **Daylight comes with it**, because a sun over a clear night is worse than no
+ * mark at all. It is computed from the beach's own coordinates rather than
+ * fetched, so it cannot fail and costs nothing.
+ *
+ * Never throws except on a slug outside the inventory, which is a coding error.
+ * A beach with no cell, a quiet feed and a cell that forecast nothing for this
+ * hour all arrive as `null` fields rather than as errors: the band falls back
+ * to its own glyph, which is what it showed before this existed.
+ */
+export interface SkyNowView {
+  /** Cloud cover percent for the hour containing `nowMs`, or null. */
+  percent: number | null;
+  /** The phenomenon named for that hour — `fog`, `rain_showers` — or null. */
+  weather: string | null;
+  /** How much of it: `patchy`, `likely`. Null when unqualified or absent. */
+  coverage: string | null;
+  /** Whether the sun is up at `nowMs`, at this beach. */
+  daylight: boolean;
+}
+
+export async function readSkyNow(
+  slug: string,
+  nowMs: number = Date.now(),
+): Promise<SkyNowView> {
+  const beach = beachBySlug(slug);
+  if (!beach) {
+    throw new Error(
+      `readSkyNow: no beach in the inventory with slug "${slug}".`,
+    );
+  }
+
+  const today = localDateOf(nowMs);
+  const { sunriseMs, sunsetMs } = daylightOn(today, midpointOf(beach.segment));
+  const daylight = nowMs >= sunriseMs && nowMs < sunsetMs;
+
+  const absent: SkyNowView = {
+    percent: null,
+    weather: null,
+    coverage: null,
+    daylight,
+  };
+
+  if (beach.grid_cell === null) return absent;
+
+  const result = await fetchGridForecast(beach.grid_cell);
+  if (result.kind === "unavailable") return absent;
+
+  /*
+    The hour containing `nowMs`, which is the hour whose start is the latest one
+    not after it. The gridpoint parser expands every interval to whole hours, so
+    there is exactly one candidate and no interpolation to do.
+  */
+  const startOfHour = nowMs - (nowMs % 3_600_000);
+  const atThisHour = <T extends { atMs: number }>(hours: readonly T[]) =>
+    hours.find((hour) => hour.atMs === startOfHour) ?? null;
+
+  const cover = atThisHour(result.forecast.skyCover);
+  const weather = atThisHour(result.forecast.weather);
+
+  return {
+    percent: cover?.percent ?? null,
+    weather: weather?.weather ?? null,
+    coverage: weather?.coverage ?? null,
+    daylight,
+  };
+}
+
+/**
  * The week's forecast wording for one beach, from the publisher's own words.
  *
  * **This is ADR-0024's deferred read, taken where it said it should be.** That

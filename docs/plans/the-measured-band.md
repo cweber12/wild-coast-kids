@@ -1,6 +1,17 @@
 # The measured band
 
-> Planned 2026-09-04. In flight.
+> **Historical.** Planned 2026-09-04, shipped 2026-09-05 across PRs #242,
+> #243 and the one this note lands in. It records what was intended then,
+> not what the code does now, and is not maintained. See
+> [`README.md`](README.md).
+>
+> Three things went differently and are recorded in ADRs rather than here,
+> which is where a decision that is still binding belongs: the page draws a
+> modelled height in **three** places and not two, so ADR-0055 names a rule
+> rather than a list; that clause hangs off each attribution rather than
+> sitting in the week's notes array; and the band's measured height saving
+> is **139px** at the review viewport (216px of cards to a 77px band),
+> against the 120-160px this file estimated from tokens.
 
 The two dark cards at the top of `/conditions` become one line. It says what was
 measured, when it was measured, and what time it is now — and it says nothing
