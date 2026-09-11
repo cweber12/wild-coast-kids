@@ -2,7 +2,9 @@
 
 Issue: [#246](https://github.com/cweber12/wild-coast-kids/issues/246).
 
-> Planned 2026-09-11. In flight.
+> **Historical.** Planned 2026-09-11, shipped in PR #247 on 2026-09-11.
+> It records what was intended then, not what the code does now, and is not
+> maintained. See [`README.md`](README.md).
 
 ## The problem, from the reader's side
 
