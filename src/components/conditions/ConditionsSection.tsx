@@ -26,6 +26,7 @@ import { Suspense } from "react";
 import { areaBySlug, beachesByArea } from "@/lib/areas";
 import { scopeFor } from "./areaScope";
 import { inventoryCaveats, inventoryReach } from "@/lib/beaches";
+import { TOOL_WORDMARK } from "../ui/headingRank";
 import { AreaBeaches } from "./AreaBeaches";
 import { AreaSelector } from "./AreaSelector";
 import { ConditionsNotes } from "./ConditionsNotes";
@@ -116,15 +117,17 @@ export function ConditionsSection({
         `ConditionsTeaser` on the landing page carries the other copy of it, for
         the reader who has not clicked yet.
 
-        The `<h1>` keeps the site's voice and drops a register: `--text-tool-
-        title`, not `--text-title`. See the token's own note -- six other pages
-        take the larger one and none of them opens on a figure.
+        **The `<h1>` is a wordmark now, not a headline.** It read "Check
+        conditions first." at 36px across a line of its own, above a liability
+        sentence and a list of links -- telling a reader who had just clicked
+        "Conditions" in the nav what they had chosen. One word in the label
+        register says the same thing and returns the line. It is smaller than
+        the region headings beneath it on purpose; `TOOL_WORDMARK` carries the
+        argument, and ADR-0058 the decision.
       */}
       <div className="mb-7 md:flex md:items-end md:justify-between md:gap-6 lg:gap-8">
         <div>
-          <h1 className="text-tool-title leading-display mb-3 font-black italic">
-            Check <span className="text-ocean">conditions</span> first.
-          </h1>
+          <h1 className={`${TOOL_WORDMARK} mb-3`}>Conditions</h1>
 
           {/*
             The standing notice ADR-0009 turns on: that decision rejects an

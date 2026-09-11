@@ -50,10 +50,16 @@ export const REGION_HEADING =
  * does not change kind.
  *
  * **The clamp is legible at both ends, which is the test the constant above
- * sets itself.** 17px at 375 against the conditions `<h1>`'s 24px, and 22px at
- * 1536 against its 36px. `--text-quote` fails that here for the mirror image of
- * the reason `--text-card` failed it there: 34px under a 36px title is not a
- * second rank, it is the same one twice.
+ * sets itself.** 17px at 375 and 22px at 1536, against the 10px label register
+ * of the card and day headings beneath. `--text-quote` was rejected here for
+ * the mirror image of the reason `--text-card` was rejected above: it clamps to
+ * 34px, and under the 36px `<h1>` this page used to carry that was not a second
+ * rank, it was the same one twice.
+ *
+ * **That `<h1>` is gone and this is now the largest type on the page.** The
+ * tool titles itself with `TOOL_WORDMARK` below, so the rank this constant has
+ * to hold is only downward, against the label register — which it does at both
+ * ends of the clamp by a wider margin than before. See ADR-0058.
  *
  * **`mb-3` rather than `mb-4`.** A smaller heading owns less space beneath it,
  * and 16px under a 22px line reads as a gap rather than as attachment.
@@ -66,3 +72,32 @@ export const REGION_HEADING =
  */
 export const TOOL_REGION_HEADING =
   "text-tool-region leading-display mb-3 font-black italic";
+
+/**
+ * How a tool names itself: a wordmark in the label register, not a headline.
+ *
+ * `/conditions` opened on "Check conditions first." at `--text-tool-title` —
+ * 36px at the review viewport, a full line of its own, above a liability
+ * sentence and a list of links. A reader reaches this page by clicking
+ * "Conditions" in the nav, so the headline spent the top of the page telling
+ * them what they had just chosen.
+ *
+ * **It is deliberately smaller than the region headings under it.** That
+ * inverts visual rank against the document outline, and it is what a toolbar
+ * does: the bar is chrome naming what the controls belong to, and the first
+ * *content* on the page is the first region. The outline is untouched — the
+ * `<h1>` is still an `<h1>` and no level is skipped — so a reader navigating by
+ * heading lands exactly where they did before.
+ *
+ * **The label register, not a smaller display size.** There is no size between
+ * `--text-tool-region` (22px) and the retired `--text-tool-title` (36px) that
+ * is not either equal to the regions — the rank collapse ADR-0014 exists to
+ * escape — or back to the headline this change shrank. A fifth size token
+ * invented to dodge that would be worse than admitting the title is a wordmark.
+ *
+ * Unlike the two constants above this carries its own colour, because the
+ * label register is defined as an accent one and `text-ocean` is what every
+ * other label on this page already uses. See ADR-0058.
+ */
+export const TOOL_WORDMARK =
+  "text-2xs font-extrabold tracking-widest text-ocean uppercase";

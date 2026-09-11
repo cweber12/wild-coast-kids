@@ -1,5 +1,6 @@
 import { beforeEach, expect, test, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
+import { TOOL_WORDMARK } from "../ui/headingRank";
 
 /** The area holding `DEFAULT_BEACH_SLUG`, so the header and the list agree with it. */
 const DEFAULT_AREA = "la-jolla";
@@ -327,6 +328,64 @@ test("every caveat the data files carry reaches this page", () => {
  * `docs/plans/conditions-tool.md` names the second: lifeguards and posted signs
  * on the day are the authority.
  */
+/**
+ * The page title, after ADR-0058.
+ *
+ * Two claims, because they can fail apart. The **text** is one word: a headline
+ * saying "Check conditions first." was addressed to a reader who has not
+ * arrived, and the only ways here are a nav item reading "Conditions" and the
+ * landing page's teaser. The **register** is the label one, which is what makes
+ * it smaller than the region headings beneath it rather than merely shorter.
+ *
+ * Asserted by class reference and not by painted size, because jsdom applies no
+ * stylesheets (ADR-0001) -- the same contract `TOOL_REGION_HEADING` is held to
+ * in `WeekGrid.test.tsx`. What stops the referenced rule silently compiling to
+ * nothing is the `stylesheet` gate, and what confirms the rank is visible is a
+ * human.
+ *
+ * The level is asserted too: this decision changes how the title is painted and
+ * deliberately does not change the outline, so an `<h1>` that quietly became an
+ * `<h2>` would be this change going further than it claimed to.
+ */
+test("the page titles itself with a wordmark, not a headline", () => {
+  render(
+    <ConditionsSection
+      areaSlug={DEFAULT_AREA}
+      beachSlug={DEFAULT_BEACH_SLUG}
+    />,
+  );
+
+  const title = screen.getByRole("heading", { level: 1 });
+  expect(title.textContent).toBe("Conditions");
+  expect(title.className).toContain(TOOL_WORDMARK);
+
+  // The sentence it replaced is gone rather than moved somewhere quieter.
+  expect(screen.queryByText(/Check conditions first/)).toBeNull();
+});
+
+/**
+ * And it does not take the liability sentence down with it.
+ *
+ * The prototype this layout came from rendered the notice at `--text-2xs`
+ * alongside the shrunken title, which would have made the one sentence the site
+ * asserts on its own behalf the smallest type in the system. ADR-0009 is what
+ * that sentence discharges; ADR-0058 records that it keeps `--text-base`.
+ */
+test("the standing notice keeps body size when the title loses it", () => {
+  render(
+    <ConditionsSection
+      areaSlug={DEFAULT_AREA}
+      beachSlug={DEFAULT_BEACH_SLUG}
+    />,
+  );
+
+  const notice = screen.getByText(
+    /Instrument readings, not a safety assessment/,
+  );
+  expect(notice.className).toContain("text-base");
+  expect(notice.className).not.toContain("text-2xs");
+});
+
 test("the page says these are instruments and not a safety assessment", () => {
   render(
     <ConditionsSection

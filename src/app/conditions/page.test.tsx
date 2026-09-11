@@ -39,8 +39,12 @@ test("the conditions page exposes its landmark and heading", () => {
 
   expect(screen.getByRole("main")).toBeDefined();
 
+  // Matched case-insensitively because the `<h1>` is a wordmark now and its
+  // text is the single capitalised word (ADR-0058). The assertion that matters
+  // here is that a level-one heading exists at all and names the page; which
+  // register it is painted in is `ConditionsSection`'s to assert.
   const heading = screen.getByRole("heading", { level: 1 });
-  expect(heading.textContent).toContain("conditions");
+  expect(heading.textContent).toMatch(/conditions/i);
 });
 
 /**
