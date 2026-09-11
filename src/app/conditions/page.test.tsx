@@ -34,8 +34,9 @@ test("the page still introduces itself where an introduction is read", () => {
   expect(metadata.description).toContain("families planning tidepool visits");
 });
 
-test("the conditions page exposes its landmark and heading", () => {
-  render(<Conditions />);
+test("the conditions page exposes its landmark and heading", async () => {
+  // PROTOTYPE: the page is async while the variant seam is in place.
+  render(await Conditions({}));
 
   expect(screen.getByRole("main")).toBeDefined();
 
@@ -49,8 +50,9 @@ test("the conditions page exposes its landmark and heading", () => {
  * the page opened on something real is the list of that area's beaches, which
  * is the thing a reader clicks next.
  */
-test("it opens on the named default area", () => {
-  render(<Conditions />);
+test("it opens on the named default area", async () => {
+  // PROTOTYPE: the page is async while the variant seam is in place.
+  render(await Conditions({}));
 
   expect(screen.queryByText(/conditions tool coming soon/i)).toBeNull();
   expect(
@@ -59,8 +61,9 @@ test("it opens on the named default area", () => {
   expect(screen.getByRole("link", { name: "WindanSea Beach" })).toBeDefined();
 });
 
-test("a reader can choose another area from here", () => {
-  render(<Conditions />);
+test("a reader can choose another area from here", async () => {
+  // PROTOTYPE: the page is async while the variant seam is in place.
+  render(await Conditions({}));
 
   const select = screen.getByLabelText("Choose an area") as HTMLSelectElement;
   expect(select.value).toBe(DEFAULT_AREA_SLUG);

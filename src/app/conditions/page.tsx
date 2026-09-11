@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { ConditionsSection } from "@/components/conditions/ConditionsSection";
+import { ConditionsVariants } from "@/components/conditions/prototype/ConditionsVariants";
 import { DEFAULT_AREA_SLUG, defaultArea } from "@/lib/areas";
 
 export const metadata: Metadata = {
@@ -31,16 +31,31 @@ export const metadata: Metadata = {
  */
 export const revalidate = 900;
 
-export default function Conditions() {
+export default async function Conditions({
+  searchParams,
+}: {
+  // Optional only so the existing tests can still call this with no props.
+  // The real signature Next passes is always present.
+  searchParams?: Promise<{ variant?: string }>;
+}) {
   // Asserts the named default is still in areas.json, which is written by hand.
   // A rename there should stop a build rather than render a page about nothing.
   // It opened on a beach until 2026-09-02; the tool is about areas now, so the
   // door it opens is an area's.
   defaultArea();
 
+  // PROTOTYPE SEAM — throwaway. `?variant=` picks a layout and `now` is the
+  // page as it ships. Reverting this file and deleting `prototype/` removes
+  // the whole experiment. See components/conditions/prototype/NOTES.md.
+  const { variant } = (await searchParams) ?? {};
+
   return (
     <main className="flex-1">
-      <ConditionsSection areaSlug={DEFAULT_AREA_SLUG} beachSlug={null} />
+      <ConditionsVariants
+        variant={variant}
+        areaSlug={DEFAULT_AREA_SLUG}
+        beachSlug={null}
+      />
     </main>
   );
 }
