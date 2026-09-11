@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { notFound, permanentRedirect } from "next/navigation";
-import { ConditionsSection } from "@/components/conditions/ConditionsSection";
+import { ConditionsVariants } from "@/components/conditions/prototype/ConditionsVariants";
 import { areaBySlug, canonicalConditionsPath, soleBeachOf } from "@/lib/areas";
 import { beachBySlug } from "@/lib/beaches";
 
@@ -79,10 +79,14 @@ export async function generateMetadata({
 
 export default async function AreaConditions({
   params,
+  searchParams,
 }: {
   params: Promise<{ area: string }>;
+  // PROTOTYPE SEAM - throwaway. See components/conditions/prototype/NOTES.md.
+  searchParams?: Promise<{ variant?: string }>;
 }) {
   const { area: slug } = await params;
+  const { variant } = (await searchParams) ?? {};
   const area = await resolve(slug);
 
   // A slug that is neither an area nor a beach is a 404 rather than a page
@@ -99,7 +103,11 @@ export default async function AreaConditions({
   */
   return (
     <main className="flex-1">
-      <ConditionsSection areaSlug={area.slug} beachSlug={soleBeachOf(area)} />
+      <ConditionsVariants
+        variant={variant}
+        areaSlug={area.slug}
+        beachSlug={soleBeachOf(area)}
+      />
     </main>
   );
 }

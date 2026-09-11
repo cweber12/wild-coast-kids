@@ -3,8 +3,7 @@
  *
  * The one seam the prototype cuts into the real route: `/conditions?variant=`
  * picks a layout, and `now` renders the page exactly as it ships so every
- * variant is judged against the thing it would replace rather than against
- * memory.
+ * variant is judged against the thing it would replace rather than memory.
  *
  * Reading a search param makes the route render dynamically, which is why the
  * real page's fifteen-minute revalidate stops applying while this is in the
@@ -18,9 +17,9 @@ import { Suspense } from "react";
 import { ConditionsSection } from "../ConditionsSection";
 import { PrototypeSwitcher } from "./PrototypeSwitcher";
 import { isVariantKey, type VariantKey } from "./variants";
-import { VariantA } from "./VariantA";
-import { VariantB } from "./VariantB";
-import { VariantC } from "./VariantC";
+import { VariantD } from "./VariantD";
+import { VariantE } from "./VariantE";
+import { VariantF } from "./VariantF";
 
 export function ConditionsVariants({
   variant,
@@ -38,18 +37,14 @@ export function ConditionsVariants({
       {current === "now" && (
         <ConditionsSection areaSlug={areaSlug} beachSlug={beachSlug} />
       )}
-      {current === "a" && (
-        <VariantA areaSlug={areaSlug} beachSlug={beachSlug} />
+      {current === "d" && (
+        <VariantD areaSlug={areaSlug} beachSlug={beachSlug} />
       )}
-      {current === "b" && (
-        <VariantB areaSlug={areaSlug} beachSlug={beachSlug} />
+      {current === "e" && (
+        <VariantE areaSlug={areaSlug} beachSlug={beachSlug} />
       )}
-      {current === "c" && (
-        <VariantC areaSlug={areaSlug} beachSlug={beachSlug} />
-      )}
-      {/* The synthesis: A's structure carrying C's prose treatment. */}
-      {current === "ac" && (
-        <VariantA areaSlug={areaSlug} beachSlug={beachSlug} quiet />
+      {current === "f" && (
+        <VariantF areaSlug={areaSlug} beachSlug={beachSlug} />
       )}
 
       {/*

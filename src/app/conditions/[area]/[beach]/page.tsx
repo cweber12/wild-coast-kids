@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { notFound, permanentRedirect } from "next/navigation";
-import { ConditionsSection } from "@/components/conditions/ConditionsSection";
+import { ConditionsVariants } from "@/components/conditions/prototype/ConditionsVariants";
 import { areaBySlug, areaOfBeach, soleBeachOf } from "@/lib/areas";
 import { beachBySlug } from "@/lib/beaches";
 
@@ -67,17 +67,22 @@ export async function generateMetadata({
 
 export default async function BeachConditions({
   params,
+  searchParams,
 }: {
   params: Promise<{ area: string; beach: string }>;
+  // PROTOTYPE SEAM - throwaway. See components/conditions/prototype/NOTES.md.
+  searchParams?: Promise<{ variant?: string }>;
 }) {
   const { area: areaSlug, beach: beachSlug } = await params;
+  const { variant } = (await searchParams) ?? {};
   const pair = resolvePair(areaSlug, beachSlug);
 
   if (!pair) notFound();
 
   return (
     <main className="flex-1">
-      <ConditionsSection
+      <ConditionsVariants
+        variant={variant}
         areaSlug={pair.area.slug}
         beachSlug={pair.beach.slug}
       />
