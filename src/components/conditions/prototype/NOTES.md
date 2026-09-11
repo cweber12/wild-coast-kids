@@ -108,5 +108,32 @@ code and the reason this branch never merges.
 
 ## The answer
 
-_Unfilled — waiting on the review. Record which variant won and why, then
-delete this directory and build the winner properly on its own branch._
+**`d` — the one-row toolbar.** Chosen 2026-09-11.
+
+What it settles: scope and now belong on one line across the top; the measured
+readings carry no ground and no border; the headline shrinks to a single word
+rather than being dropped entirely.
+
+What it does **not** settle, and what has to be decided before the real build —
+three collisions found by reading the record after the choice, not before:
+
+1. **The wordmark's rank.** `d` sets its `<h1>` in `text-tool-region`, the same
+   token `TOOL_REGION_HEADING` gives "The week ahead". That makes the page
+   title exactly equal to every region heading below it, which is the rank
+   collapse ADR-0014 was written to escape — `headingRank.ts` says it outright:
+   "34px under a 36px title is not a second rank, it is the same one twice."
+   It also drops `text-tool-title` out of `src/`, and `scripts/built-css.mjs`
+   carries a `REQUIRED` row for it whose stated reason is this page's `<h1>`.
+   With Tailwind's `source(none)`, losing the last use fails the `stylesheet`
+   gate.
+2. **The standing notice at `text-2xs`.** ADR-0009 rejects an embed partly
+   because "the host page is asserting something it does not control", and
+   `ConditionsSection` names that sentence as the assertion. `d` renders it at
+   10px.
+3. **The beach list.** Removing it orphans `AreaBeaches` — nothing else imports
+   it — and breaks the area page's own test, whose stated purpose is that "what
+   says the page opened on something real is the list of that area's beaches".
+
+Once those are answered: delete this directory, revert the three
+`src/app/conditions/*` pages, and build `d` properly on its own branch with
+tests and its own ADRs.
