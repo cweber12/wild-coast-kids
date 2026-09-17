@@ -2,7 +2,7 @@ import { beforeEach, expect, test, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import { TOOL_WORDMARK } from "../ui/headingRank";
 
-/** The area holding `DEFAULT_BEACH_SLUG`, so the header and the list agree with it. */
+/** The area holding the fixture beach, so the header and the list agree with it. */
 const DEFAULT_AREA = "la-jolla";
 
 /*
@@ -72,22 +72,20 @@ vi.mock("@/components/conditions/RipLevel", () => ({
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push: vi.fn() }) }));
 
 const { ConditionsSection } = await import("./ConditionsSection");
-const { inventoryCaveats, DEFAULT_BEACH_SLUG } = await import("@/lib/beaches");
+const { inventoryCaveats } = await import("@/lib/beaches");
+
+/** The fixture beach: La Jolla's default, so the header and the regions agree. */
+const SHORES = "la-jolla-shores-beach";
 
 test("the view carries the chooser, the two regions and the caveats", () => {
-  render(
-    <ConditionsSection
-      areaSlug={DEFAULT_AREA}
-      beachSlug={DEFAULT_BEACH_SLUG}
-    />,
-  );
+  render(<ConditionsSection areaSlug={DEFAULT_AREA} beachSlug={SHORES} />);
 
   expect(screen.getByLabelText("Choose an area")).toBeDefined();
   // Reachable by a reader, not merely built: the two regions mount on their
   // own Suspense boundaries, so a section that dropped one would still render
   // and still pass every other assertion here.
-  expect(screen.getByText(`week for ${DEFAULT_BEACH_SLUG}`)).toBeDefined();
-  expect(screen.getByText(`day for ${DEFAULT_BEACH_SLUG}`)).toBeDefined();
+  expect(screen.getByText(`week for ${SHORES}`)).toBeDefined();
+  expect(screen.getByText(`day for ${SHORES}`)).toBeDefined();
   expect(
     screen.getByText("What we are unsure about in this data"),
   ).toBeDefined();
@@ -114,14 +112,11 @@ test("the view carries the chooser, the two regions and the caveats", () => {
  */
 test("what is measured comes before the week, and the week before the day", () => {
   const { container } = render(
-    <ConditionsSection
-      areaSlug={DEFAULT_AREA}
-      beachSlug={DEFAULT_BEACH_SLUG}
-    />,
+    <ConditionsSection areaSlug={DEFAULT_AREA} beachSlug={SHORES} />,
   );
 
   // The tide card stays gone: its figure is the week grid's first column.
-  expect(screen.queryByText(`panel for ${DEFAULT_BEACH_SLUG}`)).toBeNull();
+  expect(screen.queryByText(`panel for ${SHORES}`)).toBeNull();
 
   const regions = [...container.querySelectorAll("p")]
     .map((node) => node.textContent ?? "")
@@ -132,9 +127,9 @@ test("what is measured comes before the week, and the week before the day", () =
         text.startsWith("day for "),
     );
   expect(regions).toEqual([
-    `measured for ${DEFAULT_BEACH_SLUG}`,
-    `week for ${DEFAULT_BEACH_SLUG}`,
-    `day for ${DEFAULT_BEACH_SLUG}`,
+    `measured for ${SHORES}`,
+    `week for ${SHORES}`,
+    `day for ${SHORES}`,
   ]);
 });
 
@@ -155,12 +150,7 @@ test("what is measured comes before the week, and the week before the day", () =
  * that wired one in would have to add an argument, and that is what fails here.
  */
 test("the measured block is asked for a beach and never for a day", () => {
-  render(
-    <ConditionsSection
-      areaSlug={DEFAULT_AREA}
-      beachSlug={DEFAULT_BEACH_SLUG}
-    />,
-  );
+  render(<ConditionsSection areaSlug={DEFAULT_AREA} beachSlug={SHORES} />);
 
   const [props] = measuredPanel.mock.calls[0] as [Record<string, unknown>];
 
@@ -174,7 +164,7 @@ test("the measured block is asked for a beach and never for a day", () => {
 
   // On a beach page there is no area scope at all, so the block is answering
   // for that beach and nothing wider.
-  expect(props.slug).toBe(DEFAULT_BEACH_SLUG);
+  expect(props.slug).toBe(SHORES);
   expect(props.area).toBeUndefined();
 });
 
@@ -249,12 +239,7 @@ test("the band adds no heading, and skips no level under the h1", async () => {
   const { MeasuredBand } = await import("./MeasuredBand");
   measuredPanel.mockImplementation(() => <MeasuredBand readings={MEASURED} />);
 
-  render(
-    <ConditionsSection
-      areaSlug={DEFAULT_AREA}
-      beachSlug={DEFAULT_BEACH_SLUG}
-    />,
-  );
+  render(<ConditionsSection areaSlug={DEFAULT_AREA} beachSlug={SHORES} />);
 
   const ranks = screen
     .getAllByRole("heading", { level: 2 })
@@ -279,12 +264,7 @@ test("the band is one landmark, named for the place it measures", async () => {
   const { MeasuredBand } = await import("./MeasuredBand");
   measuredPanel.mockImplementation(() => <MeasuredBand readings={MEASURED} />);
 
-  render(
-    <ConditionsSection
-      areaSlug={DEFAULT_AREA}
-      beachSlug={DEFAULT_BEACH_SLUG}
-    />,
-  );
+  render(<ConditionsSection areaSlug={DEFAULT_AREA} beachSlug={SHORES} />);
 
   expect(
     screen.getByRole("region", {
@@ -297,12 +277,7 @@ test("the band is one landmark, named for the place it measures", async () => {
 });
 
 test("every caveat the data files carry reaches this page", () => {
-  render(
-    <ConditionsSection
-      areaSlug={DEFAULT_AREA}
-      beachSlug={DEFAULT_BEACH_SLUG}
-    />,
-  );
+  render(<ConditionsSection areaSlug={DEFAULT_AREA} beachSlug={SHORES} />);
 
   // The other half of the check in src/lib/caveats.test.ts: that one asserts
   // nothing is dropped between the files and the loader, this one asserts
@@ -376,10 +351,7 @@ function bar(container: HTMLElement) {
 
 test("the readings and the judgement share a row, and the controls do not", () => {
   const { container } = render(
-    <ConditionsSection
-      areaSlug={DEFAULT_AREA}
-      beachSlug={DEFAULT_BEACH_SLUG}
-    />,
+    <ConditionsSection areaSlug={DEFAULT_AREA} beachSlug={SHORES} />,
   );
 
   const { controls, readings } = bar(container);
@@ -422,10 +394,7 @@ test("a reading with no sea beside it stays on its own row", () => {
  */
 test("the bar reads name, then place, then readings", () => {
   const { container } = render(
-    <ConditionsSection
-      areaSlug={DEFAULT_AREA}
-      beachSlug={DEFAULT_BEACH_SLUG}
-    />,
+    <ConditionsSection areaSlug={DEFAULT_AREA} beachSlug={SHORES} />,
   );
 
   const { wordmark, controls, readings } = bar(container);
@@ -459,12 +428,7 @@ test("an area of one beach keeps its rows with a single control", () => {
 });
 
 test("the page titles itself with a wordmark, not a headline", () => {
-  render(
-    <ConditionsSection
-      areaSlug={DEFAULT_AREA}
-      beachSlug={DEFAULT_BEACH_SLUG}
-    />,
-  );
+  render(<ConditionsSection areaSlug={DEFAULT_AREA} beachSlug={SHORES} />);
 
   const title = screen.getByRole("heading", { level: 1 });
   expect(title.textContent).toBe("Conditions");
@@ -483,12 +447,7 @@ test("the page titles itself with a wordmark, not a headline", () => {
  * that sentence discharges; ADR-0058 records that it keeps `--text-base`.
  */
 test("the standing notice keeps body size when the title loses it", () => {
-  render(
-    <ConditionsSection
-      areaSlug={DEFAULT_AREA}
-      beachSlug={DEFAULT_BEACH_SLUG}
-    />,
-  );
+  render(<ConditionsSection areaSlug={DEFAULT_AREA} beachSlug={SHORES} />);
 
   const notice = screen.getByText(
     /Instrument readings, not a safety assessment/,
@@ -498,12 +457,7 @@ test("the standing notice keeps body size when the title loses it", () => {
 });
 
 test("the page says these are instruments and not a safety assessment", () => {
-  render(
-    <ConditionsSection
-      areaSlug={DEFAULT_AREA}
-      beachSlug={DEFAULT_BEACH_SLUG}
-    />,
-  );
+  render(<ConditionsSection areaSlug={DEFAULT_AREA} beachSlug={SHORES} />);
 
   expect(
     screen.getByText(/Instrument readings, not a safety assessment/),
@@ -529,12 +483,7 @@ test("the page says these are instruments and not a safety assessment", () => {
  * itself.
  */
 test("the self-description is gone and the standing notice is not", () => {
-  render(
-    <ConditionsSection
-      areaSlug={DEFAULT_AREA}
-      beachSlug={DEFAULT_BEACH_SLUG}
-    />,
-  );
+  render(<ConditionsSection areaSlug={DEFAULT_AREA} beachSlug={SHORES} />);
 
   expect(screen.queryByText(/Surf · Tide · Wind · Visibility/)).toBeNull();
   expect(screen.queryByText(/built by a local/)).toBeNull();
@@ -556,12 +505,7 @@ test("the self-description is gone and the standing notice is not", () => {
  * and is what it now claims.
  */
 test("the safety framing is stated once, wherever it sits", () => {
-  render(
-    <ConditionsSection
-      areaSlug={DEFAULT_AREA}
-      beachSlug={DEFAULT_BEACH_SLUG}
-    />,
-  );
+  render(<ConditionsSection areaSlug={DEFAULT_AREA} beachSlug={SHORES} />);
 
   expect(screen.queryByText(/None of it is a safety assessment/)).toBeNull();
   expect(screen.getAllByText(/not a safety assessment/)).toHaveLength(1);
@@ -644,15 +588,10 @@ test("an area of one beach offers no beach control", () => {
  * on both pages rather than only on the area's.
  */
 test("an area of several keeps its control, opened on the beach shown", () => {
-  render(
-    <ConditionsSection
-      areaSlug={DEFAULT_AREA}
-      beachSlug={DEFAULT_BEACH_SLUG}
-    />,
-  );
+  render(<ConditionsSection areaSlug={DEFAULT_AREA} beachSlug={SHORES} />);
 
   const control = screen.getByLabelText("Choose a beach") as HTMLSelectElement;
-  expect(control.value).toBe(DEFAULT_BEACH_SLUG);
+  expect(control.value).toBe(SHORES);
   expect(control.options[0].textContent).toBe("All of La Jolla");
 });
 
@@ -775,16 +714,9 @@ test("an area page carries every region, and no sentence standing in for one", (
  * the row is, not one breakpoint below it.
  */
 test("the rip level's rule is drawn only where it shares a row with the readings", () => {
-  render(
-    <ConditionsSection
-      areaSlug={DEFAULT_AREA}
-      beachSlug={DEFAULT_BEACH_SLUG}
-    />,
-  );
+  render(<ConditionsSection areaSlug={DEFAULT_AREA} beachSlug={SHORES} />);
 
-  const wrapper = screen.getByText(
-    `rip for ${DEFAULT_BEACH_SLUG}`,
-  ).parentElement!;
+  const wrapper = screen.getByText(`rip for ${SHORES}`).parentElement!;
   expect(wrapper.className).toContain("xl:border-l");
   expect(wrapper.className).toContain("xl:pl-6");
   expect(wrapper.className).not.toContain("lg:border-l");
