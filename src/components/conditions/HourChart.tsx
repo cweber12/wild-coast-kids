@@ -365,6 +365,23 @@ const AREA_TOP_OPACITY = 0.24;
 export const NARROW_FRAME = "max-sm:aspect-[2/1]";
 
 /**
+ * The plot's proportions, for a tab that draws no plot.
+ *
+ * A quiet tab keeps its bar (see `shell`), and since 2026-09-17 it keeps the
+ * plot's height too. On an area page the swell, wind and temperature tabs
+ * are all quiet, and choosing one collapsed a 261px plot to a two-line
+ * sentence: the tile shrank by about 250px beside a square map that did not,
+ * and everything under it jumped up to meet it. The sentence sits in a box
+ * with the frame's own proportions instead -- `WIDTH` over `HEIGHT` from `sm`,
+ * and `NARROW_FRAME`'s stretch below it, the same two shapes the plot takes --
+ * so stepping across the tabs moves nothing.
+ *
+ * Written out rather than derived from `WIDTH` and `HEIGHT`, for the reason
+ * `NARROW_FRAME` gives: Tailwind scans source text (ADR-0006).
+ */
+export const PLOT_FRAME = `${NARROW_FRAME} sm:aspect-[720/220]`;
+
+/**
  * How many published points a phone can separate, above which they are not
  * drawn there at all.
  *
@@ -637,7 +654,7 @@ export function HourChart({
   if (points.length === 0) {
     return shell(
       <p
-        className="leading-relaxed text-base text-fog"
+        className={`leading-relaxed text-base text-fog ${PLOT_FRAME}`}
         id={mounted ? panelId : undefined}
         role={mounted ? "tabpanel" : undefined}
         aria-labelledby={mounted ? tabId(tab) : undefined}
