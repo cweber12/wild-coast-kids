@@ -87,10 +87,10 @@ test("an area without scripting is still reachable, as a link", () => {
     <AreaSelector areas={AREAS} current="la-jolla" />,
   );
 
-  expect(markup).toContain("<noscript>");
+  expect(markup).toContain("<noscript");
   // Two-sided: markup naming every area twice would pass a bare `toContain`
   // whether or not the fallback exists, so the links must be inside it.
-  const fallback = markup.slice(markup.indexOf("<noscript>"));
+  const fallback = markup.slice(markup.indexOf("<noscript"));
   // The same opening page the control navigates to, so a reader without a
   // script lands where a reader with one does.
   expect(fallback).toContain(
@@ -149,5 +149,7 @@ test("the fallback list sits beside the control group, not inside it", () => {
   expect(fallback.parentElement).toBe(select.parentElement!.parentElement);
   expect(select.parentElement!.className).toContain("flex");
   expect(fallback.parentElement!.className).toContain("contents");
-  expect(doc.querySelector("noscript ul")!.className).toContain("w-full");
+  // On the noscript, which is the flex item -- not on the list inside it,
+  // where it was first put and measured to do nothing.
+  expect(fallback.className).toContain("w-full");
 });

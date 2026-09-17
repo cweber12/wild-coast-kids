@@ -103,8 +103,9 @@ export function BeachSelector({
         </select>
       </div>
 
-      <noscript>
-        <ul className="leading-relaxed w-full text-base text-fog">
+      {/* `w-full` on the flex item, which is the noscript; see `AreaSelector`. */}
+      <noscript className="w-full">
+        <ul className="leading-relaxed text-base text-fog">
           <li>
             <a href={areaHref}>All of {areaName}</a>
           </li>

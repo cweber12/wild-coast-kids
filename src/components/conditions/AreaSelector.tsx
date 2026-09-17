@@ -106,8 +106,15 @@ export function AreaSelector({
         </select>
       </div>
 
-      <noscript>
-        <ul className="leading-relaxed w-full text-base text-fog">
+      {/*
+        `w-full` on the `noscript` itself, because that is the flex item: the
+        list inside it is not. Put on the list it did nothing -- the noscript
+        sat beside the group at its content width and the select was centred
+        against a 421px column again, which the first fix on 2026-09-17 was
+        measured to have left exactly where it found it.
+      */}
+      <noscript className="w-full">
+        <ul className="leading-relaxed text-base text-fog">
           {areas.map((area) => (
             <li key={area.slug}>
               <a href={area.href}>{area.name}</a>

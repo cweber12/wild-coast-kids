@@ -110,10 +110,10 @@ test("choosing the area navigates back out to it", () => {
 test("a beach without scripting is still reachable, as a link", () => {
   const markup = renderToStaticMarkup(selector());
 
-  expect(markup).toContain("<noscript>");
+  expect(markup).toContain("<noscript");
   // Two-sided: markup naming every beach twice would pass a bare `toContain`
   // whether or not the fallback exists, so the links must be inside it.
-  const fallback = markup.slice(markup.indexOf("<noscript>"));
+  const fallback = markup.slice(markup.indexOf("<noscript"));
   expect(fallback).toContain("/conditions/la-jolla/la-jolla-shores-beach");
   expect(fallback).toContain("/conditions/la-jolla/windansea-beach");
   expect(fallback).toContain("/conditions/la-jolla/bird-rock");
@@ -157,5 +157,6 @@ test("the fallback list sits beside the control group, not inside it", () => {
   expect(fallback.parentElement).toBe(select.parentElement!.parentElement);
   expect(select.parentElement!.className).toContain("flex");
   expect(fallback.parentElement!.className).toContain("contents");
-  expect(doc.querySelector("noscript ul")!.className).toContain("w-full");
+  // On the noscript, which is the flex item, not on the list inside it.
+  expect(fallback.className).toContain("w-full");
 });
