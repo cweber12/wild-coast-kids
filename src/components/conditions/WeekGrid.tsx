@@ -528,7 +528,7 @@ export function WeekGrid({
                       className={`${TOUCH_TARGET} md:min-h-8 flex flex-1 cursor-pointer items-center text-left ${
                         day.localDate === showing
                           ? "text-white underline decoration-2 underline-offset-4"
-                          : "text-ocean"
+                          : "text-ocean hover:bg-lavender"
                       }`}
                       data-day-choice={day.localDate}
                     >

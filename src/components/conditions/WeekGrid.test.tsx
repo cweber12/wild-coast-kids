@@ -410,6 +410,15 @@ test("the day control fills its row and keeps the touch floor under it", () => {
     expect(control.className).toContain("flex-1");
   }
 
+  // A pointer over a day it could choose sees the header tint, the way the
+  // chart's tabs already answer a hover. The chosen day is filled already and
+  // answers nothing. Audited 2026-09-17: the cursor changed and nothing else.
+  const [chosen, ...others] = controls;
+  expect(chosen.className).not.toContain("hover:");
+  for (const control of others) {
+    expect(control.className).toContain("hover:bg-lavender");
+  }
+
   // The button grows because its heading is the flex row it grows inside. On
   // today that row also holds the chip, which is what `flex-1` pushes to the
   // far end rather than off a second line.

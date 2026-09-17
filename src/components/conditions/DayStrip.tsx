@@ -171,7 +171,7 @@ export function DayStrip({ days }: { days: readonly DayChoice[] }) {
             className={`${TOUCH_TARGET} md:min-h-9 rounded-pill shrink-0 cursor-pointer px-4 text-2xs font-extrabold tracking-widest uppercase ${
               isShowing
                 ? "focus-visible:outline-ocean bg-ocean text-white underline decoration-2 underline-offset-4"
-                : "bg-mist text-ocean"
+                : "bg-mist text-ocean hover:bg-lavender"
             }`}
           >
             {day.dayName}
