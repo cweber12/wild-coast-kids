@@ -92,7 +92,12 @@ export function ConditionsSection({
   const bulletin = scope === undefined ? reading : scope.bulletinBeach;
 
   return (
-    <section className="px-gutter-sm py-section-sm md:px-gutter md:py-section">
+    // Named by its wordmark, so a reader moving by landmark hears "Conditions"
+    // rather than an anonymous region holding three named ones.
+    <section
+      aria-labelledby="conditions-heading"
+      className="px-gutter-sm py-section-sm md:px-gutter md:py-section"
+    >
       {/*
         THE BAR: WHAT THIS IS, WHERE, AND WHAT IS TRUE THERE NOW.
 
@@ -145,7 +150,9 @@ export function ConditionsSection({
           `ConditionsTeaser` carries the other copy for the reader who has not
           clicked yet.
         */}
-        <h1 className={TOOL_WORDMARK}>Conditions</h1>
+        <h1 id="conditions-heading" className={TOOL_WORDMARK}>
+          Conditions
+        </h1>
 
         {/*
           WHICH PLACE, AT BOTH GRAINS.

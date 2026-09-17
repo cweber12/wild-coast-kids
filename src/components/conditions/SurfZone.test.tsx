@@ -243,6 +243,14 @@ test("the three levels are rendered with the same emphasis", () => {
   });
 
   expect(new Set(classNames).size).toBe(1);
+
+  // And at a size from the site's own scale. It was Tailwind's default
+  // `text-2xl`, the only figure on the page set outside the `--text-*` tokens,
+  // in the day region's most prominent slot. `text-tool-region` is the rank
+  // the region's own heading holds, which is the rank this word deserves and
+  // no more: it must not outrank "Today, hour by hour" above it.
+  expect(classNames[0]).toContain("text-tool-region");
+  expect(classNames[0]).not.toContain("text-2xl");
 });
 
 /**
@@ -277,6 +285,13 @@ test("no state implies the water is safe", () => {
       <SurfZone state={state} localDate="2026-09-02" when="today" />,
     );
     const text = container.textContent ?? "";
+
+    // Every state is a landmark a reader can jump to by name. The three
+    // `<section>`s carried no name until 2026-09-17, so a screen reader's
+    // region list held an anonymous entry between two named ones.
+    expect(
+      screen.getByRole("region", { name: "Rip current risk" }),
+    ).toBeDefined();
 
     expect(text).not.toMatch(/\bsafe\b/i);
     expect(text).not.toMatch(/no rip current risk/i);

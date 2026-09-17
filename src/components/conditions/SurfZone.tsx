@@ -90,7 +90,15 @@ function Absence({ children }: { children: React.ReactNode }) {
 function Reading({ day, when }: { day: SurfZoneDay; when: string }) {
   return (
     <>
-      <p className="leading-display mb-1 text-2xl font-black italic">
+      {/*
+        `text-tool-region`, the rank the day region's own heading holds. It
+        was Tailwind's `text-2xl` until 2026-09-17, the one figure on the page
+        set outside the site's `--text-*` scale, and in this region's most
+        prominent slot. This word needs rank against the sentence under it and
+        must not outrank "Today, hour by hour" above it; the heading's own
+        size is exactly that.
+      */}
+      <p className="leading-display mb-1 text-tool-region font-black italic">
         {day.level}
       </p>
       {/*
@@ -151,7 +159,7 @@ function Reading({ day, when }: { day: SurfZoneDay; when: string }) {
 export function SurfZone({ state, localDate, when, areaName }: SurfZoneProps) {
   if (state.kind === "no-surf-zone") {
     return (
-      <section>
+      <section aria-label="Rip current risk">
         <h3 className={BLOCK_HEADING}>Rip current risk</h3>
         {/*
           "This forecast", not "no rip current risk". The obvious short lead-in
@@ -188,7 +196,7 @@ export function SurfZone({ state, localDate, when, areaName }: SurfZoneProps) {
 
   if (state.kind === "unavailable") {
     return (
-      <section>
+      <section aria-label="Rip current risk">
         <h3 className={BLOCK_HEADING}>Rip current risk</h3>
         {/*
           The upstream reason is shown rather than summarised. It is the same
@@ -207,7 +215,7 @@ export function SurfZone({ state, localDate, when, areaName }: SurfZoneProps) {
   const day = state.days.find((entry) => entry.localDate === localDate) ?? null;
 
   return (
-    <section>
+    <section aria-label="Rip current risk">
       <h3 className={BLOCK_HEADING}>Rip current risk</h3>
 
       {state.headline !== null && (

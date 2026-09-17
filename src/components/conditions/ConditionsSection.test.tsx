@@ -764,3 +764,21 @@ test("an area page carries every region, and no sentence standing in for one", (
   expect(screen.getByText(/day for la-jolla-shores-beach/)).toBeDefined();
   expect(screen.queryByText(/one beach at a time/)).toBeNull();
 });
+
+/**
+ * The tool's own `<section>` is a landmark named by its wordmark, so a reader
+ * navigating by region hears "Conditions" and not an anonymous region holding
+ * three named ones. It carried no name until 2026-09-17.
+ */
+test("the tool's section is a region named by its wordmark", () => {
+  render(
+    <ConditionsSection
+      areaSlug={DEFAULT_AREA}
+      beachSlug={DEFAULT_BEACH_SLUG}
+    />,
+  );
+
+  const region = screen.getByRole("region", { name: "Conditions" });
+  expect(region.tagName).toBe("SECTION");
+  expect(region.contains(screen.getByRole("heading", { level: 1 }))).toBe(true);
+});
