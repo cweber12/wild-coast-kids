@@ -27,6 +27,12 @@ import { TOUCH_TARGET } from "../ui/touchTarget";
 export interface SelectableArea {
   slug: string;
   name: string;
+  /**
+   * Where choosing this area goes: its default beach's URL when one is named,
+   * otherwise its own. Composed by the section from `openingConditionsPath`,
+   * so this control navigates and does not decide.
+   */
+  href: string;
 }
 
 export function AreaSelector({
@@ -37,6 +43,13 @@ export function AreaSelector({
   current: string;
 }) {
   const router = useRouter();
+
+  // The value a `<select>` reports is one of the options this control drew, so
+  // the lookup cannot miss; the fallback is the area's own URL rather than a
+  // silent no-op, because a chooser that does nothing is the failure the
+  // `noscript` list below exists to prevent.
+  const hrefOf = (slug: string) =>
+    areas.find((area) => area.slug === slug)?.href ?? `/conditions/${slug}`;
 
   /*
     THE VISIBLE LABEL IS SHORT AND THE ACCESSIBLE NAME IS NOT.
@@ -83,7 +96,7 @@ export function AreaSelector({
           aria-label="Choose an area"
           className={`rounded-pill ${TOUCH_TARGET} w-full border-2 border-lavender bg-white px-4 py-2 text-base font-bold md:w-auto`}
           defaultValue={current}
-          onChange={(event) => router.push(`/conditions/${event.target.value}`)}
+          onChange={(event) => router.push(hrefOf(event.target.value))}
         >
           {areas.map((area) => (
             <option key={area.slug} value={area.slug}>
@@ -97,7 +110,7 @@ export function AreaSelector({
         <ul className="leading-relaxed w-full text-base text-fog">
           {areas.map((area) => (
             <li key={area.slug}>
-              <a href={`/conditions/${area.slug}`}>{area.name}</a>
+              <a href={area.href}>{area.name}</a>
             </li>
           ))}
         </ul>

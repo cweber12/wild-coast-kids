@@ -23,7 +23,7 @@
  */
 
 import { Suspense } from "react";
-import { areaBySlug, beachesByArea } from "@/lib/areas";
+import { areaBySlug, beachesByArea, openingConditionsPath } from "@/lib/areas";
 import { scopeFor } from "./areaScope";
 import { inventoryCaveats, inventoryReach } from "@/lib/beaches";
 import { TOOL_WORDMARK } from "../ui/headingRank";
@@ -44,9 +44,13 @@ export function ConditionsSection({
   beachSlug: string | null;
 }) {
   const groups = beachesByArea();
+  // Each area with where choosing it goes -- its default beach where one is
+  // named, its own view otherwise -- composed here so the chooser navigates
+  // and does not decide. See `openingBeachOf`.
   const areas = groups.map((group) => ({
     slug: group.area.slug,
     name: group.area.name,
+    href: openingConditionsPath(group.area),
   }));
 
   // Never undefined from a route: both pages resolve the slug against the same

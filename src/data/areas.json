@@ -9,6 +9,7 @@
   "_schema": {
     "slug": "Stable key for the area. May equal a beach slug, and three do -- pacific-beach, mission-beach, ocean-beach. They are different namespaces: an area and a location sit at different positions of the route, so /conditions/pacific-beach is the area and /conditions/pacific-beach/pacific-beach the location. Five would have collided before the bays were split; mission-bay and san-diego-bay stopped colliding when those areas took compass points.",
     "name": "What the chooser and the area's heading say.",
+    "default_beach": "Optional. The member the area opens on, from /conditions and from the area chooser: an area's own view reports only what every member binds, and for a multi-beach area that is little (La Jolla's ten share a tide station and an air station), so the front door lands on a beach with figures. Named by a person, never derived. The area's own URL is unchanged and the beach chooser's 'All of' option still reaches it. Must be one of that area's beaches; the gate says so.",
     "beaches": "Member slugs, north to south, each a slug in beaches.json."
   },
   "areas": [
@@ -25,6 +26,7 @@
     {
       "slug": "la-jolla",
       "name": "La Jolla",
+      "default_beach": "la-jolla-shores-beach",
       "beaches": [
         "la-jolla-shores-beach",
         "la-jolla-cove",
@@ -41,11 +43,13 @@
     {
       "slug": "pacific-beach",
       "name": "Pacific Beach",
+      "default_beach": "tourmaline-surfing-park",
       "beaches": ["tourmaline-surfing-park", "pacific-beach"]
     },
     {
       "slug": "mission-bay-north",
       "name": "Mission Bay – North",
+      "default_beach": "mission-bay-leisure-lagoon",
       "beaches": [
         "mission-bay-campland-on-the-bay",
         "mission-bay-de-anza-cove",
@@ -59,6 +63,7 @@
     {
       "slug": "mission-bay-west",
       "name": "Mission Bay – West",
+      "default_beach": "mission-bay-sea-world",
       "beaches": [
         "mission-bay-riviera-shores",
         "mission-bay-san-juan-cove",
