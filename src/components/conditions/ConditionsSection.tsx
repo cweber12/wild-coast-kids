@@ -234,12 +234,17 @@ export function ConditionsSection({
             something that is not one, and it is the single line here that
             answers whether to put children in the water.
 
-            Behind a rule from `lg`, because a rule is a fact about a row. This
+            Behind a rule from `xl`, because a rule is a fact about a row. This
             row wraps, and a stacked item carrying a left border paints a stray
             vertical tick beside itself that reads as an indent. Seen at 375px,
-            where every item in the bar is on its own line.
+            where every item in the bar is on its own line -- and seen again
+            at 1100 and 1200px on a beach page, where the rule was gated at
+            `lg`: the readings there are two segments, 842px at every width,
+            and with the level beside them the row first fits at 1280. Below
+            that the level wraps with the rule still painted, which is the
+            tick this comment claimed to have avoided. Measured 2026-09-17.
           */}
-          <div className="lg:border-l lg:border-lavender lg:pl-6">
+          <div className="xl:border-l xl:border-lavender xl:pl-6">
             <Suspense
               fallback={
                 <p className="text-base text-fog">

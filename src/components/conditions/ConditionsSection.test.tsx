@@ -764,3 +764,28 @@ test("an area page carries every region, and no sentence standing in for one", (
   expect(screen.getByText(/day for la-jolla-shores-beach/)).toBeDefined();
   expect(screen.queryByText(/one beach at a time/)).toBeNull();
 });
+
+/**
+ * The rule beside the rip level is a fact about a row, and the row it is a
+ * fact about only exists from `xl`. Measured on 2026-09-17: on a beach page the
+ * readings are two segments, 842px wide at every width, and from 1024 to
+ * 1279px that plus the level does not fit the gutter -- the level wraps onto a
+ * line of its own with the `lg:` rule still painted down its left edge, a
+ * stray tick and a 25px indent. At 1280 it fits. So the rule is gated where
+ * the row is, not one breakpoint below it.
+ */
+test("the rip level's rule is drawn only where it shares a row with the readings", () => {
+  render(
+    <ConditionsSection
+      areaSlug={DEFAULT_AREA}
+      beachSlug={DEFAULT_BEACH_SLUG}
+    />,
+  );
+
+  const wrapper = screen.getByText(
+    `rip for ${DEFAULT_BEACH_SLUG}`,
+  ).parentElement!;
+  expect(wrapper.className).toContain("xl:border-l");
+  expect(wrapper.className).toContain("xl:pl-6");
+  expect(wrapper.className).not.toContain("lg:border-l");
+});
