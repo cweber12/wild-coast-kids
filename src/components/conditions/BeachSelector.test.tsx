@@ -140,3 +140,22 @@ test("it carries no vertical margin of its own", () => {
 
   expect(container.firstElementChild?.className).not.toContain("mb-");
 });
+
+/**
+ * The same shape `AreaSelector` takes, for the same reason: without a script
+ * the fallback list rendered inside the label/select group's centred flex
+ * row, and the dead control floated halfway down eleven links. The root is
+ * `contents`, so the group and the list are both items of the bar's row and
+ * the list takes the full width to land under the controls.
+ */
+test("the fallback list sits beside the control group, not inside it", () => {
+  const markup = renderToStaticMarkup(selector());
+  const doc = new DOMParser().parseFromString(markup, "text/html");
+
+  const select = doc.querySelector("select")!;
+  const fallback = doc.querySelector("noscript")!;
+  expect(fallback.parentElement).toBe(select.parentElement!.parentElement);
+  expect(select.parentElement!.className).toContain("flex");
+  expect(fallback.parentElement!.className).toContain("contents");
+  expect(doc.querySelector("noscript ul")!.className).toContain("w-full");
+});

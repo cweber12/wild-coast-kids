@@ -91,3 +91,25 @@ test("it carries no vertical margin of its own", () => {
 
   expect(container.firstElementChild?.className).not.toContain("mb-");
 });
+
+/**
+ * The fallback list is a row of its own, not a third item in the label/select
+ * group. Rendered without JavaScript on 2026-09-17, the eighteen links sat
+ * inside the group's `items-center` flex row: a 400px column with the label
+ * and the dead select floating vertically centred against it. The root is
+ * `contents` so the group and the list are both items of the bar's own
+ * wrapping row, and the list takes the full width to land under the controls.
+ */
+test("the fallback list sits beside the control group, not inside it", () => {
+  const markup = renderToStaticMarkup(
+    <AreaSelector areas={AREAS} current="la-jolla" />,
+  );
+  const doc = new DOMParser().parseFromString(markup, "text/html");
+
+  const select = doc.querySelector("select")!;
+  const fallback = doc.querySelector("noscript")!;
+  expect(fallback.parentElement).toBe(select.parentElement!.parentElement);
+  expect(select.parentElement!.className).toContain("flex");
+  expect(fallback.parentElement!.className).toContain("contents");
+  expect(doc.querySelector("noscript ul")!.className).toContain("w-full");
+});

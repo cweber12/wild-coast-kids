@@ -56,35 +56,45 @@ export function AreaSelector({
   return (
     // No margin of its own: it sits in the page header's flex row, and the row
     // owns the spacing. Carrying one here would be counted twice.
-    <div className="flex w-full items-center gap-2 md:w-auto md:shrink-0">
-      <label
-        className="text-2xs font-extrabold tracking-widest text-ocean uppercase"
-        htmlFor="area"
-      >
-        Area
-      </label>
-      {/*
-        `TOUCH_TARGET` rather than a bare py-3: it is the site's 44px floor
-        below md (ADR-0004), and this is the one control in the page header. A
-        value that happens to be right is not the same as one that stays right.
-      */}
-      <select
-        id="area"
-        name="area"
-        aria-label="Choose an area"
-        className={`rounded-pill ${TOUCH_TARGET} w-full border-2 border-lavender bg-white px-4 py-2 text-base font-bold md:w-auto`}
-        defaultValue={current}
-        onChange={(event) => router.push(`/conditions/${event.target.value}`)}
-      >
-        {areas.map((area) => (
-          <option key={area.slug} value={area.slug}>
-            {area.name}
-          </option>
-        ))}
-      </select>
+    //
+    // `contents`, so the control group and the fallback list are both items
+    // of that row rather than of a box of their own. The list used to sit
+    // inside the group, and without a script it rendered as an 18-link column
+    // with the label and the dead select centred against it, because the
+    // group is `items-center`. Rendered and seen on 2026-09-17. The list is
+    // `w-full` so it wraps to a row of its own under the controls; with a
+    // script it is not rendered at all and the row is what it always was.
+    <div className="contents">
+      <div className="flex w-full items-center gap-2 md:w-auto md:shrink-0">
+        <label
+          className="text-2xs font-extrabold tracking-widest text-ocean uppercase"
+          htmlFor="area"
+        >
+          Area
+        </label>
+        {/*
+          `TOUCH_TARGET` rather than a bare py-3: it is the site's 44px floor
+          below md (ADR-0004), and this is the one control in the page header. A
+          value that happens to be right is not the same as one that stays right.
+        */}
+        <select
+          id="area"
+          name="area"
+          aria-label="Choose an area"
+          className={`rounded-pill ${TOUCH_TARGET} w-full border-2 border-lavender bg-white px-4 py-2 text-base font-bold md:w-auto`}
+          defaultValue={current}
+          onChange={(event) => router.push(`/conditions/${event.target.value}`)}
+        >
+          {areas.map((area) => (
+            <option key={area.slug} value={area.slug}>
+              {area.name}
+            </option>
+          ))}
+        </select>
+      </div>
 
       <noscript>
-        <ul className="leading-relaxed mt-4 text-base text-fog">
+        <ul className="leading-relaxed w-full text-base text-fog">
           {areas.map((area) => (
             <li key={area.slug}>
               <a href={`/conditions/${area.slug}`}>{area.name}</a>

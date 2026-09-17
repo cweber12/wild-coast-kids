@@ -73,31 +73,38 @@ export function BeachSelector({
     // No margin of its own, for the reason `AreaSelector` carries none: it sits
     // in the page's bar and the row owns the spacing. One carried here would be
     // counted twice.
-    <div className="flex w-full items-center gap-2 md:w-auto md:shrink-0">
-      <label
-        className="text-2xs font-extrabold tracking-widest text-ocean uppercase"
-        htmlFor="beach"
-      >
-        Beach
-      </label>
-      <select
-        id="beach"
-        name="beach"
-        aria-label="Choose a beach"
-        className={`rounded-pill ${TOUCH_TARGET} w-full border-2 border-lavender bg-white px-4 py-2 text-base font-bold md:w-auto`}
-        defaultValue={current ?? ""}
-        onChange={(event) => router.push(hrefFor(event.target.value))}
-      >
-        <option value="">All of {areaName}</option>
-        {beaches.map((beach) => (
-          <option key={beach.slug} value={beach.slug}>
-            {beach.name}
-          </option>
-        ))}
-      </select>
+    //
+    // And `contents`, for the reason `AreaSelector` gives: the group and the
+    // fallback list are both items of the bar's row, so without a script the
+    // list lands on a row of its own under the controls rather than inside the
+    // group's centred flex row beside a dead select.
+    <div className="contents">
+      <div className="flex w-full items-center gap-2 md:w-auto md:shrink-0">
+        <label
+          className="text-2xs font-extrabold tracking-widest text-ocean uppercase"
+          htmlFor="beach"
+        >
+          Beach
+        </label>
+        <select
+          id="beach"
+          name="beach"
+          aria-label="Choose a beach"
+          className={`rounded-pill ${TOUCH_TARGET} w-full border-2 border-lavender bg-white px-4 py-2 text-base font-bold md:w-auto`}
+          defaultValue={current ?? ""}
+          onChange={(event) => router.push(hrefFor(event.target.value))}
+        >
+          <option value="">All of {areaName}</option>
+          {beaches.map((beach) => (
+            <option key={beach.slug} value={beach.slug}>
+              {beach.name}
+            </option>
+          ))}
+        </select>
+      </div>
 
       <noscript>
-        <ul className="leading-relaxed mt-4 text-base text-fog">
+        <ul className="leading-relaxed w-full text-base text-fog">
           <li>
             <a href={areaHref}>All of {areaName}</a>
           </li>
