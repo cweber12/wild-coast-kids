@@ -323,10 +323,48 @@ test("a pin is drawn for every beach given, named and pointing somewhere", () =>
   render(<ShoreMap {...PROPS} segment={null} marks={APART} />);
 
   for (const beach of APART) {
-    const link = screen.getByRole("link", { name: beach.name });
-    expect(link.getAttribute("href")).toBe(beach.href);
+    // Two links per beach in the markup: one on the map for `md` and up, one
+    // in the list beneath it for a phone. jsdom applies no stylesheets, so
+    // both are in the tree here; on a page exactly one is displayed, and
+    // `display: none` keeps the other out of the accessibility tree.
+    const links = screen.getAllByRole("link", { name: beach.name });
+    expect(links).toHaveLength(2);
+    for (const link of links) {
+      expect(link.getAttribute("href")).toBe(beach.href);
+    }
   }
   expect(document.querySelectorAll("[data-pin]")).toHaveLength(APART.length);
+});
+
+/**
+ * The phone's copy of the pins: a list under the picture, at the touch floor,
+ * north to south. On a beach map there are no marks and so no list, which is
+ * the same condition the pins themselves have always applied.
+ */
+test("the beaches are listed under the map for a phone, and not on a beach map", () => {
+  const { container } = render(
+    <ShoreMap {...PROPS} segment={null} marks={APART} />,
+  );
+
+  const list = container.querySelector("[data-pin-list]")!;
+  expect(list).not.toBeNull();
+  expect(list.className).toContain("md:hidden");
+  // Beneath the picture, not inside the frame that holds it.
+  expect(list.closest("svg")).toBeNull();
+  expect(
+    container.querySelector("svg[role='img']")!.parentElement!.contains(list),
+  ).toBe(false);
+  // North to south is the smaller y first; the fixture's names do not say
+  // which that is, so the order is derived from the marks rather than assumed.
+  const northToSouth = [...APART]
+    .sort((a, b) => a.at.y - b.at.y)
+    .map((beach) => beach.name);
+  expect([...list.querySelectorAll("a")].map((a) => a.textContent)).toEqual(
+    northToSouth,
+  );
+
+  const beachMap = render(<ShoreMap {...PROPS} />);
+  expect(beachMap.container.querySelector("[data-pin-list]")).toBeNull();
 });
 
 /**
