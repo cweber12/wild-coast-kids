@@ -120,7 +120,7 @@
 
 "use client";
 
-import { useId, useState } from "react";
+import { useId, useRef, useState } from "react";
 import { hourLabelAt } from "@/lib/pacific-time";
 import { axisTicks, hourOfDay, nightBands } from "./dayFrame";
 import { useHydrated } from "./hydrated";
@@ -515,19 +515,36 @@ export function HourChart({
   const { points, unitLabel, decimals, description, absence, provenance } =
     active;
 
+  /*
+    A roving tabindex is two halves, and the second is easy to leave out.
+    Choosing a tab moves `tabIndex="0"` onto it; focus has to be moved there
+    too, by hand, or the ring stays on the tab the keys just left -- now
+    `-1`, so the next Tab departs from a control that is no longer in the
+    sequence. That was the state of this bar until 2026-09-17. The refs exist
+    for that one call and nothing else reads them.
+  */
+  const tabRefs = useRef<(HTMLButtonElement | null)[]>([]);
+  // The hour columns' half of the same rule. Declared here, above the early
+  // return for a series with no points, because a hook below that return is
+  // skipped on an absent tab and React counts hooks per render.
+  const columnRefs = useRef<(HTMLButtonElement | null)[]>([]);
+
+  const moveTab = (index: number) => {
+    setTab(index);
+    tabRefs.current[index]?.focus();
+  };
+
   const onTabKeyDown = (event: React.KeyboardEvent) => {
     const moves: Record<string, number> = { ArrowLeft: -1, ArrowRight: 1 };
     const last = series.length - 1;
     if (event.key in moves) {
       event.preventDefault();
-      setTab((current) =>
-        Math.min(last, Math.max(0, current + moves[event.key])),
-      );
+      moveTab(Math.min(last, Math.max(0, tab + moves[event.key])));
       return;
     }
     if (event.key === "Home" || event.key === "End") {
       event.preventDefault();
-      setTab(event.key === "Home" ? 0 : last);
+      moveTab(event.key === "Home" ? 0 : last);
     }
   };
 
@@ -574,6 +591,9 @@ export function HourChart({
           aria-selected={index === tab}
           aria-controls={panelId}
           tabIndex={index === tab ? 0 : -1}
+          ref={(element) => {
+            tabRefs.current[index] = element;
+          }}
           onClick={() => setTab(index)}
           className={`text-2xs ${TOUCH_TARGET} md:min-h-0 min-w-0 flex-1 cursor-pointer rounded-pill px-2 py-1 font-extrabold tracking-widest uppercase ${
             index === tab ? "bg-white text-ocean" : "text-white/75"
@@ -767,15 +787,31 @@ export function HourChart({
       .join(" · ");
   };
 
+  /** A position in this series, held inside it: a day has two ends and they hold. */
+  const clampIndex = (index: number) =>
+    Math.min(points.length - 1, Math.max(0, index));
+
   /** Select by position in this series, which is how both controls move. */
   const selectAt = (index: number) => {
-    const point = points[Math.min(points.length - 1, Math.max(0, index))];
+    const point = points[clampIndex(index)];
     if (point !== undefined) choose(hourOf(point));
   };
 
-  /** Move the selection, wrapping at neither end: a day has two ends and they hold. */
+  /*
+    The keyboard's version of `selectAt`: the selection moves and focus moves
+    with it, which is the half of a roving tabindex this group was missing
+    until 2026-09-17 -- see the note on `tabRefs`, where `columnRefs` is
+    declared. A click needs no such help, because the click already put focus
+    on the column it landed on.
+  */
+  const moveTo = (index: number) => {
+    selectAt(index);
+    columnRefs.current[clampIndex(index)]?.focus();
+  };
+
+  /** Move the selection, wrapping at neither end. */
   const step = (delta: number) => {
-    selectAt(selected === -1 ? 0 : selected + delta);
+    moveTo(selected === -1 ? 0 : selected + delta);
   };
 
   const onColumnKeyDown = (event: React.KeyboardEvent) => {
@@ -787,7 +823,7 @@ export function HourChart({
     }
     if (event.key === "Home" || event.key === "End") {
       event.preventDefault();
-      selectAt(event.key === "Home" ? 0 : points.length - 1);
+      moveTo(event.key === "Home" ? 0 : points.length - 1);
     }
   };
 
@@ -1101,7 +1137,8 @@ export function HourChart({
 
             A roving tabindex rather than twenty-four tab stops -- one stop for
             the group, then arrow keys, which is how a radio group behaves and
-            what a keyboard reader expects. The focus ring is the site's own,
+            what a keyboard reader expects. Focus moves with the keys, through
+            the ref -- `moveTo` is where -- and the ring is the site's own,
             inherited from `globals.css` rather than redefined here.
           */}
             {mounted && (
@@ -1122,6 +1159,9 @@ export function HourChart({
                       className="min-w-0 flex-1 cursor-pointer"
                       tabIndex={index === Math.max(selected, 0) ? 0 : -1}
                       aria-pressed={index === selected}
+                      ref={(element) => {
+                        columnRefs.current[index] = element;
+                      }}
                       onClick={() => selectAt(index)}
                       data-hour-column={hour}
                     >

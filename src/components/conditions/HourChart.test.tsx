@@ -737,6 +737,29 @@ describe("reaching the hours without a mouse", () => {
     ).toContain("12 AM");
   });
 
+  /**
+   * A roving tabindex is two halves: the selection moves, and focus moves with
+   * it. Until 2026-09-17 only the first half was written, so ArrowRight chose
+   * 1 AM while focus stayed on the 12 AM column -- now `tabindex="-1"` -- and
+   * the ring stopped tracking what the keys were doing. Asserted on
+   * `document.activeElement`, which is the only place the second half shows.
+   */
+  test("focus follows the arrow keys, not just the selection", () => {
+    const { container } = render(<HourChart {...PROPS} />);
+    const column = (hour: number) =>
+      container.querySelector<HTMLButtonElement>(
+        `[data-hour-column="${hour}"]`,
+      )!;
+
+    fireEvent.click(column(0));
+    column(0).focus();
+    fireEvent.keyDown(column(0), { key: "ArrowRight" });
+    expect(document.activeElement).toBe(column(1));
+
+    fireEvent.keyDown(column(1), { key: "End" });
+    expect(document.activeElement).toBe(column(23));
+  });
+
   test("one tab stop for the group, not twenty-four", () => {
     // A roving tabindex, the way a radio group behaves. Twenty-four stops would
     // put the rest of the page a day's worth of tabs away.
@@ -1000,6 +1023,25 @@ describe("the tabs", () => {
     expect(chosen()).toBe("tide");
     fireEvent.keyDown(tablist, { key: "End" });
     expect(chosen()).toBe("swell");
+  });
+
+  /**
+   * The same second half the hour columns owe. ArrowRight selected the swell
+   * tab and left focus on the tide tab, now `tabindex="-1"`, so the next Tab
+   * left from the wrong place and the ring sat on a tab that was no longer
+   * chosen. Confirmed on the rendered page on 2026-09-17.
+   */
+  test("focus moves to the tab the arrow keys chose", () => {
+    const { container } = render(<HourChart {...TABBED} />);
+    const tab = (key: string) =>
+      container.querySelector<HTMLButtonElement>(`[data-series-tab="${key}"]`)!;
+
+    tab("tide").focus();
+    fireEvent.keyDown(tab("tide"), { key: "ArrowRight" });
+    expect(document.activeElement).toBe(tab("swell"));
+
+    fireEvent.keyDown(tab("swell"), { key: "Home" });
+    expect(document.activeElement).toBe(tab("tide"));
   });
 
   test("one tab stop for the bar, not one per tab", () => {
