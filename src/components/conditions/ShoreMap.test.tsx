@@ -354,14 +354,17 @@ test("the beaches are listed under the map for a phone, and not on a beach map",
   expect(
     container.querySelector("svg[role='img']")!.parentElement!.contains(list),
   ).toBe(false);
-  // North to south is the smaller y first; the fixture's names do not say
-  // which that is, so the order is derived from the marks rather than assumed.
-  const northToSouth = [...APART]
-    .sort((a, b) => a.at.y - b.at.y)
-    .map((beach) => beach.name);
-  expect([...list.querySelectorAll("a")].map((a) => a.textContent)).toEqual(
-    northToSouth,
-  );
+  // North to south is the smaller projected y first. The fixture gives
+  // coordinates and the map projects them, so the order is read off the
+  // on-map pins' own positions rather than assumed from the names.
+  const northToSouth = [
+    ...container.querySelectorAll<HTMLElement>("[data-pin]"),
+  ]
+    .sort((a, b) => parseFloat(a.style.top) - parseFloat(b.style.top))
+    .map((pin) => pin.getAttribute("href"));
+  expect(
+    [...list.querySelectorAll("a")].map((a) => a.getAttribute("href")),
+  ).toEqual(northToSouth);
 
   const beachMap = render(<ShoreMap {...PROPS} />);
   expect(beachMap.container.querySelector("[data-pin-list]")).toBeNull();
