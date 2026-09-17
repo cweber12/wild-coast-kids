@@ -218,15 +218,40 @@ test("a drifted payload blames this site, not the station", () => {
   expect(air.text).not.toContain("expected 6 columns");
 });
 
-test("a station publishing no temperature still leads with something", () => {
+/**
+ * An absence is worded in the gloss, never set as the figure. Until
+ * 2026-09-17 a station publishing no temperature led the segment with "No
+ * temperature reading" in the bold figure register -- on the default page,
+ * the first bold words a reader met were an absence. The wind is the figure
+ * that was measured, so it is what leads; the missing temperature is said in
+ * the plain-words line, ahead of the words for the wind.
+ */
+test("a station publishing no temperature leads with the wind, and says so in the gloss", () => {
   const { segments } = bandView(
     readings({ air: { air: { ...AIR_READING, airTempF: null } } }),
   );
 
   const air = segments[segments.length - 1];
-  // An empty lead reads as a fault, which is why the card refused one too.
-  expect(air.text).toContain("No temperature reading");
-  expect(air.gloss).toBe("A gentle breeze.");
+  expect(air.text).toBe("8 mph from the north-west");
+  expect(air.text).not.toContain("No temperature reading");
+  expect(air.gloss).toBe("No temperature reading. A gentle breeze.");
+});
+
+/**
+ * The lead still never renders empty. A reading with neither figure is a
+ * station that answered with nothing this band prints, and a blank figure
+ * reads as a calm day rather than as a silence.
+ */
+test("a station publishing neither figure says so, once, as the figure", () => {
+  const { segments } = bandView(
+    readings({
+      air: { air: { ...AIR_READING, airTempF: null, windMph: null } },
+    }),
+  );
+
+  const air = segments[segments.length - 1];
+  expect(air.text).toBe("No temperature or wind reading");
+  expect(air.gloss).toBeNull();
 });
 
 /**

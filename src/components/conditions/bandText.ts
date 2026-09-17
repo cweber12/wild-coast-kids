@@ -252,17 +252,22 @@ export function plainWords(
  * what survives of that rule is the word "Calm" itself. Rendering a speed and a
  * direction under a knot would dress instrument noise as weather.
  *
- * The lead never renders empty: a station that published no temperature says so
- * rather than opening the segment on a wind speed, because an empty lead reads
- * as a fault.
+ * **Only what was measured is a figure.** Until 2026-09-17 a station that
+ * published no temperature led with "No temperature reading" in this, the
+ * bold register, so the first bold words on the default page were an absence
+ * standing where a number goes. The absence is worded in the gloss instead
+ * (`airGloss`), and the wind -- the thing that was measured -- leads.
+ *
+ * The lead still never renders empty: a station that published neither says
+ * so here, once, because a blank figure reads as a calm day rather than as a
+ * silence. That is the one absence this register keeps, and it keeps it
+ * because there is no figure left to stand in front of it.
  */
 function airFigures(air: Extract<AirView["air"], { kind: "reading" }>): string {
   const calm = air.windMph !== null && air.windMph < CALM_MPH;
 
   const temperature =
-    air.airTempF === null
-      ? "No temperature reading"
-      : `${Math.round(air.airTempF)}°F`;
+    air.airTempF === null ? null : `${Math.round(air.airTempF)}°F`;
 
   const wind =
     air.windMph === null
@@ -274,9 +279,29 @@ function airFigures(air: Extract<AirView["air"], { kind: "reading" }>): string {
             ? ` from the ${compassWords(air.windDirDegT)}`
             : "");
 
-  return [temperature, wind]
-    .filter((part): part is string => part !== null)
-    .join(" · ");
+  const figures = [temperature, wind].filter(
+    (part): part is string => part !== null,
+  );
+  return figures.length === 0
+    ? "No temperature or wind reading"
+    : figures.join(" · ");
+}
+
+/**
+ * The plain-words line under the air figures, with any absence said first.
+ *
+ * "No temperature reading." ahead of the words for the wind, so a reader who
+ * sees one figure where two usually stand is told why in the line meant for
+ * words, and not in the line meant for numbers. Null when there is nothing to
+ * gloss and nothing absent to name -- which is only the case `airFigures`
+ * already worded as the figure.
+ */
+function airGloss(
+  air: Extract<AirView["air"], { kind: "reading" }>,
+): string | null {
+  const words = plainWords(air);
+  if (air.airTempF !== null || words === null) return words;
+  return `No temperature reading. ${words}`;
 }
 
 /**
@@ -366,7 +391,7 @@ function airSegment(
       label: "Air",
       emoji,
       text: airFigures(air),
-      gloss: plainWords(air),
+      gloss: airGloss(air),
     };
   }
 
