@@ -1135,6 +1135,12 @@ export function HourChart({
             already the picture, and a visible grid of hit areas would be the
             gridlines the brief's anti-references name.
 
+            They carry no `TOUCH_TARGET`, and that is decided rather than
+            forgotten: twenty-four 44px targets do not fit a phone's plot, so
+            the columns are one scrubber the width of the plot and the
+            Earlier/Later stepper beneath is the 44px control for landing on a
+            chosen hour. ADR-0061.
+
             A roving tabindex rather than twenty-four tab stops -- one stop for
             the group, then arrow keys, which is how a radio group behaves and
             what a keyboard reader expects. Focus moves with the keys, through
