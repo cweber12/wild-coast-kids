@@ -117,10 +117,19 @@ export function DayStrip({ days }: { days: readonly DayChoice[] }) {
               because the grid above marks its own selection the same way and
               for the same reason: fill alone is a colour, and a reader who does
               not separate these two colours still sees the line.
+
+              And it names its focus ring colour, which no other control on
+              this page has to. The site's ring is `currentColor` at a 2px
+              offset -- drawn outside the pill, on cream -- and this pill's
+              current colour is white. White on cream is no ring at all, and
+              this is the pill Tab lands on first. `outline-ocean` matches the
+              fill, with the offset's 2px of cream between them to separate the
+              two. An unselected pill is `text-ocean` and gets that ring for
+              free.
             */
             className={`${TOUCH_TARGET} md:min-h-9 rounded-pill shrink-0 cursor-pointer px-4 text-2xs font-extrabold tracking-widest uppercase ${
               isShowing
-                ? "bg-ocean text-white underline decoration-2 underline-offset-4"
+                ? "focus-visible:outline-ocean bg-ocean text-white underline decoration-2 underline-offset-4"
                 : "bg-mist text-ocean"
             }`}
           >

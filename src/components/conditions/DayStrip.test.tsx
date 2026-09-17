@@ -146,6 +146,23 @@ test("the showing day is marked by more than its fill", () => {
 });
 
 /**
+ * The site's ring is `currentColor`, which on the filled pill is white -- and
+ * `outline-offset: 2px` draws it outside the pill, on cream. White on cream
+ * paints about 1.05:1, so Tab landed on this pill and showed nothing, measured
+ * on 2026-09-17 and visible in nothing. The selected pill names its ring
+ * colour instead, the way `BeachPins` does; an unselected pill is `text-ocean`
+ * already and inherits the right one.
+ */
+test("the showing pill's focus ring is not the colour of the ground", () => {
+  strip();
+
+  expect(pill("Today").className).toContain("focus-visible:outline-ocean");
+  expect(pill("Thu, Sep 3").className).not.toContain(
+    "focus-visible:outline-ocean",
+  );
+});
+
+/**
  * ADR-0027: a control mounts only once it can work. In the server render these
  * pills would be seven dead buttons for a reader with a blocked script, and
  * unlike `BeachSelector` -- whose `noscript` list of links does the same job in
