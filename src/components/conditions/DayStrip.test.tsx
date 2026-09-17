@@ -51,16 +51,53 @@ test("choosing a day writes it to the provider the week grid also reads", () => 
   expect(screen.getByText("selected: 2026-09-04")).toBeDefined();
 });
 
-test("the day being shown is the pressed one, and only that one", () => {
+/**
+ * `aria-current="date"`, which is the week grid's word for the same fact one
+ * region up. It was `aria-pressed` here until 2026-09-17: two controls writing
+ * one provider and announcing the choice two different ways, one as a toggle
+ * that is on and the other as the current item in a set. The set is right --
+ * seven days, one showing -- and the attribute is absent rather than "false"
+ * on the others, which is how `aria-current` is specified.
+ */
+test("the day being shown is the current one, and only that one", () => {
   strip();
 
-  expect(pill("Today").getAttribute("aria-pressed")).toBe("true");
-  expect(pill("Thu, Sep 3").getAttribute("aria-pressed")).toBe("false");
+  expect(pill("Today").getAttribute("aria-current")).toBe("date");
+  expect(pill("Thu, Sep 3").hasAttribute("aria-current")).toBe(false);
 
   fireEvent.click(pill("Thu, Sep 3"));
 
-  expect(pill("Today").getAttribute("aria-pressed")).toBe("false");
-  expect(pill("Thu, Sep 3").getAttribute("aria-pressed")).toBe("true");
+  expect(pill("Today").hasAttribute("aria-current")).toBe(false);
+  expect(pill("Thu, Sep 3").getAttribute("aria-current")).toBe("date");
+});
+
+/**
+ * One tab stop for the strip rather than seven, the way the chart's tab bar
+ * and its hour columns already behave: Tab lands on the showing pill, the
+ * arrow keys walk the week, and focus moves with the selection -- the half of
+ * a roving tabindex the chart was missing until the same day this was added.
+ */
+test("one tab stop for the strip, and the arrow keys walk it with focus", () => {
+  const { container } = strip();
+
+  const stops = [...container.querySelectorAll("button")].filter(
+    (button) => button.getAttribute("tabindex") === "0",
+  );
+  expect(stops).toEqual([pill("Today")]);
+
+  pill("Today").focus();
+  fireEvent.keyDown(pill("Today"), { key: "ArrowRight" });
+  expect(screen.getByText("selected: 2026-09-03")).toBeDefined();
+  expect(document.activeElement).toBe(pill("Thu, Sep 3"));
+  expect(pill("Thu, Sep 3").getAttribute("tabindex")).toBe("0");
+
+  // Stops rather than wrapping, which is the rule the chart's controls follow.
+  fireEvent.keyDown(pill("Thu, Sep 3"), { key: "End" });
+  expect(document.activeElement).toBe(pill("Fri, Sep 4"));
+  fireEvent.keyDown(pill("Fri, Sep 4"), { key: "ArrowRight" });
+  expect(document.activeElement).toBe(pill("Fri, Sep 4"));
+  fireEvent.keyDown(pill("Fri, Sep 4"), { key: "Home" });
+  expect(document.activeElement).toBe(pill("Today"));
 });
 
 /**
@@ -69,11 +106,11 @@ test("the day being shown is the pressed one, and only that one", () => {
  * shared precisely so the grid and the strip cannot resolve the default
  * differently on a page nobody has clicked.
  */
-test("before anything is chosen the first day is the pressed one", () => {
+test("before anything is chosen the first day is the current one", () => {
   strip();
 
   expect(screen.getByText("selected: none")).toBeDefined();
-  expect(pill("Today").getAttribute("aria-pressed")).toBe("true");
+  expect(pill("Today").getAttribute("aria-current")).toBe("date");
 });
 
 /**
@@ -86,10 +123,10 @@ test("before anything is chosen the first day is the pressed one", () => {
 test("outside the provider it renders and marks today rather than throwing", () => {
   render(<DayStrip days={DAYS} />);
 
-  expect(pill("Today").getAttribute("aria-pressed")).toBe("true");
+  expect(pill("Today").getAttribute("aria-current")).toBe("date");
   // The click is inert rather than fatal.
   fireEvent.click(pill("Fri, Sep 4"));
-  expect(pill("Today").getAttribute("aria-pressed")).toBe("true");
+  expect(pill("Today").getAttribute("aria-current")).toBe("date");
 });
 
 /**
