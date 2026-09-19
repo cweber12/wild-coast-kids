@@ -40,39 +40,6 @@ const TIDE_ROW: WeekRow = {
   },
 };
 
-const RESERVED = [
-  {
-    emoji: "🏄",
-    headline: "A wave forecast is coming.",
-    detail: "CDIP's MOP model publishes an hourly forecast about ten days out.",
-  },
-];
-
-/**
- * The band at the width it was laid out for.
- *
- * Three across is a rule about three, and asserting it needs three to assert it
- * against. The one-slot `RESERVED` above is what the page actually hands over
- * today, and the two fixtures are the two halves of the same claim: the band
- * takes the shape of what it holds.
- *
- * The first headline is shared with `RESERVED` so one helper finds the band in
- * both.
- */
-const RESERVED_THREE = [
-  RESERVED[0],
-  {
-    emoji: "🌡️",
-    headline: "A water temperature is coming.",
-    detail: "The buoy reports one, and the page does not carry it yet.",
-  },
-  {
-    emoji: "🏖️",
-    headline: "A surf zone forecast is coming.",
-    detail: "Rip current risk, issued for this stretch of coast.",
-  },
-];
-
 function renderGrid(overrides: Partial<Parameters<typeof WeekGrid>[0]> = {}) {
   return render(
     <WeekGrid
@@ -144,16 +111,23 @@ test("today is named in words, not carried by a colour alone", () => {
  * was hearing all along.
  */
 test("a row is named in words, with no glyph beside it", () => {
-  const { container } = renderGrid({ reserved: RESERVED });
+  const { container } = renderGrid();
 
-  expect(screen.getAllByText("Lowest tide").length).toBeGreaterThan(0);
-
-  // The reserved band below still carries one, so this cannot pass by the grid
-  // having rendered nothing at all.
-  const glyphs = [...container.querySelectorAll('[aria-hidden="true"]')].map(
+  // Exact, and the exactness is the assertion: a glyph in front of the label
+  // reads as `🐚 Lowest tide` here, and the ragged fixture gives this row two
+  // of the three days. Asserted on the label text rather than by sweeping the
+  // grid for `[aria-hidden="true"]`, which is how this read until the reserved
+  // band was deleted -- the band held the only glyph in the grid and was that
+  // sweep's positive control, so with it gone the sweep passes whether the
+  // labels are clean or the selector matches nothing. The label list cannot:
+  // an empty grid gives `[]`. It is also the stronger claim for what ADR-0015's
+  // amendment says, since it fails on a glyph whether or not it is hidden from
+  // a screen reader; what it gives up is the rest of the day block, where a
+  // glyph in a header or a cell value no longer fails here.
+  const labels = [...container.querySelectorAll("dt")].map(
     (node) => node.textContent,
   );
-  expect(glyphs).toEqual(["🏄"]);
+  expect(labels).toEqual(["Lowest tide", "Lowest tide"]);
 });
 
 test("label and value are a description list, so the pairing is structural", () => {
@@ -198,78 +172,12 @@ test("a product that could not fill a row says so once, not seven times", () => 
   ).toHaveLength(1);
 });
 
-test("what is not built yet is named rather than left silent", () => {
-  renderGrid({ reserved: RESERVED });
-
-  expect(screen.getByText(/A wave forecast is coming/)).toBeDefined();
-  expect(
-    screen.getByText(/MOP model publishes an hourly forecast/),
-  ).toBeDefined();
-});
-
 test("the week is a region a reader can navigate to by its heading", () => {
   const { container } = renderGrid();
 
   const section = container.querySelector("section");
   expect(section?.getAttribute("aria-labelledby")).toBe("week-heading");
   expect(screen.getByText("The week ahead").id).toBe("week-heading");
-});
-
-/** The slot's own box, reached through the copy the caller gave it. */
-function reservedSlot() {
-  return screen.getByText(/A wave forecast is coming/).closest("div");
-}
-
-test("the week's reserved slots take the row density, not the section one", () => {
-  renderGrid({ reserved: RESERVED });
-
-  // 244px of dashed box against 128px of live week was the finding.
-  // `ReservedSlot` owns the numbers; what this asserts is that the grid asks
-  // for the density sized to a row rather than reusing the section default.
-  expect(reservedSlot()?.className).toContain("py-5");
-  expect(reservedSlot()?.className).not.toContain("py-12");
-});
-
-test("the reserved band says it belongs to the week above it", () => {
-  renderGrid({ reserved: RESERVED });
-
-  // Without this the three dashed panels read as a separate thing sitting
-  // below the table rather than as rows the week is waiting for. The band
-  // stays where it is: a reserved product has no cells, so it cannot be a row
-  // until it exists, and one inside the `<ol>` would print seven times.
-  expect(
-    screen.getByText(
-      "Each of these will join the week above as a row of its own.",
-    ),
-  ).toBeDefined();
-});
-
-test("the reserved band steps at the same width the days do", () => {
-  // Three slots, because three across is what this asserts. It was written
-  // when `RESERVED` held three and kept passing when the array shrank to one,
-  // at which point it was asserting a three-column grid around a single box --
-  // the defect, pinned as if it were the contract.
-  renderGrid({ reserved: RESERVED_THREE });
-
-  // `lg` is where the days above first go wider than two. Three slots side by
-  // side from 640px gave roughly 26 characters over five ragged lines at 768,
-  // while the live week was still stacked full-width -- the page's own
-  // responsive logic disagreeing with itself in adjacent bands of one section.
-  const band = reservedSlot()?.parentElement;
-  expect(band?.className).toContain("lg:grid-cols-3");
-  expect(band?.className).not.toContain("sm:grid-cols-3");
-});
-
-test("a band holding one slot is not laid out for three", () => {
-  // At 1536 the three-column band renders a 472px dashed box with 968px empty
-  // to its right, directly under a full-width seven-column grid. The layout is
-  // still correct for the case it was written for -- three products, side by
-  // side -- and wrong for the case it is in, and nothing failed because a grid
-  // with one child is a valid grid.
-  renderGrid({ reserved: RESERVED });
-
-  expect(RESERVED).toHaveLength(1);
-  expect(reservedSlot()?.parentElement?.className).not.toContain("grid-cols-3");
 });
 
 /**

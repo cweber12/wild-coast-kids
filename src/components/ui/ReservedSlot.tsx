@@ -28,17 +28,24 @@ const TONES = {
  *
  * `section` is the original and stays the default. `px-8 py-12` with a 48px
  * glyph is right for a slot holding open a whole section — a schedule, a
- * scheduler embed, the conditions tool — and it is what five of the six call
+ * scheduler embed, the conditions tool — and it is what four of the five call
  * sites want, so none of them changes.
  *
  * `row` is for a slot standing in for one row of a grid that already exists
- * around it. At section density the week's three reserved forecasts measured
- * 244px against 128px of live week above them: three dashed boxes physically
- * larger than the seven days they annotate, and 21% of the page given to
- * products that do not exist yet. Nothing about the copy or the frame was
- * wrong. The padding and the glyph were sized for a different job, and reusing
- * them unchanged in a small space is the one place this component's reuse cost
- * something.
+ * around it. It was added for the week grid's reserved band, where at section
+ * density three forecasts measured 244px against 128px of live week above them:
+ * three dashed boxes physically larger than the seven days they annotate, and
+ * 21% of the page given to products that do not exist yet. Nothing about the
+ * copy or the frame was wrong. The padding and the glyph were sized for a
+ * different job, and reusing them unchanged in a small space is the one place
+ * this component's reuse cost something.
+ *
+ * **That band is gone** — every forecast it promised arrived as a row, and #253
+ * deleted the empty container behind it. The surviving `row` caller is the
+ * sighting slot inside the shore map's column (ADR-0031), which is the same
+ * shape of problem: a stand-in sized to sit inside content rather than instead
+ * of it. The measurement above is kept because it is why these numbers are
+ * these numbers, not because the band it was taken from still exists.
  */
 const DENSITIES = {
   section: { room: "px-8 py-12", glyph: "mb-3.5 text-5xl" },

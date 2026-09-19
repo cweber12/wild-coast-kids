@@ -41,7 +41,7 @@ _Avoid_: email list, mailing list, the community, the loop
 A labeled stand-in for content that has been decided on but not yet written or
 built — a schedule, a booking scheduler, the conditions tool. Renders as a
 dashed frame with an emoji and a "coming soon" line naming what lands there.
-It may stand **instead of** the content, which is where five of the six sit, or
+It may stand **instead of** the content, which is where four of the five sit, or
 **inside** content that already exists, holding open a layer of it rather than
 the whole — the sightings on the shore map (ADR-0031). Either way it names what
 lands there and never an issue number.
