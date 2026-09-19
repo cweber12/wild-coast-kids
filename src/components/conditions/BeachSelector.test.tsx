@@ -110,10 +110,10 @@ test("choosing the area navigates back out to it", () => {
 test("a beach without scripting is still reachable, as a link", () => {
   const markup = renderToStaticMarkup(selector());
 
-  expect(markup).toContain("<noscript>");
+  expect(markup).toContain("<noscript");
   // Two-sided: markup naming every beach twice would pass a bare `toContain`
   // whether or not the fallback exists, so the links must be inside it.
-  const fallback = markup.slice(markup.indexOf("<noscript>"));
+  const fallback = markup.slice(markup.indexOf("<noscript"));
   expect(fallback).toContain("/conditions/la-jolla/la-jolla-shores-beach");
   expect(fallback).toContain("/conditions/la-jolla/windansea-beach");
   expect(fallback).toContain("/conditions/la-jolla/bird-rock");
@@ -139,4 +139,24 @@ test("it carries no vertical margin of its own", () => {
   const { container } = render(selector());
 
   expect(container.firstElementChild?.className).not.toContain("mb-");
+});
+
+/**
+ * The same shape `AreaSelector` takes, for the same reason: without a script
+ * the fallback list rendered inside the label/select group's centred flex
+ * row, and the dead control floated halfway down eleven links. The root is
+ * `contents`, so the group and the list are both items of the bar's row and
+ * the list takes the full width to land under the controls.
+ */
+test("the fallback list sits beside the control group, not inside it", () => {
+  const markup = renderToStaticMarkup(selector());
+  const doc = new DOMParser().parseFromString(markup, "text/html");
+
+  const select = doc.querySelector("select")!;
+  const fallback = doc.querySelector("noscript")!;
+  expect(fallback.parentElement).toBe(select.parentElement!.parentElement);
+  expect(select.parentElement!.className).toContain("flex");
+  expect(fallback.parentElement!.className).toContain("contents");
+  // On the noscript, which is the flex item, not on the list inside it.
+  expect(fallback.className).toContain("w-full");
 });

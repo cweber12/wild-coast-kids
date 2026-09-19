@@ -77,8 +77,15 @@ export interface TideReading {
  * **Both can be null in only one direction.** `daylight` is null when no low
  * falls between sunrise and sunset, and `allDay` then carries the day's lowest
  * so the cell still has a figure. They are never both null: a day with no low
- * at all is `no-low`, which is a fact about the window this site asked NOAA
- * for.
+ * at all is `no-low`.
+ *
+ * **`no-low` is a fact about the sea, not about the request.** This file said
+ * the opposite until 2026-09-17. The tide on this coast runs diurnal for a few
+ * days at a time -- one low per lunar day of 24 h 50 min -- and a calendar date
+ * inside that stretch can hold no low turning point while the window asked for
+ * covers it entirely. `readTideWindow` asks for the whole week, so a short
+ * answer is not how this state is reached; `conditions.test.ts` reaches it
+ * from a diurnal fixture.
  */
 export interface TideLows {
   daylight: TideReading | null;
@@ -1037,9 +1044,10 @@ export interface WaveWeekDay extends WeekDayFrame {
  * feed.
  *
  * `week` CARRIES ONLY THE DAYS THE FORECAST REACHES, which is where this
- * differs from `TideWeekView`. A tide prediction runs years ahead, so a short
- * tide week is a fault and is named `no-low`; a forecast that stops on Sunday
- * is a forecast doing what forecasts do. The grid draws no cell where a row has
+ * differs from `TideWeekView`. A tide prediction runs years ahead, so the tide
+ * week is always seven days and a day with nothing in it is named (`no-low`, a
+ * diurnal date with no low turning point -- see `TideLows`); a forecast that
+ * stops on Sunday is a forecast doing what forecasts do. The grid draws no cell where a row has
  * none, which is exactly the shape a ragged row needs -- see `WeekGrid`.
  */
 export interface WaveWeekView {

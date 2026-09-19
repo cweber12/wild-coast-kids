@@ -6,6 +6,8 @@ import {
   DEFAULT_AREA_SLUG,
   beachesByArea,
   defaultArea,
+  openingBeachOf,
+  openingConditionsPath,
   surfZoneBeachOf,
 } from "./areas";
 import { allBeaches, surfZoneWithheldReason } from "./beaches";
@@ -179,6 +181,51 @@ describe("looking one area up", () => {
 
     vi.doUnmock("@/data/areas.json");
     vi.resetModules();
+  });
+});
+
+/**
+ * Where an area opens. Named on 2026-09-17 for four areas, because a
+ * multi-beach area's own view shares only what every member binds -- La
+ * Jolla's ten share a tide station and an air station and nothing else -- so
+ * the two entry points a reader uses, `/conditions` and the area chooser, land
+ * on a beach with figures rather than on a view of absences. The area URL is
+ * unchanged and the beach chooser's "All of" option still reaches it.
+ */
+describe("where an area opens", () => {
+  test("an area with a named default opens on it, at the nested URL", () => {
+    const area = areaBySlug("la-jolla")!;
+    expect(openingBeachOf(area)).toBe("la-jolla-shores-beach");
+    expect(openingConditionsPath(area)).toBe(
+      "/conditions/la-jolla/la-jolla-shores-beach",
+    );
+  });
+
+  test("an area of one opens on its beach, at the area's own URL", () => {
+    // The sole beach is served at the area's URL (see `canonicalConditionsPath`),
+    // so the opening path is the area's even though the opening beach is named.
+    const area = areaBySlug("del-mar")!;
+    expect(openingBeachOf(area)).toBe("del-mar-city-beach");
+    expect(openingConditionsPath(area)).toBe("/conditions/del-mar");
+  });
+
+  test("an area with neither opens on its own view", () => {
+    const area = areaBySlug("coronado")!;
+    expect(openingBeachOf(area)).toBeNull();
+    expect(openingConditionsPath(area)).toBe("/conditions/coronado");
+  });
+
+  test("the four defaults Cole named are the ones in the table", () => {
+    const defaults = beachesByArea()
+      .filter((group) => group.area.default_beach !== undefined)
+      .map((group) => [group.area.slug, group.area.default_beach]);
+
+    expect(defaults).toEqual([
+      ["la-jolla", "la-jolla-shores-beach"],
+      ["pacific-beach", "tourmaline-surfing-park"],
+      ["mission-bay-north", "mission-bay-leisure-lagoon"],
+      ["mission-bay-west", "mission-bay-sea-world"],
+    ]);
   });
 });
 

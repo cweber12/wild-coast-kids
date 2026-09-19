@@ -61,6 +61,21 @@ export function checkAreaPartition({ areas, beaches }) {
   }
 
   /** Which area claimed each beach, so a double claim can name both. @type {Map<string, string[]>} */
+  // A default beach is where an area opens -- from /conditions and from the
+  // area chooser -- so one that is not a member would open the area on a
+  // beach outside it. Optional: an area without one opens on its own view.
+  for (const area of areas) {
+    if (
+      area.default_beach !== undefined &&
+      !area.beaches.includes(area.default_beach)
+    ) {
+      problems.push(
+        `area ${JSON.stringify(area.slug)} opens on ${JSON.stringify(area.default_beach)}, ` +
+          `which is not one of its beaches`,
+      );
+    }
+  }
+
   const claims = new Map();
   for (const area of areas) {
     for (const slug of area.beaches) {
