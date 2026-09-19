@@ -2,8 +2,6 @@ import { describe, expect, test } from "vitest";
 import {
   allBeaches,
   beachBySlug,
-  DEFAULT_BEACH_SLUG,
-  defaultBeach,
   inventoryCaveats,
   inventoryReach,
   airStationFor,
@@ -12,6 +10,18 @@ import {
   tideStationFor,
   waveBuoyFor,
 } from "./beaches";
+
+/**
+ * La Jolla Shores, the fixture beach: central, 1.4 km from its station, and
+ * bound by every join, so a test about one binding can start from a beach that
+ * has it. It was `DEFAULT_BEACH_SLUG` until 2026-09-17, when the beach the tool
+ * opens on became a row in `areas.json`; a fixture is not a default.
+ */
+const SHORES = "la-jolla-shores-beach";
+
+function shores() {
+  return beachBySlug(SHORES)!;
+}
 
 describe("the inventory", () => {
   test("holds only the beaches the station networks reach", () => {
@@ -142,7 +152,7 @@ describe("a beach", () => {
   });
 
   test("reproduces upstream's values, including the unknown one", () => {
-    const beach = beachBySlug(DEFAULT_BEACH_SLUG)!;
+    const beach = shores();
     expect(beach.upstream.usepa_id).toBe("CA876094");
     expect(beach.upstream.water_body_type).toBe("Open Coast");
     expect(beach.upstream.beach_access).toBe("PUBLIC");
@@ -154,7 +164,7 @@ describe("a beach", () => {
 
 describe("the tide station binding", () => {
   test("resolves with its water class and the distance the join measured", () => {
-    const beach = beachBySlug(DEFAULT_BEACH_SLUG)!;
+    const beach = shores();
     const station = tideStationFor(beach)!;
 
     expect(station.id).toBe("9410230");
@@ -224,13 +234,13 @@ describe("the tide station binding", () => {
     // No beach in the inventory has one. The field is still written by a join
     // that can fail, so the reader of the data file validates rather than
     // trusts, and conditions.ts still has a state to render if one ever does.
-    const beach = { ...defaultBeach(), tide_station: null };
+    const beach = { ...shores(), tide_station: null };
     expect(tideStationFor(beach)).toBeNull();
   });
 
   test("a beach naming an undescribed station is a broken data file, and says so", () => {
     const beach = {
-      ...beachBySlug(DEFAULT_BEACH_SLUG)!,
+      ...shores(),
       tide_station: "9999999",
     };
     expect(() => tideStationFor(beach)).toThrow(
@@ -247,14 +257,6 @@ describe("the tide station binding", () => {
   the behaviour this change removes -- Childrens Pool now sits in La Jolla, with
   the beaches either side of it, rather than with a wildlife refuge 19 km away.
 */
-
-describe("the default beach", () => {
-  test("is in the inventory and has a station", () => {
-    const beach = defaultBeach();
-    expect(beach.slug).toBe(DEFAULT_BEACH_SLUG);
-    expect(tideStationFor(beach)).not.toBeNull();
-  });
-});
 
 describe("caveats", () => {
   test("carry both data files' unresolved entries", () => {
@@ -357,7 +359,7 @@ describe("the MOP line binding", () => {
   });
 
   test("a beach naming an undescribed line is a broken data file, and says so", () => {
-    const beach = { ...defaultBeach(), mop_line: "D9999" };
+    const beach = { ...shores(), mop_line: "D9999" };
     expect(() => mopLineFor(beach)).toThrow(/no entry in mop-lines.json/);
   });
 
@@ -397,7 +399,7 @@ describe("the wave buoy binding", () => {
   });
 
   test("a beach naming an undescribed buoy is a broken data file, and says so", () => {
-    const beach = { ...defaultBeach(), wave_buoy: "99999" };
+    const beach = { ...shores(), wave_buoy: "99999" };
     expect(() => waveBuoyFor(beach)).toThrow(/no entry in wave-buoys.json/);
   });
 
@@ -580,7 +582,7 @@ describe("which beaches the surf zone forecast describes", () => {
   */
 
   test("an open-coast beach is not withheld", () => {
-    expect(surfZoneWithheldReason(beachBySlug(DEFAULT_BEACH_SLUG)!)).toBeNull();
+    expect(surfZoneWithheldReason(shores())).toBeNull();
   });
 
   /**

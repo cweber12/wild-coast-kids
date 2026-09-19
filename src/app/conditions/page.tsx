@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { ConditionsSection } from "@/components/conditions/ConditionsSection";
-import { DEFAULT_AREA_SLUG, defaultArea } from "@/lib/areas";
+import { DEFAULT_AREA_SLUG, defaultArea, openingBeachOf } from "@/lib/areas";
 
 export const metadata: Metadata = {
   title: "Conditions",
@@ -34,13 +34,20 @@ export const revalidate = 900;
 export default function Conditions() {
   // Asserts the named default is still in areas.json, which is written by hand.
   // A rename there should stop a build rather than render a page about nothing.
-  // It opened on a beach until 2026-09-02; the tool is about areas now, so the
-  // door it opens is an area's.
-  defaultArea();
+  //
+  // The door it opens is the area's default beach. It opened on the area's own
+  // view from 2026-09-02 to 2026-09-17, and that view is what ten beaches share
+  // -- a tide station and an air station -- so the tool's front door showed
+  // its emptiest room. `openingBeachOf` says which beach and why; the area
+  // view keeps its own URL and the beach chooser's "All of" option reaches it.
+  const area = defaultArea();
 
   return (
     <main className="flex-1">
-      <ConditionsSection areaSlug={DEFAULT_AREA_SLUG} beachSlug={null} />
+      <ConditionsSection
+        areaSlug={DEFAULT_AREA_SLUG}
+        beachSlug={openingBeachOf(area)}
+      />
     </main>
   );
 }
