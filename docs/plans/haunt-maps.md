@@ -407,3 +407,55 @@ map and their data is positioned in longitude and latitude rather than into a
 fixed frame. Marine protected areas, a dozen small polygons county-wide, need no
 haunt to be drawn; substrate, sightings and the water line are still cut and
 keyed per haunt. Sub-project 1 is unchanged except that its link leads here.
+
+## Addendum — 2026-09-19 (second): the map first, haunts and sightings last
+
+Cole, once the issues were open: haunts and species sightings come last.
+
+That is a change of order and not of design, and it is possible only because of
+the first addendum. With a fixed-frame haunt page the haunt _was_ the map; with
+one map that pans and zooms, the map stands without any haunt in it.
+
+### The order now
+
+| #   | Sub-project                 | Needs                                          |
+| --- | --------------------------- | ---------------------------------------------- |
+| 1   | The shore map as a locator  | —                                              |
+| 2   | The map that pans and zooms | —                                              |
+| 3   | Marine protected areas      | 2, for the boundary; nothing, for the sentence |
+| 4   | Substrate                   | 2                                              |
+| 5   | The water line              | 4 and Spike 2 — and see below                  |
+| 6   | Haunts in the map           | 2                                              |
+| 7   | What lives here, and when   | 6                                              |
+
+Sub-project 2 splits in two: the map is 2 and the haunts are 6. The tracer
+bullet is now "one beach opens in a map that pans and zooms", with beaches as its
+pins.
+
+### What this costs, said plainly
+
+**Until sub-project 6 the map stops at the free tiles' ceiling — about 2 m a
+pixel, a neighbourhood and not a tidepool.** Of Cole's three complaints, "hard
+to connect to the real place" is answered by sub-projects 1 and 2; "does not
+show enough" is answered only in part until the haunts bring their fine
+photographs. That is the trade being made, knowingly: the map, the reserves and
+the rock arrive sooner, and the detail arrives last.
+
+**Substrate can no longer be cut to haunt frames**, because there are none when
+it is built. It is cut to a corridor along the inventory's coast instead, and
+its size is a question for its own probe. Drawn at 2 m a pixel it is a
+classified shoreline rather than a shaded bench; it sharpens for free when the
+haunts arrive.
+
+**Whether the water line can come before the haunts is for Spike 2 to say.** On
+a wide bench the line moves tens of metres — 5 to 25 pixels at the tiles'
+ceiling — which may be legible; on a steep shore it will not be. If the spike
+finds it only reads over a haunt's fine photograph, sub-project 5 moves behind
+6 and this table is amended again. It is not decided here.
+
+**Sightings stay keyed by haunt**, which is why they are last and not merely
+late. The alternative — keying them by beach so they could come earlier — blends
+Hospitals and Bird Rock into one list along a 5 km "beach", which is the thing
+the haunt exists to prevent.
+
+Nothing in _Decisions_ or in the first addendum is withdrawn.
