@@ -3,7 +3,13 @@ import { render, screen } from "@testing-library/react";
 import { projectionFor } from "@/lib/coastline";
 import { beachesByArea } from "@/lib/areas";
 import { shoreViewForArea } from "./shore";
-import { BeachPins, inlineFits, type PinnedBeach } from "./BeachPins";
+import {
+  BeachPinList,
+  BeachPins,
+  inlineFits,
+  type PinnedBeach,
+} from "./BeachPins";
+import { TOUCH_TARGET } from "../ui/touchTarget";
 
 /** A beach at a given row of the plot, which is all either placement reads. */
 function at(y: number, name = `Beach at ${y}`): PinnedBeach {
@@ -128,7 +134,13 @@ test("beside the beach, a pin is one link carrying the glyph and the name", () =
   }
   // Nothing is carried anywhere, so there is nothing to lead the eye to.
   expect(container.querySelectorAll("[data-leader]")).toHaveLength(0);
-  expect(container.querySelectorAll("[data-dot]")).toHaveLength(0);
+  // A dot per beach, for the phone, where the label is not on the map and
+  // the dot is what marks the place. Hidden from `md`, where the label is.
+  const dots = [...container.querySelectorAll("[data-dot]")];
+  expect(dots).toHaveLength(2);
+  for (const dot of dots) {
+    expect(dot.closest("svg")!.getAttribute("class")).toContain("md:hidden");
+  }
 });
 
 test("in a column, every beach keeps a named link and gains a leader", () => {
@@ -142,6 +154,55 @@ test("in a column, every beach keeps a named link and gains a leader", () => {
   }
   expect(container.querySelectorAll("[data-leader]")).toHaveLength(3);
   expect(container.querySelectorAll("[data-dot]")).toHaveLength(3);
+  // A leader runs to a label, and below `md` the label is not on the map.
+  for (const leader of container.querySelectorAll("[data-leader]")) {
+    expect(leader.getAttribute("class")).toContain("hidden");
+    expect(leader.getAttribute("class")).toContain("md:block");
+  }
+});
+
+/**
+ * ADR-0004's 44px floor, and the shape it takes on a map.
+ *
+ * An on-map label is a 24px anchor at every width, and cannot be 44: ten of
+ * them in a column are 440px against a 327px map at 375, and beside the
+ * beaches they would overlap wherever two beaches sit closer than 44px. So
+ * below `md` the labels leave the map for a list beneath it, at 44px a row,
+ * and the map keeps its dots. `display: none` removes the hidden set from the
+ * accessibility tree, so exactly one set of links is exposed at a time and no
+ * beach is announced twice. Audited 2026-09-17.
+ */
+test("on the map, a label is for md and up; the list beneath is for a phone", () => {
+  const marks = [at(10, "North Beach"), at(40, "South Beach")];
+  const { container } = render(<BeachPins marks={marks} />);
+
+  for (const link of container.querySelectorAll("a")) {
+    expect(link.className).toContain("hidden");
+    expect(link.className).toContain("md:flex");
+  }
+});
+
+test("the list names every beach north to south, at the touch floor, for a phone only", () => {
+  const marks = [at(40, "South Beach"), at(10, "North Beach")];
+  const { container } = render(<BeachPinList marks={marks} />);
+
+  const list = container.querySelector("[data-pin-list]")!;
+  expect(list.className).toContain("md:hidden");
+
+  const links = [...list.querySelectorAll("a")];
+  expect(links.map((link) => link.textContent?.trim())).toEqual([
+    "North Beach",
+    "South Beach",
+  ]);
+  for (const link of links) {
+    expect(link.getAttribute("href")).toMatch(/^\/conditions\/here\//);
+    expect(link.className).toContain(TOUCH_TARGET);
+  }
+});
+
+test("a beach map gets no list either", () => {
+  const { container } = render(<BeachPinList marks={[]} />);
+  expect(container.innerHTML).toBe("");
 });
 
 /**

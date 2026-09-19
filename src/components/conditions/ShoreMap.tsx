@@ -45,7 +45,7 @@
 import type { ReactNode } from "react";
 import type { Bounds, Position, ShorePoint } from "@/lib/coastline";
 import { projectionFor } from "@/lib/coastline";
-import { BeachPins } from "./BeachPins";
+import { BeachPinList, BeachPins } from "./BeachPins";
 import { seaWash } from "./wash";
 
 /**
@@ -354,6 +354,14 @@ export function ShoreMap({
         */}
         <BeachPins marks={pins} />
       </div>
+
+      {/*
+        The same beaches as a list, for a phone, where the labels are not on
+        the map: an on-map label is 24px and ADR-0004 asks for 44. Under the
+        picture and outside the frame's graphic for the reason the pins are.
+        See `BeachPinList`.
+      */}
+      <BeachPinList marks={pins} />
 
       {/*
         Under the picture rather than over it, which is ADR-0038 reversing

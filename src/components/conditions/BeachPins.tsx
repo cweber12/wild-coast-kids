@@ -26,6 +26,7 @@
  */
 
 import type { CSSProperties } from "react";
+import { TOUCH_TARGET } from "../ui/touchTarget";
 
 import type { PlotPoint } from "@/lib/coastline";
 
@@ -199,10 +200,19 @@ function PinLink({
   style: CSSProperties;
 }) {
   return (
+    /*
+      `hidden md:flex`: on a phone the label is not on the map at all. It is a
+      24px anchor and cannot be the 44px ADR-0004 asks for -- ten of them in a
+      column are 440px against a 327px map at 375, and beside the beaches they
+      would overlap wherever two sit closer than 44px. So below `md` the names
+      go to `BeachPinList` under the picture and the map keeps its dots.
+      `display: none` takes this anchor out of the accessibility tree there,
+      so a beach is never announced twice.
+    */
     <a
       href={beach.href}
       data-pin=""
-      className={`text-dark focus-visible:outline-ocean group absolute flex items-center gap-1 rounded focus-visible:outline-2 focus-visible:outline-offset-2 ${pill ? "bg-white/90 pr-1" : ""} ${className}`}
+      className={`text-dark focus-visible:outline-ocean group absolute hidden items-center gap-1 rounded focus-visible:outline-2 focus-visible:outline-offset-2 md:flex ${pill ? "bg-white/90 pr-1" : ""} ${className}`}
       style={style}
     >
       <span
@@ -239,6 +249,30 @@ function PinLink({
 function Inline({ marks }: { marks: readonly PinnedBeach[] }) {
   return (
     <>
+      {/*
+        The phone's marks. Beside the beach the label is its own marker, and
+        below `md` the label is not on the map (see `PinLink`), so the place
+        would go unmarked. A dot per beach, the column's own, drawn only where
+        the labels are not.
+      */}
+      <svg
+        viewBox="0 0 100 100"
+        preserveAspectRatio="none"
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-0 h-full w-full md:hidden"
+      >
+        {marks.map((beach) => (
+          <circle
+            key={beach.href}
+            cx={beach.at.x}
+            cy={beach.at.y}
+            r={1}
+            className="fill-purple-deep"
+            data-dot=""
+          />
+        ))}
+      </svg>
+
       {marks.map((beach) => {
         const toLeft = beach.at.x > 50;
         return (
@@ -309,7 +343,9 @@ function Column({ marks }: { marks: readonly PinnedBeach[] }) {
             y1={beach.at.y}
             x2={anchorX}
             y2={rows[index]}
-            className="stroke-purple-deep/40"
+            // A leader runs to a label, and below `md` the label is not on the
+            // map -- a line to nowhere would read as a stray stroke.
+            className="stroke-purple-deep/40 hidden md:block"
             strokeWidth={1}
             vectorEffect="non-scaling-stroke"
             data-leader=""
@@ -364,5 +400,47 @@ export function BeachPins({ marks }: { marks: readonly PinnedBeach[] }) {
     <Inline marks={marks} />
   ) : (
     <Column marks={marks} />
+  );
+}
+
+/**
+ * The phone's copy of the pins: the names as a list under the picture.
+ *
+ * **Why a list and not a bigger label.** ADR-0004 puts a 44px floor under
+ * every tap target below `md`, and an on-map label cannot meet it: ten in a
+ * column are 440px against a 327px map at 375, and beside the beaches they
+ * would overlap wherever two beaches sit closer than 44px, which on this coast
+ * is most pairs. So below `md` the labels leave the map (`PinLink` is
+ * `hidden md:flex`), the map keeps a dot per beach, and this list names them
+ * at 44px a row. From `md` the list is `hidden` and the labels are back on the
+ * map. `display: none` removes whichever set is hidden from the accessibility
+ * tree, so exactly one set of links is exposed at a time. Audited 2026-09-17.
+ *
+ * **North to south, which is the column's order and the inventory's.** The
+ * dots on the map carry no names, so the list's order is what lets a reader
+ * match a dot to a row: the first row is the northernmost dot.
+ *
+ * No glyph: on the map the glyph is a marker and the list has the dots for
+ * that. A `ShoreMap` with no marks -- every beach map -- renders no list, the
+ * same condition the pins have always applied.
+ */
+export function BeachPinList({ marks }: { marks: readonly PinnedBeach[] }) {
+  if (marks.length === 0) return null;
+
+  const sorted = [...marks].sort((a, b) => a.at.y - b.at.y);
+
+  return (
+    <ul className="mt-3 md:hidden" data-pin-list="">
+      {sorted.map((beach) => (
+        <li key={beach.href}>
+          <a
+            href={beach.href}
+            className={`${TOUCH_TARGET} flex items-center text-base font-semibold text-dark underline-offset-2 hover:underline`}
+          >
+            {beach.name}
+          </a>
+        </li>
+      ))}
+    </ul>
   );
 }
