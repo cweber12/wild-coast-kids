@@ -571,7 +571,7 @@ export function WeekGrid({
                 134px is `MIN_SPARK_BLOCK_PX`, written out because Tailwind
                 scans source text and cannot read a constant. The pair is held
                 together from the other side: a test asserts the constant is
-                still 137, and the `stylesheet` gate asserts this class
+                still 134, and the `stylesheet` gate asserts this class
                 compiled to a real rule. Neither alone is enough -- an
                 unregistered variant leaves the class in the markup where jsdom
                 still finds it, so the component tests cannot see it fail.

@@ -686,7 +686,7 @@ test("a day given no shape renders the cell it rendered before there were any", 
  * ========================================================================= */
 
 test("the container threshold in the markup is the measured floor plus the cell's chrome", () => {
-  // Tailwind scans source text, so the class carries the literal `137` and
+  // Tailwind scans source text, so the class carries the literal `134` and
   // cannot read this constant. This assertion is the other half of that pair:
   // change the measured floor or the wrapper's padding and it fails here, naming
   // the number the class has to become. The `stylesheet` gate asserts the other
