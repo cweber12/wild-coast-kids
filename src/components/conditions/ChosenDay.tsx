@@ -163,18 +163,27 @@ export function ChosenDay({
       */}
       {/*
         When and where, side by side, which is the brief's third principle as a
-        layout: "time on the left, place on the right". Two thirds and one third
-        from `xl`, because the chart plots twenty-four hours and needs the width
-        while the map is square.
+        layout: "time on the left, place on the right". Two columns of three
+        for the chart and one for the map from `xl`, because the chart plots
+        twenty-four hours and needs the width while the map is square.
 
-        Below `xl` they stack, chart first. The map does not go full width when
-        it does: it is square, so a 1,184px column would draw a 1,184px-tall
-        picture and push the rip current block off the screen entirely. Capping
-        the width is what "the map beneath at a reduced height" comes to for a
-        shape that is as tall as it is wide.
+        **A grid with the map spanning both rows, not a flex row.** As a flex
+        row of two columns the chart column ended about 300px above the map
+        column on every page -- the map is square and carries a caption and a
+        reserved slot beneath it -- and the rip block sat below both, leaving
+        that much blank beside the map. Measured on 2026-09-17. The rip block
+        is the grid's third item now and takes the chart's two columns on the
+        second row, under the chart, where the void was.
+
+        Below `xl` the grid is a stack and nothing about it has changed: chart,
+        then the map, then the rip block, in markup order. The map does not go
+        full width when it stacks: it is square, so a 1,184px column would draw
+        a 1,184px-tall picture and push the rip current block off the screen
+        entirely. Capping the width is what "the map beneath at a reduced
+        height" comes to for a shape that is as tall as it is wide.
       */}
-      <div className="xl:flex xl:items-start xl:gap-6">
-        <div className="min-w-0 xl:basis-2/3">
+      <div className="xl:grid xl:grid-cols-3 xl:items-start xl:gap-6">
+        <div className="min-w-0 xl:col-span-2">
           <HourChart
             startMs={day.startMs}
             endMs={day.endMs}
@@ -187,25 +196,26 @@ export function ChosenDay({
             nowMs={day.nowMs}
           />
         </div>
-        <div className="mx-auto mt-6 w-full max-w-sm min-w-0 xl:mt-0 xl:max-w-none xl:basis-1/3">
+        <div className="mx-auto mt-6 w-full max-w-sm min-w-0 xl:col-start-3 xl:row-span-2 xl:mt-0 xl:max-w-none">
           {map}
         </div>
+
+        {/*
+          Last, which is reading order rather than layout convenience: the sky
+          in words, then the day's shape, then what the forecaster judges. The
+          instruments are no longer below it -- they are at the top of the
+          page, ahead of all three, which is what the standing notice beside
+          them already implies: the numbers are not a safety assessment and
+          the authority is someone else's.
+
+          Below the chart and not above it, because this is several lines on
+          the days the bulletin reaches and one line on the days it does not,
+          so putting it above would move the plot up and down the page as a
+          reader steps across the week. From `xl` it is under the chart in the
+          chart's own columns, which is the same place with the map beside it.
+        */}
+        <div className="mt-6 xl:col-span-2 xl:col-start-1">{day.surfZone}</div>
       </div>
-
-      {/*
-        Last, which is reading order rather than layout convenience: the sky in
-        words, then the day's shape, then what the forecaster judges. The
-        instruments are no longer below it -- they are at the top of the page,
-        ahead of all three, which is what the standing notice beside them
-        already implies: the numbers are not a safety assessment and the
-        authority is someone else's.
-
-        Below the chart and not above it, because this is several lines on the
-        days the bulletin reaches and one line on the days it does not, so
-        putting it above would move the plot up and down the page as a reader
-        steps across the week.
-      */}
-      <div className="mt-6">{day.surfZone}</div>
     </>
   );
 }

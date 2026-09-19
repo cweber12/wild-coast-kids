@@ -190,6 +190,18 @@ test("the showing day is marked by more than its fill", () => {
  * colour instead, the way `BeachPins` does; an unselected pill is `text-ocean`
  * already and inherits the right one.
  */
+/**
+ * A pointer over a pill it could choose sees it tint, the way the chart's
+ * tabs already answer a hover. Audited 2026-09-17: the cursor changed and the
+ * pill did not. The showing pill is filled already and answers nothing.
+ */
+test("a pill a reader could choose answers a hover, and the showing one does not", () => {
+  strip();
+
+  expect(pill("Thu, Sep 3").className).toContain("hover:bg-lavender");
+  expect(pill("Today").className).not.toContain("hover:");
+});
+
 test("the showing pill's focus ring is not the colour of the ground", () => {
   strip();
 

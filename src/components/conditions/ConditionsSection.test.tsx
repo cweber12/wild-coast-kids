@@ -721,3 +721,16 @@ test("the rip level's rule is drawn only where it shares a row with the readings
   expect(wrapper.className).toContain("xl:pl-6");
   expect(wrapper.className).not.toContain("lg:border-l");
 });
+
+/**
+ * The tool's own `<section>` is a landmark named by its wordmark, so a reader
+ * navigating by region hears "Conditions" and not an anonymous region holding
+ * three named ones. It carried no name until 2026-09-17.
+ */
+test("the tool's section is a region named by its wordmark", () => {
+  render(<ConditionsSection areaSlug={DEFAULT_AREA} beachSlug={SHORES} />);
+
+  const region = screen.getByRole("region", { name: "Conditions" });
+  expect(region.tagName).toBe("SECTION");
+  expect(region.contains(screen.getByRole("heading", { level: 1 }))).toBe(true);
+});

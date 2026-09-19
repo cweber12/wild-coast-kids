@@ -6,7 +6,7 @@ import {
 } from "@testing-library/react";
 import { renderToStaticMarkup } from "react-dom/server";
 import type { ReactElement } from "react";
-import { HourChart, NARROW_FRAME } from "./HourChart";
+import { HourChart, NARROW_FRAME, PLOT_FRAME } from "./HourChart";
 import { SelectedHourProvider } from "./selectedHour";
 import { TOUCH_TARGET } from "../ui/touchTarget";
 import type { SparkPoint } from "./DaySpark";
@@ -971,6 +971,27 @@ describe("the tabs", () => {
     expect(screen.getByText(SWELL.absence)).toBeDefined();
     expect(container.querySelector("[data-curve]")).toBeNull();
     expect(container.querySelector('[data-series-tab="tide"]')).not.toBeNull();
+  });
+
+  /**
+   * A quiet tab keeps the plot's height as well as its bar. On an area page
+   * the swell, wind and temperature tabs are all quiet, and choosing one
+   * collapsed a 261px plot to a two-line sentence: the tile shrank by about
+   * 250px beside a square map that did not, and the rip block below jumped up
+   * to meet it. Measured on 2026-09-17. The sentence sits in a box with the
+   * plot's own proportions, so stepping across the tabs moves nothing.
+   */
+  test("a quiet tab keeps the plot's proportions, so the tile does not collapse", () => {
+    const { container } = render(
+      <HourChart {...TABBED} series={[TIDE, { ...SWELL, points: [] }]} />,
+    );
+
+    fireEvent.click(container.querySelector('[data-series-tab="swell"]')!);
+
+    const panel = container.querySelector('[role="tabpanel"]')!;
+    expect(panel.className).toContain(PLOT_FRAME);
+    expect(PLOT_FRAME).toContain(NARROW_FRAME);
+    expect(PLOT_FRAME).toContain("sm:aspect-[720/220]");
   });
 
   test("a quiet tab draws no cloud band either, so nothing frames an empty frame", () => {
