@@ -286,3 +286,124 @@ Open for Cole and Lena: whether the Children's Pool belongs as a fourth kind
 (seal watching, with its seasonal closure); whether any Mission Bay or San Diego
 Bay beach holds a haunt at all; and which of these you would actually send a
 family to.
+
+## Addendum — 2026-09-19: one map that zooms, and no drawn sea over a photograph
+
+Two things changed the same day the plan was written, before any code. Both are
+recorded here rather than by rewriting the sections above, which stay as the
+record of what was first decided and why.
+
+### What Spike 1 found (#261)
+
+Three 700 m frames — La Jolla Cove, Bird Rock, La Jolla Shores — with
+`shoreline.json` projected over a NAIP export of the same box.
+
+**Registration holds.** A box square in metres, longitude carrying the cosine of
+the mid-latitude, requested in EPSG:4326 at a square pixel size, puts the traced
+line on the photographed coast's shape in all three frames with no reprojection.
+
+**"The land is a photograph and the sea is drawn" does not hold.** The traced
+shoreline is a terrestrial boundary, as it has always said of itself: at Bird
+Rock it runs along the back of the bench, 40–60 m from the photographed water;
+at the Shores it runs through the middle of the dry sand, 60–80 m from the
+swash; at the Cove it is mostly within 5–15 m and steps 20–30 m over open water
+at the point. A wash closed on it would paint the Bird Rock bench — the
+tidepools — as sea. Figures read from the overlays' scale bars; the spike's
+automatic edge detector misfired and its numbers are not to be quoted.
+
+**And the rejection of the photographed sea was wrong at this scale.** The
+mosaic seam was in a 2.2 km frame; none of the three 700 m frames has one, and
+the photographed water is the most informative part of the Bird Rock picture.
+A seam is a per-haunt check when the photograph is cut.
+
+### What Cole asked next, and what the probe said
+
+"What if, instead of haunts, users can just zoom in?" A haunt does two jobs:
+it frames tightly enough for a photograph to pay, and it curates — names the
+good part of a long beach and gives the sightings, substrate and water-line data
+something to be keyed by. Zoom replaces the first job and not the second.
+
+Probed the same day:
+
+- USGS `basemap.nationalmap.gov/.../USGSImageryOnly/MapServer` serves 256px
+  Web Mercator tiles, public domain, no key, `max-age=86400`, 40–100 ms each —
+  **and stops at level 16**, about 2 m per pixel here. Levels 17–19 return 404
+  although the service advertises lods to 23. At 2 m the Bird Rock bench is 25
+  pixels wide and, in that vintage, under glare: a neighbourhood, not a
+  tidepool.
+- The NAIP ImageServer that does reach 0.3 m renders on request: five tile-sized
+  exports took 0.5, 0.6, 0.9, 6.3 and 8.9 s. Unusable live.
+
+Cole's reasons for asking were that the authored list felt heavy and that people
+will expect to pinch a map. Not that detail is wanted everywhere — which would
+have meant paid tiles and was not chosen.
+
+### Decisions, superseding the ones above where they conflict
+
+**One map that pans and zooms, used at three scales.** An area page opens it on
+the area, a beach page on the beach, a haunt page on the haunt: one component,
+three initial views, different words beside it. The shore map in the day panel
+is untouched by this and is still sub-project 1's locator; it links in.
+
+**Free USGS tiles are the ground, to their ceiling.** The map page now reads a
+feed from the reader's browser, which the shore map never did. If tiles fail the
+pins and layers still draw, and the page says the imagery is unavailable rather
+than showing a grey square in silence.
+
+**A haunt supplies the detail the tiles cannot.** Its photograph is cut ahead of
+time at fine resolution in Web Mercator, committed, and laid into the same map
+as a georeferenced overlay, so zooming in on a haunt sharpens and zooming in
+anywhere else stops at the tiles' ceiling.
+
+**A haunt slims to a line**: name, point, kind, parent beach. Its frame defaults
+to a square about the point and may be overridden. Landmarks and a readout
+corner leave the haunt's entry — the first because the tiles show the streets,
+the second because of the next decision.
+
+**No sea wash and no traced shoreline on this map.** Spike 1's finding, made
+moot as well as decided: a tile map has neither.
+
+**The readout is a fixed corner panel inside the map.** ADR-0034 rejected a
+fixed corner because it covered the coast; a reader who can pan is not held to
+what a corner covers. It needs a ground behind it over imagery, measured from
+painted pixels.
+
+**Leaflet carries the panning and zooming.** 1.9.4, BSD-2-Clause, no
+dependencies of its own, 42.7 KB of script and 3.5 KB of styles gzipped
+(measured), loaded only on map pages. This needs an ADR, and the ADR's argument
+is that ADR-0025's reasons are about plots: "the largest thing drawn is a few
+hundred points" is no longer true of this map; panning cannot happen on the
+server whoever writes it; Leaflet draws DOM — image tiles, SVG, focusable
+markers — not the canvas ADR-0025 objects to; and it is one package, not the
+first module of six. **ADR-0025 stands for every chart and for the shore map.**
+The new rule is narrow: a map that pans and zooms may carry a library.
+
+**Leaflet is kept at the edge.** Every layer is a pure function from committed
+data to shapes in longitude and latitude, asserted without Leaflet or the DOM.
+One component touches the library. Leaving it means rewriting that component.
+
+### Considered and rejected, in this addendum
+
+**Hand-rolled panning and zooming.** The repo's habit. Rejected: gesture code —
+the pinch centre, one-finger pan against page scroll, momentum — works at a desk
+and fails on a phone, and no gate row can see it. It would be a small map
+library maintained here.
+
+**Zoom by buttons that are links**, every view drawn on the server. No library.
+Rejected: the reason for zooming at all was that people expect to pinch.
+
+**Paid tiles to full depth everywhere.** What a reader expects of a map, and
+what "detail everywhere" would need. Not chosen: an account, a key, a provider's
+terms, and every layer drawn at every scale. Reopen it if the 2 m ceiling
+between haunts turns out to be the complaint.
+
+**Zoom instead of haunts.** Rejected by the tile ceiling and by the second job.
+
+### What this does to the order
+
+Sub-project 2 becomes "one zoomable map and one haunt, end to end" and is no
+longer blocked by Spike 1, which is done. Sub-projects 3–6 draw into the same
+map and their data is positioned in longitude and latitude rather than into a
+fixed frame. Marine protected areas, a dozen small polygons county-wide, need no
+haunt to be drawn; substrate, sightings and the water line are still cut and
+keyed per haunt. Sub-project 1 is unchanged except that its link leads here.
