@@ -7,10 +7,24 @@ import { TOUCH_TARGET } from "../ui/touchTarget";
 const push = vi.fn();
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push }) }));
 
+/**
+ * Each area comes with where it opens, composed by the section rather than by
+ * this control: an area with a named default beach opens on that beach's URL,
+ * one without opens on its own. This control navigates to whatever it is
+ * handed and knows nothing about why.
+ */
 const AREAS = [
-  { slug: "la-jolla", name: "La Jolla" },
-  { slug: "mission-bay-west", name: "Mission Bay – West" },
-  { slug: "ocean-beach", name: "Ocean Beach" },
+  {
+    slug: "la-jolla",
+    name: "La Jolla",
+    href: "/conditions/la-jolla/la-jolla-shores-beach",
+  },
+  {
+    slug: "mission-bay-west",
+    name: "Mission Bay – West",
+    href: "/conditions/mission-bay-west/mission-bay-sea-world",
+  },
+  { slug: "ocean-beach", name: "Ocean Beach", href: "/conditions/ocean-beach" },
 ];
 
 test("the chooser is labelled, so it is reachable without sight of it", () => {
@@ -48,6 +62,23 @@ test("choosing an area navigates to it", () => {
   expect(push).toHaveBeenCalledWith("/conditions/ocean-beach");
 });
 
+/**
+ * The default beach is the area's opening page, so choosing the area lands
+ * on it. Until 2026-09-17 this navigated to `/conditions/<area>` regardless,
+ * which for La Jolla is a view sharing two sources across ten beaches.
+ */
+test("choosing an area with a default beach navigates to that beach", () => {
+  render(<AreaSelector areas={AREAS} current="ocean-beach" />);
+
+  const select = screen.getByLabelText("Choose an area") as HTMLSelectElement;
+  select.value = "mission-bay-west";
+  select.dispatchEvent(new Event("change", { bubbles: true }));
+
+  expect(push).toHaveBeenCalledWith(
+    "/conditions/mission-bay-west/mission-bay-sea-world",
+  );
+});
+
 test("an area without scripting is still reachable, as a link", () => {
   // Asserted against server-rendered markup, because that is where a `noscript`
   // does its job: the client renderer never parses its contents, and a family on
@@ -56,12 +87,19 @@ test("an area without scripting is still reachable, as a link", () => {
     <AreaSelector areas={AREAS} current="la-jolla" />,
   );
 
-  expect(markup).toContain("<noscript>");
+  expect(markup).toContain("<noscript");
   // Two-sided: markup naming every area twice would pass a bare `toContain`
   // whether or not the fallback exists, so the links must be inside it.
-  const fallback = markup.slice(markup.indexOf("<noscript>"));
-  expect(fallback).toContain("/conditions/la-jolla");
-  expect(fallback).toContain("/conditions/mission-bay-west");
+  const fallback = markup.slice(markup.indexOf("<noscript"));
+  // The same opening page the control navigates to, so a reader without a
+  // script lands where a reader with one does.
+  expect(fallback).toContain(
+    'href="/conditions/la-jolla/la-jolla-shores-beach"',
+  );
+  expect(fallback).toContain(
+    'href="/conditions/mission-bay-west/mission-bay-sea-world"',
+  );
+  expect(fallback).toContain('href="/conditions/ocean-beach"');
   expect(fallback).toContain("Mission Bay – West");
 });
 
@@ -90,4 +128,28 @@ test("it carries no vertical margin of its own", () => {
   );
 
   expect(container.firstElementChild?.className).not.toContain("mb-");
+});
+
+/**
+ * The fallback list is a row of its own, not a third item in the label/select
+ * group. Rendered without JavaScript on 2026-09-17, the eighteen links sat
+ * inside the group's `items-center` flex row: a 400px column with the label
+ * and the dead select floating vertically centred against it. The root is
+ * `contents` so the group and the list are both items of the bar's own
+ * wrapping row, and the list takes the full width to land under the controls.
+ */
+test("the fallback list sits beside the control group, not inside it", () => {
+  const markup = renderToStaticMarkup(
+    <AreaSelector areas={AREAS} current="la-jolla" />,
+  );
+  const doc = new DOMParser().parseFromString(markup, "text/html");
+
+  const select = doc.querySelector("select")!;
+  const fallback = doc.querySelector("noscript")!;
+  expect(fallback.parentElement).toBe(select.parentElement!.parentElement);
+  expect(select.parentElement!.className).toContain("flex");
+  expect(fallback.parentElement!.className).toContain("contents");
+  // On the noscript, which is the flex item -- not on the list inside it,
+  // where it was first put and measured to do nothing.
+  expect(fallback.className).toContain("w-full");
 });

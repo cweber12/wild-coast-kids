@@ -232,40 +232,17 @@ const OBSERVATION_STATIONS = observationTable.stations as Readonly<
   Record<string, ObservationStation>
 >;
 
-/**
- * The beach the conditions view opens on when no other is asked for.
- *
- * Named rather than derived. "First in the inventory" meant San Onofre until
- * the service predicate removed it, 57 km from the nearest station that
- * publishes predictions; it now means Del Mar City Beach, which is served but
- * sits at the northern edge of what survives and would move again the next time
- * upstream adds a row. This one is central, sits 1.4 km from its station, and is
- * the beach the National Weather Service means when its surf zone forecast says
- * "La Jolla".
- */
-export const DEFAULT_BEACH_SLUG = "la-jolla-shores-beach";
+/*
+  `DEFAULT_BEACH_SLUG` and `defaultBeach()` stood here until 2026-09-17. The
+  beach `/conditions` opens on is a row in `areas.json` now -- each area's
+  `default_beach`, read through `openingBeachOf` in `areas.ts` -- so a constant
+  here was a second copy of the same fact, and the `areas` gate row is what
+  holds that row to a beach the inventory has.
+*/
 
 /** Every beach, north to south. */
 export function allBeaches(): readonly Beach[] {
   return BEACHES;
-}
-
-/**
- * The default beach, or a loud failure.
- *
- * The inventory is rewritten by a script from an upstream resource, so a rename
- * upstream could take the default slug with it. That must stop a build rather
- * than render an empty page.
- */
-export function defaultBeach(): Beach {
-  const beach = beachBySlug(DEFAULT_BEACH_SLUG);
-  if (!beach) {
-    throw new Error(
-      `beaches.json no longer contains ${DEFAULT_BEACH_SLUG}, which the conditions view ` +
-        `opens on. Upstream may have renamed it; pick a new default deliberately.`,
-    );
-  }
-  return beach;
 }
 
 /** One beach by slug, or null. Null means the slug is not in the inventory. */

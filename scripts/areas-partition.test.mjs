@@ -49,6 +49,34 @@ describe("checkAreaPartition", () => {
     expect(lines.join("\n")).toContain("belongs to no area");
   });
 
+  /**
+   * A default beach is the one an area opens on -- from `/conditions` and from
+   * the area chooser -- so a default that is not a member would open an area
+   * on a beach that is not in it. Optional: an area without one opens on its
+   * own view, which is what the eight multi-beach areas without a named
+   * default do.
+   */
+  it("accepts a default beach that is a member of its area", () => {
+    const tables = fabricated();
+    tables.areas[1].default_beach = "south-point";
+
+    const { ok } = checkAreaPartition(tables);
+
+    expect(ok).toBe(true);
+  });
+
+  it("rejects a default beach that is not a member, and names both", () => {
+    const tables = fabricated();
+    tables.areas[1].default_beach = "north-cove";
+
+    const { ok, lines } = checkAreaPartition(tables);
+
+    expect(ok).toBe(false);
+    expect(lines.join("\n")).toContain('"the-south"');
+    expect(lines.join("\n")).toContain('"north-cove"');
+    expect(lines.join("\n")).toContain("not one of its beaches");
+  });
+
   it("rejects a beach claimed by two areas, and names both", () => {
     const tables = fabricated();
     tables.areas[0].beaches.push("south-point");
