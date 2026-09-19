@@ -34,12 +34,21 @@
  * is drawn outside the pill's own box and an `overflow-hidden` scroller clips
  * it. `py-1` gives the ring room on the cross axis for the same reason.
  *
- * **Buttons with `aria-pressed`, not a tablist.** The chart below already owns
- * a real tab set -- tide, swell, wind, temperature -- and nesting a second
- * tablist for days inside the same region would put a reader in two tab
- * contexts at once. A radiogroup is the closest formal match and it promises
- * arrow-key roving this does not implement; `aria-pressed` on a labelled group
- * of buttons says exactly what is true, which is that one of seven is on.
+ * **Buttons with `aria-current="date"`, not a tablist.** The chart below
+ * already owns a real tab set -- tide, swell, wind, temperature -- and nesting
+ * a second tablist for days inside the same region would put a reader in two
+ * tab contexts at once. `aria-current` is the week grid's word for the same
+ * fact one region up, and the two controls write one provider: until
+ * 2026-09-17 this one said `aria-pressed`, so the same choice was announced as
+ * a toggle here and as the current item there. One fact, one word.
+ *
+ * **One tab stop, and the arrow keys walk it.** Seven pills were seven stops,
+ * on top of the seven day headers in the grid above -- fourteen presses to get
+ * past one choice. The showing pill holds `tabIndex="0"` and the rest `-1`,
+ * ArrowLeft and ArrowRight step the week and stop at its ends, Home and End
+ * jump to them, and focus moves with the selection through a ref -- the half
+ * of a roving tabindex the chart's own controls were missing until the same
+ * day. It is the shape the chart's hour columns already had.
  *
  * The label a pill carries is `dayName`, which is the same string the heading
  * uses and the grid's own label for that day. Three names for one Thursday is
@@ -58,6 +67,7 @@
 
 "use client";
 
+import { useRef } from "react";
 import { TOUCH_TARGET } from "../ui/touchTarget";
 import { useHydrated } from "./hydrated";
 import { resolveSelected, useSelectedDay } from "./selectedDay";
@@ -76,6 +86,32 @@ export function DayStrip({ days }: { days: readonly DayChoice[] }) {
     selected,
     days.map((day) => day.localDate),
   );
+  const showingIndex = days.findIndex((day) => day.localDate === showing);
+
+  // One ref per pill, read by the key handler alone: choosing a day moves
+  // `tabIndex="0"` onto its pill, and focus has to be moved there by hand or
+  // the ring stays on the pill the keys just left.
+  const pillRefs = useRef<(HTMLButtonElement | null)[]>([]);
+
+  const moveTo = (index: number) => {
+    const day = days[Math.min(days.length - 1, Math.max(0, index))];
+    if (day === undefined) return;
+    choose(day.localDate);
+    pillRefs.current[days.indexOf(day)]?.focus();
+  };
+
+  const onKeyDown = (event: React.KeyboardEvent) => {
+    const moves: Record<string, number> = { ArrowLeft: -1, ArrowRight: 1 };
+    if (event.key in moves) {
+      event.preventDefault();
+      moveTo(showingIndex + moves[event.key]);
+      return;
+    }
+    if (event.key === "Home" || event.key === "End") {
+      event.preventDefault();
+      moveTo(event.key === "Home" ? 0 : days.length - 1);
+    }
+  };
 
   // ADR-0027, and see this file's header: no affordance at all beats a dead
   // one. There is nothing to degrade *to* here -- unlike the beach chooser,
@@ -88,8 +124,9 @@ export function DayStrip({ days }: { days: readonly DayChoice[] }) {
       role="group"
       aria-label="Choose a day"
       className="no-scrollbar mb-4 flex gap-2 overflow-x-auto py-1"
+      onKeyDown={onKeyDown}
     >
-      {days.map((day) => {
+      {days.map((day, index) => {
         const isShowing = day.localDate === showing;
 
         return (
@@ -97,7 +134,11 @@ export function DayStrip({ days }: { days: readonly DayChoice[] }) {
             key={day.localDate}
             type="button"
             onClick={() => choose(day.localDate)}
-            aria-pressed={isShowing}
+            aria-current={isShowing ? "date" : undefined}
+            tabIndex={isShowing ? 0 : -1}
+            ref={(element) => {
+              pillRefs.current[index] = element;
+            }}
             data-day-pill={day.localDate}
             /*
               `md:min-h-9` rather than the `md:min-h-0` most callers of
@@ -117,10 +158,19 @@ export function DayStrip({ days }: { days: readonly DayChoice[] }) {
               because the grid above marks its own selection the same way and
               for the same reason: fill alone is a colour, and a reader who does
               not separate these two colours still sees the line.
+
+              And it names its focus ring colour, which no other control on
+              this page has to. The site's ring is `currentColor` at a 2px
+              offset -- drawn outside the pill, on cream -- and this pill's
+              current colour is white. White on cream is no ring at all, and
+              this is the pill Tab lands on first. `outline-ocean` matches the
+              fill, with the offset's 2px of cream between them to separate the
+              two. An unselected pill is `text-ocean` and gets that ring for
+              free.
             */
             className={`${TOUCH_TARGET} md:min-h-9 rounded-pill shrink-0 cursor-pointer px-4 text-2xs font-extrabold tracking-widest uppercase ${
               isShowing
-                ? "bg-ocean text-white underline decoration-2 underline-offset-4"
+                ? "focus-visible:outline-ocean bg-ocean text-white underline decoration-2 underline-offset-4"
                 : "bg-mist text-ocean"
             }`}
           >
