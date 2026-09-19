@@ -258,6 +258,11 @@ test("asks for the slug it was given and renders both live rows", async () => {
  * The band's own sentence goes with them: "Each of these will join the week
  * above as a row of its own" is a claim about a band that no longer has
  * anything in it.
+ *
+ * **The band itself went in #253**, so the last assertion below now follows from
+ * the grid's shape rather than from this panel's choice — `WeekGrid` has no
+ * `reserved` prop to pass. The first three still guard what this test was
+ * written for: a slot re-added beside its live row would fail here.
  */
 test("every reserved forecast has been filled, and none is promised twice", async () => {
   readWeekOfLowestLows.mockResolvedValue({

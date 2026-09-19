@@ -64,7 +64,6 @@ import { resolveSelected, useSelectedDay } from "./selectedDay";
 import { TOUCH_TARGET } from "../ui/touchTarget";
 import { TOOL_REGION_HEADING } from "../ui/headingRank";
 import { ProvenanceLine } from "./ProvenanceLine";
-import { ReservedSlot } from "../ui/ReservedSlot";
 
 /**
  * The narrowest a day block ever gets, in CSS pixels.
@@ -197,9 +196,11 @@ export type WeekDay = {
  * The rounding is still the caller's, because what counts as a distance worth
  * a decimal differs per product.
  *
- * Shaped for the rows that are coming as much as for the one that is here. Two
- * of the reserved forecasts below will each want to name a source, and a field
- * shaped around waves alone would have to be widened to hold them.
+ * Shaped for more than one product, and that has been borne out. It was written
+ * against two reserved forecasts below the grid that would each want to name a
+ * source; both arrived as rows, and the three rows now name a tide station, a
+ * MOP line and a grid cell between them. A field shaped around waves alone
+ * would have been widened for each.
  */
 export type WeekRowProvenance = {
   source: string;
@@ -246,13 +247,6 @@ export type WeekRow = {
   provenance?: WeekRowProvenance;
 };
 
-/** What `ReservedSlot` needs, carried through so the caller names its own slots. */
-export type ReservedRow = {
-  emoji: string;
-  headline: string;
-  detail: string;
-};
-
 type WeekGridProps = {
   /** The heading's own id. The caller owns it, because it owns the anchor. */
   headingId: string;
@@ -268,8 +262,6 @@ type WeekGridProps = {
    * that shares this request, rather than being repeated here.
    */
   notes?: readonly string[];
-  /** Products that are decided but not built. Named rather than left silent. */
-  reserved?: readonly ReservedRow[];
 };
 
 export function WeekGrid({
@@ -278,7 +270,6 @@ export function WeekGrid({
   days,
   rows,
   notes = [],
-  reserved = [],
 }: WeekGridProps) {
   const { selected, choose } = useSelectedDay();
   const hydrated = useHydrated();
@@ -580,7 +571,7 @@ export function WeekGrid({
                 134px is `MIN_SPARK_BLOCK_PX`, written out because Tailwind
                 scans source text and cannot read a constant. The pair is held
                 together from the other side: a test asserts the constant is
-                still 137, and the `stylesheet` gate asserts this class
+                still 134, and the `stylesheet` gate asserts this class
                 compiled to a real rule. Neither alone is enough -- an
                 unregistered variant leaves the class in the markup where jsdom
                 still finds it, so the component tests cannot see it fail.
@@ -688,67 +679,6 @@ export function WeekGrid({
             ),
           )}
         </div>
-      )}
-
-      {/*
-        `density="row"` rather than the section default. At section density
-        these three slots measured 244px against 128px of live week above
-        them -- three dashed boxes physically larger than the seven days they
-        annotate, because `ReservedSlot` was built to hold open a whole section
-        and was reused here unchanged. It records why its own numbers are what
-        they are; what this asks for is the density sized to a row.
-      */}
-      {reserved.length > 0 && (
-        <>
-          {/*
-            The band says what it is. Nothing tied it to the grid above, so a
-            reader had no way to tell that a wave forecast lands *in* the week
-            rather than in a box of its own -- three dashed panels under a
-            table read as a separate thing that happens to sit below it.
-
-            A sentence is the whole fix, and the band stays where it is. A
-            reserved product is one fact about a feed rather than seven facts
-            about seven days: `ReservedRow` carries no `cells`, so there is
-            nothing to put in a day-block until the product exists, and moving
-            one into the `<ol>` would print its headline seven times.
-          */}
-          <p className="leading-relaxed mb-3 max-w-130 text-base text-fog">
-            Each of these will join the week above as a row of its own.
-          </p>
-          {/*
-            `lg:grid-cols-3`, which is where the days above first go wider
-            than two. These three once sat side by side from `sm` at 216px
-            each -- roughly 26 characters over five ragged lines -- while the
-            live week was still stacked full-width: the week said 768 was
-            narrow and the slots said it was wide, in adjacent bands of the
-            same section. Three across beside four days is close enough that
-            neither band contradicts the other.
-
-            **And it is a rule about three, so it is asked for only when there
-            are three.** The band held three when that was written and holds
-            one now, which rendered a 472px dashed box in a 1440px band with
-            968px empty beside it, under a full-width seven-column grid. A grid
-            with one child is a valid grid, so nothing failed.
-
-            The threshold is three rather than two. At two slots a three-column
-            grid leaves one column empty -- the same fault, a third smaller --
-            where two full-width rows say exactly what is there. That also
-            keeps this to one literal class: a count interpolated into
-            `lg:grid-cols-${n}` compiles to nothing under ADR-0006's opt-in
-            source detection and would fail only at a width no test runs at.
-
-            Padding `reserved` to three would be the other way to make the
-            container match, and it would be a lie: two more dashed boxes
-            announcing nothing are worse than the empty ground they fill.
-          */}
-          <div
-            className={`grid gap-3 ${reserved.length > 2 ? "lg:grid-cols-3" : ""}`}
-          >
-            {reserved.map((slot) => (
-              <ReservedSlot key={slot.headline} {...slot} density="row" />
-            ))}
-          </div>
-        </>
       )}
     </section>
   );

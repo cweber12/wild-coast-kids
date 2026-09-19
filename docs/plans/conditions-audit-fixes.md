@@ -1,6 +1,14 @@
 # Conditions audit fixes
 
-> Planned 2026-09-17. In flight.
+> **Historical.** Planned 2026-09-17, shipped across PRs #254, #255, #256, #257,
+> #258 and #259, the last of them on 2026-09-19. It records what was intended
+> then, not what the code does now, and is not maintained. See
+> [`README.md`](README.md).
+>
+> One decision in it was dropped rather than shipped: PR F's second item called
+> `NARROWEST_CELL_CLEARS_FLOOR` dead, and it is read by the test that keeps
+> ADR-0023's breakpoint from silently hiding the sparklines. The argument is in
+> #253 and #259.
 
 Fixes from a UX/UI audit of `/conditions` taken on 2026-09-17 at `main`
 (`5b27470`, after PR #247). The audit rendered the default page, a no-buoy area,
