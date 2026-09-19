@@ -38,12 +38,23 @@
  * no branch to equalise: `3:13 PM 1.6 ft` is 79px against 125px in the
  * narrowest seven-column cell, and 189px at 1024 where the grid now shows four.
  *
- * **An absent day says so.** `no-low` means the range we asked NOAA for did not
- * cover that date — a fact about our request, never about the sea. `None` means
- * the sea did not put a low between sunrise and sunset, which is close to
- * unreachable on this coast. Both are words rather than a blank, because a
- * blank cell in a tide row reads as a calm, flat day, which is the failure this
- * whole page is built to avoid.
+ * **An absent day says so, in a parent's words.** Two absences, both facts
+ * about the sea and neither about our request. The tide on this coast runs
+ * diurnal for a few days at a time -- one low per lunar day of 24 h 50 min --
+ * and while it does, a date can hold no low turning point at all (`no-low`,
+ * "No low tide today"), and the day before or after it puts its only low in
+ * the small hours (`daylight` null, "Lowest after dark"). Both were reached on
+ * the default page on 2026-09-17, three cells of seven; this file had called
+ * the second close to unreachable and printed "None" for it, which under LOW
+ * TIDE read as no tide at all, and had called the first a request-window fault
+ * and printed "Not in range" for a Saturday inside a seven-day request.
+ * `conditions.test.ts` reaches `no-low` from real-shaped predictions.
+ *
+ * Both are words rather than a blank, because a blank cell in a tide row reads
+ * as a calm, flat day, which is the failure this whole page is built to avoid.
+ * Neither prints a figure: the after-dark low is on the page as the dip the day
+ * view draws, and a time printed here would be one the window above says is
+ * outside the day.
  *
  * **What is not here is a caveat per cell.** Which station these predictions
  * come from, how far away it is and what the datum means are all said once, in
@@ -62,14 +73,13 @@ export const TIDE_WEEK_ROW = {
 
 export function TideWeek({ state }: { state: TideWeekDay["state"] }) {
   if (state.kind === "no-low") {
-    return <span className="text-fog italic">Not in range</span>;
+    return <span className="text-fog italic">No low tide today</span>;
   }
 
   if (state.daylight === null) {
-    // No low between sunrise and sunset. Close to unreachable on this coast --
-    // two lows about twelve and a half hours apart against ten to fourteen
-    // hours of daylight -- and a named absence rather than a blank.
-    return <span className="text-fog italic">None</span>;
+    // No low between sunrise and sunset: the day's only low is in the small
+    // hours, which a diurnal stretch produces. See the header.
+    return <span className="text-fog italic">Lowest after dark</span>;
   }
 
   return (
