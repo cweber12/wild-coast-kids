@@ -25,6 +25,13 @@ import { allBeaches, surfZoneWithheldReason, type Beach } from "./beaches";
 export interface Area {
   slug: string;
   name: string;
+  /**
+   * The beach this area opens on, when one is named. See `openingBeachOf`.
+   *
+   * A member of `beaches`, and the `areas` gate row is what says so. Named by
+   * hand on 2026-09-17 for four areas; the rest open on their own view.
+   */
+  default_beach?: string;
   /** Member beach slugs, north to south. */
   beaches: readonly string[];
 }
@@ -34,9 +41,8 @@ const AREAS: readonly Area[] = areaTable.areas;
 /**
  * The area `/conditions` opens on.
  *
- * Named rather than derived, for the reason `DEFAULT_BEACH_SLUG` next door is:
- * "first in the table" would move the moment somebody adds an area north of
- * Del Mar. This is the one the National Weather Service means when its surf
+ * Named rather than derived: "first in the table" would move the moment
+ * somebody adds an area north of Del Mar. This is the one the National Weather Service means when its surf
  * zone forecast says "La Jolla", it holds ten beaches, and it is the area the
  * whole design was worked against.
  */
@@ -64,8 +70,8 @@ export function areaOfBeach(beachSlug: string): Area | null {
  *
  * `areas.json` is written by hand, so the default can be renamed out from under
  * this by an ordinary edit. That must stop a build rather than render a page
- * about nothing -- the argument `defaultBeach()` makes about an upstream
- * rename, applied to the file a person maintains.
+ * about nothing. The beach it opens on is a row of the same table, held to
+ * the area's own members by the `areas` gate row -- see `openingBeachOf`.
  */
 export function defaultArea(): Area {
   const area = areaBySlug(DEFAULT_AREA_SLUG);
@@ -88,6 +94,43 @@ export function defaultArea(): Area {
  */
 export function soleBeachOf(area: Area): string | null {
   return area.beaches.length === 1 ? area.beaches[0] : null;
+}
+
+/**
+ * The beach an area opens on, or null for an area that opens on its own view.
+ *
+ * **Why an area opens on a beach at all.** An area's own view reports only
+ * what every member binds (ADR-0048), and for a multi-beach area that is
+ * little: La Jolla's ten share a tide station and an air station and nothing
+ * else, so `/conditions` opened the tool on a bold absence, two paragraphs
+ * about what could not be shown and a tide-only week. Only two areas share
+ * every source and both hold one beach. So the two entry points a reader
+ * actually uses -- `/conditions` and the area chooser -- land on a beach
+ * with figures, and the area view keeps its URL and stays reachable through
+ * the beach chooser's "All of" option.
+ *
+ * A named default first, then the sole beach where the area holds one, which
+ * is the beach the area's URL already serves (ADR-0046). Null for the rest:
+ * a default is a row in `areas.json`, named by a person, and this does not
+ * guess one -- "first in the table" would be a claim about which beach an
+ * area is really about, made by whoever last sorted it.
+ */
+export function openingBeachOf(area: Area): string | null {
+  return area.default_beach ?? soleBeachOf(area);
+}
+
+/**
+ * Where the area chooser navigates for an area: the nested URL of its default
+ * beach when one is named, otherwise the area's own.
+ *
+ * The sole-beach case is the area's own URL rather than the nested one, for
+ * the reason `canonicalConditionsPath` gives: an area of one serves its beach
+ * at the area's address, and the nested form redirects there.
+ */
+export function openingConditionsPath(area: Area): string {
+  return area.default_beach === undefined
+    ? `/conditions/${area.slug}`
+    : `/conditions/${area.slug}/${area.default_beach}`;
 }
 
 /**

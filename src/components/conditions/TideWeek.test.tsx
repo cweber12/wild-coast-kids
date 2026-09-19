@@ -75,17 +75,19 @@ test("whether the two extremes agree changes nothing a reader sees", () => {
   expect(agreed.container.textContent).not.toContain("none lower");
 });
 
-test("a day with no low in daylight says so rather than falling back", () => {
-  // Close to unreachable on this coast -- two lows twelve and a half hours
-  // apart against ten to fourteen hours of daylight. A named absence rather
-  // than a blank, because an empty cell in a tide row reads as a flat sea, and
-  // rather than the overnight low, which is the figure this grid no longer
-  // shows.
+test("a day with no low in daylight says the low is after dark", () => {
+  // Reached twice in one week on the default page, 2026-09-17, on a coast
+  // whose tides go diurnal for a few days at a time -- the docstring that
+  // called this close to unreachable was wrong. A named absence rather than a
+  // blank, because an empty cell in a tide row reads as a flat sea; and words
+  // a parent can act on rather than "None", which under LOW TIDE read as no
+  // tide at all. The overnight figure itself stays out: the day view draws it.
   const { container } = render(
     <TideWeek state={{ kind: "reading", daylight: null, allDay: ALL_DAY }} />,
   );
 
-  expect(screen.getByText("None")).toBeDefined();
+  expect(screen.getByText("Lowest after dark")).toBeDefined();
+  expect(container.textContent).not.toContain("None");
   expect(container.textContent).not.toContain("3:14 AM");
 });
 
@@ -111,12 +113,18 @@ test("no branch of the cell forces a line break", () => {
   }
 });
 
-test("a day the window did not cover says so rather than rendering a blank", () => {
+test("a date with no low at all says so rather than rendering a blank", () => {
   render(<TideWeek state={{ kind: "no-low" }} />);
 
-  // A blank cell in a tide row reads as a calm sea. This one says the range did
-  // not reach, which is a fact about our request rather than about the sea.
-  expect(screen.getByText(/Not in range/)).toBeDefined();
+  // A blank cell in a tide row reads as a calm sea. It said "Not in range"
+  // until 2026-09-17, on the belief that this state was a fact about the
+  // window we asked NOAA for; it is a fact about the sea. When the tide runs
+  // diurnal -- one low per lunar day, a few days at a time on this coast -- a
+  // calendar date can hold no low turning point, and a Saturday inside a
+  // seven-day request printed the request-fault wording. `conditions.test.ts`
+  // reaches the state from real-shaped predictions.
+  expect(screen.getByText("No low tide today")).toBeDefined();
+  expect(screen.queryByText(/Not in range/)).toBeNull();
 });
 
 /**

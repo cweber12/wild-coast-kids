@@ -71,6 +71,21 @@ test("it opens on the named default area", () => {
   expect(beaches.options[0].textContent).toBe("All of La Jolla");
 });
 
+/**
+ * On the area's default beach rather than on the area's own view. La Jolla's
+ * ten beaches share a tide station and an air station and nothing else, so
+ * the area view opened the tool on a bold absence, two paragraphs about what
+ * could not be shown and a tide-only week (audit of 2026-09-17). The default
+ * beach is a row in `areas.json`, and the regions answer for it.
+ */
+test("it opens on the default area's default beach", () => {
+  render(<Conditions />);
+
+  const beaches = screen.getByLabelText("Choose a beach") as HTMLSelectElement;
+  expect(beaches.value).toBe("la-jolla-shores-beach");
+  expect(screen.getByText("week for la-jolla-shores-beach")).toBeDefined();
+});
+
 test("a reader can choose another area from here", () => {
   render(<Conditions />);
 

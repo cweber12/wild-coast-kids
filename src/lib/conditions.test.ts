@@ -223,6 +223,33 @@ test("all three rows are selected by one computation of the week's daylight", as
   expect(state.allDay?.timeLabel).toBe("3:00 AM");
 });
 
+/**
+ * Regression, for a docstring rather than a bug. `no-low` was described as a
+ * fact about the window this site asked for, and the cell printed "Not in
+ * range" for it; on 2026-09-17 a Saturday inside a seven-day request printed
+ * that. The tide on this coast runs diurnal for a few days at a time -- one
+ * low per lunar day of 24 h 50 min -- so a calendar date can hold no low
+ * turning point at all while the window covers it perfectly. This is that
+ * shape: Monday's low is at 11:40 PM, Wednesday's at 12:30 AM, and Tuesday has
+ * none. Highs sit between them, as they do.
+ */
+test("a diurnal day with no low on its own date is no-low, and its neighbours are readings", async () => {
+  ok([
+    // 11:40 PM Pacific on Monday the 17th.
+    { atMs: Date.UTC(2026, 7, 18, 6, 40), feet: 0.3, kind: "low" },
+    // Noon on Tuesday the 18th: the one high of a diurnal day.
+    { atMs: Date.UTC(2026, 7, 18, 19, 0), feet: 5.6, kind: "high" },
+    // 12:30 AM Pacific on Wednesday the 19th: 24 h 50 min after Monday's.
+    { atMs: Date.UTC(2026, 7, 19, 7, 30), feet: 0.1, kind: "low" },
+  ]);
+
+  const days = daysOf(await readWeekOfLowestLows(BEACH, NOON_PACIFIC_20260817));
+
+  expect(days[0].state.kind).toBe("reading");
+  expect(days[1].state).toEqual({ kind: "no-low" });
+  expect(days[2].state.kind).toBe("reading");
+});
+
 test("a day the window did not cover is named, not dropped from the week", async () => {
   ok([{ atMs: Date.UTC(2026, 7, 18, 14, 10), feet: -0.4, kind: "low" }]);
 
